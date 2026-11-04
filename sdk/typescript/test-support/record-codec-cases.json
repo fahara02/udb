@@ -1,0 +1,212 @@
+{
+  "encode_record": [
+    {
+      "name": "empty file: defaults, NULLs and dropped NOT NULL columns",
+      "message_type": "udb.core.storage.entity.v1.File",
+      "message": {},
+      "mode": "insert",
+      "json": "{\"backend\":null,\"bucket\":null,\"cdn_url\":null,\"checksum\":null,\"content_type\":null,\"deleted_at\":null,\"deleted_by\":null,\"expires_at\":null,\"file_type\":\"UNSPECIFIED\",\"filename\":\"\",\"is_public\":false,\"object_key\":\"\",\"project_id\":null,\"reference_id\":null,\"reference_type\":null,\"scan_detail\":null,\"scan_verdict\":\"UNSPECIFIED\",\"scanned_at\":null,\"scanned_by\":null,\"size_bytes\":0,\"status\":\"UNSPECIFIED\",\"uploaded_by\":null,\"url\":null}"
+    },
+    {
+      "name": "file with enums in text columns and a timestamp",
+      "message_type": "udb.core.storage.entity.v1.File",
+      "message": {
+        "tenant_id": "0190f1b2-0000-7000-8000-0000000000aa",
+        "filename": "notes.pdf",
+        "status": "FILE_STATUS_PENDING",
+        "file_type": "FILE_TYPE_PDF",
+        "expires_at": "2026-10-07T09:30:00Z"
+      },
+      "mode": "insert",
+      "json": "{\"backend\":null,\"bucket\":null,\"cdn_url\":null,\"checksum\":null,\"content_type\":null,\"deleted_at\":null,\"deleted_by\":null,\"expires_at\":\"2026-10-07T09:30:00Z\",\"file_type\":\"PDF\",\"filename\":\"notes.pdf\",\"is_public\":false,\"object_key\":\"\",\"project_id\":null,\"reference_id\":null,\"reference_type\":null,\"scan_detail\":null,\"scan_verdict\":\"UNSPECIFIED\",\"scanned_at\":null,\"scanned_by\":null,\"size_bytes\":0,\"status\":\"PENDING\",\"tenant_id\":\"0190f1b2-0000-7000-8000-0000000000aa\",\"uploaded_by\":null,\"url\":null}"
+    },
+    {
+      "name": "update leaves out the key, tenant and project",
+      "message_type": "udb.core.storage.entity.v1.File",
+      "message": {
+        "file_id": "0190f1b2-0000-7000-8000-000000000002",
+        "tenant_id": "0190f1b2-0000-7000-8000-0000000000aa",
+        "project_id": "owned",
+        "filename": "a.txt",
+        "is_public": true
+      },
+      "mode": "update",
+      "json": "{\"backend\":null,\"bucket\":null,\"cdn_url\":null,\"checksum\":null,\"content_type\":null,\"deleted_at\":null,\"deleted_by\":null,\"expires_at\":null,\"file_type\":\"UNSPECIFIED\",\"filename\":\"a.txt\",\"is_public\":true,\"object_key\":\"\",\"reference_id\":null,\"reference_type\":null,\"scan_detail\":null,\"scan_verdict\":\"UNSPECIFIED\",\"scanned_at\":null,\"scanned_by\":null,\"size_bytes\":0,\"status\":\"UNSPECIFIED\",\"uploaded_by\":null,\"url\":null}"
+    },
+    {
+      "name": "int64 beyond 2^53 is an exact JSON number",
+      "message_type": "udb.core.storage.entity.v1.File",
+      "message": {
+        "file_id": "0190f1b2-0000-7000-8000-000000000003",
+        "size_bytes": "9007199254740993",
+        "filename": "<big>&.bin"
+      },
+      "mode": "insert",
+      "json": "{\"backend\":null,\"bucket\":null,\"cdn_url\":null,\"checksum\":null,\"content_type\":null,\"deleted_at\":null,\"deleted_by\":null,\"expires_at\":null,\"file_id\":\"0190f1b2-0000-7000-8000-000000000003\",\"file_type\":\"UNSPECIFIED\",\"filename\":\"\\u003cbig\\u003e\\u0026.bin\",\"is_public\":false,\"object_key\":\"\",\"project_id\":null,\"reference_id\":null,\"reference_type\":null,\"scan_detail\":null,\"scan_verdict\":\"UNSPECIFIED\",\"scanned_at\":null,\"scanned_by\":null,\"size_bytes\":9007199254740993,\"status\":\"UNSPECIFIED\",\"uploaded_by\":null,\"url\":null}"
+    },
+    {
+      "name": "timestamp offsets normalize to UTC with 0, 3, 6 or 9 digits",
+      "message_type": "udb.core.storage.entity.v1.File",
+      "message": {
+        "expires_at": "2026-10-07T15:30:00.123400+06:00",
+        "scanned_at": "2026-10-07T09:30:00.000000001Z"
+      },
+      "mode": "insert",
+      "json": "{\"backend\":null,\"bucket\":null,\"cdn_url\":null,\"checksum\":null,\"content_type\":null,\"deleted_at\":null,\"deleted_by\":null,\"expires_at\":\"2026-10-07T09:30:00.123400Z\",\"file_type\":\"UNSPECIFIED\",\"filename\":\"\",\"is_public\":false,\"object_key\":\"\",\"project_id\":null,\"reference_id\":null,\"reference_type\":null,\"scan_detail\":null,\"scan_verdict\":\"UNSPECIFIED\",\"scanned_at\":\"2026-10-07T09:30:00.000000001Z\",\"scanned_by\":null,\"size_bytes\":0,\"status\":\"UNSPECIFIED\",\"uploaded_by\":null,\"url\":null}"
+    },
+    {
+      "name": "a JSON column keeps key order and digits",
+      "message_type": "udb.core.workflow.entity.v1.WorkflowInstance",
+      "message": {
+        "workflow_id": "0190f1b2-0000-7000-8000-000000000004",
+        "workflow_type": "w",
+        "status": "WORKFLOW_STATUS_COMPLETED",
+        "current_step": 3,
+        "payload": "{\"b\": 1, \"a\": 12345678901234567890, \"c\": \"<x>\"}",
+        "compensations": "[1, 2]"
+      },
+      "mode": "insert",
+      "json": "{\"compensations\":[1,2],\"correlation_id\":null,\"current_step\":3,\"deleted_at\":null,\"deleted_by\":null,\"last_error\":null,\"last_transition_at\":null,\"next_run_at\":null,\"payload\":{\"b\":1,\"a\":12345678901234567890,\"c\":\"\\u003cx\\u003e\"},\"pending_signal\":null,\"project_id\":null,\"saga_id\":null,\"status\":\"COMPLETED\",\"total_steps\":0,\"workflow_id\":\"0190f1b2-0000-7000-8000-000000000004\",\"workflow_type\":\"w\"}"
+    },
+    {
+      "name": "repeated text stays an array",
+      "message_type": "udb.core.authz.entity.v1.AccessDecisionAudit",
+      "message": {
+        "matched_policy_ids": [
+          "p1",
+          "p2"
+        ]
+      },
+      "mode": "insert",
+      "json": "{\"action\":\"\",\"actor_kind\":null,\"correlation_id\":null,\"decision_id\":null,\"decision_input\":null,\"decision_source\":\"UNSPECIFIED\",\"domain\":\"\",\"effect\":\"UNSPECIFIED\",\"evaluated_by\":null,\"evaluated_by_service_identity\":null,\"ip_address\":null,\"matched_policy_ids\":[\"p1\",\"p2\"],\"matched_rule\":null,\"object\":\"\",\"policy_version\":null,\"project_id\":null,\"purpose\":null,\"reason\":null,\"relationship_version\":null,\"resource_type\":null,\"scopes\":null,\"span_id\":null,\"tenant_id\":\"\",\"trace_id\":null,\"user_agent_hash\":null}"
+    },
+    {
+      "name": "an unset repeated column is an empty array, and a NOT NULL text column keeps empty",
+      "message_type": "udb.core.authz.entity.v1.AccessDecisionAudit",
+      "message": {},
+      "mode": "insert",
+      "json": "{\"action\":\"\",\"actor_kind\":null,\"correlation_id\":null,\"decision_id\":null,\"decision_input\":null,\"decision_source\":\"UNSPECIFIED\",\"domain\":\"\",\"effect\":\"UNSPECIFIED\",\"evaluated_by\":null,\"evaluated_by_service_identity\":null,\"ip_address\":null,\"matched_policy_ids\":[],\"matched_rule\":null,\"object\":\"\",\"policy_version\":null,\"project_id\":null,\"purpose\":null,\"reason\":null,\"relationship_version\":null,\"resource_type\":null,\"scopes\":null,\"span_id\":null,\"tenant_id\":\"\",\"trace_id\":null,\"user_agent_hash\":null}"
+    }
+  ],
+  "encode_event": [
+    {
+      "name": "only populated fields",
+      "message_type": "udb.core.apikey.events.v1.ApiKeyCreatedEvent",
+      "message": {
+        "key_id": "k1",
+        "tenant_id": "0190f1b2-0000-7000-8000-0000000000aa",
+        "name": "",
+        "scopes": []
+      },
+      "json": "{\"key_id\":\"k1\",\"tenant_id\":\"0190f1b2-0000-7000-8000-0000000000aa\"}"
+    },
+    {
+      "name": "enum names, arrays and timestamps",
+      "message_type": "udb.core.apikey.events.v1.ApiKeyCreatedEvent",
+      "message": {
+        "key_id": "k1",
+        "owner_type": 1,
+        "scopes": [
+          "a",
+          "b"
+        ],
+        "occurred_at": "2026-10-07T15:30:00+06:00",
+        "tenant_id": "0190f1b2-0000-7000-8000-0000000000aa"
+      },
+      "json": "{\"key_id\":\"k1\",\"occurred_at\":\"2026-10-07T09:30:00Z\",\"owner_type\":\"API_KEY_OWNER_TYPE_INTEGRATION\",\"scopes\":[\"a\",\"b\"],\"tenant_id\":\"0190f1b2-0000-7000-8000-0000000000aa\"}"
+    },
+    {
+      "name": "an int64 stays a quoted string",
+      "message_type": "udb.core.storage.events.v1.FileUploaded",
+      "message": {
+        "size_bytes": "9007199254740993",
+        "file_id": "f1"
+      },
+      "json": "{\"file_id\":\"f1\",\"size_bytes\":\"9007199254740993\"}"
+    }
+  ],
+  "decode_record": [
+    {
+      "name": "short and full enum names, enum number as text, boolean as text, unknown column",
+      "message_type": "udb.core.storage.entity.v1.File",
+      "record": {
+        "file_id": "f1",
+        "tenant_id": "0190f1b2-0000-7000-8000-0000000000aa",
+        "filename": "notes.pdf",
+        "status": "PENDING",
+        "file_type": "FILE_TYPE_PDF",
+        "scan_verdict": "1",
+        "is_public": "true",
+        "expires_at": "2026-10-07T09:30:00Z",
+        "not_a_column": "ignored",
+        "url": null
+      },
+      "message": {
+        "file_id": "f1",
+        "tenant_id": "0190f1b2-0000-7000-8000-0000000000aa",
+        "filename": "notes.pdf",
+        "status": "FILE_STATUS_PENDING",
+        "file_type": "FILE_TYPE_PDF",
+        "scan_verdict": "SCAN_VERDICT_PENDING",
+        "is_public": true,
+        "expires_at": "2026-10-07T09:30:00Z"
+      }
+    },
+    {
+      "name": "a JSONB column that came back as a value becomes JSON text with sorted keys",
+      "message_type": "udb.core.workflow.entity.v1.WorkflowInstance",
+      "record": {
+        "payload": {
+          "b": 1,
+          "a": [
+            true
+          ]
+        },
+        "compensations": "[1]",
+        "current_step": "3"
+      },
+      "message": {
+        "payload": "{\"a\":[true],\"b\":1}",
+        "compensations": "[1]",
+        "current_step": 3
+      }
+    },
+    {
+      "name": "a Postgres array literal and a JSON array both read as a repeated field",
+      "message_type": "udb.core.authz.entity.v1.AccessDecisionAudit",
+      "record": {
+        "matched_policy_ids": "{a,\"b, c\",d}"
+      },
+      "message": {
+        "matched_policy_ids": [
+          "a",
+          "b, c",
+          "d"
+        ]
+      }
+    },
+    {
+      "name": "a JSON array in text reads as a repeated field",
+      "message_type": "udb.core.authz.entity.v1.AccessDecisionAudit",
+      "record": {
+        "matched_policy_ids": "[\"x\",\"y\"]"
+      },
+      "message": {
+        "matched_policy_ids": [
+          "x",
+          "y"
+        ]
+      }
+    },
+    {
+      "name": "a large integer stays exact as a decimal string",
+      "message_type": "udb.core.storage.entity.v1.File",
+      "record": {
+        "size_bytes": "9007199254740993"
+      },
+      "message": {
+        "size_bytes": "9007199254740993"
+      }
+    }
+  ]
+}

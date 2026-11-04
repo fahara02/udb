@@ -104,7 +104,7 @@ function handleRequest(UdbClient $client, int $requestNo): string
         scopes: [],
         serviceIdentity: 'php.persistent-worker.example',
         projectId: $project,
-        clientCatalogVersion: '1.0.0',
+        clientCatalogVersion: '',
         bearerToken: env_or('UDB_BEARER_TOKEN', ''),
     );
 

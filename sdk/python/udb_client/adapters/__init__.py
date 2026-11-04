@@ -28,6 +28,16 @@ from ._context import (
     canonical_outbound_headers,
     metadata_from_headers,
 )
+from .grpc_server import (
+    UdbAsyncServerInterceptor,
+    UdbServerInterceptor,
+    correlation_id,
+    from_context,
+    metadata_from_context,
+    tenant_id,
+    user_id,
+    with_metadata,
+)
 
 __all__ = [
     "CANONICAL_HEADERS",
@@ -36,8 +46,16 @@ __all__ = [
     "HEADER_REQUEST_ID",
     "RequestContext",
     "RequestScopedUdb",
+    "UdbAsyncServerInterceptor",
+    "UdbServerInterceptor",
     "canonical_outbound_headers",
+    "correlation_id",
+    "from_context",
+    "metadata_from_context",
     "metadata_from_headers",
+    "tenant_id",
+    "user_id",
+    "with_metadata",
 ]
 
 

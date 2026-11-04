@@ -9,8 +9,7 @@ await using var client = new UdbClient(
         CorrelationId: "csharp-admin-example",
         Scopes: ["udb:read", "udb:admin"],
         ServiceIdentity: "example.service",
-        ProjectId: "default",
-        ClientCatalogVersion: "1.0.0"));
+        ProjectId: "default"));
 
 var response = await client.SelectAsync(new SelectRequest
 {

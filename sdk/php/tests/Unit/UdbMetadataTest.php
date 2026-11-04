@@ -22,6 +22,18 @@ it('builds metadata from the request context with config fallbacks', function ()
         ->and($meta->clientCatalogVersion)->toBe('1.0.0');
 });
 
+// The broker skips its catalog comparison for a blank version. A fixed default
+// can never match a catalog versioned generator-N.
+it('sends no catalog version unless the caller pins one', function () {
+    $config = app('config')->get('udb.metadata');
+    unset($config['client_catalog_version']);
+    app('config')->set('udb.metadata', $config);
+
+    $meta = UdbMetadata::fromContext('acme', 'u-1', 'corr-1');
+    expect($meta->clientCatalogVersion)->toBe('')
+        ->and($meta->toGrpcMetadata()['x-udb-client-catalog-version'])->toBe(['']);
+});
+
 it('renders all 8 canonical headers in toGrpcMetadata()', function () {
     $meta = UdbMetadata::fromContext('acme', 'u-1', 'corr-1');
     $headers = $meta->toGrpcMetadata();

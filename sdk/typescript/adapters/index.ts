@@ -6,3 +6,4 @@ export * from "./context";
 export * from "./express";
 export * from "./fastify";
 export * from "./next";
+export * from "./grpc";

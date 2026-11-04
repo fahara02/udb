@@ -660,6 +660,16 @@ fn grant_policy_entry_parses_as_a_policy_file_entry() {
 }
 
 #[test]
+fn a_snapshot_is_behind_only_when_both_revisions_are_known_and_differ() {
+    assert!(snapshot_predates_revision(Some("r1"), Some("r2")));
+    assert!(!snapshot_predates_revision(Some("r1"), Some("r1")));
+    assert!(!snapshot_predates_revision(None, Some("r2")));
+    assert!(!snapshot_predates_revision(Some("r1"), None));
+    assert!(!snapshot_predates_revision(Some(""), Some("r2")));
+    assert!(!snapshot_predates_revision(Some("r1"), Some("")));
+}
+
+#[test]
 fn a_deny_on_a_snapshot_behind_the_durable_revision_says_so_with_a_retry_time() {
     // Same revision, or nothing known: no note (a real missing grant).
     assert_eq!(stale_snapshot_message(Some("r1"), Some("r1"), 5, 1), None);

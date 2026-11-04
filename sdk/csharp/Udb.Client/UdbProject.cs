@@ -41,7 +41,7 @@ public sealed record UdbProjectConfig
     public string ServiceIdentity { get; init; } = "";
     public string CorrelationId { get; init; } = "";
     public string[] Scopes { get; init; } = Array.Empty<string>();
-    public string ClientCatalogVersion { get; init; } = UdbClient.ProtocolVersion;
+    public string ClientCatalogVersion { get; init; } = "";
     public string BearerToken { get; init; } = "";
     public string ApiKey { get; init; } = "";
 

@@ -49,7 +49,7 @@ $metadata = new UdbMetadata(
     ],
     serviceIdentity: 'examples.php',
     projectId: $projectId,
-    clientCatalogVersion: '1.0.0',
+    clientCatalogVersion: '',
 );
 
 if ($warmup) {

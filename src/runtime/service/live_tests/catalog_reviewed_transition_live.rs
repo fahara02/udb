@@ -1861,6 +1861,80 @@ async fn run_reviewed_catalog_fixture(single_connection: bool, primary_as_target
         Code::FailedPrecondition
     );
     assert_active(&control, &project, &active.catalog_id).await;
+
+    // Widening a column on the ACTIVE catalog loses nothing, so the reviewed path
+    // takes it end to end and the live column changes. The reverse narrowing is
+    // still refused, on the same catalogs.
+    let widened_source = candidate_source.replace(
+        "string lookup_key = 4 [(udb.core.common.v1.pg_column) = {sql_type:\"VARCHAR(80)\" not_null:true}];",
+        "string lookup_key = 4 [(udb.core.common.v1.pg_column) = {sql_type:\"VARCHAR(400)\" not_null:true}];",
+    );
+    assert_ne!(widened_source, candidate_source);
+    let (widened, _) = parsed(&widened_source);
+    let widened_bytes = serde_json::to_vec(&widened).unwrap();
+    let widen_plan = plan(
+        &mut restarted.client,
+        &owner,
+        &project,
+        &active,
+        &widened_bytes,
+        "widen-plan",
+    )
+    .await
+    .expect("a lossless widening can use the reviewed transition");
+    let widen_approval = approve(&mut restarted.client, &owner, &widen_plan)
+        .await
+        .expect("approve the widening");
+    let widen_applied = apply(&mut restarted.client, &owner, &widen_approval)
+        .await
+        .expect("apply and verify the widening");
+    assert_eq!(widen_applied.state, "COMPLETED");
+    let widened_length: Option<i32> = sqlx::query_scalar(
+        "SELECT character_maximum_length::INTEGER FROM information_schema.columns \
+         WHERE table_schema=$1 AND table_name='records' AND column_name='lookup_key'",
+    )
+    .bind(&schema)
+    .fetch_one(&target)
+    .await
+    .expect("read the live column type");
+    assert_eq!(widened_length, Some(400));
+    let widen_stage = stage(
+        &mut restarted.client,
+        &owner,
+        &project,
+        &widened_bytes,
+        &widen_plan.run_id,
+        "widen-stage",
+    )
+    .await
+    .expect("stage the applied widening");
+    let widened_active = activate(
+        &mut restarted.client,
+        &owner,
+        &widen_stage,
+        &widen_plan.run_id,
+        "widen-activate",
+    )
+    .await
+    .expect("activate the applied widening");
+    assert_eq!(widened_active.status, "ACTIVE");
+    assert_active(&control, &project, &widened_active.catalog_id).await;
+    assert_eq!(
+        plan(
+            &mut restarted.client,
+            &owner,
+            &project,
+            &widened_active,
+            &candidate_bytes,
+            "narrow-plan"
+        )
+        .await
+        .unwrap_err()
+        .code(),
+        Code::FailedPrecondition,
+        "VARCHAR(400) to VARCHAR(80) stays destructive"
+    );
+    assert_active(&control, &project, &widened_active.catalog_id).await;
     restarted.stop().await;
     drop(runtime);
     }).catch_unwind().await;

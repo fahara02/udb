@@ -87,11 +87,6 @@ message NotificationTemplate {
       for_each: "ROW"
     }
     required_scope: "notification:admin"
-    // 0.6.6 two-phase migration hint: both unique indexes above gained
-    // `locale`, which the migration applies as drop + re-create of the same
-    // index names; dropping a unique index needs this hint to apply without a
-    // reviewed plan. Remove it in the release after 0.6.6.
-    allow_drop: true
   };
   option (udb.core.common.v1.db_table_security) = {
     tenant_isolation_mode: "tenant"

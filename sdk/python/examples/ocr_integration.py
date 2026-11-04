@@ -13,7 +13,6 @@ async def main() -> None:
             scopes=("udb:write", "udb:event"),
             service_identity="example.service",
             project_id="default",
-            client_catalog_version="1.0.0",
         ),
     ) as client:
         await client.upsert(

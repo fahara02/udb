@@ -48,8 +48,10 @@ pub struct PlanOperation {
     ///
     /// True only where rows or their values can be lost: dropping a table,
     /// column, partition, collection, bucket or store, an in-place column type
-    /// rewrite, or a storage-engine change. Removing a constraint, index, policy,
-    /// default or NOT NULL removes enforcement, not data, so it is false.
+    /// rewrite other than a lossless widening (`VARCHAR(80)` to `VARCHAR(400)` or
+    /// `TEXT`, `INTEGER` to `BIGINT`), or a storage-engine change. Removing a
+    /// constraint, index, policy, default or NOT NULL removes enforcement, not
+    /// data, so it is false.
     #[serde(default)]
     pub data_destructive: bool,
     /// Deterministic fingerprint of this operation (kind+schema+table+column+safety).
@@ -131,7 +133,7 @@ pub fn build_exported_plan(
             column: c.column.clone(),
             safety,
             blocked_reason: c.blocked_reason.clone(),
-            data_destructive: crate::migration::diff::is_data_destructive(&c.kind),
+            data_destructive: crate::migration::diff::operation_is_data_destructive(c),
             fingerprint: fp,
             sql_preview: String::new(),
         }

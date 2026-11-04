@@ -47,7 +47,7 @@ function meta(string $tenant, string $project, string $bearer = ''): UdbMetadata
         scopes: [],
         serviceIdentity: 'php.bench',
         projectId: $project,
-        clientCatalogVersion: '1.0.0',
+        clientCatalogVersion: '',
         bearerToken: $bearer,
     );
 }

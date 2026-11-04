@@ -110,6 +110,63 @@ export function wasDuplicate(resp: any): boolean {
   return flag === true;
 }
 
+// ── Automatic read-your-writes ──────────────────────────────────────────────
+
+/** How long after a write its fence rides on reads. */
+export const READ_YOUR_WRITES_WINDOW_MS = 30_000;
+
+/** How long a fenced read may wait for its write to land. */
+export const READ_FENCE_WAIT_MS = 2_000;
+
+function isEmptyReceipt(r: WriteReceipt): boolean {
+  return (
+    !r.source_lsn &&
+    !r.outbox_seq &&
+    !(r.projection_task_ids && r.projection_task_ids.length) &&
+    !r.manifest_checksum &&
+    !r.written_at_unix_ms
+  );
+}
+
+/** Read a typed `udb.entity.v1.WriteReceipt` (for example `TxStatus.write_receipt`). */
+export function receiptFromProto(raw: any): WriteReceipt | null {
+  if (!raw || typeof raw !== "object") return null;
+  return {
+    source_lsn: String(raw.source_lsn ?? ""),
+    outbox_seq: Number(raw.outbox_seq ?? 0),
+    projection_task_ids: Array.isArray(raw.projection_task_ids) ? raw.projection_task_ids : [],
+    manifest_checksum: String(raw.manifest_checksum ?? ""),
+    written_at_unix_ms: Number(raw.written_at_unix_ms ?? 0),
+  };
+}
+
+/** Keeps the latest write's receipt, so the reads right after it carry a fence and
+ *  see the write even when a replica or a projection serves them. A client holds
+ *  one and every store on that client shares it. */
+export class SessionFence {
+  private receipt: WriteReceipt | null = null;
+  private at = 0;
+
+  /** Keep a mutation response's receipt. A response without one changes nothing. */
+  rememberWrite(response: unknown): void {
+    this.rememberReceipt(receiptFromResponse(response));
+  }
+
+  /** Keep a receipt. An empty receipt changes nothing. */
+  rememberReceipt(receipt: WriteReceipt | null): void {
+    if (!receipt || isEmptyReceipt(receipt)) return;
+    this.receipt = receipt;
+    this.at = Date.now();
+  }
+
+  /** The request-context fields of the latest write's fence; empty when there was
+   *  no write in the window. */
+  readContext(): { read_fence_json?: string } {
+    if (!this.receipt || Date.now() - this.at > READ_YOUR_WRITES_WINDOW_MS) return {};
+    return readFenceContext(readFenceFromReceipt(this.receipt, READ_FENCE_WAIT_MS));
+  }
+}
+
 // ── Consistency-mode selection (RequestContext.consistency / x-udb-consistency) ─
 //
 // TS callers had no ergonomic way to declare a read consistency mode (the request

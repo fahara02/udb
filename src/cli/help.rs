@@ -332,6 +332,23 @@ const COMMANDS: &[CmdHelp] = &[
   key prefix. Create now rejects a duplicate ACTIVE name for the same owner.",
     },
     CmdHelp {
+        name: "auth service-account",
+        group: "Auth & policy",
+        summary: "Create a service-account user and make it ACTIVE through the authenticated native API.",
+        usage: "udb auth service-account <create|activate> --tenant <tenant-id> [flags]",
+        details: "\
+  Needs UDB_AUTH_TARGET (or UDB_GRPC_TARGET) and UDB_AUTH_TOKEN.
+  create:   --tenant <tenant-id> --username <u> --email <e>
+            (--password-env <VAR> | --password-file <path>) [--project <p>] [--reason <r>]
+            Creates the account, then activates it, and prints its user_id. The password
+            is never a flag; a file must be private to its owner.
+  activate: --tenant <tenant-id> --user <uuid> [--reason <r>]
+            Moves a SERVICE_ACCOUNT from PENDING_VERIFICATION to ACTIVE. It refuses a
+            person and a suspended or locked account; ACTIVE is a no-op.
+  Next: `udb auth grant create --tenant <tenant-id> --user <user_id> --identity <svc-id>
+  --scope <s>`. `udb identity apply` does all of this from a declaration file.",
+    },
+    CmdHelp {
         name: "auth grant",
         group: "Auth & policy",
         summary: "Manage typed service-account grants through the authenticated native API.",
@@ -643,7 +660,7 @@ const COMMANDS: &[CmdHelp] = &[
         name: "sdk generate",
         group: "SDK & native",
         summary: "Generate/refresh a language SDK from the embedded RPC manifest + templates.",
-        usage: "udb sdk generate --lang <ts|python|go|java|csharp|php|all> [--out <dir>] [--surface <…>] [--check]",
+        usage: "udb sdk generate --lang <ts|python|go|java|csharp|php|rust|all> [--entities-only] [--out <dir>] [--surface <…>] [--check]",
         details: "\
   --check renders the requested output and exits 1 if any generated file is
   missing or stale, without changing the output tree. Use the same selectors,

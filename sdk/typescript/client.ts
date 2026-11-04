@@ -36,7 +36,7 @@ export function metadata(meta: UdbMetadata): grpc.Metadata {
   headers.set("x-scopes", (meta.scopes ?? []).join(","));
   headers.set("x-service-identity", meta.serviceIdentity ?? "example.service");
   headers.set("x-udb-project-id", meta.projectId ?? "default");
-  headers.set("x-udb-client-catalog-version", meta.clientCatalogVersion ?? UDB_PROTOCOL_VERSION);
+  headers.set("x-udb-client-catalog-version", meta.clientCatalogVersion ?? "");
   if (meta.bearerToken) headers.set("authorization", `Bearer ${meta.bearerToken}`);
   if (meta.apiKey) headers.set("x-api-key", meta.apiKey);
   return headers;

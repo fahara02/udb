@@ -44,13 +44,12 @@ func main() {
 	// The caller identity is attached to every request as gRPC metadata. Broad
 	// scopes + a control-plane purpose so the admin RPCs authorize cleanly.
 	auth := udbclient.NewAuthClient(conn, udbclient.Metadata{
-		TenantID:             "acme",
-		ProjectID:            "billing",
-		Purpose:              "control-plane",
-		ServiceIdentity:      "examples.native-go",
-		CorrelationID:        "native-go-example",
-		Scopes:               []string{"udb:*"},
-		ClientCatalogVersion: "1.0.0",
+		TenantID:        "acme",
+		ProjectID:       "billing",
+		Purpose:         "control-plane",
+		ServiceIdentity: "examples.native-go",
+		CorrelationID:   "native-go-example",
+		Scopes:          []string{"udb:*"},
 	})
 	apiKeys := apikeyv1.NewApiKeyServiceClient(conn)
 	ctx := context.Background()

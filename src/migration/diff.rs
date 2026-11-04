@@ -893,6 +893,15 @@ fn diff_column(
 ) {
     if old.sql_type != new.sql_type {
         let (safety, blocked) = type_change_safety(old, new);
+        // A USING expression can rewrite the values however it likes, so only the
+        // plain cast of a lossless widening keeps every stored value.
+        let reason = if new.using_expression.trim().is_empty()
+            && is_lossless_widening(&old.sql_type, &new.sql_type)
+        {
+            LOSSLESS_WIDENING_REASON
+        } else {
+            "column SQL type changed"
+        };
         ops.push(op(
             ChangeKind::ChangeColumnType,
             safety,
@@ -900,7 +909,7 @@ fn diff_column(
             &table.table,
             &new.column_name,
             &new.sql_type,
-            "column SQL type changed",
+            reason,
             blocked,
         ));
     }
@@ -1152,7 +1161,9 @@ fn type_change_safety<'a>(old: &ManifestColumn, new: &ManifestColumn) -> (Change
     if !new.using_expression.trim().is_empty() {
         return (ChangeSafety::SafeAuto, "");
     }
-    if is_widening_sql_type(&old.sql_type, &new.sql_type) {
+    if is_lossless_widening(&old.sql_type, &new.sql_type)
+        || is_widening_sql_type(&old.sql_type, &new.sql_type)
+    {
         return (ChangeSafety::SafeAuto, "");
     }
     if is_narrowing_sql_type(&old.sql_type, &new.sql_type) {
@@ -1165,6 +1176,102 @@ fn type_change_safety<'a>(old: &ManifestColumn, new: &ManifestColumn) -> (Change
         ChangeSafety::RequiresReview,
         "change_type requires using_expression annotation",
     )
+}
+
+/// The reason of a `ChangeColumnType` whose stored values all survive unchanged.
+/// The operation carries it, so the plan, its approval and its review read one
+/// classification.
+const LOSSLESS_WIDENING_REASON: &str = "column SQL type widened; every stored value is kept";
+
+/// A SQL type split into its canonical name, numeric modifiers and array rank.
+#[derive(Debug, PartialEq, Eq)]
+struct ParsedSqlType {
+    base: String,
+    modifiers: Vec<u32>,
+    array_rank: usize,
+}
+
+fn parse_sql_type(value: &str) -> Option<ParsedSqlType> {
+    let mut rest = value.trim().to_ascii_uppercase();
+    let mut array_rank = 0;
+    while let Some(stripped) = rest.strip_suffix("[]") {
+        rest = stripped.trim_end().to_string();
+        array_rank += 1;
+    }
+    let (name, modifiers) = match rest.split_once('(') {
+        Some((name, tail)) => {
+            let inner = tail.trim().strip_suffix(')')?;
+            let modifiers = inner
+                .split(',')
+                .map(|part| part.trim().parse::<u32>().ok())
+                .collect::<Option<Vec<_>>>()?;
+            (name.trim().to_string(), modifiers)
+        }
+        None => (rest, Vec::new()),
+    };
+    let base = match name
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .as_str()
+    {
+        "INT2" | "SMALLINT" => "SMALLINT",
+        "INT" | "INT4" | "INTEGER" => "INTEGER",
+        "INT8" | "BIGINT" => "BIGINT",
+        "FLOAT4" | "REAL" => "REAL",
+        "FLOAT8" | "DOUBLE PRECISION" => "DOUBLE PRECISION",
+        "CHARACTER VARYING" | "VARCHAR" => "VARCHAR",
+        "DECIMAL" | "NUMERIC" => "NUMERIC",
+        "TEXT" => "TEXT",
+        // Nothing else has a widening below, and CHAR must not: casting it strips
+        // the padding, so its values change.
+        _ => return None,
+    }
+    .to_string();
+    Some(ParsedSqlType {
+        base,
+        modifiers,
+        array_rank,
+    })
+}
+
+/// Whether casting `old` to `new` keeps every value, byte for byte, so the change
+/// cannot lose data. Deliberately narrower than [`is_widening_sql_type`], which
+/// decides what may run unattended: REAL to NUMERIC rounds, JSON to JSONB rewrites
+/// the document, and a bounded target can reject or round what the source holds.
+/// An unknown type or an array-rank change is never a widening.
+pub fn is_lossless_widening(old: &str, new: &str) -> bool {
+    let (Some(old), Some(new)) = (parse_sql_type(old), parse_sql_type(new)) else {
+        return false;
+    };
+    if old.array_rank != new.array_rank {
+        return false;
+    }
+    match (old.base.as_str(), new.base.as_str()) {
+        ("SMALLINT", "INTEGER" | "BIGINT")
+        | ("INTEGER", "BIGINT")
+        | ("REAL", "DOUBLE PRECISION") => true,
+        ("VARCHAR", "TEXT") => true,
+        ("VARCHAR", "VARCHAR") => match (old.modifiers.as_slice(), new.modifiers.as_slice()) {
+            (_, []) => true,
+            ([from], [to]) => to > from,
+            _ => false,
+        },
+        ("SMALLINT" | "INTEGER" | "BIGINT", "NUMERIC") => new.modifiers.is_empty(),
+        ("NUMERIC", "NUMERIC") => match (old.modifiers.as_slice(), new.modifiers.as_slice()) {
+            (_, []) => true,
+            ([], _) => false,
+            (from, to) => {
+                let scale = |modifiers: &[u32]| modifiers.get(1).copied().unwrap_or(0);
+                let (from_scale, to_scale) = (scale(from), scale(to));
+                // Neither the fractional nor the integral digits may shrink.
+                to_scale >= from_scale
+                    && to[0].checked_sub(to_scale) >= from[0].checked_sub(from_scale)
+                    && from != to
+            }
+        },
+        _ => false,
+    }
 }
 
 fn is_widening_sql_type(old: &str, new: &str) -> bool {
@@ -1721,7 +1828,7 @@ fn rename_sources(tables: &[ManifestTable]) -> BTreeSet<String> {
 fn finalize_ops(ops: &mut [ChangeOperation]) {
     for op in ops.iter_mut() {
         op.priority = priority(&op.kind);
-        op.data_destructive = is_data_destructive(&op.kind);
+        op.data_destructive = operation_is_data_destructive(op);
         op.fingerprint = operation_fingerprint(op);
     }
     ops.sort_by(|a, b| {
@@ -1751,6 +1858,13 @@ fn operation_fingerprint(op: &ChangeOperation) -> String {
     format!("sha256:{:x}", hasher.finalize())
 }
 
+/// Whether this operation can destroy committed row data: its kind's class, less
+/// a type change the differ proved is a lossless widening.
+pub fn operation_is_data_destructive(op: &ChangeOperation) -> bool {
+    is_data_destructive(&op.kind)
+        && !(op.kind == ChangeKind::ChangeColumnType && op.reason == LOSSLESS_WIDENING_REASON)
+}
+
 /// Whether a change kind can destroy committed row data.
 ///
 /// Deliberately conservative: anything that removes rows, removes a column's
@@ -1769,6 +1883,7 @@ pub fn is_data_destructive(kind: &ChangeKind) -> bool {
         // An in-place type rewrite can be lossy (narrowing, failed cast); the
         // planner emits a USING expression where it can, but the operation is
         // still value-rewriting, so it must not be auto-approved as harmless.
+        // The kind alone cannot see a widening: see `operation_is_data_destructive`.
         ChangeKind::ChangeColumnType => true,
         // Storage-engine and validator rewrites re-materialise existing rows.
         ChangeKind::ChangeTableEngine => true,
@@ -2874,6 +2989,116 @@ mod tests {
                 && change.safety == ChangeSafety::Blocked
                 && change.column == "amount"
         }));
+    }
+
+    fn type_change(old_type: &str, new_type: &str, using: &str) -> ChangeOperation {
+        let mut new_column = column("name", new_type);
+        new_column.using_expression = using.to_string();
+        let old_manifest = manifest(table(vec![column("name", old_type)]), "old", "old-table");
+        let new_manifest = manifest(table(vec![new_column]), "new", "new-table");
+        diff_manifests(Some(&old_manifest), &new_manifest)
+            .into_iter()
+            .find(|change| change.kind == ChangeKind::ChangeColumnType)
+            .expect("a type change")
+    }
+
+    /// A widening a consumer could not ship: `catalog stage` needs it auto-safe and
+    /// reviewed activation needs it non-destructive.
+    #[test]
+    fn widening_a_column_is_safe_and_not_destructive() {
+        for (old_type, new_type) in [
+            ("VARCHAR(80)", "VARCHAR(400)"),
+            ("varchar(80)", "CHARACTER VARYING(400)"),
+            ("VARCHAR(80)", "VARCHAR"),
+            ("VARCHAR(80)", "TEXT"),
+            ("VARCHAR", "TEXT"),
+            ("INTEGER", "BIGINT"),
+            ("INT", "BIGINT"),
+            ("INT4", "INT8"),
+            ("SMALLINT", "INTEGER"),
+            ("REAL", "DOUBLE PRECISION"),
+            ("BIGINT", "NUMERIC"),
+            ("NUMERIC(10,2)", "NUMERIC(12,2)"),
+            ("NUMERIC(10,2)", "NUMERIC(12,4)"),
+            ("NUMERIC(10,2)", "NUMERIC"),
+            ("VARCHAR(80)[]", "VARCHAR(400)[]"),
+            ("VARCHAR(80)[]", "TEXT[]"),
+        ] {
+            let change = type_change(old_type, new_type, "");
+            assert_eq!(
+                change.safety,
+                ChangeSafety::SafeAuto,
+                "{old_type} -> {new_type}"
+            );
+            assert!(change.blocked_reason.is_empty(), "{old_type} -> {new_type}");
+            assert!(
+                !change.data_destructive,
+                "{old_type} -> {new_type} keeps every value"
+            );
+        }
+    }
+
+    #[test]
+    fn narrowing_and_rewriting_a_column_stay_destructive() {
+        for (old_type, new_type) in [
+            ("VARCHAR(400)", "VARCHAR(80)"),
+            ("VARCHAR", "VARCHAR(80)"),
+            ("TEXT", "VARCHAR(80)"),
+            ("TEXT", "VARCHAR"),
+            ("BIGINT", "INTEGER"),
+            ("INTEGER", "SMALLINT"),
+            ("DOUBLE PRECISION", "REAL"),
+            ("INTEGER", "NUMERIC(3)"),
+            ("NUMERIC", "NUMERIC(10,2)"),
+            ("NUMERIC(10,2)", "NUMERIC(8,2)"),
+            ("NUMERIC(10,2)", "NUMERIC(10,1)"),
+            ("NUMERIC(10,4)", "NUMERIC(10,6)"),
+            ("REAL", "NUMERIC"),
+            ("JSON", "JSONB"),
+            ("CHAR(4)", "TEXT"),
+            ("VARCHAR(80)", "VARCHAR(80)[]"),
+            ("VARCHAR(80)[]", "TEXT"),
+            ("UUID", "TEXT"),
+            ("TEXT", "INTEGER"),
+        ] {
+            assert!(
+                type_change(old_type, new_type, "").data_destructive,
+                "{old_type} -> {new_type} must stay destructive"
+            );
+        }
+    }
+
+    /// A USING expression can rewrite values, whatever the two types are.
+    #[test]
+    fn widening_with_a_using_expression_stays_destructive() {
+        let change = type_change("VARCHAR(80)", "VARCHAR(400)", "left(name, 3)");
+        assert!(change.data_destructive);
+    }
+
+    #[test]
+    fn widening_renders_a_plain_alter_type_without_using() {
+        let new_table = table(vec![column("name", "VARCHAR(400)")]);
+        let old_manifest = manifest(
+            table(vec![column("name", "VARCHAR(80)")]),
+            "old",
+            "old-table",
+        );
+        let new_manifest = manifest(new_table, "new", "new-table");
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+        let artifacts = crate::generation::generate_delta_sql(
+            &new_manifest,
+            &changes,
+            &crate::generation::SqlGenerationConfig::default(),
+        );
+        let sql = artifacts
+            .iter()
+            .map(|artifact| artifact.content.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            sql.contains("ALTER COLUMN \"name\" TYPE VARCHAR(400);"),
+            "{sql}"
+        );
     }
 
     #[test]

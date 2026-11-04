@@ -1298,3 +1298,299 @@ async fn served_update_by_unique_non_pk_key_never_silently_affects_zero_live() {
     );
     teardown(&pool, &schema, &tenant).await;
 }
+
+// ── explicit null on a write ─────────────────────────────────────────────────
+
+/// `IS NULL` for one column of one row, read past every served scope.
+async fn raw_is_null(pool: &sqlx::PgPool, schema: &str, column: &str, id: &str) -> bool {
+    sqlx::query_scalar(&format!(
+        "SELECT \"{column}\" IS NULL FROM \"{schema}\".nulls WHERE id = $1"
+    ))
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .unwrap_or_else(|err| panic!("read {column} IS NULL: {err}"))
+}
+
+/// An explicit null writes SQL NULL on Update and on Upsert for every column
+/// type, so `IS NULL`, NOT NULL and partial indexes all see it. Update is served
+/// from planner SQL + `bind_one` and Upsert from the bridged IR emitter, so the two
+/// have separate bind paths. Update with a partial change set is also what the SDKs
+/// send for a patch.
+///
+/// Revert-proof: binding `Json(null)` in `bind_one` stores the jsonb scalar `null`
+/// on Update (`doc IS NULL` false, and the NOT NULL column accepts it).
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn served_explicit_null_writes_sql_null_for_every_column_type_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        eprintln!("data-plane live DSN unset — skipping explicit null writes");
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool)
+        .await
+        .expect("bootstrap system catalog");
+
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    let tenant = Uuid::new_v4().to_string();
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".nulls (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, \
+         doc JSONB, required_doc JSONB NOT NULL DEFAULT '{{}}', attempts INTEGER, \
+         seen_at TIMESTAMPTZ, active BOOLEAN, note TEXT)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create nulls");
+
+    const MSG: &str = "acme.dp.v1.NullRow";
+    let mut table = ManifestTable {
+        proto_package: "acme.dp.v1".to_string(),
+        message_name: "NullRow".to_string(),
+        schema: schema.clone(),
+        table: "nulls".to_string(),
+        primary_key: vec!["id".to_string()],
+        table_security: ManifestTableSecurity {
+            tenant_column: "tenant_id".to_string(),
+            ..ManifestTableSecurity::default()
+        },
+        ..ManifestTable::default()
+    };
+    table.columns = vec![
+        col("id", "TEXT", true),
+        col("tenant_id", "TEXT", false),
+        col("doc", "JSONB", false),
+        col("required_doc", "JSONB", false),
+        col("attempts", "INTEGER", false),
+        col("seen_at", "TIMESTAMPTZ", false),
+        col("active", "BOOLEAN", false),
+        col("note", "TEXT", false),
+    ];
+    let svc = dp_service(
+        &dsn,
+        CatalogManifest {
+            tables: vec![table],
+            ..CatalogManifest::default()
+        },
+    )
+    .await;
+    let id = format!("row-{}", Uuid::new_v4().simple());
+    let key = json!({"id": id, "tenant_id": tenant});
+    let seeded = json!({
+        "id": id,
+        "tenant_id": tenant,
+        "doc": {"k": null, "x": 1},
+        "attempts": 7,
+        "seen_at": "2026-11-05T08:30:00Z",
+        "active": true,
+        "note": "n",
+    });
+    const NULLABLE: [&str; 5] = ["doc", "attempts", "seen_at", "active", "note"];
+
+    // A null nested inside a document stays a JSON null in that document.
+    served_upsert(&svc, &tenant, MSG, seeded.clone(), "")
+        .await
+        .expect("seed row");
+    let nested: Option<String> = sqlx::query_scalar(&format!(
+        "SELECT jsonb_typeof(doc->'k') FROM \"{schema}\".nulls WHERE id = $1"
+    ))
+    .bind(&id)
+    .fetch_one(&pool)
+    .await
+    .expect("read nested type");
+    assert_eq!(nested.as_deref(), Some("null"));
+
+    // Update, one column at a time.
+    for column in NULLABLE {
+        served_upsert(&svc, &tenant, MSG, seeded.clone(), "")
+            .await
+            .expect("reseed row");
+        assert!(
+            !raw_is_null(&pool, &schema, column, &id).await,
+            "{column} is seeded"
+        );
+        let mut changes = serde_json::Map::new();
+        changes.insert(column.to_string(), serde_json::Value::Null);
+        super::data_plane_live::served_update(
+            &svc,
+            &tenant,
+            MSG,
+            key.clone(),
+            serde_json::Value::Object(changes),
+        )
+        .await
+        .unwrap_or_else(|status| panic!("Update {column} to null: {status}"));
+        assert!(
+            raw_is_null(&pool, &schema, column, &id).await,
+            "Update with null must leave {column} IS NULL"
+        );
+    }
+
+    // A jsonb null can no longer slip past NOT NULL, and the document stays.
+    let refused = super::data_plane_live::served_update(
+        &svc,
+        &tenant,
+        MSG,
+        key.clone(),
+        json!({"required_doc": null}),
+    )
+    .await;
+    assert!(refused.is_err(), "NOT NULL must refuse an explicit null");
+    assert!(!raw_is_null(&pool, &schema, "required_doc", &id).await);
+
+    // Upsert, every column at once.
+    served_upsert(&svc, &tenant, MSG, seeded.clone(), "")
+        .await
+        .expect("reseed row");
+    let mut cleared = key.as_object().cloned().expect("key is an object");
+    for column in NULLABLE {
+        cleared.insert(column.to_string(), serde_json::Value::Null);
+    }
+    served_upsert(&svc, &tenant, MSG, serde_json::Value::Object(cleared), "")
+        .await
+        .expect("Upsert with nulls");
+    for column in NULLABLE {
+        assert!(
+            raw_is_null(&pool, &schema, column, &id).await,
+            "Upsert with null must leave {column} IS NULL"
+        );
+    }
+    teardown(&pool, &schema, &tenant).await;
+}
+
+/// One SQL text must not be reused across bind shapes on a connection. sqlx caches
+/// a prepared statement by SQL text and keeps the parameter types of the first
+/// prepare, so the second write below used to reach a statement prepared for the
+/// first one. Run on a ONE-connection pool because the cache is per connection,
+/// which also makes the failure intermittent on a real pool.
+///
+/// Revert-proof: without `statement_for_bind_shape` and the jsonb-typed NULL, the
+/// second write fails with `invalid input syntax for type json`, detail
+/// `Token "\x01" is invalid` (the jsonb version byte read as text), and without the
+/// bind shape alone the DOUBLE PRECISION value `5.5` is stored as the int8 reading of
+/// its float8 bytes.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn compiled_upsert_survives_a_changing_bind_shape_on_one_connection_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        eprintln!("data-plane live DSN unset — skipping compiled upsert bind shapes");
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&dsn)
+        .await
+        .expect("connect one-connection pool");
+
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    let tenant = Uuid::new_v4().to_string();
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".shapes (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, \
+         pins JSONB, provenance JSONB, ratio DOUBLE PRECISION)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create shapes");
+
+    const MSG: &str = "acme.dp.v1.ShapeRow";
+    let mut table = ManifestTable {
+        proto_package: "acme.dp.v1".to_string(),
+        message_name: "ShapeRow".to_string(),
+        schema: schema.clone(),
+        table: "shapes".to_string(),
+        primary_key: vec!["id".to_string()],
+        table_security: ManifestTableSecurity {
+            tenant_column: "tenant_id".to_string(),
+            ..ManifestTableSecurity::default()
+        },
+        ..ManifestTable::default()
+    };
+    table.columns = vec![
+        col("id", "TEXT", true),
+        col("tenant_id", "TEXT", false),
+        col("pins", "JSONB", false),
+        col("provenance", "JSONB", false),
+        col("ratio", "DOUBLE PRECISION", false),
+    ];
+    let manifest = CatalogManifest {
+        tables: vec![table],
+        ..CatalogManifest::default()
+    };
+    let context = crate::planning::broker::RequestContext {
+        tenant_id: tenant.clone(),
+        purpose: "admin".to_string(),
+        scopes: vec!["udb:write".to_string()],
+        ..Default::default()
+    };
+
+    // The column set never changes; only the shape of the values does.
+    let rows = [
+        ("a", json!(null), json!({}), json!(5)),
+        ("b", json!({}), json!(null), json!(5.5)),
+        ("c", json!("{\"a\":1}"), json!({}), json!(5)),
+        ("d", json!({"a": 1}), json!("[]"), json!(5.5)),
+    ];
+    for (id, pins, provenance, ratio) in rows {
+        let statement = crate::runtime::core::bridged_pg_upsert_statement(
+            &manifest,
+            &crate::planning::broker::UpsertPlanRequest {
+                context: context.clone(),
+                message_type: MSG.to_string(),
+                record: json!({
+                    "id": id,
+                    "tenant_id": tenant,
+                    "pins": pins,
+                    "provenance": provenance,
+                    "ratio": ratio,
+                }),
+                ..Default::default()
+            },
+        )
+        .expect("the record lowers to a bridged statement");
+        crate::runtime::core::bind_typed_generic_pg_params(
+            sqlx::query(&statement.sql),
+            &statement.params,
+            Some(&statement.param_types),
+        )
+        .expect("bind")
+        .execute(&pool)
+        .await
+        .unwrap_or_else(|err| panic!("write row {id}: {err}"));
+    }
+
+    let row = |id: &'static str, predicate: &'static str| {
+        let sql = format!("SELECT {predicate} FROM \"{schema}\".shapes WHERE id = '{id}'");
+        let pool = pool.clone();
+        async move {
+            let holds: bool = sqlx::query_scalar(&sql)
+                .fetch_one(&pool)
+                .await
+                .unwrap_or_else(|err| panic!("read {sql}: {err}"));
+            assert!(holds, "{sql}");
+        }
+    };
+    row(
+        "a",
+        "pins IS NULL AND provenance = '{}'::jsonb AND ratio = 5",
+    )
+    .await;
+    row(
+        "b",
+        "pins = '{}'::jsonb AND provenance IS NULL AND ratio = 5.5",
+    )
+    .await;
+    // JSON text is parsed into a document, not stored as a JSON string.
+    row("c", "pins = '{\"a\":1}'::jsonb AND ratio = 5").await;
+    row(
+        "d",
+        "pins = '{\"a\":1}'::jsonb AND provenance = '[]'::jsonb AND ratio = 5.5",
+    )
+    .await;
+
+    teardown(&pool, &schema, &tenant).await;
+}

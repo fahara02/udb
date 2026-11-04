@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
-import path from "node:path";
 import type { TestContext } from "node:test";
 import { Table, codeOf, type StorePlane } from "../stores";
+import { tableCasesPath } from "../udbtest/conformance";
 
 interface CaseStep {
   op: string;
@@ -14,8 +14,7 @@ interface CaseStep {
   expect?: { error?: string; row?: Record<string, unknown> };
 }
 
-const CASES_PATH = path.join(__dirname, "..", "..", "..", "conformance", "table-cases.json");
-const contract = JSON.parse(fs.readFileSync(CASES_PATH, "utf8"));
+const contract = JSON.parse(fs.readFileSync(tableCasesPath(), "utf8"));
 
 function substitute(values: Record<string, unknown> | undefined, id: string): Record<string, unknown> {
   return Object.fromEntries(Object.entries(values ?? {}).map(([key, value]) =>

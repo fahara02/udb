@@ -1307,7 +1307,13 @@ pub fn run() {
         Command::Lint => {
             let manifest = CatalogManifest::from_schemas(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
-            let report = lint_catalog(&manifest);
+            let mut report = lint_catalog(&manifest);
+            // The manifest cannot show a message the parser dropped because
+            // another one already declares its table.
+            if let Ok(parsed) = parse_directory_report(&proto_root, &ParserConfig::new(&namespace))
+            {
+                udb::generation::lint::add_parser_findings(&mut report, &parsed.diagnostics);
+            }
             let exit_code = if report.passed { 0 } else { 1 };
             // Style hint (raw-source pass): the manifest lint runs on the
             // compiled descriptor and cannot see physical line layout. Dense

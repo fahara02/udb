@@ -1,8 +1,15 @@
 {
   "name": "@udb_plus/sdk",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "TypeScript/Node gRPC client for the Universal Data Broker (UDB) — DataBroker data plane plus the native Authn/Authz control plane.",
-  "keywords": ["udb", "grpc", "database", "broker", "multi-tenant", "sdk"],
+  "keywords": [
+    "udb",
+    "grpc",
+    "database",
+    "broker",
+    "multi-tenant",
+    "sdk"
+  ],
   "type": "commonjs",
   "license": "MIT",
   "author": "fahara02",
@@ -43,6 +50,10 @@
     "./messaging": {
       "types": "./dist/messaging.d.ts",
       "default": "./dist/messaging.js"
+    },
+    "./udbtest": {
+      "types": "./dist/udbtest/index.d.ts",
+      "default": "./dist/udbtest/index.js"
     }
   },
   "files": [
@@ -60,7 +71,7 @@
     "typecheck": "tsc --noEmit",
     "bundle-proto": "node scripts/bundle-proto.mjs",
     "build": "npm run bundle-proto && tsc -p tsconfig.build.json",
-    "test": "npm run bundle-proto && tsc -p tsconfig.test.json && node --test dist-test/facade.test.js dist-test/sdkhelpers.test.js dist-test/live-auth.test.js dist-test/negotiation.test.js dist-test/outbound.test.js dist-test/refresh.test.js dist-test/retry.test.js dist-test/stores.test.js dist-test/live-admin.test.js dist-test/live-refresh-rotation.test.js dist-test/live-service-accounts.test.js",
+    "test": "npm run bundle-proto && tsc -p tsconfig.test.json && node --test dist-test/facade.test.js dist-test/sdkhelpers.test.js dist-test/live-auth.test.js dist-test/negotiation.test.js dist-test/outbound.test.js dist-test/refresh.test.js dist-test/retry.test.js dist-test/stores.test.js dist-test/record-codec.test.js dist-test/data-parity.test.js dist-test/udbtest.test.js dist-test/live-parity-data.test.js dist-test/live-admin.test.js dist-test/live-refresh-rotation.test.js dist-test/live-service-accounts.test.js dist-test/parity-surface.test.js dist-test/live-parity-surface.test.js",
     "build:mls-wasm": "node scripts/build-mls-wasm.mjs",
     "test:mls": "npm run bundle-proto && tsc -p tsconfig.test.json && node --test dist-test/messaging.test.js dist-test/live-messaging.test.js",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('dist-test',{recursive:true,force:true})\"",
@@ -68,7 +79,8 @@
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.12.2",
-    "@grpc/proto-loader": "^0.7.13"
+    "@grpc/proto-loader": "^0.7.13",
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

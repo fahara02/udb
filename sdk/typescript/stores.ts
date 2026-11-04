@@ -7,15 +7,30 @@
 
 import { randomUUID } from "node:crypto";
 import * as grpc from "@grpc/grpc-js";
-import { UdbError } from "./generatedClient";
+import { SessionFence, receiptFromProto } from "./consistency";
+import { UdbConflictError, UdbNotFoundError } from "./entity";
+import { CallOptions, UdbError } from "./generatedClient";
+import { MessageSchema, ProtoSchemas, protoSchemas } from "./protoSchema";
+import {
+  RawJson,
+  WriteMode,
+  decodeEventPayload,
+  decodeRecord,
+  encodeEvent,
+  encodeRecord,
+  formatTimestamp,
+  recordToJson,
+} from "./recordCodec";
 
 const DATABROKER = "udb.services.v1.DataBroker";
 
 /** The transport a store needs: the generated `UdbCore` satisfies it. */
 export interface StorePlane {
-  unary(service: string, method: string, request: any): Promise<any>;
-  serverStream?(service: string, method: string, request: any): any;
-  bidiStream?(service: string, method: string): any;
+  unary(service: string, method: string, request: any, call?: CallOptions): Promise<any>;
+  serverStream?(service: string, method: string, request: any, call?: CallOptions): any;
+  bidiStream?(service: string, method: string, call?: CallOptions): any;
+  /** The client's settings, when the plane is a real client. */
+  opts?: { protoRoot?: string; meta?: { correlationId?: string } };
 }
 
 // ── Error codes ─────────────────────────────────────────────────────────────
@@ -121,8 +136,11 @@ export interface ErrorInfo {
   constraint?: string;
   column?: string;
   fixHint?: string;
+  /** What the caller lacks (scope, rule, purpose, ...). */
   missing?: Record<string, string>;
   retryAfterMs?: number;
+  /** The underlying gRPC status code; undefined for an error that is not a call failure. */
+  grpc?: number;
 }
 
 /** The row a keyed read or conditional write named does not exist. */
@@ -135,22 +153,59 @@ export class ConflictError extends Error {
   readonly code = ErrorCode.Conflict;
 }
 
-/** Classify any error from a store, the generated client or a raw gRPC call. */
+/** Find the broker failure inside an error: a store's error keeps it as its cause. */
+function underlyingFailure(err: unknown): UdbError | undefined {
+  let current: any = err;
+  for (let depth = 0; current && depth < 8; depth += 1) {
+    if (current instanceof UdbError) return current;
+    if (current.udb instanceof UdbError) return current.udb;
+    current = current.cause;
+  }
+  return undefined;
+}
+
+/** A trailer gives the kind as its number; a transaction frame as its enum name. */
+function kindNumber(kind: unknown): number | undefined {
+  if (typeof kind === "number") return kind;
+  if (typeof kind === "string") {
+    const name = kind.replace(/^ERROR_KIND_/, "") as keyof typeof ErrorKind;
+    return ErrorKind[name];
+  }
+  return undefined;
+}
+
+/** Classify any error from a store, the generated client or a raw gRPC call: the
+ *  broker's stable reason decides when present, then the typed kind, then the gRPC
+ *  code. An error that is not a call failure has code `unknown`. */
 export function inspect(err: unknown): ErrorInfo {
-  if (err instanceof NotFoundError) return { code: ErrorCode.NotFound };
-  if (err instanceof ConflictError) return { code: ErrorCode.Conflict };
-  const udb = err instanceof UdbError ? err : (err as any)?.udb instanceof UdbError ? (err as any).udb : undefined;
-  if (!udb) return { code: ErrorCode.Unknown };
+  const udb = underlyingFailure(err);
+  const sentinel =
+    err instanceof ConflictError || err instanceof UdbConflictError
+      ? ErrorCode.Conflict
+      : err instanceof NotFoundError || err instanceof UdbNotFoundError
+        ? ErrorCode.NotFound
+        : undefined;
+  if (!udb) {
+    const code = (err as { code?: unknown } | null | undefined)?.code;
+    const status = typeof code === "number" ? code : undefined;
+    return { code: sentinel ?? (status !== undefined ? GRPC_CODES[status] : undefined) ?? ErrorCode.Unknown, grpc: status };
+  }
   const detail = udb.detail ?? {};
   const reason = typeof detail.reason === "string" && detail.reason.startsWith("UDB_") ? detail.reason : undefined;
+  const kind = kindNumber(detail.kind);
+  // A validation kind says little on its own: the gRPC code decides, so a
+  // FAILED_PRECONDITION stays a precondition rather than an invalid request.
+  const byKind = kind !== undefined && kind !== ErrorKind.VALIDATION ? KIND_CODES[kind as ErrorKind] : undefined;
+  const retryAfter = Number(detail.retry_after_ms ?? 0);
   return {
-    code: (reason && REASON_CODES[reason]) || KIND_CODES[detail.kind as ErrorKind] || GRPC_CODES[udb.code] || ErrorCode.Unknown,
+    code: (reason && REASON_CODES[reason]) || byKind || sentinel || GRPC_CODES[udb.code] || ErrorCode.Unknown,
     reason,
     constraint: detail.constraint as string | undefined,
     column: detail.column as string | undefined,
     fixHint: detail.fix_hint as string | undefined,
     missing: detail.missing as Record<string, string> | undefined,
-    retryAfterMs: detail.retry_after_ms as number | undefined,
+    retryAfterMs: retryAfter > 0 ? retryAfter : undefined,
+    grpc: udb.code,
   };
 }
 
@@ -162,19 +217,86 @@ export const isUnique = (err: unknown, constraint?: string): boolean => {
   return info.code === ErrorCode.Unique && (!constraint || info.constraint === constraint);
 };
 
+/** The scope the broker said the caller lacks ("" when the failure is not a missing scope). */
+export function missingScope(err: unknown): string {
+  const info = inspect(err);
+  return info.code === ErrorCode.ScopeMissing ? info.missing?.scope ?? "" : "";
+}
+
+/** Whether `err` is a compare-and-swap precondition failure: the target row was
+ *  absent or a field no longer matched. Check it after a write with `expected` to
+ *  decide whether to re-read and retry. Other FAILED_PRECONDITION refusals, such as
+ *  a conditional write not keyed by a primary key, are usage errors a retry cannot
+ *  fix, and are not conflicts. The message text is never matched. */
+export function isCasConflict(err: unknown): boolean {
+  const udb = underlyingFailure(err);
+  if (!udb || udb.code !== grpc.status.FAILED_PRECONDITION) return false;
+  const reason = udb.detail?.reason;
+  return reason === "UDB_CAS_CONFLICT" || reason === "UDB_CAS_ROW_MISSING" || reason === "UDB_REVISION_CONFLICT";
+}
+
 // ── Table ───────────────────────────────────────────────────────────────────
 
-/** The primary-key values of one row, by field name. */
+/** The columns of one row, by field name: every primary-key column, or every
+ *  column of one declared unique key. */
 export type RowKey = Record<string, unknown>;
 
 export interface TablePage<T> {
   rows: T[];
+  /** True when the page is full: more rows may match. */
   hasMore: boolean;
+  /** Continues the walk (empty on the last page, or when no limit was set). */
+  next: string;
+  /** Every matching row, when `includeTotal` was set. */
   total?: number;
+  /** Columns that came back as the redaction placeholder; never write those back. */
+  redacted: string[];
+}
+
+/** Options of {@link Table.select}. */
+export interface TableSelectOptions {
+  /** The page size (0 = the broker default of 100). */
+  limit?: number;
+  /** Continues a previous page ({@link TablePage.next}). */
+  pageToken?: string;
+  /** Sort by these columns (`-column` for descending). */
+  orderBy?: readonly string[];
+  /** Also count every matching row into `total`. */
+  includeTotal?: boolean;
+  /** Read only these columns (empty = every non-PII column). */
+  fields?: readonly string[];
+  primaryRead?: boolean;
+}
+
+/** Options of {@link Table}. */
+export interface TableOptions {
+  /** The key fields; read from the message's annotations when omitted. */
+  key?: string[];
+  /** The client's read-your-writes state, shared by its stores. */
+  fence?: SessionFence;
+  /** The proto tree declaring the message; the bundled one by default. */
+  schemas?: ProtoSchemas;
 }
 
 function jsonBytes(value: unknown): Buffer {
-  return Buffer.from(JSON.stringify(value), "utf8");
+  return Buffer.from(recordToJson(value), "utf8");
+}
+
+/** Make a value a google.protobuf.Struct can carry without losing it: an integer
+ *  beyond 2^53 travels as its decimal string, which the broker reads exactly. */
+function structSafe(value: unknown): unknown {
+  if (typeof value === "bigint") return value.toString();
+  if (value instanceof RawJson) return value.toJSON();
+  if (value instanceof Date) return formatTimestamp(value);
+  if (Array.isArray(value)) return value.map(structSafe);
+  if (value && typeof value === "object" && !Buffer.isBuffer(value) && !(value instanceof Uint8Array)) {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, structSafe(item)]));
+  }
+  return value;
+}
+
+function structMap(value: Record<string, unknown>): Record<string, unknown> {
+  return structSafe(value) as Record<string, unknown>;
 }
 
 function decodeRows<T>(response: any): T[] {
@@ -182,7 +304,7 @@ function decodeRows<T>(response: any): T[] {
   const items: unknown[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
   const rows: T[] = [];
   for (const item of items) {
-    const text = Buffer.isBuffer(item) ? item.toString("utf8") : typeof item === "string" ? item : "";
+    const text = Buffer.isBuffer(item) || item instanceof Uint8Array ? Buffer.from(item).toString("utf8") : typeof item === "string" ? item : "";
     if (!text) continue;
     const parsed = JSON.parse(text);
     if (Array.isArray(parsed)) rows.push(...(parsed as T[]));
@@ -191,66 +313,171 @@ function decodeRows<T>(response: any): T[] {
   return rows;
 }
 
+/** Find the proto declaration of a message; undefined when the tree has none, as
+ *  for a transport-only unit test over an undeclared type. */
+function schemaOf(schemas: ProtoSchemas, messageType: string): MessageSchema | undefined {
+  try {
+    return schemas.find(messageType);
+  } catch {
+    return undefined;
+  }
+}
+
+function schemasOf(plane: StorePlane, given?: ProtoSchemas): ProtoSchemas {
+  return given ?? protoSchemas(plane.opts?.protoRoot);
+}
+
+/** The whole row a write stores, through the column rules when the message is
+ *  declared. An unknown property is refused rather than dropped. */
+function writeRecord(schema: MessageSchema | undefined, schemas: ProtoSchemas, messageType: string, row: Record<string, unknown>): unknown {
+  if (!schema) return row;
+  for (const key of Object.keys(row)) {
+    if (!schema.field(key)) throw new Error(`udb: ${messageType} has no field "${key}"`);
+  }
+  return encodeRecord(messageType, decodeRecord(messageType, row, schemas), WriteMode.Insert, schemas);
+}
+
 /** A typed store over one entity. Writes go through the broker's data plane, so
- *  policies, tenancy, projections and events apply as for any write. */
-export class Table<T extends Record<string, unknown>> {
+ *  policies, tenancy, projections and events apply as for any write. After a
+ *  write, the next reads through the same fence carry that write's read fence. */
+export class Table<T extends Record<string, unknown> = Record<string, unknown>> {
+  private readonly fence?: SessionFence;
+  private readonly schemas: ProtoSchemas;
+  private readonly explicitKey?: string[];
+
   constructor(
     private readonly plane: StorePlane,
     readonly messageType: string,
-    private readonly opts: { key: string[] },
+    opts: TableOptions = {},
   ) {
-    if (!opts.key.length) throw new Error(`udb: Table(${messageType}) needs its key fields`);
+    if (opts.key && !opts.key.length) throw new Error(`udb: Table(${messageType}) needs its key fields`);
+    this.explicitKey = opts.key;
+    this.fence = opts.fence;
+    this.schemas = schemasOf(plane, opts.schemas);
   }
 
-  /** The filter that addresses exactly one row. */
+  private get schema(): MessageSchema | undefined {
+    return schemaOf(this.schemas, this.messageType);
+  }
+
+  private get key(): string[] {
+    return this.explicitKey ?? this.schema?.primaryKeys ?? [];
+  }
+
+  /** The filter that addresses one row: the key fields of `key`, or `key` itself
+   *  when it names another unique key. */
   keyFilter(key: RowKey): Record<string, unknown> {
+    const fields = this.key;
     const filter: Record<string, unknown> = {};
-    for (const field of this.opts.key) {
-      if (!(field in key)) throw new Error(`udb: ${this.messageType} key is missing ${field}`);
-      filter[field] = key[field];
+    if (fields.length && fields.every((field) => field in key)) {
+      for (const field of fields) filter[field] = key[field];
+      return structMap(filter);
     }
-    return filter;
+    if (this.explicitKey) {
+      const missing = fields.find((field) => !(field in key));
+      throw new Error(`udb: ${this.messageType} key is missing ${missing}`);
+    }
+    if (Object.keys(key).length === 0) throw new Error(`udb: ${this.messageType} key is empty`);
+    return structMap(key);
   }
 
+  /** The primary key of `row`. Throws when a primary-key column has no value. */
+  keyOf(row: Partial<T>): RowKey {
+    const fields = this.key;
+    if (fields.length === 0) throw new Error(`udb: ${this.messageType} declares no primary key`);
+    const key: RowKey = {};
+    for (const field of fields) {
+      const value = (row as Record<string, unknown>)[field];
+      if (value === undefined || value === null || value === "") {
+        throw new Error(`udb: ${this.messageType} has no value for primary-key column ${field}`);
+      }
+      key[field] = value;
+    }
+    return key;
+  }
+
+  /** The row with `key`. A missing row throws {@link NotFoundError}. */
   async get(key: RowKey): Promise<T> {
-    const page = await this.select(this.keyFilter(key), { limit: 1 });
-    if (!page.rows.length) throw new NotFoundError(`udb: ${this.messageType} ${JSON.stringify(key)} not found`);
+    const page = await this.select(this.keyFilter(key), { limit: 2 });
+    if (page.rows.length === 0) throw new NotFoundError(`udb: ${this.messageType} ${JSON.stringify(key)} not found`);
+    if (page.rows.length > 1) {
+      throw new Error(`udb: ${this.messageType} key ${JSON.stringify(key)} matched more than one row; address a primary or unique key`);
+    }
     return page.rows[0];
   }
 
-  async select(
-    filter: Record<string, unknown> = {},
-    opts: { limit?: number; includeTotal?: boolean; primaryRead?: boolean } = {},
-  ): Promise<TablePage<T>> {
-    const response = await this.plane.unary(DATABROKER, "Select", {
+  /** One page of rows matching `filter`. */
+  async select(filter: Record<string, unknown> = {}, opts: TableSelectOptions = {}): Promise<TablePage<T>> {
+    const request: Record<string, unknown> = {
       message_type: this.messageType,
-      filter,
+      filter: structMap(filter),
       limit: opts.limit ?? 0,
       include_total: opts.includeTotal ?? false,
-      context: opts.primaryRead ? { primary_read: true } : undefined,
+    };
+    if (opts.pageToken) request.page_token = opts.pageToken;
+    if (opts.fields?.length) request.fields = [...opts.fields];
+    if (opts.orderBy?.length) {
+      request.sort = opts.orderBy.map((column) => ({
+        field: column.startsWith("-") ? column.slice(1) : column,
+        descending: column.startsWith("-"),
+      }));
+    }
+    const context = { ...(this.fence?.readContext() ?? {}), ...(opts.primaryRead ? { primary_read: true } : {}) };
+    if (Object.keys(context).length > 0) request.context = context;
+    const response = await this.plane.unary(DATABROKER, "Select", request).catch((err) => {
+      throw classify(err);
     });
     return {
       rows: decodeRows<T>(response),
       hasMore: Boolean(response?.has_more),
+      next: String(response?.next_page_token ?? ""),
       total: opts.includeTotal ? Number(response?.exact_total ?? 0) : undefined,
+      redacted: Array.isArray(response?.redacted_fields) ? response.redacted_fields : [],
     };
+  }
+
+  /** Walk every row matching `filter`, page by page. A throw from `fn` stops the
+   *  walk and propagates. */
+  async selectAll(filter: Record<string, unknown>, fn: (row: T) => void | Promise<void>): Promise<void> {
+    let pageToken: string | undefined;
+    for (;;) {
+      const page = await this.select(filter, { limit: 500, pageToken });
+      for (const row of page.rows) await fn(row);
+      if (!page.next || !page.hasMore) return;
+      pageToken = page.next;
+    }
   }
 
   async count(filter: Record<string, unknown> = {}): Promise<number> {
     return (await this.select(filter, { limit: 1, includeTotal: true })).total ?? 0;
   }
 
-  /** Insert or replace the whole row; NotFoundError when the broker's scope
-   *  guard leaves a conflicting row untouched. */
+  /** Write the whole row: inserted when its key is new, replaced when it exists.
+   *  To change some columns use {@link patch} or {@link updateIf}. NotFoundError
+   *  means the broker's scope guard left a conflicting row untouched. */
   async upsert(row: T): Promise<void> {
-    const response = await this.plane.unary(DATABROKER, "Upsert", {
+    await this.write("Upsert", row);
+  }
+
+  /** Create the row. A primary or unique-key collision throws with code `unique`
+   *  and never replaces the existing row. */
+  async insert(row: T): Promise<void> {
+    await this.write("Insert", row);
+  }
+
+  private async write(rpc: "Upsert" | "Insert", row: T): Promise<void> {
+    const request: Record<string, unknown> = {
       message_type: this.messageType,
-      record_json: jsonBytes(row),
-      conflict_fields: this.opts.key,
+      record_json: jsonBytes(writeRecord(this.schema, this.schemas, this.messageType, row)),
+    };
+    if (rpc === "Upsert" && this.explicitKey) request.conflict_fields = this.explicitKey;
+    const response = await this.plane.unary(DATABROKER, rpc, request).catch((err) => {
+      throw classify(err);
     });
     if (String(response?.affected_rows ?? "0") === "0") {
       throw new NotFoundError(`${this.messageType}: write target not found in the verified scope`);
     }
+    this.fence?.rememberWrite(response);
   }
 
   /** Set some columns of an existing row; NotFoundError when it does not exist. */
@@ -259,52 +486,111 @@ export class Table<T extends Record<string, unknown>> {
   }
 
   /** Set columns only while the row still holds `expected`; ConflictError when
-   *  it changed, NotFoundError when it is gone. */
+   *  it changed or is gone. */
   async updateIf(key: RowKey, expected: Partial<T>, changes: Partial<T>): Promise<void> {
     await this.update(key, changes, expected);
   }
 
-  async delete(key: RowKey): Promise<void> {
-    try {
-      await this.plane.unary(DATABROKER, "Delete", {
-        message_type: this.messageType,
-        filter: this.keyFilter(key),
-        require_affected: 1,
-      });
-    } catch (err) {
-      throw classify(err, this.messageType, key);
-    }
+  /** Add `deltas` to numeric columns of the row with `key`, atomically on the
+   *  broker, with no read-modify-write window. */
+  async increment(key: RowKey, deltas: Readonly<Record<string, number>>): Promise<void> {
+    await this.update(key, undefined, undefined, deltas);
   }
 
-  private async update(key: RowKey, changes: Partial<T>, expected?: Partial<T>): Promise<void> {
-    try {
-      await this.plane.unary(DATABROKER, "Update", {
+  /** Read the row, apply `change`, and write back only the columns it modified,
+   *  guarded by their previous values. A conflict reads and tries again, up to
+   *  `attempts` times. Returns the row as written. */
+  async updateWithRetry(key: RowKey, change: (current: T) => T | Promise<T>, attempts = 5): Promise<T> {
+    const limit = attempts > 0 ? attempts : 5;
+    for (let attempt = 0; attempt < limit; attempt += 1) {
+      const current = await this.get(key);
+      const before = this.updateColumns(current);
+      const next = await change(structuredClone(current));
+      const after = this.updateColumns(next);
+      const changes: Record<string, unknown> = {};
+      const expected: Record<string, unknown> = {};
+      for (const [column, value] of Object.entries(after)) {
+        if (recordToJson(before[column]) !== recordToJson(value)) {
+          changes[column] = value;
+          expected[column] = before[column] ?? null;
+        }
+      }
+      if (Object.keys(changes).length === 0) return current;
+      try {
+        await this.update(key, changes as Partial<T>, expected as Partial<T>);
+        return next;
+      } catch (err) {
+        if (!(err instanceof ConflictError)) throw err;
+      }
+    }
+    throw new ConflictError(`udb: conflict: gave up after ${limit} attempts`);
+  }
+
+  /** The columns of `row` an update may set. */
+  private updateColumns(row: T): Record<string, unknown> {
+    const schema = this.schema;
+    if (schema) {
+      return encodeRecord(this.messageType, decodeRecord(this.messageType, row, this.schemas), WriteMode.Update, this.schemas);
+    }
+    const out: Record<string, unknown> = { ...row };
+    for (const field of this.key) delete out[field];
+    return out;
+  }
+
+  async delete(key: RowKey): Promise<void> {
+    const response = await this.plane
+      .unary(DATABROKER, "Delete", {
         message_type: this.messageType,
         filter: this.keyFilter(key),
-        changes,
-        expected,
         require_affected: 1,
+      })
+      .catch((err) => {
+        throw classify(err, this.messageType, key);
       });
-    } catch (err) {
-      throw classify(err, this.messageType, key);
+    this.fence?.rememberWrite(response);
+  }
+
+  private async update(
+    key: RowKey,
+    changes?: Partial<T>,
+    expected?: Partial<T>,
+    deltas?: Readonly<Record<string, number>>,
+  ): Promise<void> {
+    const request: Record<string, unknown> = {
+      message_type: this.messageType,
+      filter: this.keyFilter(key),
+      require_affected: 1,
+    };
+    if (changes && Object.keys(changes).length > 0) request.changes = structMap(changes);
+    if (expected && Object.keys(expected).length > 0) request.expected = structMap(expected);
+    if (deltas) {
+      request.increments = Object.entries(deltas).map(([column, delta]) => ({ column, delta }));
     }
+    const response = await this.plane.unary(DATABROKER, "Update", request).catch((err) => {
+      throw classify(err, this.messageType, key);
+    });
+    this.fence?.rememberWrite(response);
   }
 }
 
-function classify(err: unknown, messageType: string, key: RowKey): unknown {
-  switch (codeOf(err)) {
-    case ErrorCode.NotFound:
-      return new NotFoundError(`udb: ${messageType} ${JSON.stringify(key)} not found`);
-    case ErrorCode.Conflict:
-      return new ConflictError(`udb: ${messageType} ${JSON.stringify(key)} changed`);
-    default:
-      return err;
+/** Map a broker status to the errors callers test with `instanceof`, keeping the
+ *  typed status as the cause so {@link inspect} still reads its reason. */
+function classify(err: unknown, messageType?: string, key?: RowKey): unknown {
+  const info = inspect(err);
+  const subject = messageType ? ` ${messageType} ${JSON.stringify(key ?? {})}` : "";
+  if (info.reason === "UDB_CAS_CONFLICT" || info.reason === "UDB_REVISION_CONFLICT" || info.reason === "UDB_CAS_ROW_MISSING") {
+    return new ConflictError(`udb:${subject} changed: ${(err as Error).message}`, { cause: err });
   }
+  if (info.reason === "UDB_NO_ROWS_AFFECTED" || (info.grpc === grpc.status.NOT_FOUND && !(err instanceof NotFoundError))) {
+    return new NotFoundError(`udb:${subject} not found: ${(err as Error).message}`, { cause: err });
+  }
+  return err;
 }
 
 // ── Transactions ────────────────────────────────────────────────────────────
 
-/** An event emitted inside a transaction; it commits with the writes. */
+/** A hand-assembled outbox event. Prefer {@link TxScope.emit} with the event's
+ *  message type, which reads the topic and partition key from its contract. */
 export interface TxEvent {
   topic: string;
   eventType: string;
@@ -314,69 +600,198 @@ export interface TxEvent {
   messageType?: string;
 }
 
+/** The outbox envelope version this SDK writes and reads. */
 export const EVENT_ENVELOPE_VERSION = 2;
 
-/** Writes collected for one atomic commit. */
+/** Writes collected for one atomic commit. Use it only inside the function
+ *  passed to {@link tx}. A write this scope refuses throws, and also fails the
+ *  whole transaction even when the function catches the throw. */
 export class TxScope {
   readonly mutations: any[] = [];
-  constructor(readonly correlationId: string) {}
+  /** The first write this scope refused. */
+  failure?: unknown;
 
+  constructor(
+    readonly correlationId: string,
+    private readonly schemas: ProtoSchemas = protoSchemas(),
+  ) {}
+
+  private fail(err: unknown): never {
+    if (this.failure === undefined) this.failure = err;
+    throw err;
+  }
+
+  private write(operation: string, messageType: string, row: Record<string, unknown>): void {
+    let record: unknown;
+    try {
+      record = writeRecord(schemaOf(this.schemas, messageType), this.schemas, messageType, row);
+    } catch (err) {
+      this.fail(err);
+    }
+    this.mutations.push({ operation, message_type: messageType, record_json: jsonBytes(record) });
+  }
+
+  /** Write the whole row in the transaction. */
   upsert(messageType: string, row: Record<string, unknown>): void {
-    this.mutations.push({ operation: "upsert", message_type: messageType, record_json: jsonBytes(row) });
+    this.write("upsert", messageType, row);
   }
+
+  /** Create the row. A duplicate fails with code `unique` and rolls back every
+   *  write and event in the transaction. */
+  insert(messageType: string, row: Record<string, unknown>): void {
+    this.write("insert", messageType, row);
+  }
+
+  /** Set the given columns on the row with `key`. */
   patch(messageType: string, key: RowKey, changes: Record<string, unknown>): void {
-    this.mutations.push({ operation: "update", message_type: messageType, filter: key, changes });
+    this.update(messageType, key, changes);
   }
+
+  /** Set columns if the stored row still holds `expected`; otherwise the whole
+   *  transaction fails with code `conflict`. */
   updateIf(messageType: string, key: RowKey, expected: Record<string, unknown>, changes: Record<string, unknown>): void {
-    this.mutations.push({ operation: "update", message_type: messageType, filter: key, changes, expected });
+    this.update(messageType, key, changes, expected);
   }
+
+  /** Write the updatable columns of `next` if the stored row still holds
+   *  `expected`; the key comes from `next`'s primary-key fields. */
+  updateRowIf(messageType: string, next: Record<string, unknown>, expected: Record<string, unknown>): void {
+    let key: RowKey = {};
+    let changes: Record<string, unknown> = {};
+    try {
+      const schema = this.schemas.message(messageType);
+      const message = decodeRecord(messageType, next, this.schemas);
+      const record = encodeRecord(messageType, message, WriteMode.Insert, this.schemas);
+      for (const column of schema.primaryKeys) key[column] = record[column];
+      changes = encodeRecord(messageType, message, WriteMode.Update, this.schemas);
+    } catch (err) {
+      this.fail(err);
+    }
+    this.update(messageType, key, changes, expected);
+  }
+
+  /** Remove the row with `key` in the transaction. */
   delete(messageType: string, key: RowKey): void {
-    this.mutations.push({ operation: "delete", message_type: messageType, filter: key });
+    this.mutations.push({ operation: "delete", message_type: messageType, filter: structMap(key) });
   }
-  emit(event: TxEvent): void {
+
+  private update(messageType: string, key: RowKey, changes: Record<string, unknown>, expected?: Record<string, unknown>): void {
+    const mutation: Record<string, unknown> = { operation: "update", message_type: messageType, filter: structMap(key) };
+    if (Object.keys(changes).length > 0) mutation.changes = structMap(changes);
+    if (expected && Object.keys(expected).length > 0) mutation.expected = structMap(expected);
+    this.mutations.push(mutation);
+  }
+
+  /** Queue an event on the outbox, committed with the transaction. The topic is the
+   *  event's declared outbox topic and the partition key its declared partition-key
+   *  field (message_event_contract); its own fields go under the envelope's payload.
+   *  The older form taking a whole {@link TxEvent} is kept for undeclared events. */
+  emit(messageType: string, event: Record<string, unknown>): void;
+  emit(event: TxEvent): void;
+  emit(first: string | TxEvent, event?: Record<string, unknown>): void {
+    if (typeof first !== "string") {
+      this.enqueue(first.messageType ?? first.eventType, first.topic, first.eventType, first.documentId, first.payload);
+      return;
+    }
+    const messageType = first;
+    let topic = "";
+    let eventType = "";
+    let document: unknown;
+    let payload: Record<string, unknown> = {};
+    try {
+      const schema = this.schemas.message(messageType);
+      topic = schema.topic;
+      if (!topic) throw new Error(`udb: ${messageType} declares no outbox topic (message_event_contract.outbox_topic)`);
+      const keyField = schema.partitionKeyField;
+      if (!keyField) throw new Error(`udb: ${messageType} declares no partition key field (message_event_contract.partition_key_field)`);
+      payload = encodeEvent(messageType, event ?? {}, this.schemas);
+      document = payload[keyField];
+      if (typeof document !== "string" || document === "") {
+        throw new Error(`udb: event ${messageType} has no value in its partition key field ${keyField}`);
+      }
+      eventType = schema.eventType;
+    } catch (err) {
+      this.fail(err);
+    }
+    this.enqueue(messageType, topic, eventType, document as string, payload);
+  }
+
+  private enqueue(messageType: string, topic: string, eventType: string, document: string, payload: Record<string, unknown>): void {
     this.mutations.push({
       operation: "enqueue_outbox_event",
-      message_type: event.messageType ?? event.eventType,
-      collection: event.topic,
-      object_key: event.documentId,
+      message_type: messageType,
+      collection: topic,
+      object_key: document,
       payload: {
         event_id: randomUUID(),
-        event_type: event.eventType,
+        event_type: eventType,
         correlation_id: this.correlationId,
-        document_id: event.documentId,
+        document_id: document,
         envelope_version: EVENT_ENVELOPE_VERSION,
-        payload: event.payload,
+        payload,
       },
     });
   }
 }
 
-/** Run `body`, then commit its writes and events atomically over BeginTx. A
- *  failed mutation rejects with its own error (Conflict, Unique, ...). */
-export async function tx(plane: StorePlane, body: (scope: TxScope) => void | Promise<void>): Promise<void> {
+/** Options of {@link tx}. */
+export interface TxOptions {
+  /** Ties the events to a request; defaults to the client's, then the transaction id. */
+  correlationId?: string;
+  /** Keeps the commit's receipt so the next reads see this transaction's writes. */
+  fence?: SessionFence;
+  schemas?: ProtoSchemas;
+  call?: CallOptions;
+}
+
+/** The error a rolled-back status frame describes. The terminal trailer stays
+ *  authoritative when the broker sends one. */
+function txStatusError(status: any): UdbError {
+  const message = String(status?.message ?? "transaction rolled back");
+  const code = Number(status?.code) || grpc.status.UNKNOWN;
+  return new UdbError(
+    "DataBroker/BeginTx",
+    Object.assign(new Error(message), { code, details: message, metadata: new grpc.Metadata() }),
+    status?.error_detail ?? undefined,
+  );
+}
+
+/** Run `body` and commit everything it collected atomically over BeginTx: every
+ *  write and event commits together or none does. `body` throwing commits nothing,
+ *  and with nothing collected no stream opens. A failed mutation rejects with its
+ *  own error (conflict, unique, ...). */
+export async function tx(
+  plane: StorePlane,
+  body: (scope: TxScope) => void | Promise<void>,
+  opts: TxOptions = {},
+): Promise<void> {
   if (!plane.bidiStream) throw new Error("udb: this transport does not support transactions");
-  const scope = new TxScope(randomUUID());
-  await body(scope);
   const txId = randomUUID();
-  const stream = plane.bidiStream(DATABROKER, "BeginTx");
+  const correlationId = opts.correlationId || plane.opts?.meta?.correlationId || txId;
+  const scope = new TxScope(correlationId, schemasOf(plane, opts.schemas));
+  await body(scope);
+  if (scope.failure !== undefined) throw scope.failure;
+  if (scope.mutations.length === 0) return;
+  const stream = plane.bidiStream(DATABROKER, "BeginTx", opts.call);
   await new Promise<void>((resolve, reject) => {
     let committed = false;
-    let failure: Error | undefined;
+    let refused: unknown;
     stream.on("data", (status: any) => {
       const state = String(status?.state ?? "");
-      if (state === "TX_STATE_COMMITTED" || state === "2") committed = true;
+      if (state === "TX_STATE_COMMITTED" || state === "2") {
+        committed = true;
+        opts.fence?.rememberReceipt(receiptFromProto(status?.write_receipt));
+      }
       if (state === "TX_STATE_ERROR" || state === "TX_STATE_ROLLED_BACK" || state === "4" || state === "3") {
-        const message = `udb: transaction ${txId} rolled back: ${status?.message ?? ""}`;
-        failure = status?.error_detail ? new UdbError("DataBroker/BeginTx",
-          Object.assign(new Error(message), { code: Number(status.code) || grpc.status.UNKNOWN,
-            details: message, metadata: new grpc.Metadata() }), status.error_detail) : new Error(message);
+        refused = txStatusError(status);
       }
     });
     // The trailer carries the typed mutation error; an ERROR data frame must
     // not reject first and hide the Conflict/Unique classification.
     stream.on("error", (err: unknown) => reject((err as any)?.udb ?? err));
     stream.on("end", () => {
-      if (failure || !committed) reject(failure ?? new Error(`udb: transaction ${txId} ended without a commit acknowledgement`));
+      if (refused) reject(refused);
+      else if (!committed) reject(new Error(`udb: transaction ${txId} ended without a commit acknowledgement`));
       else resolve();
     });
     for (const mutation of scope.mutations) stream.write({ ...mutation, tx_id: txId });
@@ -387,12 +802,17 @@ export async function tx(plane: StorePlane, body: (scope: TxScope) => void | Pro
 
 // ── Durable consumers ───────────────────────────────────────────────────────
 
-export interface ConsumedEvent {
+export interface ConsumedEvent<P = Record<string, unknown>> {
   id: string;
   topic: string;
   eventType: string;
   partitionKey: string;
-  payload: Record<string, unknown>;
+  correlationId: string;
+  /** When the journal published the event, when the broker reports it. */
+  publishedAt?: Date;
+  /** The domain event; decoded through the proto when `messageType` is set. */
+  payload: P;
+  /** The full envelope as delivered, for fields the payload lacks. */
   envelope: Record<string, unknown>;
 }
 
@@ -418,115 +838,493 @@ export function decodeEnvelope(payloadJson: string): Record<string, unknown> {
   return envelope;
 }
 
-/** Deliver every event on `topicPattern` to `handle` as the durable consumer
- *  `name`: the broker keeps the position (AckCdcEvents), reconnects resume
- *  there, and an event is acked only after `handle` resolves. A name that has
- *  never subscribed starts at the journal head unless `fromEarliest` asks for
- *  the retained history. Returns when `signal` aborts or a refusal
- *  reconnecting cannot fix arrives. */
-export async function consume(
+/** Options of {@link consume}. Every default suits most consumers. */
+export interface ConsumeOptions {
+  signal?: AbortSignal;
+  /** How often a failing handler is retried for one event before the event is
+   *  dead-lettered (default 5, maximum 1000). */
+  maxAttempts?: number;
+  /** The first retry delay, doubled per attempt up to 30s (default 500ms). It also
+   *  paces reconnects. */
+  backoffMs?: number;
+  /** Acknowledge this many successful events together (default 1, maximum 1024).
+   *
+   *  The default keeps the strict contract: an event is acknowledged before the
+   *  next one is read, and a failed acknowledgement stops the stream before later
+   *  events can advance the cursor. Raising it trades that for throughput: the
+   *  batch settles as one watermark, so a refusal or crash redelivers the whole
+   *  batch. Handlers must be idempotent, which at-least-once delivery requires. */
+  ackBatchSize?: number;
+  /** Flush a partial batch even on an idle stream (default 1s). Only meaningful
+   *  when `ackBatchSize` is greater than 1. */
+  ackIntervalMs?: number;
+  /** Bound on each acknowledgement, including a shutdown flush (default 5s, maximum 30s). */
+  ackTimeoutMs?: number;
+  /** Make a name that has never subscribed replay the retained history. A new name
+   *  otherwise starts at the journal head. No effect once the name has a position. */
+  fromEarliest?: boolean;
+  /** Observes handler failures and reconnects. */
+  onError?: (err: unknown) => void;
+  /** The event's message type: decodes the payload through the proto, and an event
+   *  that does not decode stops the consumer. */
+  messageType?: string;
+  schemas?: ProtoSchemas;
+}
+
+const MAX_CONSUMER_ATTEMPTS = 1000;
+const MAX_CONSUMER_ACK_BATCH = 1024;
+const MAX_BACKOFF_MS = 30_000;
+const SETTLEMENT_TIMEOUT_MS = 5_000;
+const MAX_FAILURE_REASON_BYTES = 2048;
+const RECENT_IDS = 4096;
+
+interface NormalizedConsume {
+  maxAttempts: number;
+  backoffMs: number;
+  ackBatchSize: number;
+  ackIntervalMs: number;
+  ackTimeoutMs: number;
+}
+
+function normalizeConsume(o: ConsumeOptions): NormalizedConsume {
+  const positive = (value: number | undefined, fallback: number) => (value && value > 0 ? value : fallback);
+  return {
+    maxAttempts: Math.min(positive(o.maxAttempts, 5), MAX_CONSUMER_ATTEMPTS),
+    backoffMs: Math.min(positive(o.backoffMs, 500), MAX_BACKOFF_MS),
+    ackBatchSize: Math.min(positive(o.ackBatchSize, 1), MAX_CONSUMER_ACK_BATCH),
+    ackIntervalMs: positive(o.ackIntervalMs, 1000),
+    ackTimeoutMs: Math.min(positive(o.ackTimeoutMs, SETTLEMENT_TIMEOUT_MS), MAX_BACKOFF_MS),
+  };
+}
+
+/** An error reconnecting cannot fix. */
+class ConsumeFatal {
+  constructor(readonly err: unknown) {}
+}
+
+/** An error from a settlement rather than the stream: this batch is not reissued
+ *  on the way out. */
+class SettlementRefused {
+  constructor(readonly err: unknown) {}
+}
+
+const STOPPED = Symbol("consumer stopped");
+
+function unwrapConsumeError(err: unknown): unknown {
+  if (err instanceof SettlementRefused) return unwrapConsumeError(err.err);
+  if (err instanceof ConsumeFatal) return err.err;
+  return err;
+}
+
+/** Invalid consumer or cursor, missing authority and unavailable contracts need the
+ *  caller; reconnecting cannot repair them. */
+function consumeAttemptError(err: unknown): unknown {
+  const code = inspect(err).grpc;
+  return code === grpc.status.INVALID_ARGUMENT ||
+    code === grpc.status.PERMISSION_DENIED ||
+    code === grpc.status.NOT_FOUND ||
+    code === grpc.status.FAILED_PRECONDITION ||
+    code === grpc.status.OUT_OF_RANGE ||
+    code === grpc.status.UNIMPLEMENTED
+    ? new ConsumeFatal(err)
+    : err;
+}
+
+function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/** The handler error as valid UTF-8, cut to the bound on a character boundary. */
+function consumerFailureReason(err: unknown): string {
+  // Encoding replaces a lone surrogate, so the bytes are always valid UTF-8.
+  const bytes = Buffer.from(errorText(err), "utf8");
+  if (bytes.length <= MAX_FAILURE_REASON_BYTES) return bytes.toString("utf8");
+  let end = MAX_FAILURE_REASON_BYTES;
+  while (end > 0 && (bytes[end] & 0xc0) === 0x80) end -= 1;
+  return bytes.subarray(0, end).toString("utf8");
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    const done = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    signal?.addEventListener("abort", done, { once: true });
+  });
+}
+
+/** Three distinct states for an event id: its handler completed (a redelivery never
+ *  runs it again), the broker confirmed its cursor or dead-letter (it is durable),
+ *  and it is inside the open acknowledgement batch. */
+class ConsumerProgress {
+  private readonly completed = new Set<string>();
+  private readonly durable = new Set<string>();
+  private readonly pending: string[] = [];
+  private readonly pendingSet = new Set<string>();
+  poison?: { id: string; attempts: number; reason: string };
+  /** Successful settlements: tells a routine reauthentication from no progress. */
+  settlements = 0;
+
+  has(id: string): boolean {
+    return this.completed.has(id);
+  }
+  durableHas(id: string): boolean {
+    return this.durable.has(id);
+  }
+  pendingHas(id: string): boolean {
+    return this.pendingSet.has(id);
+  }
+  get pendingCount(): number {
+    return this.pending.length;
+  }
+
+  /** Queue `id` as the newest watermark. A redelivery of a handled event is queued
+   *  on purpose: re-sending its acknowledgement is what advances the cursor. */
+  enqueue(id: string): void {
+    this.pending.push(id);
+    this.pendingSet.add(id);
+  }
+
+  add(id: string): void {
+    this.remember(this.completed, id);
+  }
+
+  private remember(set: Set<string>, id: string): void {
+    set.add(id);
+    if (set.size > RECENT_IDS) set.delete(set.values().next().value!);
+  }
+
+  private clearPending(): void {
+    this.pending.length = 0;
+    this.pendingSet.clear();
+  }
+
+  /** Acknowledge the open batch as one watermark and dead-letter a poison event. It
+   *  outlives a cancelled consumer for one bounded call, and never marks an event
+   *  durable before the broker confirms, so a lost response leaves it retained and
+   *  a retry is safe. Returns the failure instead of throwing. */
+  async settle(plane: StorePlane, name: string, pattern: string, o: NormalizedConsume, onError?: (err: unknown) => void): Promise<unknown> {
+    if (this.pending.length === 0 && !this.poison) return undefined;
+    const call: CallOptions = { deadlineMs: o.ackTimeoutMs, noRetry: true };
+    if (this.pending.length > 0) {
+      const last = this.pending[this.pending.length - 1];
+      try {
+        await plane.unary(DATABROKER, "AckCdcEvents", { consumer_name: name, topic_pattern: pattern, event_id: last }, call);
+      } catch (err) {
+        onError?.(new Error(`udb: consumer ${name} ack ${last}: ${errorText(err)}`, { cause: err }));
+        // At batch size 1 nothing carries across the reconnect: the broker redelivers
+        // the event and the already-handled path acknowledges it again.
+        if (o.ackBatchSize <= 1) this.clearPending();
+        return new SettlementRefused(consumeAttemptError(err));
+      }
+      for (const id of this.pending) {
+        this.add(id);
+        this.remember(this.durable, id);
+      }
+      this.clearPending();
+      this.settlements += 1;
+    }
+    if (this.poison) {
+      const failed = this.poison;
+      try {
+        await plane.unary(
+          DATABROKER,
+          "NackCdcEvents",
+          { consumer_name: name, topic_pattern: pattern, event_id: failed.id, attempts: failed.attempts, failure_reason: failed.reason },
+          call,
+        );
+      } catch (err) {
+        onError?.(new Error(`udb: consumer ${name} dead-letter ${failed.id}: ${errorText(err)}`, { cause: err }));
+        return new SettlementRefused(consumeAttemptError(err));
+      }
+      this.add(failed.id);
+      this.remember(this.durable, failed.id);
+      this.poison = undefined;
+      this.settlements += 1;
+    }
+    return undefined;
+  }
+}
+
+async function handleWithRetry<P>(
+  event: ConsumedEvent<P>,
+  handle: (event: ConsumedEvent<P>, signal: AbortSignal) => Promise<void> | void,
+  o: NormalizedConsume,
+  signal: AbortSignal,
+  onError?: (err: unknown) => void,
+): Promise<unknown> {
+  let delay = o.backoffMs;
+  let failure: unknown;
+  for (let attempt = 1; attempt <= o.maxAttempts; attempt += 1) {
+    try {
+      await handle(event, signal);
+      return undefined;
+    } catch (err) {
+      failure = err ?? new Error("udb: consumer handler failed");
+    }
+    onError?.(new Error(`event ${event.id} attempt ${attempt}: ${errorText(failure)}`, { cause: failure }));
+    if (attempt === o.maxAttempts) break;
+    await sleep(delay, signal);
+    if (signal.aborted) return STOPPED;
+    delay = Math.min(delay * 2, MAX_BACKOFF_MS);
+  }
+  return failure;
+}
+
+function publishedAtOf(envelope: any): Date | undefined {
+  const stamp = envelope?.published_at;
+  if (!stamp) return undefined;
+  const ms = Number(stamp.seconds ?? 0) * 1000 + Math.floor(Number(stamp.nanos ?? 0) / 1e6);
+  return ms > 0 ? new Date(ms) : undefined;
+}
+
+function decodeConsumedEvent<P>(id: string, raw: any, messageType: string | undefined, schemas: ProtoSchemas): ConsumedEvent<P> {
+  const envelope = decodeEnvelope(String(raw?.payload_json ?? ""));
+  const domain = envelope.payload;
+  let payload: unknown = domain ?? {};
+  if (messageType && domain !== undefined && domain !== null) {
+    try {
+      payload = decodeEventPayload(messageType, domain as Record<string, unknown>, schemas);
+    } catch (err) {
+      throw new Error(`payload does not decode as ${messageType}: ${errorText(err)}`);
+    }
+  }
+  return {
+    id,
+    topic: String(raw?.topic ?? ""),
+    eventType: String(envelope.event_type ?? ""),
+    partitionKey: String(raw?.partition_key ?? ""),
+    correlationId: String(envelope.correlation_id ?? ""),
+    publishedAt: publishedAtOf(raw),
+    payload: payload as P,
+    envelope,
+  };
+}
+
+/** Hold items a stream delivered until the loop asks; pauses the stream when the
+ *  loop falls behind, so a slow handler cannot grow the queue without bound. */
+const STREAM_HIGH_WATER = 256;
+
+async function consumeOnce<P>(
   plane: StorePlane,
   name: string,
   topicPattern: string,
-  handle: (event: ConsumedEvent) => Promise<void>,
-  opts: { signal?: AbortSignal; backoffMs?: number; onError?: (err: unknown) => void; fromEarliest?: boolean } = {},
-): Promise<void> {
-  if (!plane.serverStream) throw new Error("udb: this transport does not support streams");
-  const seen = new Set<string>();
-  let delay = opts.backoffMs ?? 500;
-  for (;;) {
-    if (opts.signal?.aborted) return;
-    const failure = await new Promise<unknown>((resolve) => {
-      // Progress markers let a consumer of a quiet topic move its stored
-      // position past the rest of the journal; they never reach `handle`.
-      const stream = plane.serverStream!(DATABROKER, "PublishCDC", {
+  handle: (event: ConsumedEvent<P>, signal: AbortSignal) => Promise<void> | void,
+  opts: ConsumeOptions,
+  o: NormalizedConsume,
+  progress: ConsumerProgress,
+  schemas: ProtoSchemas,
+): Promise<unknown> {
+  const signal = opts.signal;
+  const batched = o.ackBatchSize > 1;
+  const settle = () => progress.settle(plane, name, topicPattern, o, opts.onError);
+  const failed = await settle();
+  if (failed) return failed;
+  if (signal?.aborted) return STOPPED;
+  const attempt = new AbortController();
+  const stopAttempt = () => attempt.abort();
+  signal?.addEventListener("abort", stopAttempt, { once: true });
+  let stream: any;
+  try {
+    // Progress markers let a consumer of a quiet topic move its stored position
+    // past the rest of the journal; they never reach the handler.
+    stream = plane.serverStream!(
+      DATABROKER,
+      "PublishCDC",
+      {
         topic_pattern: topicPattern,
         consumer_name: name,
         progress_markers: true,
         start: opts.fromEarliest ? "CDC_CONSUMER_START_EARLIEST" : "CDC_CONSUMER_START_LATEST",
-      });
-      let chain = Promise.resolve();
-      let closing = false;
-      let stopped = false;
-      let handlerFailure: unknown;
-      const finish = (terminalError: unknown) => {
-        if (closing) return;
-        closing = true;
-        // Drain queued work before reconnecting. A failed head event stops the
-        // whole queue so a later ack cannot advance the cursor past it.
-        void chain.then(() => {
-          opts.signal?.removeEventListener("abort", abort);
-          resolve(handlerFailure ?? terminalError);
+      },
+      { signal: attempt.signal },
+    );
+  } catch (err) {
+    signal?.removeEventListener("abort", stopAttempt);
+    return consumeAttemptError(err);
+  }
+  type Item = { envelope: any } | { error: unknown } | { ended: true };
+  const queue: Item[] = [];
+  let wake: (() => void) | undefined;
+  const notify = () => {
+    const resume = wake;
+    wake = undefined;
+    resume?.();
+  };
+  let paused = false;
+  stream.on("data", (envelope: any) => {
+    queue.push({ envelope });
+    if (queue.length >= STREAM_HIGH_WATER && stream.pause) {
+      paused = true;
+      stream.pause();
+    }
+    notify();
+  });
+  stream.on("error", (err: any) => {
+    queue.push({ error: err?.udb ?? err });
+    notify();
+  });
+  stream.on("end", () => {
+    queue.push({ ended: true });
+    notify();
+  });
+  signal?.addEventListener("abort", notify, { once: true });
+  let tick = false;
+  const ticker = batched
+    ? setInterval(() => {
+        tick = true;
+        notify();
+      }, o.ackIntervalMs)
+    : undefined;
+  try {
+    for (;;) {
+      if (signal?.aborted) return STOPPED;
+      if (tick) {
+        tick = false;
+        const failure = await settle();
+        if (failure) return failure;
+      }
+      const item = queue.shift();
+      if (!item) {
+        await new Promise<void>((resolve) => {
+          wake = resolve;
         });
-      };
-      const abort = () => {
-        stream.cancel?.();
-        finish(undefined);
-      };
-      opts.signal?.addEventListener("abort", abort, { once: true });
-      stream.on("data", (envelope: any) => {
-        if (closing) return;
-        chain = chain.then(async () => {
-          if (stopped || opts.signal?.aborted) return;
-          const id = String(envelope?.event_id ?? "");
-          if (seen.has(id)) return;
-          if (envelope?.progress_only) {
-            // Not an event: the stream read the journal up to this position.
-            // The queue is sequential, so every earlier event is already
-            // acknowledged when the marker's token is.
-            await plane.unary(DATABROKER, "AckCdcEvents", { consumer_name: name, topic_pattern: topicPattern, event_id: id });
-            return;
+        continue;
+      }
+      if (paused && queue.length < STREAM_HIGH_WATER / 2) {
+        paused = false;
+        stream.resume?.();
+      }
+      if ("error" in item || "ended" in item) {
+        if (batched) {
+          // Settle the retained watermark first, so a reconnect does not replay
+          // acknowledged events.
+          const failure = await settle();
+          if (failure) return failure;
+        }
+        if ("ended" in item) return new Error("udb: the event stream ended");
+        return consumeAttemptError(item.error);
+      }
+      const envelope = item.envelope;
+      const id = String(envelope?.event_id ?? "");
+      if (progress.pendingHas(id)) continue;
+      if (envelope?.progress_only) {
+        // Not an event: the stream read the journal up to this position. Every
+        // earlier event is settled or queued ahead of it, so its token goes last.
+        if (progress.durableHas(id)) continue;
+        progress.enqueue(id);
+      } else {
+        // A durable id needs nothing at all; a handled-but-not-durable id is
+        // acknowledged again, which advances a cursor the broker never confirmed.
+        if (!progress.has(id) && !progress.durableHas(id)) {
+          let event: ConsumedEvent<P>;
+          try {
+            event = decodeConsumedEvent<P>(id, envelope, opts.messageType, schemas);
+          } catch (err) {
+            const message = `udb: consumer ${name}: event ${id}: ${errorText(err)}`;
+            return new ConsumeFatal(err instanceof EnvelopeVersionError ? new EnvelopeVersionError(message) : new Error(message, { cause: err }));
           }
-          const decoded = decodeEnvelope(String(envelope?.payload_json ?? ""));
-          await handle({
-            id,
-            topic: String(envelope?.topic ?? ""),
-            eventType: String(decoded.event_type ?? ""),
-            partitionKey: String(envelope?.partition_key ?? ""),
-            payload: (decoded.payload as Record<string, unknown>) ?? {},
-            envelope: decoded,
-          });
-          await plane.unary(DATABROKER, "AckCdcEvents", { consumer_name: name, topic_pattern: topicPattern, event_id: id });
-          seen.add(id);
-          if (seen.size > 4096) seen.delete(seen.values().next().value!);
-          delay = opts.backoffMs ?? 500;
-        }).catch((err) => {
-          stopped = true;
-          handlerFailure = err;
-          finish(err);
-          stream.cancel?.();
-        });
-      });
-      stream.on("error", (err: any) => {
-        finish(err?.udb ?? err);
-      });
-      stream.on("end", () => finish(new Error("udb: the event stream ended")));
-      if (opts.signal?.aborted) abort();
-    });
-    if (opts.signal?.aborted) return;
-    const error = (failure as any)?.udb ?? failure;
-    if (error instanceof EnvelopeVersionError || [3, 5, 7].includes((error as any)?.code)) throw error;
-    opts.onError?.(error);
-    if (opts.signal?.aborted) return;
-    await new Promise<void>((resolve) => {
-      const done = () => {
-        clearTimeout(timer);
-        opts.signal?.removeEventListener("abort", done);
-        resolve();
-      };
-      const timer = setTimeout(done, delay);
-      opts.signal?.addEventListener("abort", done, { once: true });
-      if (opts.signal?.aborted) done();
-    });
-    delay = Math.min(delay * 2, 30_000);
+          const failure = await handleWithRetry(event, handle, o, attempt.signal, opts.onError);
+          if (failure !== undefined) {
+            if (failure === STOPPED || signal?.aborted) return STOPPED;
+            if ((failure as Error)?.name === "AbortError" || (failure as Error)?.name === "TimeoutError") {
+              return new ConsumeFatal(new Error(`udb: consumer ${name} gave up on event ${id}: ${errorText(failure)}`, { cause: failure }));
+            }
+            // A poison event is dead-lettered: the broker stores it and advances this
+            // consumer in one transaction, so later events keep flowing. A broker that
+            // cannot (UNIMPLEMENTED) stops the consumer instead of discarding the event.
+            progress.poison = { id, attempts: o.maxAttempts, reason: consumerFailureReason(failure) };
+            const refused = await settle();
+            if (refused) return refused;
+            continue;
+          }
+          // The handler completed even if the acknowledgement is lost: a redelivery
+          // retries only the acknowledgement and never reruns the handler.
+          progress.add(id);
+        }
+        progress.enqueue(id);
+      }
+      if (!batched || progress.pendingCount >= o.ackBatchSize) {
+        const failure = await settle();
+        if (failure) return failure;
+      }
+    }
+  } finally {
+    if (ticker) clearInterval(ticker);
+    signal?.removeEventListener("abort", stopAttempt);
+    signal?.removeEventListener("abort", notify);
+    attempt.abort();
+    stream.cancel?.();
+  }
+}
+
+/** Deliver every event on `topicPattern` to `handle` as the durable consumer `name`:
+ *  the broker keeps the position (AckCdcEvents) and reconnects resume there. An event
+ *  is acknowledged after `handle` resolves, so a crash redelivers at most the event
+ *  in flight. A handler that keeps failing has its event dead-lettered after
+ *  `maxAttempts`, and later events keep flowing. A failed acknowledgement stops the
+ *  stream before later events can advance the cursor. An envelope newer than this
+ *  SDK understands stops the consumer rather than being misread.
+ *
+ *  Resolves when `signal` aborts, after flushing completed events. Rejects on a
+ *  refusal reconnecting cannot fix, or when that shutdown flush fails. */
+export async function consume<P = Record<string, unknown>>(
+  plane: StorePlane,
+  name: string,
+  topicPattern: string,
+  handle: (event: ConsumedEvent<P>, signal: AbortSignal) => Promise<void> | void,
+  opts: ConsumeOptions = {},
+): Promise<void> {
+  if (!plane.serverStream) throw new Error("udb: this transport does not support streams");
+  const o = normalizeConsume(opts);
+  const progress = new ConsumerProgress();
+  const schemas = schemasOf(plane, opts.schemas);
+  // Flush a retained batch before returning, so an event whose handler completed
+  // just before shutdown is still acknowledged. A settlement the broker definitively
+  // refused is not reissued: it could only repeat a call that cannot succeed.
+  const finish = async (cause?: unknown): Promise<void> => {
+    if (cause instanceof SettlementRefused) throw unwrapConsumeError(cause);
+    const failure = await progress.settle(plane, name, topicPattern, o, opts.onError);
+    if (cause !== undefined) {
+      if (failure) throw new AggregateError([unwrapConsumeError(cause), unwrapConsumeError(failure)], errorText(unwrapConsumeError(cause)));
+      throw unwrapConsumeError(cause);
+    }
+    if (failure) throw unwrapConsumeError(failure);
+  };
+  let delay = o.backoffMs;
+  for (;;) {
+    if (opts.signal?.aborted) return finish();
+    const before = progress.settlements;
+    const failure = await consumeOnce(plane, name, topicPattern, handle, opts, o, progress, schemas);
+    if (opts.signal?.aborted) {
+      return failure instanceof SettlementRefused ? finish(failure) : finish();
+    }
+    if (failure === STOPPED) return finish();
+    const inner = failure instanceof SettlementRefused ? failure.err : failure;
+    if (inner instanceof ConsumeFatal) return finish(failure instanceof SettlementRefused ? failure : inner);
+    // Credential expiry and progress on a healthy stream must not accumulate an
+    // ever-longer outage across a routine reauthentication.
+    if (progress.settlements !== before || inspect(inner).grpc === grpc.status.UNAUTHENTICATED) delay = o.backoffMs;
+    opts.onError?.(new Error(`udb: consumer ${name} reconnecting: ${errorText(inner)}`, { cause: inner }));
+    await sleep(delay, opts.signal);
+    if (opts.signal?.aborted) return finish();
+    delay = Math.min(delay * 2, MAX_BACKOFF_MS);
   }
 }
 
 // ── In-memory data plane (tests) ────────────────────────────────────────────
 
-/** A broker stand-in for unit tests of code that uses `Table`: Select, Upsert,
- *  Update (with expected/require_affected) and Delete over plain rows, with the
- *  same NotFound/Conflict outcomes and reason codes the broker sends. */
+/** A small stand-in for a unit test of code that only uses `Table` over plain rows:
+ *  Select, Upsert, Insert, Update and Delete, with the broker's NotFound, Conflict
+ *  and Unique reasons. For the broker's full semantics (tenancy, transactions,
+ *  consumers, faults) use `createFake` from `@udb_plus/sdk/udbtest`. */
 export class InMemoryDataPlane implements StorePlane {
   readonly rows = new Map<string, Record<string, unknown>[]>();
 
@@ -539,7 +1337,7 @@ export class InMemoryDataPlane implements StorePlane {
   private refuse(code: number, reason: string, message: string): never {
     const err: any = new Error(message);
     err.code = code;
-    throw new UdbError("InMemory", err, { reason, kind: code === 9 ? 8 : 9 });
+    throw new UdbError("InMemory", err, { reason, kind: code === 9 ? 8 : code === 6 ? 10 : 9 });
   }
 
   async unary(_service: string, method: string, request: any): Promise<any> {
@@ -555,10 +1353,12 @@ export class InMemoryDataPlane implements StorePlane {
           exact_total: request.include_total ? found.length : 0,
         };
       }
+      case "Insert":
       case "Upsert": {
         const row = JSON.parse(Buffer.from(request.record_json).toString("utf8"));
         const key = this.keys[request.message_type] ?? request.conflict_fields ?? [];
         const index = table.findIndex((existing) => key.every((field: string) => existing[field] === row[field]));
+        if (index >= 0 && method === "Insert") this.refuse(6, "UDB_UNIQUE_VIOLATION", "duplicate key");
         if (index >= 0) table[index] = row;
         else table.push(row);
         return { affected_rows: 1 };

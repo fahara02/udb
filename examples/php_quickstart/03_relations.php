@@ -34,7 +34,7 @@ $md = new UdbMetadata(
     scopes: ['udb:read', 'udb:write'],
     serviceIdentity: 'examples.php.quickstart',
     projectId: 'default',
-    clientCatalogVersion: '1.0.0',
+    clientCatalogVersion: '',
 );
 
 // Deterministic ids so re-running this script updates the same rows in place

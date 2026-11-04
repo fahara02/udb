@@ -362,16 +362,64 @@ fn req<T>(body: T, tenant: &str) -> Result<Request<T>, String> {
     Ok(r)
 }
 
+/// One bounded single line of a typed refusal field.
+fn refusal_text(value: &str, limit: usize) -> String {
+    value
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(limit)
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
+/// What the broker's typed detail says is wrong: its field violations, what the
+/// caller is missing, and the fix hint. These are structured fields the broker
+/// writes for the caller, so `UDB_VALIDATION_FAILED` alone is never the whole
+/// message.
+fn typed_refusal_explanation(detail: &udb::proto::ErrorDetail) -> String {
+    const MAX_ITEMS: usize = 8;
+    let mut parts: Vec<String> = detail
+        .field_violations
+        .iter()
+        .take(MAX_ITEMS)
+        .map(|violation| {
+            format!(
+                "{}: {}",
+                refusal_text(&violation.field, 128),
+                refusal_text(&violation.description, 256)
+            )
+        })
+        .collect();
+    let mut missing: Vec<_> = detail.missing.iter().collect();
+    missing.sort();
+    parts.extend(missing.into_iter().take(MAX_ITEMS).map(|(key, value)| {
+        format!(
+            "missing {}: {}",
+            refusal_text(key, 64),
+            refusal_text(value, 256)
+        )
+    }));
+    let hint = refusal_text(&detail.fix_hint, 256);
+    if !hint.is_empty() {
+        parts.push(hint);
+    }
+    parts.join("; ")
+}
+
 fn rpc_error(op: &str, status: Status) -> String {
-    // Do not echo arbitrary server text from a credential-bearing request.
-    // Retain only the stable typed reason; it is needed to distinguish a grant
-    // owned by another account from a retryable transport failure.
-    let reason = status
+    // Do not echo the free-form status message from a credential-bearing request.
+    // Retain the stable typed reason, needed to distinguish a grant owned by
+    // another account from a retryable transport failure, and the broker's typed
+    // explanation of the refusal.
+    let detail = status
         .metadata()
         .get_bin("udb-error-detail-bin")
         .and_then(|raw| raw.to_bytes().ok())
-        .and_then(|raw| udb::proto::ErrorDetail::decode(raw.as_ref()).ok())
-        .map(|detail| detail.reason)
+        .and_then(|raw| udb::proto::ErrorDetail::decode(raw.as_ref()).ok());
+    let reason = detail
+        .as_ref()
+        .map(|detail| detail.reason.as_str())
         .filter(|reason| {
             reason.starts_with("UDB_")
                 && reason.len() <= 128
@@ -381,8 +429,14 @@ fn rpc_error(op: &str, status: Status) -> String {
         })
         .map(|reason| format!(", {reason}"))
         .unwrap_or_default();
+    let explanation = detail
+        .as_ref()
+        .map(typed_refusal_explanation)
+        .filter(|text| !text.is_empty())
+        .map(|text| format!(": {text}"))
+        .unwrap_or_default();
     format!(
-        "{op} failed ({:?}{reason}); no later steps were applied",
+        "{op} failed ({:?}{reason}){explanation}; no later steps were applied",
         status.code(),
     )
 }
@@ -851,6 +905,199 @@ struct AccountPlan {
     keys: Vec<KeyStep>,
 }
 
+/// The operator bearer the native requests carry (`with_metadata` attaches it).
+fn operator_bearer() -> Result<String, String> {
+    let token = std::env::var("UDB_AUTH_TOKEN")
+        .or_else(|_| std::env::var("UDB_BEARER_TOKEN"))
+        .map_err(|_| "verified bearer is required")?;
+    if token.trim().is_empty() || token.chars().any(char::is_control) || !token.is_ascii() {
+        return Err("verified bearer reference is malformed".into());
+    }
+    Ok(token)
+}
+
+async fn connect_native_auth() -> Result<Channel, String> {
+    let target = super::authz_cli::auth_target();
+    Ok(tonic::transport::Endpoint::from_shared(target)
+        .map_err(|_| "invalid auth target")?
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(30))
+        .connect()
+        .await
+        .map_err(|_| "cannot connect to the native auth service")?)
+}
+
+/// `udb auth service-account create`: CreateUser as a SERVICE_ACCOUNT, then
+/// ChangeUserStatus to ACTIVE. A new account starts PENDING_VERIFICATION and a
+/// service account has no channel to verify through, so a grant could never be
+/// created for it otherwise. Marked as UDB-managed, like `udb identity apply`
+/// accounts, so a later `identity apply` can adopt it.
+pub(super) async fn service_account_create(
+    tenant: &str,
+    username: &str,
+    email: &str,
+    password_env: &str,
+    password_file: &str,
+    project: &str,
+    reason: &str,
+) -> Result<Value, String> {
+    bounded_field(tenant, 120, "tenant", false)?;
+    bounded_field(username, 150, "username", false)?;
+    bounded_field(email, 255, "email", false)?;
+    bounded_field(project, 120, "project", true)?;
+    bounded_field(reason, 2048, "reason", true)?;
+    operator_bearer()?;
+    let base = std::env::current_dir().map_err(|_| "working directory is unavailable")?;
+    let password = SecretRef {
+        env: password_env.trim().to_string(),
+        file: password_file.trim().to_string(),
+    }
+    .resolve(&base)
+    .map_err(|err| format!("{err} (pass --password-env or --password-file)"))?;
+    let reason = if reason.is_empty() {
+        "udb auth service-account create"
+    } else {
+        reason
+    };
+    let mut auth = AuthnServiceClient::new(connect_native_auth().await?);
+    let user = auth
+        .create_user(req(
+            authn_pb::CreateUserRequest {
+                username: username.to_string(),
+                email: email.to_string(),
+                password: password.0,
+                tenant_id: tenant.to_string(),
+                project_id: project.to_string(),
+                account_kind: user_pb::AccountKind::ServiceAccount as i32,
+                profile_attributes: BTreeMap::from([(
+                    "udb.identity.managed".to_string(),
+                    "v1".to_string(),
+                )])
+                .into_iter()
+                .collect(),
+                context: Some(context(tenant, project)),
+                ..Default::default()
+            },
+            tenant,
+        )?)
+        .await
+        .map_err(|s| rpc_error("create service account", s))?
+        .into_inner()
+        .user
+        .ok_or("CreateUser returned no account")?;
+    let user = activate_pending_service_account(&mut auth, user, tenant, reason)
+        .await
+        .map_err(|err| {
+            format!(
+                "{err}; the account exists but is not ACTIVE: run `udb auth service-account \
+                 activate --tenant {tenant} --user <user_id>` once the cause is fixed \
+                 (`udb auth principal list` shows the user_id)"
+            )
+        })?;
+    Ok(service_account_json(&user, true, true))
+}
+
+/// `udb auth service-account activate`: an operator's explicit activation of an
+/// existing service account. A person proves their own address, and a suspended
+/// or locked account is not reactivated here.
+pub(super) async fn service_account_activate(
+    tenant: &str,
+    user_id: &str,
+    reason: &str,
+) -> Result<Value, String> {
+    bounded_field(tenant, 120, "tenant", false)?;
+    canonical_uuid(user_id)?;
+    bounded_field(reason, 2048, "reason", true)?;
+    operator_bearer()?;
+    let reason = if reason.is_empty() {
+        "udb auth service-account activate"
+    } else {
+        reason
+    };
+    let mut auth = AuthnServiceClient::new(connect_native_auth().await?);
+    let user = auth
+        .get_user(req(
+            authn_pb::GetUserRequest {
+                user_id: user_id.to_string(),
+                ..Default::default()
+            },
+            tenant,
+        )?)
+        .await
+        .map_err(|s| rpc_error("get service account", s))?
+        .into_inner()
+        .user
+        .ok_or("GetUser returned no account")?;
+    if user.status == user_pb::UserStatus::Active as i32 {
+        verify_service_account_activation(&user, tenant)?;
+        return Ok(service_account_json(&user, false, false));
+    }
+    let user = activate_pending_service_account(&mut auth, user, tenant, reason).await?;
+    Ok(service_account_json(&user, false, true))
+}
+
+/// Refuse anything but this tenant's SERVICE_ACCOUNT. Activating a person would
+/// bypass their channel verification.
+fn verify_service_account_activation(user: &user_pb::User, tenant: &str) -> Result<(), String> {
+    canonical_uuid(&user.user_id)?;
+    if user.tenant_id != tenant || user.account_kind != user_pb::AccountKind::ServiceAccount as i32
+    {
+        return Err("account is not a SERVICE_ACCOUNT of the target tenant".into());
+    }
+    Ok(())
+}
+
+async fn activate_pending_service_account(
+    client: &mut AuthnServiceClient<Channel>,
+    user: user_pb::User,
+    tenant: &str,
+    reason: &str,
+) -> Result<user_pb::User, String> {
+    verify_service_account_activation(&user, tenant)?;
+    if user.status != user_pb::UserStatus::PendingVerification as i32 {
+        return Err("service account is not PENDING_VERIFICATION; no implicit reactivation".into());
+    }
+    let project = user.project_id.clone();
+    let activated = client
+        .change_user_status(req(
+            authn_pb::ChangeUserStatusRequest {
+                user_id: user.user_id.clone(),
+                new_status: user_pb::UserStatus::Active as i32,
+                reason: reason.to_string(),
+                context: Some(context(tenant, &project)),
+            },
+            tenant,
+        )?)
+        .await
+        .map_err(|s| rpc_error("activate service account", s))?
+        .into_inner()
+        .user
+        .ok_or("activation returned no account")?;
+    verify_service_account_activation(&activated, tenant)?;
+    if activated.status != user_pb::UserStatus::Active as i32 {
+        return Err("server did not activate the service account".into());
+    }
+    Ok(activated)
+}
+
+fn service_account_json(user: &user_pb::User, created: bool, activated: bool) -> Value {
+    json!({
+        "user_id": user.user_id,
+        "username": user.username,
+        "email": user.email,
+        "tenant_id": user.tenant_id,
+        "project_id": user.project_id,
+        "account_kind": "SERVICE_ACCOUNT",
+        "status": "ACTIVE",
+        "created": created,
+        "activated": activated,
+        "next": format!(
+            "udb auth grant create --tenant {} --user {} --identity <svc-id> --scope <s>",
+            user.tenant_id, user.user_id
+        ),
+    })
+}
+
 pub(super) async fn identity_command(
     apply: bool,
     file: &str,
@@ -883,20 +1130,8 @@ pub(super) async fn identity_command(
     )
     .map_err(|_| "declaration directory is unavailable")?;
     validate_declarations(&parsed, &tenant, &base)?;
-    let token = std::env::var("UDB_AUTH_TOKEN")
-        .or_else(|_| std::env::var("UDB_BEARER_TOKEN"))
-        .map_err(|_| "verified bearer is required")?;
-    if token.trim().is_empty() || token.chars().any(char::is_control) || !token.is_ascii() {
-        return Err("verified bearer reference is malformed".into());
-    }
-    let target = super::authz_cli::auth_target();
-    let channel = tonic::transport::Endpoint::from_shared(target)
-        .map_err(|_| "invalid auth target")?
-        .connect_timeout(Duration::from_secs(10))
-        .timeout(Duration::from_secs(30))
-        .connect()
-        .await
-        .map_err(|_| "cannot connect to the native auth service")?;
+    let token = operator_bearer()?;
+    let channel = connect_native_auth().await?;
     let mut auth = AuthnServiceClient::new(channel.clone());
     let mut key_client = ApiKeyServiceClient::new(channel);
     let principal = auth
@@ -1478,6 +1713,108 @@ mod tests {
             tonic::metadata::MetadataValue::from_bytes(&detail.encode_to_vec()),
         );
         assert!(!rpc_error("create grant", status).contains("unsafe"));
+    }
+
+    /// The broker refuses a native RPC without a request context. `load_grants`
+    /// and every other reconciliation step build their requests here.
+    #[test]
+    fn identity_requests_carry_a_request_context_and_the_tenant() {
+        let first = req((), "tenant-a").expect("request");
+        let second = req((), "tenant-a").expect("request");
+        let id = |request: &Request<()>| {
+            request
+                .metadata()
+                .get("x-correlation-id")
+                .expect("a correlation id on every request")
+                .to_str()
+                .expect("ascii")
+                .to_string()
+        };
+        assert!(id(&first).starts_with("udb-cli-"));
+        assert_ne!(id(&first), id(&second), "one id per request");
+        assert_eq!(
+            first
+                .metadata()
+                .get("x-tenant-id")
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            "tenant-a"
+        );
+    }
+
+    /// The exact refusal the consumer saw as a bare `UDB_VALIDATION_FAILED`.
+    #[test]
+    fn validation_refusal_prints_the_field_violation() {
+        let detail = udb::proto::ErrorDetail {
+            reason: "UDB_VALIDATION_FAILED".into(),
+            field_violations: vec![udb::proto::ErrorFieldViolation {
+                field: "request_context".into(),
+                description: "must include x-correlation-id, x-request-id, or traceparent".into(),
+            }],
+            ..Default::default()
+        };
+        let mut status = Status::unknown("free-form server text");
+        status.metadata_mut().insert_bin(
+            "udb-error-detail-bin",
+            tonic::metadata::MetadataValue::from_bytes(&detail.encode_to_vec()),
+        );
+        let error = rpc_error("list grants", status);
+        assert!(error.contains("UDB_VALIDATION_FAILED"), "{error}");
+        assert!(
+            error.contains("request_context: must include x-correlation-id"),
+            "{error}"
+        );
+        assert!(!error.contains("free-form server text"), "{error}");
+    }
+
+    #[test]
+    fn refusal_prints_what_is_missing_and_the_hint_on_one_bounded_line() {
+        let detail = udb::proto::ErrorDetail {
+            reason: "UDB_SCOPE_MISSING".into(),
+            missing: [("scope".to_string(), "udb:authn:admin\r\nforged".to_string())]
+                .into_iter()
+                .collect(),
+            fix_hint: "Add the scope to the grant.".into(),
+            ..Default::default()
+        };
+        let mut status = Status::unknown("denied");
+        status.metadata_mut().insert_bin(
+            "udb-error-detail-bin",
+            tonic::metadata::MetadataValue::from_bytes(&detail.encode_to_vec()),
+        );
+        let error = rpc_error("create grant", status);
+        assert!(
+            error.contains("missing scope: udb:authn:adminforged"),
+            "{error}"
+        );
+        assert!(error.contains("Add the scope to the grant."), "{error}");
+        assert!(!error.contains('\n') && !error.contains('\r'), "{error}");
+    }
+
+    fn account(kind: user_pb::AccountKind, tenant: &str) -> user_pb::User {
+        user_pb::User {
+            user_id: "5f0c7a7e-2f6b-4f7e-9d5a-0d3f6f3f1a11".into(),
+            tenant_id: tenant.into(),
+            account_kind: kind as i32,
+            status: user_pb::UserStatus::PendingVerification as i32,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn activation_applies_only_to_a_service_account_of_the_tenant() {
+        let service = account(user_pb::AccountKind::ServiceAccount, "tenant-a");
+        assert!(verify_service_account_activation(&service, "tenant-a").is_ok());
+        assert!(
+            verify_service_account_activation(&service, "tenant-b").is_err(),
+            "another tenant's account is refused"
+        );
+        let person = account(user_pb::AccountKind::Person, "tenant-a");
+        assert!(
+            verify_service_account_activation(&person, "tenant-a").is_err(),
+            "a person keeps their channel verification"
+        );
     }
 
     #[cfg(unix)]

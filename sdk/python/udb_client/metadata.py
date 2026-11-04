@@ -161,7 +161,7 @@ class Metadata:
     service_identity: str = "python.app"
     user_id: str = ""
     project_id: str = "default"
-    client_catalog_version: str = UDB_PROTOCOL_VERSION
+    client_catalog_version: str = ""
     consistency: str = ""
     target_backend: str = ""
     target_instance: str = ""
@@ -201,9 +201,7 @@ class Metadata:
             scopes=tuple(scopes) if scopes is not None else parsed_scopes,
             service_identity=env("SERVICE_IDENTITY", "python.app"),
             project_id=env("PROJECT_ID", "default"),
-            client_catalog_version=env(
-                "CLIENT_CATALOG_VERSION", UDB_PROTOCOL_VERSION
-            ),
+            client_catalog_version=env("CLIENT_CATALOG_VERSION"),
             consistency=env("CONSISTENCY"),
             target_backend=env("TARGET_BACKEND"),
             target_instance=env("TARGET_INSTANCE"),

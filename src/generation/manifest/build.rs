@@ -370,7 +370,11 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
             if !literals.is_empty() {
                 checks.push(ManifestCheck {
                     name: format!("chk_{}_{}_enum", schema.table_name, column.column_name),
-                    expression: format!("{} IN ({})", column.column_name, literals.join(",")),
+                    expression: format!(
+                        "{} IN ({})",
+                        crate::generation::lint::check_column_reference(&column.column_name),
+                        literals.join(",")
+                    ),
                 });
             }
         }
@@ -399,7 +403,14 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
             member_cols.sort();
             checks.push(ManifestCheck {
                 name: format!("chk_{}_{}_oneof", schema.table_name, group),
-                expression: format!("num_nonnulls({}) <= 1", member_cols.join(", ")),
+                expression: format!(
+                    "num_nonnulls({}) <= 1",
+                    member_cols
+                        .iter()
+                        .map(|column| crate::generation::lint::check_column_reference(column))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
             });
         }
     }
@@ -584,7 +595,9 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
             })
             .collect(),
         comment: schema.table_comment.clone(),
-        source_file: schema.file.clone(),
+        // Written into generated migration headers (`-- UDB:source_proto=`), so it
+        // must not depend on the platform's path separator.
+        source_file: schema.file.replace('\\', "/"),
         previous_table_name: normalize_ident(&schema.previous_table_name),
         allow_drop: schema.allow_drop,
         warnings,
@@ -1580,6 +1593,50 @@ mod oneof_check_tests {
             !table.checks.iter().any(|c| c.name == "chk_accounts_bal"),
             "unsafe column check_constraint must be omitted from the manifest"
         );
+    }
+
+    /// A Windows parse of the same tree writes the same migration header as Linux.
+    #[test]
+    fn source_file_uses_forward_slashes_on_every_platform() {
+        let mut schema = ProtoSchema::new("Acct");
+        schema.table_name = "accounts".to_string();
+        schema.columns = vec![col("id", 1, "")];
+        schema.file = "proto\\acme\\billing\\v1\\account.proto".to_string();
+        let table = table_from_schema(&schema);
+        assert_eq!(table.source_file, "proto/acme/billing/v1/account.proto");
+
+        let header = crate::generation::sql::render_header(
+            &table,
+            "checksum",
+            &crate::generation::SqlGenerationConfig::default(),
+        );
+        assert!(
+            header.contains("-- UDB:source_proto=proto/acme/billing/v1/account.proto\n"),
+            "{header}"
+        );
+    }
+
+    /// A generated CHECK on a column with a reserved name must parse too.
+    #[test]
+    fn generated_checks_quote_a_reserved_column_name() {
+        let mut schema = ProtoSchema::new("Msg");
+        schema.table_name = "msgs".to_string();
+        let mut to = col("to", 2, "");
+        to.enum_values = vec!["a".to_string()];
+        let mut status = col("status", 3, "");
+        status.enum_values = vec!["b".to_string()];
+        schema.columns = vec![col("id", 1, ""), to, status];
+        let table = table_from_schema(&schema);
+        let expression = |name: &str| {
+            table
+                .checks
+                .iter()
+                .find(|check| check.name == name)
+                .map(|check| check.expression.clone())
+                .expect("enum check")
+        };
+        assert_eq!(expression("chk_msgs_to_enum"), "\"to\" IN ('a')");
+        assert_eq!(expression("chk_msgs_status_enum"), "status IN ('b')");
     }
 
     #[test]

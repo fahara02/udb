@@ -181,7 +181,7 @@ var File_udb_core_notification_entity_v1_notification_template_proto protoreflec
 
 const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc = "" +
 	"\n" +
-	";udb/core/notification/entity/v1/notification_template.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xd6\x16\n" +
+	";udb/core/notification/entity/v1/notification_template.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xd3\x16\n" +
 	"\x14NotificationTemplate\x12O\n" +
 	"\vtemplate_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vtemplate_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -229,7 +229,7 @@ const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc =
 	"project_id\x18\x0e \x01(\tBP\x82\xb7\x18L\n" +
 	"\n" +
 	"project_id\x12\fVARCHAR(120)\x18\x01:\x02''R'\n" +
-	"\x1eidx_notif_templates_project_id\x12\x05BTREE\xa0\x02\x01R\tprojectId:\xed\t\xfa\xb6\x18\xdd\a\n" +
+	"\x1eidx_notif_templates_project_id\x12\x05BTREE\xa0\x02\x01R\tprojectId:\xea\t\xfa\xb6\x18\xda\a\n" +
 	"\x16notification_templates\x12\x10udb_notification\x18\x01 \x01*8Message templates for each notification type and channel0\x018\x01@\x01b\xd0\x01\n" +
 	"\x18tenant_project_isolation\x12\x03ALL\x1a\xac\x01((tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text) AND project_id::text = current_setting('app.current_project_id', true)::text)(\x01h\x01\x8a\x01\x8e\x01\n" +
 	"0idx_notif_templates_project_global_event_channel\x12\x05BTREE\x18\x01:(tenant_id IS NULL AND deleted_at IS NULLZ\n" +
@@ -238,7 +238,7 @@ const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc =
 	"0idx_notif_templates_tenant_project_event_channel\x12\x05BTREE\x18\x01:,tenant_id IS NOT NULL AND deleted_at IS NULLZ\ttenant_idZ\n" +
 	"project_idZ\n" +
 	"event_typeZ\achannelZ\x06locale\xaa\x01g\n" +
-	"+trg_notification_templates_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"#udb_notification.touch_updated_at()*\x03ROW\xb8\x01\x01\xc2\x01\xe1\x01\n" +
+	"+trg_notification_templates_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"#udb_notification.touch_updated_at()*\x03ROW\xc2\x01\xe1\x01\n" +
 	"\x19touch_updated_at_function\x12\bpostgres\x1a\x0fbefore_triggers\"\xa8\x01CREATE OR REPLACE FUNCTION udb_notification.touch_updated_at()\n" +
 	"RETURNS trigger\n" +
 	"LANGUAGE plpgsql\n" +

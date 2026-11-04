@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+from dataclasses import dataclass, field
+from datetime import datetime
 import json
-from typing import Any, AsyncIterator, Iterable, Iterator, Mapping, Sequence
+import threading
+import time
+from typing import Any, AsyncIterator, Awaitable, Callable, Iterable, Iterator, Mapping, Sequence
 
 import grpc
 from google.protobuf.struct_pb2 import Struct
@@ -10,10 +15,27 @@ from udb.entity.v1 import types_pb2
 from udb.services.v1 import data_broker_pb2_grpc
 
 from ._channel import merge_channel_options
-from .exceptions import UdbConfigurationError, UdbRpcError
-from .metadata import Metadata, WriteReceipt
+from .error_code import map_rpc_error
+from .exceptions import UdbConfigurationError
+from .generated_client import (
+    RPC_OPERATION_KIND,
+    RetryPolicy,
+    _is_replay_safe,
+    _request_has_idempotency_key,
+)
+from .metadata import ConsistencyMode, Metadata, ReadFence, WriteReceipt
+from .record_codec import format_timestamp
 
 JsonMapping = Mapping[str, Any]
+
+_DATA_BROKER_PATH = "/udb.services.v1.DataBroker/"
+_EMPTY_CAS = (
+    "udb: guarded write requires a non-empty expected precondition; refusing to run unconditionally"
+)
+# How long after a write its fence rides on reads, and how long a fenced read may
+# wait for its write to land.
+_READ_YOUR_WRITES_WINDOW_S = 30.0
+_READ_FENCE_WAIT_MS = 2000
 
 
 def receipt_from_response(response: Any) -> WriteReceipt:
@@ -43,8 +65,20 @@ def to_struct(value: JsonMapping | Struct | None) -> Struct:
         return value
     struct = Struct()
     if value:
-        struct.update(dict(value))
+        struct.update(_json_safe(value))
     return struct
+
+
+def _json_safe(value: Any) -> Any:
+    """Values a Struct accepts: nested mappings and sequences become dicts and
+    lists, and a datetime becomes the text udb stores for a TIMESTAMPTZ."""
+    if isinstance(value, Mapping):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, datetime):
+        return format_timestamp(value)
+    return value
 
 
 def to_record_json(record: JsonMapping | bytes | str) -> bytes:
@@ -56,11 +90,213 @@ def to_record_json(record: JsonMapping | bytes | str) -> bytes:
 
 
 def decode_records(record_set: types_pb2.RecordSet) -> list[dict[str, Any]]:
-    return [json.loads(raw.decode("utf-8")) for raw in record_set.records_json]
+    """Decode a RecordSet's rows. ``records_json`` is the canonical representation;
+    ``rows`` without it means the records are missing, not that nothing matched, and
+    an empty body fails rather than leaving the page short."""
+    if not record_set.records_json and len(record_set.rows) > 0:
+        raise ValueError(
+            f"udb: record set carries {len(record_set.rows)} compatibility row(s) but no records_json"
+        )
+    records: list[dict[str, Any]] = []
+    for index, raw in enumerate(record_set.records_json):
+        if not raw:
+            raise ValueError(f"udb: decode record row {index}: empty body")
+        records.append(json.loads(raw.decode("utf-8")))
+    return records
 
 
-class UdbClient:
-    """Synchronous UDB DataBroker client with metadata injection."""
+@dataclass
+class Page:
+    """One page of a keyset-paginated read."""
+
+    rows: list[dict[str, Any]] = field(default_factory=list)
+    #: Feed back as ``page_token``; empty on the last page. Opaque.
+    next_page_token: str = ""
+    #: True when the page is full: more rows may match.
+    has_more: bool = False
+    #: Every matching row, when ``include_total`` asked for it; 0 otherwise.
+    exact_total: int = 0
+
+
+@dataclass
+class UpsertResult:
+    """An entity upsert's outcome. Other attributes read from ``response``."""
+
+    response: types_pb2.MutationResponse
+    #: The returned row, only when ``return_record`` was set.
+    record: dict[str, Any] | None = None
+    #: True when the broker collapsed this write onto an earlier one with the same
+    #: idempotency key instead of applying it again.
+    was_duplicate: bool = False
+
+    def __getattr__(self, name: str) -> Any:
+        if name == "response":
+            raise AttributeError(name)
+        return getattr(self.response, name)
+
+
+class _ClientBase:
+    """State and request plumbing shared by the sync and async data clients."""
+
+    _metadata: Metadata | None
+    _retry: RetryPolicy
+
+    def _init_fence(self) -> None:
+        self._fence_lock = threading.Lock()
+        self._fence_receipt: WriteReceipt | None = None
+        self._fence_at = 0.0
+
+    def remember_write(self, response: Any) -> None:
+        """Keep a write's receipt so the next reads through this client see it.
+
+        Called by entity handles and typed tables after every write; call it after a
+        raw :meth:`upsert` to make that write count as well."""
+        try:
+            receipt = receipt_from_response(response)
+        except (ValueError, TypeError):
+            return
+        self.remember_receipt(receipt)
+
+    def remember_receipt(self, receipt: WriteReceipt) -> None:
+        if receipt == WriteReceipt():
+            return
+        with self._fence_lock:
+            self._fence_receipt = receipt
+            self._fence_at = time.monotonic()
+
+    def read_fence(self) -> types_pb2.RequestContext | None:
+        """The context carrying the latest write's fence, ``None`` when no write
+        happened in the last 30 seconds."""
+        with self._fence_lock:
+            receipt, at = self._fence_receipt, self._fence_at
+        if receipt is None or time.monotonic() - at > _READ_YOUR_WRITES_WINDOW_S:
+            return None
+        fence = ReadFence.from_receipt(receipt, _READ_FENCE_WAIT_MS)
+        return types_pb2.RequestContext(read_fence_json=fence.to_json())
+
+    def _retry_facts(self, rpc_name: str, request: Any) -> dict[str, bool]:
+        path = _DATA_BROKER_PATH + rpc_name
+        return {
+            "read_only": RPC_OPERATION_KIND.get(path) == "read_only",
+            "replay_safe": _is_replay_safe(path),
+            "has_idempotency_key": _request_has_idempotency_key(request),
+        }
+
+    def _effective_metadata(self, metadata: Metadata | None) -> Metadata:
+        effective = metadata or self._metadata
+        if effective is None:
+            raise UdbConfigurationError(
+                "No UDB metadata is bound. Pass metadata=... or call bind_metadata()."
+            )
+        return effective
+
+    def _call_metadata(self, metadata: Metadata | None) -> tuple[tuple[str, str], ...]:
+        return self._effective_metadata(metadata).to_grpc_metadata()
+
+    def _with_context(self, request: Any, metadata: Metadata | None) -> Any:
+        if not hasattr(request, "context"):
+            return request
+        cloned = type(request)()
+        cloned.CopyFrom(request)
+        if not cloned.context.tenant_id:
+            fence = cloned.context.read_fence_json
+            cloned.context.CopyFrom(self._effective_metadata(metadata).to_request_context())
+            # A fence the caller put on its metadata wins over the automatic one.
+            if fence and not cloned.context.read_fence_json:
+                cloned.context.read_fence_json = fence
+        return cloned
+
+
+def _insert_request(
+    message_type: str,
+    record: JsonMapping | bytes | str | None,
+    payload: JsonMapping | Struct | None,
+    return_record: bool,
+    idempotency_key: str,
+) -> types_pb2.UpsertRequest:
+    request = types_pb2.UpsertRequest(
+        message_type=message_type,
+        record_json=to_record_json(record or {}),
+        return_record=return_record,
+        idempotency_key=idempotency_key,
+    )
+    if payload:
+        request.payload.CopyFrom(to_struct(payload))
+    return request
+
+
+def _update_request(
+    message_type: str,
+    filter: JsonMapping | Struct | None,
+    changes: JsonMapping | Struct | None,
+    increments: Mapping[str, float] | None,
+    expected: JsonMapping | Struct | None,
+    idempotency_key: str,
+    return_record: bool,
+    expected_revision: str,
+    require_affected: int,
+) -> types_pb2.UpdateRequest:
+    request = types_pb2.UpdateRequest(
+        message_type=message_type,
+        idempotency_key=idempotency_key,
+        return_record=return_record,
+        expected_revision=expected_revision,
+        require_affected=require_affected,
+    )
+    if filter:
+        request.filter.CopyFrom(to_struct(filter))
+    if changes:
+        request.changes.CopyFrom(to_struct(changes))
+    if expected:
+        request.expected.CopyFrom(to_struct(expected))
+    # Deterministic wire order for the increments.
+    for column in sorted(increments or {}):
+        request.increments.add(column=column, delta=float(increments[column]))  # type: ignore[index]
+    return request
+
+
+def _check_idempotency_key(key: str) -> None:
+    # A blank key would silently disable replay-safety while looking set.
+    if key and not key.strip():
+        raise ValueError("udb: idempotency key must not be whitespace-only")
+
+
+def _sort_keys(sort: Sequence[types_pb2.Sort | str]) -> list[types_pb2.Sort]:
+    keys = []
+    for item in sort:
+        if isinstance(item, str):
+            descending = item.startswith("-")
+            keys.append(types_pb2.Sort(field=item[1:] if descending else item, descending=descending))
+        else:
+            keys.append(item)
+    return keys
+
+
+def _page_from(record_set: types_pb2.RecordSet) -> Page:
+    return Page(
+        rows=decode_records(record_set),
+        next_page_token=record_set.next_page_token,
+        has_more=record_set.has_more,
+        exact_total=record_set.exact_total,
+    )
+
+
+def _upsert_result(response: types_pb2.MutationResponse, return_record: bool) -> UpsertResult:
+    result = UpsertResult(response=response, was_duplicate=response.was_duplicate)
+    if return_record and response.record_json:
+        result.record = json.loads(response.record_json.decode("utf-8"))
+    return result
+
+
+class UdbClient(_ClientBase):
+    """Synchronous UDB DataBroker client with metadata injection.
+
+    Unary calls retry per ``retry`` (default :class:`RetryPolicy`): reads on
+    transient codes, mutations only when replay-safe and idempotency-keyed. A failed
+    call raises :class:`~udb_client.exceptions.UdbRpcError`, carrying the broker's
+    ErrorDetail as :class:`~udb_client.generated_client.UdbDetailedRpcError` when
+    one was sent.
+    """
 
     def __init__(
         self,
@@ -72,11 +308,14 @@ class UdbClient:
         channel_options: Sequence[tuple[str, Any]] | None = None,
         timeout: float | None = 30.0,
         channel: grpc.Channel | None = None,
+        retry: RetryPolicy | None = None,
     ):
         if not target and channel is None:
             raise UdbConfigurationError("UDB target is required, e.g. '127.0.0.1:50051'")
         self._metadata = metadata
         self._timeout = timeout
+        self._retry = retry or RetryPolicy()
+        self._init_fence()
         self._owns_channel = channel is None
         if channel is None:
             options = merge_channel_options(channel_options)
@@ -117,14 +356,21 @@ class UdbClient:
     ) -> Any:
         method = getattr(self._stub, rpc_name)
         request = self._with_context(request, metadata)
-        try:
-            return method(
-                request,
-                metadata=self._call_metadata(metadata),
-                timeout=self._timeout if timeout is None else timeout,
-            )
-        except grpc.RpcError as error:
-            raise UdbRpcError(rpc_name, error) from error
+        facts = self._retry_facts(rpc_name, request)
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                return method(
+                    request,
+                    metadata=self._call_metadata(metadata),
+                    timeout=self._timeout if timeout is None else timeout,
+                )
+            except grpc.RpcError as error:
+                if self._retry.should_retry(error.code(), attempt, **facts):
+                    time.sleep(self._retry.backoff_for(attempt))
+                    continue
+                raise map_rpc_error(rpc_name, error) from error
 
     def select(
         self,
@@ -136,6 +382,7 @@ class UdbClient:
         limit: int = 0,
         page_token: str = "",
         sort: Sequence[types_pb2.Sort] = (),
+        include_total: bool = False,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.RecordSet:
@@ -146,6 +393,7 @@ class UdbClient:
             limit=limit,
             page_token=page_token,
             sort=list(sort),
+            include_total=include_total,
         )
         return self.call("Select", req, metadata=metadata, timeout=timeout)
 
@@ -187,6 +435,8 @@ class UdbClient:
         message_type: str = "",
         filter: JsonMapping | Struct | None = None,
         idempotency_key: str = "",
+        expected: JsonMapping | Struct | None = None,
+        require_affected: int = 0,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.MutationResponse:
@@ -194,8 +444,52 @@ class UdbClient:
             message_type=message_type,
             filter=to_struct(filter),
             idempotency_key=idempotency_key,
+            require_affected=require_affected,
         )
+        if request is None and expected:
+            req.expected.CopyFrom(to_struct(expected))
         return self.call("Delete", req, metadata=metadata, timeout=timeout)
+
+    def insert(
+        self,
+        request: types_pb2.UpsertRequest | None = None,
+        *,
+        message_type: str = "",
+        record: JsonMapping | bytes | str | None = None,
+        payload: JsonMapping | Struct | None = None,
+        return_record: bool = False,
+        idempotency_key: str = "",
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        """Create a row. A primary or unique-key collision raises and never replaces
+        the existing row. Older brokers answer UNIMPLEMENTED."""
+        req = request or _insert_request(message_type, record, payload, return_record, idempotency_key)
+        return self.call("Insert", req, metadata=metadata, timeout=timeout)
+
+    def update(
+        self,
+        request: types_pb2.UpdateRequest | None = None,
+        *,
+        message_type: str = "",
+        filter: JsonMapping | Struct | None = None,
+        changes: JsonMapping | Struct | None = None,
+        increments: Mapping[str, float] | None = None,
+        expected: JsonMapping | Struct | None = None,
+        idempotency_key: str = "",
+        return_record: bool = False,
+        expected_revision: str = "",
+        require_affected: int = 0,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        """One partial update: set only ``changes`` (``None`` writes SQL NULL) and
+        apply ``increments`` atomically on the rows ``filter`` matches."""
+        req = request or _update_request(
+            message_type, filter, changes, increments, expected,
+            idempotency_key, return_record, expected_revision, require_affected,
+        )
+        return self.call("Update", req, metadata=metadata, timeout=timeout)
 
     def upsert_with_receipt(
         self, *args: Any, **kwargs: Any
@@ -230,6 +524,13 @@ class UdbClient:
         """Table-shaped alias of :meth:`entity` (``udb.data.table("invoice")``)."""
         return self.entity(name, key=key)
 
+    def tx(self, fn: Callable[[Any], Any], *, metadata: Metadata | None = None, timeout: float | None = None) -> None:
+        """Run ``fn(tx)`` and commit everything it collected atomically: every write
+        and every event commits together or none does. See :class:`udb_client.tx.TxScope`."""
+        from .tx import run_tx
+
+        run_tx(self, fn, metadata=metadata, timeout=timeout)
+
     def batch_select(
         self,
         requests: Iterable[types_pb2.SelectRequest],
@@ -237,14 +538,14 @@ class UdbClient:
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[types_pb2.RecordSet]:
-        try:
-            return self._stub.BatchSelect(
+        return _mapped_stream(
+            "BatchSelect",
+            lambda: self._stub.BatchSelect(
                 (self._with_context(req, metadata) for req in requests),
                 metadata=self._call_metadata(metadata),
                 timeout=self._timeout if timeout is None else timeout,
-            )
-        except grpc.RpcError as error:
-            raise UdbRpcError("BatchSelect", error) from error
+            ),
+        )
 
     def batch_upsert(
         self,
@@ -253,14 +554,14 @@ class UdbClient:
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Iterator[types_pb2.MutationResponse]:
-        try:
-            return self._stub.BatchUpsert(
+        return _mapped_stream(
+            "BatchUpsert",
+            lambda: self._stub.BatchUpsert(
                 (self._with_context(req, metadata) for req in requests),
                 metadata=self._call_metadata(metadata),
                 timeout=self._timeout if timeout is None else timeout,
-            )
-        except grpc.RpcError as error:
-            raise UdbRpcError("BatchUpsert", error) from error
+            ),
+        )
 
     def vector_upsert(
         self,
@@ -367,7 +668,7 @@ class UdbClient:
                 timeout=self._timeout if timeout is None else timeout,
             )
         except grpc.RpcError as error:
-            raise UdbRpcError("PutObject", error) from error
+            raise map_rpc_error("PutObject", error) from error
 
     def get_object(
         self,
@@ -386,7 +687,7 @@ class UdbClient:
             )
             return b"".join(chunk.data for chunk in chunks)
         except grpc.RpcError as error:
-            raise UdbRpcError("GetObject", error) from error
+            raise map_rpc_error("GetObject", error) from error
 
     def generate_presigned_url(
         self,
@@ -441,41 +742,126 @@ class UdbClient:
     def warmup(self, *, metadata: Metadata | None = None) -> types_pb2.CapabilitiesResponse:
         return self.get_capabilities(metadata=metadata)
 
-    def _effective_metadata(self, metadata: Metadata | None) -> Metadata:
-        effective = metadata or self._metadata
-        if effective is None:
-            raise UdbConfigurationError(
-                "No UDB metadata is bound. Pass metadata=... or call bind_metadata()."
-            )
-        return effective
 
-    def _call_metadata(self, metadata: Metadata | None) -> tuple[tuple[str, str], ...]:
-        return self._effective_metadata(metadata).to_grpc_metadata()
-
-    def _with_context(self, request: Any, metadata: Metadata | None) -> Any:
-        if not hasattr(request, "context"):
-            return request
-        cloned = type(request)()
-        cloned.CopyFrom(request)
-        if not cloned.context.tenant_id:
-            cloned.context.CopyFrom(self._effective_metadata(metadata).to_request_context())
-        return cloned
+def _mapped_stream(rpc_name: str, open_stream: Callable[[], Iterable[Any]]) -> Iterator[Any]:
+    """A response stream whose failures raise the typed error, which they do while
+    iterating rather than when the stream opens."""
+    try:
+        yield from open_stream()
+    except grpc.RpcError as error:
+        raise map_rpc_error(rpc_name, error) from error
 
 
-class _BoundEntity:
-    """A message-type/table bound to a :class:`UdbClient`, taking plain dicts.
+class _EntityBase:
+    """Request building shared by the sync and async entity handles.
 
-    Returned by :meth:`UdbClient.entity` / :meth:`UdbClient.table`. Its
-    ``select``/``upsert``/``delete`` build the proto requests from dicts using the
-    same :func:`to_record_json`/:func:`to_struct`/:func:`decode_records` helpers
-    the raw client uses, and set ``conflict_fields`` from the bound key. The bind
-    happens once; no per-request catalog lookup.
+    A handle binds a message type and key once and takes plain dicts, with no
+    per-request catalog lookup. Each verb is exactly one RPC. Reads carry the fence
+    of this client's latest handle write, and every write refreshes it, so a read
+    after a write sees it even from a replica; a fence on the caller's own metadata
+    wins. The broker stays the enforcement point: nothing here sets scopes.
     """
 
-    def __init__(self, client: "UdbClient", message_type: str, key: Sequence[str]):
+    def __init__(self, client: Any, message_type: str, key: Sequence[str], consistency: Any = None):
         self._client = client
         self._message_type = message_type
         self._key = tuple(key)
+        self._consistency = consistency
+
+    def with_consistency(self, mode: "ConsistencyMode | str | None") -> Any:
+        """A copy whose calls request ``mode``; ``None`` clears it. The broker stays
+        the enforcement point: this only states the caller's preference."""
+        return type(self)(self._client, self._message_type, self._key, mode)
+
+    def _metadata_for(self, metadata: Metadata | None) -> Metadata | None:
+        if self._consistency is None:
+            return metadata
+        return self._client._effective_metadata(metadata).with_consistency(self._consistency)
+
+    def _select_request(
+        self,
+        where: JsonMapping | Struct | None,
+        fields: Sequence[str],
+        limit: int,
+        page_token: str,
+        sort: Sequence[types_pb2.Sort | str],
+        include_total: bool,
+    ) -> types_pb2.SelectRequest:
+        request = types_pb2.SelectRequest(
+            message_type=self._message_type,
+            filter=to_struct(where),
+            fields=list(fields),
+            limit=limit,
+            page_token=page_token,
+            sort=_sort_keys(sort),
+            include_total=include_total,
+        )
+        fence = self._client.read_fence()
+        if fence is not None:
+            request.context.CopyFrom(fence)
+        return request
+
+    def _upsert_request(
+        self,
+        record: JsonMapping,
+        return_record: bool,
+        idempotency_key: str,
+        expected: JsonMapping | Struct | None,
+    ) -> types_pb2.UpsertRequest:
+        if record is None:
+            raise ValueError("udb: Upsert record is None")
+        _check_idempotency_key(idempotency_key)
+        request = types_pb2.UpsertRequest(
+            message_type=self._message_type,
+            record_json=to_record_json(record),
+            conflict_fields=list(self._key),
+            return_record=return_record,
+            idempotency_key=idempotency_key,
+        )
+        if expected:
+            request.expected.CopyFrom(to_struct(expected))
+        return request
+
+    def _delete_request(
+        self,
+        where: JsonMapping | Struct | None,
+        idempotency_key: str,
+        expected: JsonMapping | Struct | None,
+    ) -> types_pb2.DeleteRequest:
+        # A guarded delete must never degrade into deleting every matched row.
+        if expected is not None and not expected:
+            raise ValueError(_EMPTY_CAS)
+        _check_idempotency_key(idempotency_key)
+        request = types_pb2.DeleteRequest(
+            message_type=self._message_type,
+            filter=to_struct(where),
+            idempotency_key=idempotency_key,
+        )
+        if expected:
+            request.expected.CopyFrom(to_struct(expected))
+        return request
+
+    def _update_for(
+        self,
+        where: JsonMapping | Struct | None,
+        changes: JsonMapping | Struct | None,
+        deltas: Mapping[str, float] | None,
+        expected: JsonMapping | Struct | None,
+        idempotency_key: str,
+        return_record: bool,
+    ) -> types_pb2.UpdateRequest:
+        if expected is not None and not expected:
+            raise ValueError(_EMPTY_CAS)
+        return _update_request(
+            self._message_type, where, changes, deltas, expected, idempotency_key, return_record, "", 0
+        )
+
+
+class _BoundEntity(_EntityBase):
+    """A message-type/table bound to a :class:`UdbClient`, taking plain dicts.
+
+    Returned by :meth:`UdbClient.entity` / :meth:`UdbClient.table`.
+    """
 
     def select(
         self,
@@ -484,22 +870,33 @@ class _BoundEntity:
         fields: Sequence[str] = (),
         limit: int = 0,
         page_token: str = "",
-        sort: Sequence[types_pb2.Sort] = (),
+        sort: Sequence[types_pb2.Sort | str] = (),
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> list[dict[str, Any]]:
         """One ``Select``; returns decoded records (no hidden List)."""
-        record_set = self._client.select(
-            message_type=self._message_type,
-            filter=where,
-            fields=fields,
-            limit=limit,
-            page_token=page_token,
-            sort=sort,
-            metadata=metadata,
-            timeout=timeout,
-        )
+        request = self._select_request(where, fields, limit, page_token, sort, False)
+        record_set = self._client.select(request, metadata=self._metadata_for(metadata), timeout=timeout)
         return decode_records(record_set)
+
+    def select_page(
+        self,
+        where: JsonMapping | Struct | None = None,
+        *,
+        fields: Sequence[str] = (),
+        sort: Sequence[types_pb2.Sort | str] = (),
+        limit: int = 0,
+        page_token: str = "",
+        include_total: bool = False,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Page:
+        """One keyset-paginated ``Select``. Pass an empty ``page_token`` for the first
+        page, then each returned ``next_page_token`` until it comes back empty. A
+        ``sort`` item is a :class:`Sort` or a column name (``"-column"`` descends)."""
+        request = self._select_request(where, fields, limit, page_token, sort, include_total)
+        record_set = self._client.select(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        return _page_from(record_set)
 
     def upsert(
         self,
@@ -510,44 +907,172 @@ class _BoundEntity:
         expected: JsonMapping | Struct | None = None,
         metadata: Metadata | None = None,
         timeout: float | None = None,
-    ) -> types_pb2.MutationResponse:
+    ) -> UpsertResult:
         """One ``Upsert`` with ``conflict_fields`` from the bound key.
 
-        ``expected`` is passed through as the broker's optimistic CAS
-        precondition; a key-bound handle is exactly where a caller reaches for
-        compare-and-swap, so dropping it here would leave the capability
-        unreachable through the ergonomic surface.
+        ``expected`` makes it a compare-and-swap: every field must equal the current
+        row or the broker refuses with FAILED_PRECONDITION and writes nothing; an
+        empty value leaves it unconditional. ``return_record`` decodes the record
+        from the same response, without a second read. The result reads like the
+        ``MutationResponse`` and adds ``was_duplicate`` and ``record``.
         """
-        return self._client.upsert(
-            message_type=self._message_type,
-            record=record,
-            conflict_fields=self._key,
-            return_record=return_record,
-            idempotency_key=idempotency_key,
-            expected=expected,
-            metadata=metadata,
-            timeout=timeout,
-        )
+        request = self._upsert_request(record, return_record, idempotency_key, expected)
+        response = self._client.upsert(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        self._client.remember_write(response)
+        return _upsert_result(response, return_record)
+
+    def update(
+        self,
+        where: JsonMapping | Struct | None,
+        changes: JsonMapping | Struct,
+        *,
+        expected: JsonMapping | Struct | None = None,
+        idempotency_key: str = "",
+        return_record: bool = False,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        """One partial update: set only the columns in ``changes`` (``None`` writes
+        SQL NULL) on the rows ``where`` matches. ``expected`` makes it a compare-and-
+        swap; an empty ``expected`` raises before any RPC, so a guarded update never
+        degrades into an unconditional one."""
+        request = self._update_for(where, changes, None, expected, idempotency_key, return_record)
+        response = self._client.update(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        self._client.remember_write(response)
+        return response
+
+    def increment(
+        self,
+        where: JsonMapping | Struct | None,
+        deltas: Mapping[str, float],
+        *,
+        expected: JsonMapping | Struct | None = None,
+        idempotency_key: str = "",
+        return_record: bool = False,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        """Atomic counter deltas (``column = column + delta``) in one statement, with
+        no read-modify-write window."""
+        request = self._update_for(where, None, deltas, expected, idempotency_key, return_record)
+        response = self._client.update(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        self._client.remember_write(response)
+        return response
 
     def delete(
         self,
         *,
         where: JsonMapping | Struct | None = None,
         idempotency_key: str = "",
+        expected: JsonMapping | Struct | None = None,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.MutationResponse:
-        """One ``Delete`` filtered by ``where``."""
-        return self._client.delete(
-            message_type=self._message_type,
-            filter=where,
-            idempotency_key=idempotency_key,
-            metadata=metadata,
-            timeout=timeout,
-        )
+        """One ``Delete`` filtered by ``where``. ``expected`` makes it a compare-and-
+        swap; an empty ``expected`` raises before any RPC."""
+        request = self._delete_request(where, idempotency_key, expected)
+        response = self._client.delete(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        self._client.remember_write(response)
+        return response
 
 
-class UdbAsyncClient:
+class _AsyncBoundEntity(_EntityBase):
+    """The async form of :class:`_BoundEntity`, from :meth:`UdbAsyncClient.entity`."""
+
+    async def select(
+        self,
+        *,
+        where: JsonMapping | Struct | None = None,
+        fields: Sequence[str] = (),
+        limit: int = 0,
+        page_token: str = "",
+        sort: Sequence[types_pb2.Sort | str] = (),
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> list[dict[str, Any]]:
+        request = self._select_request(where, fields, limit, page_token, sort, False)
+        record_set = await self._client.select(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        return decode_records(record_set)
+
+    async def select_page(
+        self,
+        where: JsonMapping | Struct | None = None,
+        *,
+        fields: Sequence[str] = (),
+        sort: Sequence[types_pb2.Sort | str] = (),
+        limit: int = 0,
+        page_token: str = "",
+        include_total: bool = False,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Page:
+        request = self._select_request(where, fields, limit, page_token, sort, include_total)
+        record_set = await self._client.select(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        return _page_from(record_set)
+
+    async def upsert(
+        self,
+        record: JsonMapping,
+        *,
+        return_record: bool = False,
+        idempotency_key: str = "",
+        expected: JsonMapping | Struct | None = None,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> UpsertResult:
+        request = self._upsert_request(record, return_record, idempotency_key, expected)
+        response = await self._client.upsert(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        self._client.remember_write(response)
+        return _upsert_result(response, return_record)
+
+    async def update(
+        self,
+        where: JsonMapping | Struct | None,
+        changes: JsonMapping | Struct,
+        *,
+        expected: JsonMapping | Struct | None = None,
+        idempotency_key: str = "",
+        return_record: bool = False,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        request = self._update_for(where, changes, None, expected, idempotency_key, return_record)
+        response = await self._client.update(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        self._client.remember_write(response)
+        return response
+
+    async def increment(
+        self,
+        where: JsonMapping | Struct | None,
+        deltas: Mapping[str, float],
+        *,
+        expected: JsonMapping | Struct | None = None,
+        idempotency_key: str = "",
+        return_record: bool = False,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        request = self._update_for(where, None, deltas, expected, idempotency_key, return_record)
+        response = await self._client.update(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        self._client.remember_write(response)
+        return response
+
+    async def delete(
+        self,
+        *,
+        where: JsonMapping | Struct | None = None,
+        idempotency_key: str = "",
+        expected: JsonMapping | Struct | None = None,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        request = self._delete_request(where, idempotency_key, expected)
+        response = await self._client.delete(request, metadata=self._metadata_for(metadata), timeout=timeout)
+        self._client.remember_write(response)
+        return response
+
+
+class UdbAsyncClient(_ClientBase):
     """Async UDB DataBroker client with the same convenience surface."""
 
     def __init__(
@@ -560,11 +1085,14 @@ class UdbAsyncClient:
         channel_options: Sequence[tuple[str, Any]] | None = None,
         timeout: float | None = 30.0,
         channel: grpc.aio.Channel | None = None,
+        retry: RetryPolicy | None = None,
     ):
         if not target and channel is None:
             raise UdbConfigurationError("UDB target is required, e.g. '127.0.0.1:50051'")
         self._metadata = metadata
         self._timeout = timeout
+        self._retry = retry or RetryPolicy()
+        self._init_fence()
         self._owns_channel = channel is None
         if channel is None:
             options = merge_channel_options(channel_options)
@@ -603,14 +1131,21 @@ class UdbAsyncClient:
     ) -> Any:
         method = getattr(self._stub, rpc_name)
         request = self._with_context(request, metadata)
-        try:
-            return await method(
-                request,
-                metadata=self._call_metadata(metadata),
-                timeout=self._timeout if timeout is None else timeout,
-            )
-        except grpc.RpcError as error:
-            raise UdbRpcError(rpc_name, error) from error
+        facts = self._retry_facts(rpc_name, request)
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                return await method(
+                    request,
+                    metadata=self._call_metadata(metadata),
+                    timeout=self._timeout if timeout is None else timeout,
+                )
+            except grpc.RpcError as error:
+                if self._retry.should_retry(error.code(), attempt, **facts):
+                    await asyncio.sleep(self._retry.backoff_for(attempt))
+                    continue
+                raise map_rpc_error(rpc_name, error) from error
 
     async def select(
         self,
@@ -622,6 +1157,7 @@ class UdbAsyncClient:
         limit: int = 0,
         page_token: str = "",
         sort: Sequence[types_pb2.Sort] = (),
+        include_total: bool = False,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.RecordSet:
@@ -632,6 +1168,7 @@ class UdbAsyncClient:
             limit=limit,
             page_token=page_token,
             sort=list(sort),
+            include_total=include_total,
         )
         return await self.call("Select", req, metadata=metadata, timeout=timeout)
 
@@ -673,6 +1210,8 @@ class UdbAsyncClient:
         message_type: str = "",
         filter: JsonMapping | Struct | None = None,
         idempotency_key: str = "",
+        expected: JsonMapping | Struct | None = None,
+        require_affected: int = 0,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.MutationResponse:
@@ -680,8 +1219,70 @@ class UdbAsyncClient:
             message_type=message_type,
             filter=to_struct(filter),
             idempotency_key=idempotency_key,
+            require_affected=require_affected,
         )
+        if request is None and expected:
+            req.expected.CopyFrom(to_struct(expected))
         return await self.call("Delete", req, metadata=metadata, timeout=timeout)
+
+    async def insert(
+        self,
+        request: types_pb2.UpsertRequest | None = None,
+        *,
+        message_type: str = "",
+        record: JsonMapping | bytes | str | None = None,
+        payload: JsonMapping | Struct | None = None,
+        return_record: bool = False,
+        idempotency_key: str = "",
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        """See :meth:`UdbClient.insert`."""
+        req = request or _insert_request(message_type, record, payload, return_record, idempotency_key)
+        return await self.call("Insert", req, metadata=metadata, timeout=timeout)
+
+    async def update(
+        self,
+        request: types_pb2.UpdateRequest | None = None,
+        *,
+        message_type: str = "",
+        filter: JsonMapping | Struct | None = None,
+        changes: JsonMapping | Struct | None = None,
+        increments: Mapping[str, float] | None = None,
+        expected: JsonMapping | Struct | None = None,
+        idempotency_key: str = "",
+        return_record: bool = False,
+        expected_revision: str = "",
+        require_affected: int = 0,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> types_pb2.MutationResponse:
+        """See :meth:`UdbClient.update`."""
+        req = request or _update_request(
+            message_type, filter, changes, increments, expected,
+            idempotency_key, return_record, expected_revision, require_affected,
+        )
+        return await self.call("Update", req, metadata=metadata, timeout=timeout)
+
+    def entity(self, message_type: str, *, key: Sequence[str] = ()) -> _AsyncBoundEntity:
+        """Bind an entity once, then ``await`` its verbs with plain dicts."""
+        return _AsyncBoundEntity(self, message_type, tuple(key))
+
+    def table(self, name: str, *, key: Sequence[str] = ()) -> _AsyncBoundEntity:
+        """Table-shaped alias of :meth:`entity`."""
+        return self.entity(name, key=key)
+
+    async def tx(
+        self,
+        fn: Callable[[Any], "Awaitable[Any] | Any"],
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> None:
+        """See :meth:`UdbClient.tx`; ``fn`` may be sync or async."""
+        from .tx import run_tx_async
+
+        await run_tx_async(self, fn, metadata=metadata, timeout=timeout)
 
     async def batch_select(
         self,
@@ -699,7 +1300,7 @@ class UdbAsyncClient:
             async for item in stream:
                 yield item
         except grpc.RpcError as error:
-            raise UdbRpcError("BatchSelect", error) from error
+            raise map_rpc_error("BatchSelect", error) from error
 
     async def vector_upsert(
         self,
@@ -806,7 +1407,7 @@ class UdbAsyncClient:
                 timeout=self._timeout if timeout is None else timeout,
             )
         except grpc.RpcError as error:
-            raise UdbRpcError("PutObject", error) from error
+            raise map_rpc_error("PutObject", error) from error
 
     async def get_object(
         self,
@@ -828,7 +1429,7 @@ class UdbAsyncClient:
                 data.extend(chunk.data)
             return bytes(data)
         except grpc.RpcError as error:
-            raise UdbRpcError("GetObject", error) from error
+            raise map_rpc_error("GetObject", error) from error
 
     async def generate_presigned_url(
         self,
@@ -884,23 +1485,3 @@ class UdbAsyncClient:
         self, *, metadata: Metadata | None = None
     ) -> types_pb2.CapabilitiesResponse:
         return await self.get_capabilities(metadata=metadata)
-
-    def _effective_metadata(self, metadata: Metadata | None) -> Metadata:
-        effective = metadata or self._metadata
-        if effective is None:
-            raise UdbConfigurationError(
-                "No UDB metadata is bound. Pass metadata=... or call bind_metadata()."
-            )
-        return effective
-
-    def _call_metadata(self, metadata: Metadata | None) -> tuple[tuple[str, str], ...]:
-        return self._effective_metadata(metadata).to_grpc_metadata()
-
-    def _with_context(self, request: Any, metadata: Metadata | None) -> Any:
-        if not hasattr(request, "context"):
-            return request
-        cloned = type(request)()
-        cloned.CopyFrom(request)
-        if not cloned.context.tenant_id:
-            cloned.context.CopyFrom(self._effective_metadata(metadata).to_request_context())
-        return cloned

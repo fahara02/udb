@@ -865,6 +865,8 @@ impl AuthnServiceImpl {
         sign_in: SignIn<'_>,
         now: u64,
     ) -> Result<authn_pb::LoginResponse, Status> {
+        self.reload_snapshot_if_unbound_and_stale(&user.user_id, &user.tenant_id, &user.project_id)
+            .await;
         // Block 1 (auth_fix.md, Decision E): resolve the user's role-derived
         // grants ONCE from the warm authz snapshot and thread them into both the
         // session record (the refresh carrier) and the issued JWT below.

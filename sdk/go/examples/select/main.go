@@ -18,13 +18,12 @@ func main() {
 	defer conn.Close()
 
 	client := udbclient.New(conn, udbclient.Metadata{
-		TenantID:             "tenant-1",
-		Purpose:              "workflow-read",
-		CorrelationID:        "go-select-example",
-		Scopes:               []string{"udb:read"},
-		ServiceIdentity:      "example.service",
-		ProjectID:            "default",
-		ClientCatalogVersion: "1.0.0",
+		TenantID:        "tenant-1",
+		Purpose:         "workflow-read",
+		CorrelationID:   "go-select-example",
+		Scopes:          []string{"udb:read"},
+		ServiceIdentity: "example.service",
+		ProjectID:       "default",
 	})
 
 	resp, err := client.Select(context.Background(), &entityv1.SelectRequest{

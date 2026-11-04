@@ -185,6 +185,8 @@ pub struct EntityColumnDescriptor {
     pub is_jsonb: bool,
     /// Column is server-populated (e.g. default/PK); omit from generated INSERTs.
     pub exclude_from_insert: bool,
+    pub exclude_from_update: bool,
+    pub generated: bool,
     /// PII blind-index column — the generator scaffolds the HMAC lookup plumbing.
     pub is_blind_index: bool,
     pub is_pii: bool,
@@ -729,6 +731,8 @@ fn entity_descriptor_from_table(
                     is_jsonb: column.is_jsonb
                         || column.sql_type.trim().eq_ignore_ascii_case("JSONB"),
                     exclude_from_insert: column.exclude_from_insert,
+                    exclude_from_update: column.exclude_from_update,
+                    generated: column.generated,
                     is_blind_index: column.security.is_blind_index,
                     is_pii: column.security.is_pii,
                     is_encrypted: column.security.is_encrypted,

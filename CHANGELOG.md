@@ -5,6 +5,123 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.7] - 2026-11-05
+
+### Added
+
+- **Typed code generation for TypeScript and Python, matching Go.**
+  `udb sdk generate --project-proto <dir> --lang ts` writes
+  `typescript/udb_entities_gen.ts`, and `--lang python` writes
+  `python/udb_entities_gen.py`. For each table they provide the row type, `XKey` and
+  `XBy<Unique>` key types, the `XColumns` column policy, `XWhere` typed predicates,
+  the `XToUDBRecord` and `XFromUDBRow` mappers, `XTable` and `XRepo`, plus an `XFields`
+  name map. TypeScript rows use camelCase protobuf JSON names; Python rows are dicts
+  keyed by proto field name. In both, a NULL column is absent from the row.
+- **`--entities-only`** writes only the generated entities file, for Go, TypeScript
+  and Python. `udb sdk diff --against` now checks all three, by file extension.
+  `--lang ts` and the other aliases in the help now work with `sdk generate`.
+- **The Go table surface in TypeScript and Python.** `get`, `select` (sort, total,
+  fields, paging), `selectAll`, `count`, `upsert`, `insert`, `patch`, `updateIf`,
+  `updateWithRetry`, `increment`, `delete` and `keyOf`, with not-found and conflict
+  errors: `UdbNotFoundError` and `UdbConflictError` in TypeScript, `UdbNotFound` and
+  `UdbConflict` in Python. Python also has `AsyncTable` and `AsyncRepo`.
+- **Other Go capabilities in TypeScript and Python.**
+  - Automatic read-your-writes on entity handles and tables.
+  - Transactions with `insert` and contract-driven `emit`.
+  - A durable consumer with retries, dead-lettering and batched acknowledgements.
+  - `inspect`, `missingScope` and `isCasConflict` error helpers.
+  - The proto record codec: `encodeRecord`, `decodeRecord`, `encodeEvent`.
+  - Test support with a fake, an embedded broker, fault injection and the shared
+    table contract: `@udb_plus/sdk/udbtest` and `udb_client.udbtest`.
+  - Enterprise sessions with tenant validation, tenant session pools and `TenantState`.
+  - `connectFromEnv`, `verify` and `ready`; `asUser` and `validateSession`.
+  - `liveQuery`, graph and vector builders, a flags facade, schema reflection, and
+    `principal` and `bearerExpiresAt`.
+  - gRPC server interceptors.
+  Python names are the snake_case forms.
+- **Python only:** the data plane now retries per `UdbConfig.retry` and raises errors
+  carrying the broker's `ErrorDetail`. `UdbProject` gains `entity`, `table`,
+  `generated`, `admin.apply_current` and `delete_file_mode`, and `UdbAsyncClient`
+  gains `entity`. Entity handles gain `select_page`, `update` and `increment`.
+- **`udb auth service-account create` and `activate`.** The password comes from
+  `--password-env` or `--password-file`, never a plain flag.
+
+### Fixed
+
+- **An explicit null on a JSON or JSONB column writes SQL NULL** on every write path,
+  and is accepted on an array column through compiled statements. It used to store
+  the JSON document `null` on `Update`, soft-delete `Upsert` and `BeginTx`.
+- **`Upsert` no longer fails with `invalid input syntax for type json`, `Token ""`**
+  when one column set is written with different null or value shapes. Each bind shape
+  now has its own statement text, so a stale prepared statement cannot send a value
+  with the wrong parameter type. The same fix stops a `DOUBLE PRECISION` column storing
+  a wrong number when integers and floats are mixed.
+- **A consumer table no longer inherits a native table's projections by short name.**
+  This cures `read fence did not clear: projection_missing` on tables named like a
+  native entity, such as `Session` or `User`.
+- **`udb identity apply`, `udb up` with `service_accounts`, and every other CLI gRPC
+  call send a correlation id,** and identity errors print the broker's reason.
+- **Generated Go `*ToUDBRecord` writes message-valued JSONB through
+  `udbclient.EncodeField`,** so it matches the typed table and `EncodeRecord`.
+- **`udb auth bootstrap user` takes effect at once.** It appends an authorization
+  revision, and the first sign-in after it reloads the policy snapshot, which cures
+  `scope udb:write is required` right after a bootstrap.
+- **`-- UDB:source_proto=` in migration files always uses forward slashes.**
+- **A lossless column widening is no longer destructive.** A longer `VARCHAR`,
+  `VARCHAR` to `TEXT`, a larger integer, `REAL` to `DOUBLE PRECISION` and a larger
+  `NUMERIC` are `SafeAuto`, and can use `catalog stage` and reviewed transitions.
+
+### Breaking for callers
+
+- **`Update` with null on a `NOT NULL` JSONB column now fails** instead of storing the
+  JSON document `null`. Rows already holding it are not rewritten.
+  - detect: sql: `SELECT count(*) FROM <table> WHERE jsonb_typeof(<column>) = 'null'`
+  - fix: send a value, or make the column nullable.
+- **A float may be wrong if `Upsert` mixed integer and float values on a
+  `DOUBLE PRECISION` column before this release.**
+  - detect: sql: audit `DOUBLE PRECISION` columns written through `Upsert` with mixed values
+  - fix: rewrite the affected values from their source.
+- **Regenerated Go helpers write message JSONB with proto names, numeric enums and
+  emitted defaults.** Reads accept both shapes and stored rows are not rewritten, so a
+  compare-and-swap expectation built from a regenerated helper will not match an
+  old-shape row.
+  - detect: code: `ToUDBRecord`
+  - fix: rewrite the row first, or build that expectation in the old shape.
+- **`udb lint` and broker startup refuse more catalogs.** A bare reserved word in a
+  `CHECK` and a default the column type cannot hold now fail, and two messages sharing
+  a table name fail `udb lint`.
+  - detect: code: `check_unquoted_reserved_word`, `default_value_invalid_for_type`, `duplicate_table_name`
+  - fix: quote the identifier (`"to"`), use `'{}'` for an array default, and give each
+    message its own table.
+- **TypeScript, Python, Java, C# and PHP no longer send a default catalog version.**
+  Code that set `1.0.0` itself must drop it.
+  - detect: env: `UDB_CLIENT_CATALOG_VERSION`
+  - fix: remove the setting and any `sharedMeta` workaround.
+- **Migration files generated on Windows show as stale once.**
+  - detect: file: a `-- UDB:source_proto=` header containing a backslash
+  - fix: run `udb sync-migrations` and commit.
+- **The `allow_drop` hint on `NotificationTemplate` is removed.** Upgrade from 0.6.5 or
+  earlier through 0.6.6 first, because the `locale` index change needs that hint.
+  - detect: sql: `SELECT indexdef FROM pg_indexes WHERE schemaname = 'udb_notification' AND indexdef LIKE '%UNIQUE%' AND indexdef NOT LIKE '%locale%'`
+  - fix: start 0.6.6 once before starting 0.6.7.
+- **TypeScript `Table.upsert` writes the whole row, and `tx` with no writes opens no
+  stream.**
+  - detect: code: `Table.upsert`
+  - fix: use `patch` to change some columns.
+- **TypeScript `UdbProject.connect` refuses an API key together with a bearer token,**
+  as Go does.
+  - detect: code: `UdbProject.connect`
+  - fix: pass one credential.
+- **Python entity `upsert` returns `UpsertResult`, and Python writes through typed
+  tables no longer send `conflict_fields`.** `UpsertResult` delegates to the response,
+  so existing attribute reads keep working.
+  - detect: code: `isinstance(result, MutationResponse)`
+  - fix: read attributes from the result.
+- **Generated entity descriptors gain two columns, so `sdk manifest` output and the
+  generated file hash change.**
+  - detect: code: `udb sdk diff`
+  - fix: regenerate and commit.
+
 ## [0.6.6] - 2026-10-30
 
 ### Added

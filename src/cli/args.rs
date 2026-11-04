@@ -364,6 +364,9 @@ pub(crate) struct SdkSelector {
     /// marshalling file (B3). Defaults to `udbentities`. Only used with
     /// `--project-proto` + Go.
     pub go_package: Option<String>,
+    /// `--entities-only` — write only `udb_entities_gen.go`, not the language's
+    /// templated client tree. Requires `--project-proto` and `--lang go`.
+    pub entities_only: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -454,6 +457,24 @@ pub(crate) enum AuthCommand {
     /// typed durable `service_account_grants` table (offline, deterministic).
     MigrateGrants {
         dry_run: bool,
+    },
+    /// `udb auth service-account create`: CreateUser with the SERVICE_ACCOUNT
+    /// kind, then ChangeUserStatus to ACTIVE, over the native Authn API.
+    ServiceAccountCreate {
+        tenant_id: String,
+        username: String,
+        email: String,
+        password_env: String,
+        password_file: String,
+        project_id: String,
+        reason: String,
+    },
+    /// `udb auth service-account activate`: PENDING_VERIFICATION to ACTIVE for a
+    /// service account that already exists. Never applies to a person.
+    ServiceAccountActivate {
+        tenant_id: String,
+        user_id: String,
+        reason: String,
     },
     /// Typed-grant management through the authenticated native Authn API.
     GrantCreate {
@@ -882,6 +903,20 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
         },
         (Some("migrate-grants"), _) => AuthCommand::MigrateGrants {
             dry_run: has_flag("--dry-run"),
+        },
+        (Some("service-account"), Some("create")) => AuthCommand::ServiceAccountCreate {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            username: flag_value("--username").unwrap_or_default(),
+            email: flag_value("--email").unwrap_or_default(),
+            password_env: flag_value("--password-env").unwrap_or_default(),
+            password_file: flag_value("--password-file").unwrap_or_default(),
+            project_id: flag_value("--project").unwrap_or_default(),
+            reason: flag_value("--reason").unwrap_or_default(),
+        },
+        (Some("service-account"), Some("activate")) => AuthCommand::ServiceAccountActivate {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            user_id: flag_value("--user").unwrap_or_default(),
+            reason: flag_value("--reason").unwrap_or_default(),
         },
         (Some("grant"), Some("create")) => AuthCommand::GrantCreate {
             tenant_id: flag_value("--tenant").unwrap_or_default(),
@@ -1775,6 +1810,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     strict_server_capabilities: has_flag("--strict-server-capabilities"),
                     project_proto: flag_value("--project-proto"),
                     go_package: flag_value("--go-package"),
+                    entities_only: has_flag("--entities-only"),
                 },
             }
         }
@@ -1965,6 +2001,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                         | "--native-services"
                         | "--include-deps"
                         | "--strict-server-capabilities"
+                        | "--entities-only"
                         | "--tui"
                         | "--no-tui"
                         | "--json-plan"

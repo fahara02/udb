@@ -12,7 +12,14 @@ class UdbConfigurationError(UdbError):
 
 
 class UdbRpcError(UdbError):
-    """Raised when the broker returns a non-OK gRPC status."""
+    """Raised when the broker returns a non-OK gRPC status.
+
+    ``error_detail`` is the broker's decoded ``ErrorDetail`` when it sent one, which
+    arrives as the :class:`~udb_client.generated_client.UdbDetailedRpcError` subclass.
+    Read it through :func:`udb_client.error_code.inspect`.
+    """
+
+    error_detail: object | None = None
 
     def __init__(self, rpc_name: str, error: grpc.RpcError):
         self.rpc_name = rpc_name
@@ -22,6 +29,17 @@ class UdbRpcError(UdbError):
         super().__init__(
             f"UDB {rpc_name} failed: gRPC status={self.code.name} details={self.details}"
         )
+
+
+class UdbNotFound(UdbError):
+    """Raised when the addressed row does not exist or the caller cannot see it."""
+
+
+class UdbConflict(UdbError):
+    """Raised when a conditional write lost: the row changed since it was read.
+
+    Read it again and retry, which ``Table.update_with_retry`` does.
+    """
 
 
 class UdbPolicyBundleError(UdbError):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "udb-client"
-version = "0.6.6"
+version = "0.6.7"
 description = "Python SDK for the UDB DataBroker gRPC API"
 readme = "README.md"
 license = "MIT"
@@ -30,6 +30,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Reads policy files for udb_client.udbtest.new_fake.
+test = [
+  "pyyaml>=6,<7",
+]
 pydantic = [
   "pydantic>=2.7,<3",
 ]
@@ -39,6 +43,7 @@ dev = [
   "pydantic>=2.7,<3",
   "pyrefly>=1",
   "pytest>=9",
+  "pyyaml>=6,<7",
   "twine>=6.2",
 ]
 

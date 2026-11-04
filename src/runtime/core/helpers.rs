@@ -630,6 +630,13 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
     }
     for (value, param_type) in params.iter().zip(param_types) {
         query = match param_type.as_str() {
+            // A NULL array binds a typed NULL. The array arms below would refuse it
+            // as "not an array", which made an explicit null unwritable on an array
+            // column through every compiled statement.
+            "array_string" if value.is_null() => query.bind(Option::<Vec<String>>::None),
+            "array_int" if value.is_null() => query.bind(Option::<Vec<i64>>::None),
+            "array_float" if value.is_null() => query.bind(Option::<Vec<f64>>::None),
+            "array_bool" if value.is_null() => query.bind(Option::<Vec<bool>>::None),
             "array_string" => {
                 let values = json_array_values(value, "array_string")?
                     .iter()
@@ -690,6 +697,9 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                     .collect::<Result<Vec<_>, _>>()?;
                 query.bind(values)
             }
+            // A top-level null is SQL NULL, typed jsonb: see `postgres_param_types`
+            // for why the declared type must not depend on the value.
+            "json" if value.is_null() => query.bind(Option::<sqlx::types::Json<JsonValue>>::None),
             "json" => query.bind(sqlx::types::Json(strip_nul_json(value))),
             "numeric" => match value {
                 JsonValue::Null => query.bind(Option::<PgDecimal>::None),
@@ -1584,6 +1594,36 @@ mod generic_dispatch_validation_tests {
             ),
             vec![""]
         );
+        // A null, and a bool or number scalar, in a jsonb placeholder bind jsonb:
+        // the same SQL text must never be prepared with a TEXT parameter by a null
+        // and then be sent a document in jsonb wire format.
+        for value in [
+            LogicalValue::Null,
+            LogicalValue::Bool(true),
+            LogicalValue::Int(3),
+            LogicalValue::Float(1.5),
+            LogicalValue::Json(json!({"a": null})),
+        ] {
+            for statement in [
+                "INSERT INTO t (d) VALUES ($1::JSONB)",
+                "UPDATE t SET d = $1::json",
+            ] {
+                assert_eq!(
+                    postgres_param_types(statement, &[value.clone()]),
+                    vec!["json"],
+                    "{statement} {value:?}"
+                );
+            }
+        }
+        // JSON text stays text so Postgres parses it as a document, not as a JSON
+        // string scalar.
+        assert_eq!(
+            postgres_param_types(
+                "INSERT INTO t (d) VALUES ($1::JSONB)",
+                &[LogicalValue::String("{}".to_string())]
+            ),
+            vec![""]
+        );
         // `$1::` must not be matched by `$10::`.
         assert_eq!(
             postgres_array_cast_param_type("jsonb) values ($10::text[]"),
@@ -1610,6 +1650,62 @@ mod generic_dispatch_validation_tests {
             ),
             vec!["array_numeric"]
         );
+    }
+
+    /// sqlx caches a prepared statement by SQL text and keeps the parameter types
+    /// of its first prepare, so SQL text must differ wherever the types bound to it
+    /// do. The first two shapes are the row replay that failed with
+    /// `Token "" is invalid` (a jsonb value sent to a TEXT parameter); the last two
+    /// are `5` then `5.5` on a DOUBLE PRECISION column, which share 8-byte encodings
+    /// and would store a wrong number instead of failing.
+    #[test]
+    fn bridged_statement_text_differs_per_bind_shape() {
+        let bound = |params: &[JsonValue], types: &[&str]| {
+            statement_for_bind_shape(
+                "INSERT INTO t VALUES ($1)".to_string(),
+                params,
+                &types.iter().map(|t| t.to_string()).collect::<Vec<_>>(),
+            )
+        };
+        assert_ne!(
+            bound(&[json!("{}")], &[""]),
+            bound(&[json!({})], &["json"]),
+            "JSON text and a document must not share a statement"
+        );
+        assert_ne!(
+            bound(&[json!(5)], &[""]),
+            bound(&[json!(5.5)], &[""]),
+            "an integer and a float bound to one column must not share a statement"
+        );
+        // The same declared types share a statement: a null and a string both bind
+        // text, and a null and a document both bind jsonb once typed `json`.
+        assert_eq!(bound(&[json!(null)], &[""]), bound(&[json!("x")], &[""]));
+        assert_eq!(
+            bound(&[json!(null)], &["json"]),
+            bound(&[json!({})], &["json"])
+        );
+        // The classifier that refuses a foreign-scope upsert reads this text.
+        assert!(
+            statement_for_bind_shape(
+                "INSERT INTO t VALUES ($1) ON CONFLICT (id) DO UPDATE SET a = 1".to_string(),
+                &[json!(1)],
+                &[String::new()],
+            )
+            .contains(" DO UPDATE SET ")
+        );
+    }
+
+    #[test]
+    fn typed_generic_pg_param_null_arrays_bind_without_a_shape_error() {
+        for param_type in ["array_string", "array_int", "array_float", "array_bool"] {
+            let params = [json!(null)];
+            let types = [param_type.to_string()];
+            assert!(
+                bind_typed_generic_pg_params(sqlx::query("SELECT $1"), &params, Some(&types))
+                    .is_ok(),
+                "a null {param_type} is a NULL array, not a malformed one"
+            );
+        }
     }
 
     #[test]
@@ -1784,8 +1880,28 @@ pub(crate) fn postgres_param_types(
             // not a Postgres array: binding `float8[]` under a `$n::jsonb`
             // cast fails with 42846 (cannot coerce), which made every JSONB
             // column holding a list of scalars unwritable through Upsert.
-            if value_type.starts_with("array_")
-                && postgres_placeholder_casts_to_json(statement, idx + 1)
+            //
+            // A NULL must bind jsonb as well. sqlx keys its per-connection
+            // statement cache on the SQL text alone and keeps the parameter
+            // types of the FIRST prepare, and `$n::JSONB` renders identically for
+            // a null and for a document. A text-typed NULL therefore prepares the
+            // statement with a TEXT parameter, and the next write of that column
+            // set sends a document in jsonb wire format (a leading 0x01 version
+            // byte) to it: Postgres reads the byte as text and rejects it with
+            // `Token "\x01" is invalid`, which prints as `Token "" is invalid`.
+            // Bool and number scalars are JSON documents too, and have no cast
+            // to jsonb in their own wire types. A string stays text so Postgres
+            // parses it as JSON text; `compile_bridged_postgres_statement` keeps
+            // that shape in a statement of its own.
+            if postgres_placeholder_casts_to_json(statement, idx + 1)
+                && (value_type.starts_with("array_")
+                    || matches!(
+                        value,
+                        crate::ir::value::LogicalValue::Null
+                            | crate::ir::value::LogicalValue::Bool(_)
+                            | crate::ir::value::LogicalValue::Int(_)
+                            | crate::ir::value::LogicalValue::Float(_)
+                    ))
             {
                 return "json";
             }
@@ -1889,6 +2005,54 @@ pub(crate) fn pg_bridged_emitter_enabled() -> bool {
     })
 }
 
+/// The SQL text a bridged statement is prepared under: the compiled statement plus
+/// a trailing comment naming the Postgres type each parameter will be declared as.
+///
+/// sqlx caches prepared statements per connection by SQL text alone and reuses the
+/// parameter types of the first prepare, while an untyped placeholder here takes its
+/// bind type from the VALUE. Two writes with one SQL text and different value shapes
+/// therefore share a statement, and the second one's binary encoding is decoded as
+/// the first one's type: an error when the lengths disagree, and a wrong stored value
+/// when they do not (`5` then `5.5` on a DOUBLE PRECISION column are both 8 bytes).
+/// Distinct bind shapes get distinct statements, so this cannot happen.
+fn statement_for_bind_shape(
+    statement: String,
+    params: &[JsonValue],
+    param_types: &[String],
+) -> String {
+    let shape: String = params
+        .iter()
+        .zip(param_types)
+        .map(|(value, param_type)| match param_type.as_str() {
+            "json" => 'j',
+            "uuid" => 'u',
+            "timestamptz" => 'z',
+            "numeric" => 'n',
+            "array_string" => 'S',
+            "array_int" => 'I',
+            "array_float" => 'F',
+            "array_bool" => 'B',
+            "array_numeric" => 'N',
+            // Mirrors `bind_generic_pg_param`, the arm an untyped value binds through.
+            _ => match value {
+                JsonValue::Null | JsonValue::String(_) => 't',
+                JsonValue::Bool(_) => 'b',
+                JsonValue::Number(number) => {
+                    if number.as_i64().is_some() {
+                        'i'
+                    } else if number.as_u64().is_some() {
+                        't'
+                    } else {
+                        'f'
+                    }
+                }
+                JsonValue::Array(_) | JsonValue::Object(_) => 'j',
+            },
+        })
+        .collect();
+    format!("{statement} /* udb-binds:{shape} */")
+}
+
 fn compile_bridged_postgres_statement(
     manifest: &CatalogManifest,
     context: &crate::RequestContext,
@@ -1908,13 +2072,13 @@ fn compile_bridged_postgres_statement(
             statement,
             params,
         })) if backend == crate::backend::BackendKind::Postgres => {
-            let param_types = postgres_param_types(&statement, &params)
+            let param_types: Vec<String> = postgres_param_types(&statement, &params)
                 .into_iter()
                 .map(str::to_string)
                 .collect();
-            let params = params.iter().map(logical_value_to_json).collect();
+            let params: Vec<JsonValue> = params.iter().map(logical_value_to_json).collect();
             Some(BridgedPgStatement {
-                sql: statement,
+                sql: statement_for_bind_shape(statement, &params, &param_types),
                 params,
                 param_types,
             })

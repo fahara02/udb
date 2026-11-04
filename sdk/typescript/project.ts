@@ -34,9 +34,13 @@ import * as http from "http";
 import * as https from "https";
 
 import { AuthzCache, PermissionCheck, UdbAuthClient } from "./auth";
-import { UDB_PROTOCOL_VERSION, UdbMetadata } from "./client";
-import { consistencyMetadata } from "./consistency";
+import { UdbMetadata, metadata as buildMetadata } from "./client";
+import { UdbExpect, checkBrokerHealth, configFromEnv, verifyPrincipal } from "./connectEnv";
+import { SessionFence, consistencyMetadata } from "./consistency";
 import { EntityHandle, EntityHandleOptions } from "./entity";
+import { ConsumeOptions, ConsumedEvent, Table, TableOptions, TxOptions, TxScope, consume, tx } from "./stores";
+import { FlagsFacade, LockFacade, UserSession, asUserCall, validateSessionOn } from "./facades";
+import { TenantState } from "./tenantState";
 import {
   CallOptions,
   ENTITY_REGISTRY,
@@ -91,6 +95,9 @@ export interface UdbProjectConfig {
   userId?: string;
   serviceIdentity?: string;
   correlationId?: string;
+  /** Pin this client to a catalog version the broker checks against its ACTIVE
+   *  catalog. Unset sends no pin, and the broker skips the comparison. */
+  clientCatalogVersion?: string;
 
   credentials?: UdbCredentials;
   /** Enable TLS. When `tls` is provided this is implied. */
@@ -120,7 +127,7 @@ function metaFromConfig(config: UdbProjectConfig): UdbMetadata {
     serviceIdentity: config.serviceIdentity,
     userId: config.userId,
     projectId: config.projectId,
-    clientCatalogVersion: UDB_PROTOCOL_VERSION,
+    clientCatalogVersion: config.clientCatalogVersion ?? "",
     bearerToken: config.credentials?.bearerToken,
     apiKey: undefined,
   };
@@ -399,6 +406,13 @@ export class StorageFacade {
     private readonly objectService = "udb.services.v1.DataBroker",
   ) {}
 
+  /** The request with the connected tenant filled in when it names none. The broker
+   *  requires tenant_id on these calls; an explicit one is never overridden. */
+  private withTenant(request: Record<string, unknown>): Record<string, unknown> {
+    const tenantId = this.core.opts?.meta?.tenantId;
+    return request.tenant_id || !tenantId ? request : { ...request, tenant_id: tenantId };
+  }
+
   // ── StorageService (primary, file lifecycle) ──────────────────────────────
 
   /** Begin an upload: reserve a file id + (optionally) a presigned target
@@ -418,7 +432,7 @@ export class StorageFacade {
    *  request or a `file_id` string. */
   getDownloadUrl(request: any, call?: CallOptions): Promise<any> {
     const req = typeof request === "string" ? { file_id: request } : request;
-    return this.core.unary(this.service, "GetDownloadUrl", req, call);
+    return this.core.unary(this.service, "GetDownloadUrl", this.withTenant(req), call);
   }
 
   /**
@@ -462,7 +476,7 @@ export class StorageFacade {
     const stream = this.core.serverStream(
       this.service,
       "DownloadFile",
-      { file_id: fileId, ...opts },
+      this.withTenant({ file_id: fileId, ...opts }),
       call,
     );
     const parts: Uint8Array[] = [];
@@ -486,7 +500,7 @@ export class StorageFacade {
   /** Fetch a file record by id (or full `GetFileRequest`). */
   getFile(request: any, call?: CallOptions): Promise<any> {
     const req = typeof request === "string" ? { file_id: request } : request;
-    return this.core.unary(this.service, "GetFile", req, call);
+    return this.core.unary(this.service, "GetFile", this.withTenant(req), call);
   }
 
   /** Update mutable file metadata (`UpdateFileRequest` → `UpdateFileResponse`). */
@@ -494,10 +508,18 @@ export class StorageFacade {
     return this.core.unary(this.service, "UpdateFile", request, call);
   }
 
-  /** Delete a file record (and its object) by id (or full `DeleteFileRequest`). */
+  /** Delete a file record (and its object) by id (or full `DeleteFileRequest`). The
+   *  connected tenant is filled in when the request names none. */
   deleteFile(request: any, call?: CallOptions): Promise<any> {
     const req = typeof request === "string" ? { file_id: request } : request;
-    return this.core.unary(this.service, "DeleteFile", req, call);
+    return this.core.unary(this.service, "DeleteFile", this.withTenant(req), call);
+  }
+
+  /** Delete a file with an explicit mode: `DELETE_MODE_SOFT` keeps the metadata
+   *  tombstoned and removes the bytes best-effort, `DELETE_MODE_HARD` records a durable
+   *  object-GC intent. `reason` is recorded on a hard delete. */
+  deleteFileMode(fileId: string, mode: string, reason = "", call?: CallOptions): Promise<any> {
+    return this.deleteFile({ file_id: fileId, mode, reason }, call);
   }
 
   /** List file records (`ListFilesRequest` → `ListFilesResponse`). */
@@ -1105,6 +1127,74 @@ const BG_REFRESH_LIFETIME_FRACTION = 0.8; // renew at 80% of a known token lifet
  *  field) so the secret never appears in `util.inspect`/JSON dumps of the project. */
 const RETAINED_API_KEYS = new WeakMap<object, string>();
 
+/** Credentials retained for re-login, keyed by project, kept out of the object so the
+ *  password never appears in `util.inspect`/JSON dumps of it. */
+const RETAINED_LOGINS = new WeakMap<object, Record<string, string>>();
+
+/** A renewal that verified as a different principal or scope set. Renewing again cannot
+ *  fix it, so the session fails closed until a new explicit login. */
+export class CredentialBindingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CredentialBindingError";
+  }
+}
+
+/** The verified identity a connection is pinned to when it connects. A service's user
+ *  id may be empty, so the account fields are pinned too. */
+interface CredentialPin {
+  principalId: string;
+  subject: string;
+  accountKind: unknown;
+  tenantId: string;
+  projectId: string;
+  userId: string;
+  serviceIdentity: string;
+  scopes: string[];
+}
+
+// Scope ordering and duplicates carry no additional permissions.
+function scopeSet(scopes: unknown): string[] {
+  return [...new Set<string>(Array.isArray(scopes) ? scopes : [])].sort();
+}
+
+function credentialPin(principal: any): CredentialPin {
+  return {
+    principalId: principal?.principal_id ?? "",
+    subject: principal?.subject ?? "",
+    accountKind: principal?.account_kind ?? "",
+    tenantId: principal?.tenant_id ?? "",
+    projectId: principal?.project_id ?? "",
+    userId: principal?.user_id ?? "",
+    serviceIdentity: principal?.service_identity ?? "",
+    scopes: scopeSet(principal?.scopes),
+  };
+}
+
+/** Refuse a renewal that switched the connected principal or its scope set. */
+function checkCredentialPin(pin: CredentialPin, principal: any): void {
+  if (!principal) throw new CredentialBindingError("udb: renewal principal is missing");
+  const next = credentialPin(principal);
+  const fields: Array<[string, unknown, unknown]> = [
+    ["principal_id", next.principalId, pin.principalId],
+    ["subject", next.subject, pin.subject],
+    ["account_kind", next.accountKind, pin.accountKind],
+  ];
+  for (const [name, actual, expected] of fields) {
+    if (actual !== expected) throw new CredentialBindingError(`udb: renewal changed ${name}`);
+  }
+  const identity: Array<[string, unknown, unknown]> = [
+    ["tenant", next.tenantId, pin.tenantId],
+    ["project", next.projectId, pin.projectId],
+    ["user", next.userId, pin.userId],
+    ["service identity", next.serviceIdentity, pin.serviceIdentity],
+    ["scopes", next.scopes.join(","), pin.scopes.join(",")],
+  ];
+  for (const [name, actual, expected] of identity) {
+    if (actual !== expected) throw new CredentialBindingError(`udb: renewed principal changed ${name}`);
+  }
+}
+
 /** How long before expiry a token should be renewed: 60s, or 20% of its known
  *  lifetime when that is earlier — never more than half the lifetime. */
 function refreshSkewMs(tok: StoredToken | null | undefined): number {
@@ -1130,6 +1220,9 @@ export class UdbProject {
   /** Receipt/fence accessors per the naming contract: `udb.metadata.afterWrite(receipt)`
    *  attaches a receipt-derived read fence to exactly the next read. */
   readonly metadata = consistencyMetadata;
+  /** Read-your-writes: the latest write's receipt, which the reads of this client's
+   *  entity handles, typed tables and stores carry as a read fence for 30 seconds. */
+  readonly fence = new SessionFence();
   /** Authentication ergonomics (authenticate*, login/refresh helpers, …). */
   readonly auth: UdbAuthClient;
   /** Authorization ergonomics (can / require / explain / batchCan / nativeAccess),
@@ -1150,6 +1243,12 @@ export class UdbProject {
   readonly events: EventsFacade;
   /** Admin: migration lifecycle helpers (`.admin.migrations.applyCurrent`). */
   readonly admin: AdminFacade;
+  /** Feature flags for the connected tenant and project. */
+  readonly flags: FlagsFacade;
+  /** Distributed locks on the control-plane channel. */
+  readonly lock: LockFacade;
+  /** The tenant code to canonical UUID transition; verified by `connectEnterprise`. */
+  readonly tenantState: TenantState;
 
   private readonly tokenStore: TokenStore;
   private refreshInFlight: Promise<StoredToken | null> | null = null;
@@ -1163,6 +1262,18 @@ export class UdbProject {
   private poisoned = false;
   private lastRefreshError: Error | null = null;
   private closed = false;
+  /** The principal the broker verified for the current login or API key. */
+  private verifiedPrincipal: any | null = null;
+  /** Epoch ms when the bearer exchanged from an API key expires; 0 when none. */
+  private exchangedBearerExpiresAt = 0;
+  /** The identity this connection's renewals must keep; null when none is pinned. */
+  private credentialPin: CredentialPin | null = null;
+  /** Set once a renewal changed the principal: every later renewal is refused. */
+  private credentialTerminal: Error | null = null;
+  /** A failed renewal may have spent the refresh token, so the next one logs in. */
+  private credentialNeedsLogin = false;
+  /** Lazily built channel for the gRPC health check; closed by `close()`. */
+  private healthClient: grpc.Client | null = null;
   /** Dedicated generated client for the auth/control-plane target when
    * `authTarget` differs from `target`; otherwise null (native facades share
    * `this.generated`). */
@@ -1185,10 +1296,35 @@ export class UdbProject {
    * (synchronous) aliases.
    */
   static async connect(config: UdbProjectConfig): Promise<UdbProject> {
-    const udb = new UdbProject(config);
     const apiKey = config.credentials?.apiKey;
-    if (apiKey && !config.credentials?.bearerToken) {
-      await udb.authenticateApiKeyAndAdopt(apiKey);
+    if (apiKey && config.credentials?.bearerToken) {
+      throw new Error("udb: credentials.apiKey and credentials.bearerToken are mutually exclusive");
+    }
+    const udb = new UdbProject(config);
+    if (apiKey) {
+      try {
+        await udb.authenticateApiKeyAndAdopt(apiKey);
+      } catch (err) {
+        udb.close();
+        throw err;
+      }
+    }
+    return udb;
+  }
+
+  /**
+   * Read the environment contract (see `configFromEnv`), connect, and check the
+   * verified principal against `expect`. The client carries an exchanged,
+   * self-refreshing bearer when an API key was configured. A principal that does
+   * not match closes the connection and throws.
+   */
+  static async connectFromEnv(prefix = "", expect: UdbExpect = {}): Promise<UdbProject> {
+    const udb = await UdbProject.connect(configFromEnv(prefix));
+    try {
+      udb.verify(expect);
+    } catch (err) {
+      udb.close();
+      throw err;
     }
     return udb;
   }
@@ -1200,27 +1336,51 @@ export class UdbProject {
    * background refresher that keeps the bearer fresh and fails closed if it can no
    * longer be renewed.
    *
-   * Pass the human tenant CODE as `config.tenantId` (e.g. `"acme"`); it is used as
-   * the pre-login hint and replaced by the canonical tenant UUID after login — so
-   * every later call sends the UUID that row-level security compares, never the
-   * code. Returns a session ready for tenant-scoped work; call `close()` to stop
-   * the refresher and channels.
+   * Pass the human tenant CODE as `config.tenantCode` or `config.tenantId` (e.g.
+   * `"acme"`); it is used as the pre-login hint and replaced by the canonical tenant
+   * UUID after login — so every later call sends the UUID that row-level security
+   * compares, never the code. A principal without a canonical lowercase tenant UUID
+   * is refused. A refresh the broker refuses leads to a fresh login with these
+   * credentials; a renewal that verifies as a different principal or scope set fails
+   * the session closed, with no retry. Returns a session ready for tenant-scoped work: check a record with
+   * `validateTenant` before a tenant-scoped write, and call `close()` to stop the
+   * refresher and channels.
    */
   static async connectEnterprise(
-    config: UdbProjectConfig & {
+    config: Omit<UdbProjectConfig, "tenantId"> & {
+      tenantId?: string;
+      tenantCode?: string;
       username: string;
       password: string;
       [key: string]: any;
     },
   ): Promise<UdbProject> {
-    const { username, password, ...rest } = config;
-    const udb = new UdbProject(rest as UdbProjectConfig);
-    await udb.loginAndAdoptTenant({
-      username,
-      password,
-      tenant_hint: rest.tenantId,
-      project_hint: rest.projectId ?? "",
-    });
+    const { username, password, tenantCode, ...rest } = config;
+    if (!rest.target || !username || !password) {
+      throw new Error("udb: connectEnterprise requires target, username, and password");
+    }
+    const code: string = tenantCode ?? rest.tenantId ?? "";
+    const udb = new UdbProject({ ...rest, tenantId: code || "default" } as UdbProjectConfig);
+    udb.tenantState.tenantCode = code;
+    try {
+      await udb.loginAndAdoptTenant({
+        username,
+        password,
+        tenant_hint: code,
+        project_hint: rest.projectId ?? "",
+      });
+      const principal = udb.verifiedPrincipal;
+      if (!principal) throw new Error("udb: connectEnterprise: no principal returned");
+      udb.tenantState.adopt(principal.tenant_id ?? "");
+      udb.sharedMeta.userId = principal.user_id ?? "";
+      udb.sharedMeta.serviceIdentity = principal.service_identity ?? "";
+      udb.sharedMeta.scopes = [...(principal.scopes ?? [])];
+      udb.credentialPin = credentialPin(principal);
+      RETAINED_LOGINS.set(udb, { username, password, tenant_hint: code, project_hint: rest.projectId ?? "" });
+    } catch (err) {
+      udb.close();
+      throw err;
+    }
     udb.startBackgroundRefresh();
     return udb;
   }
@@ -1312,8 +1472,112 @@ export class UdbProject {
     this.events = new EventsFacade(this.core, this.sharedMeta);
     // Migration admin rides the data-plane DataBroker channel.
     this.admin = new AdminFacade(this.core);
+    this.flags = new FlagsFacade(nativeCore, this.sharedMeta);
+    this.lock = new LockFacade(nativeCore, this.sharedMeta);
+    this.tenantState = new TenantState(config.tenantId);
 
     this.tokenStore = config.tokenStore ?? new MemoryTokenStore();
+  }
+
+  /** The core native-service calls ride: the control-plane target when it differs
+   *  from the data target. Identity and credentials match `core`. */
+  get nativeCore(): UdbCore {
+    return this.authGenerated?.core ?? this.core;
+  }
+
+  /** The verified canonical tenant UUID ("" until `connectEnterprise` adopted it).
+   *  Use this, never the human code, in tenant-scoped records and filters. */
+  get canonicalTenantId(): string {
+    return this.tenantState.canonicalId;
+  }
+
+  /** The project of the verified principal ("" when there is none). */
+  get canonicalProjectId(): string {
+    return this.verifiedPrincipal?.project_id ?? "";
+  }
+
+  /** Fail fast, naming both values, if `recordTenantId` differs from the verified
+   *  canonical tenant. Call it before a tenant-scoped write. Throws when the tenant
+   *  was never verified. */
+  validateTenant(recordTenantId: string): void {
+    this.tenantState.validateTenantId(recordTenantId);
+  }
+
+  /** A copy of the principal the broker verified for this connection's API key or
+   *  login; null when there is none (a raw bearer, or before connecting). */
+  principal(): any | null {
+    return this.verifiedPrincipal === null || this.verifiedPrincipal === undefined
+      ? null
+      : structuredClone(this.verifiedPrincipal);
+  }
+
+  /** When the current bearer exchanged from an API key expires; null when the
+   *  connection does not exchange one. A login session's expiry is on `currentToken()`. */
+  bearerExpiresAt(): Date | null {
+    return this.exchangedBearerExpiresAt ? new Date(this.exchangedBearerExpiresAt) : null;
+  }
+
+  /** The current "Bearer <token>" credential ("" when none), for callers that build
+   *  their own metadata. */
+  bearer(): string {
+    const token = this.sharedMeta.bearerToken;
+    return token ? `Bearer ${token}` : "";
+  }
+
+  /** Why this connection's credential is not current: it was closed or its background
+   *  refresh is failing. Null while it is current. */
+  credentialError(): Error | null {
+    if (this.closed) return new Error("udb: credential owner is closed");
+    return this.lastRefreshError ?? null;
+  }
+
+  /** Check the connected principal against `expect`, reporting every mismatch at once.
+   *  It needs a verified principal: a connection made with a raw bearer has none and
+   *  fails here if anything is expected. */
+  verify(expect: UdbExpect = {}): void {
+    verifyPrincipal(this.verifiedPrincipal, expect);
+  }
+
+  /** Resolve when the broker is serving and this connection's credential is current:
+   *  the standard gRPC health check on the broker connection plus `credentialError`.
+   *  Use it as a readiness probe; it needs no admin scope. The check is bounded by
+   *  `deadlineMs`, else the client's deadline, else 5 seconds. */
+  async ready(options: { deadlineMs?: number; signal?: AbortSignal } = {}): Promise<void> {
+    const failure = this.credentialError();
+    if (failure) throw new Error(`udb: credential refresh is failing: ${failure.message}`, { cause: failure });
+    if (!this.healthClient) {
+      const { secure, tls, target, channelOptions } = this.config;
+      const credentials = tls
+        ? grpc.credentials.createSsl(tls.rootCerts, tls.privateKey, tls.certChain)
+        : secure
+          ? grpc.credentials.createSsl()
+          : grpc.credentials.createInsecure();
+      this.healthClient = new grpc.Client(target, credentials, channelOptions);
+    }
+    await checkBrokerHealth(this.healthClient, buildMetadata(this.sharedMeta), {
+      deadlineMs: options.deadlineMs ?? this.config.deadlineMs ?? 5_000,
+      signal: options.signal,
+    });
+  }
+
+  /** Call options that carry the end user's bearer instead of this service's own, for
+   *  operations the broker must authorize as that user. Pass them to any generated or
+   *  facade call. The token may carry the "Bearer " prefix. The broker verifies it; the
+   *  connected tenant and project do not change, so the user must belong to them.
+   *  Throws when this connection's own credential can no longer be refreshed. */
+  asUser(bearer: string, call?: CallOptions): CallOptions {
+    if (this.closed || this.poisoned) {
+      const cause = this.credentialError();
+      throw new Error(`udb: bearer refresh failed, session not authorized${cause ? `: ${cause.message}` : ""}`, { cause });
+    }
+    return asUserCall(bearer, call);
+  }
+
+  /** Check a user's bearer token (with or without the "Bearer " prefix). An invalid or
+   *  expired token throws `NotFoundError`. It runs with this connection's credential,
+   *  so pass `asUser(token)` as `call` when the service lacks token-validation scope. */
+  validateSession(token: string, call?: CallOptions): Promise<UserSession> {
+    return validateSessionOn(this.nativeCore, token, call);
   }
 
   /** The currently stored token, if any. */
@@ -1343,6 +1607,8 @@ export class UdbProject {
       });
       // A password session supersedes any API-key identity: stop re-exchanging it.
       RETAINED_API_KEYS.delete(this);
+      this.exchangedBearerExpiresAt = 0;
+      this.forgetCredentialPin();
       this.applyCredentials(resp.access_token || resp.session_token || "");
     }
     return resp;
@@ -1376,7 +1642,36 @@ export class UdbProject {
       tenant_id: this.sharedMeta.tenantId,
       project_id: this.sharedMeta.projectId ?? "",
     };
-    return new EntityHandle<T>(this.core, messageType, resolved, context);
+    return new EntityHandle<T>(this.core, messageType, resolved, context, this.fence);
+  }
+
+  /** The typed store for one entity message; its key comes from the annotations. */
+  tableOf<T extends Record<string, unknown> = Record<string, unknown>>(
+    messageType: string,
+    opts: TableOptions = {},
+  ): Table<T> {
+    return new Table<T>(this.core, messageType, { fence: this.fence, ...opts });
+  }
+
+  /** Run `body` and commit everything it collected atomically: every write and
+   *  every event commits together or none does. `body` throwing commits nothing. */
+  tx(body: (scope: TxScope) => void | Promise<void>, opts: TxOptions = {}): Promise<void> {
+    return tx(this.core, body, {
+      correlationId: this.sharedMeta.correlationId,
+      fence: this.fence,
+      ...opts,
+    });
+  }
+
+  /** Deliver events on `topicPattern` to `handle` as the durable consumer `name`,
+   *  resuming where it left off. See {@link consume}. */
+  consume<P = Record<string, unknown>>(
+    name: string,
+    topicPattern: string,
+    handle: (event: ConsumedEvent<P>, signal: AbortSignal) => Promise<void> | void,
+    opts: ConsumeOptions = {},
+  ): Promise<void> {
+    return consume<P>(this.core, name, topicPattern, handle, opts);
   }
 
   /** Thin table-shaped alias over {@link entity}. Resolves the message type from
@@ -1402,6 +1697,8 @@ export class UdbProject {
    */
   async authenticateApiKeyAndAdopt(apiKey = this.config.credentials?.apiKey ?? ""): Promise<any> {
     if (!apiKey) throw new Error("udb: api key is required");
+    // An explicit adoption chooses the identity; re-exchanges must then keep it.
+    this.forgetCredentialPin();
     const { verified } = await this.exchangeApiKey(apiKey);
     if (!this.closed) {
       if (this.refreshTimer) this.scheduleRefresh();
@@ -1414,6 +1711,11 @@ export class UdbProject {
    *  Shared by the initial connect and the background re-exchange. */
   private async exchangeApiKey(apiKey: string): Promise<{ verified: any; token: StoredToken | null }> {
     const verified: any = await this.auth.authenticateApiKey(apiKey);
+    // Checked before anything is adopted, so a refused renewal changes no identity.
+    if (this.credentialPin) this.checkRenewal(verified?.principal);
+    else if (verified?.access_token && !verified?.principal) {
+      throw new Error("udb: exchange API key: the broker returned no verified principal");
+    }
     RETAINED_API_KEYS.set(this, apiKey);
     const token: string = verified?.access_token ?? "";
     const principal = verified?.principal ?? {};
@@ -1444,7 +1746,122 @@ export class UdbProject {
     };
     await this.tokenStore.save(next);
     this.applyCredentials(token);
+    this.exchangedBearerExpiresAt = next.expiresAt;
+    if (verified?.principal) {
+      this.verifiedPrincipal = verified.principal;
+      this.credentialPin ??= credentialPin(verified.principal);
+    }
     return { verified, token: next };
+  }
+
+  /** Check a renewed principal against the pin and the identity now on the wire. A
+   *  mismatch fails this connection closed at once, whatever the bearer's expiry. */
+  private checkRenewal(principal: any): void {
+    try {
+      checkCredentialPin(this.credentialPin!, principal);
+      const tenantId = principal.tenant_id ?? "";
+      if (tenantId && tenantId !== this.sharedMeta?.tenantId) {
+        throw new CredentialBindingError("udb: renewed principal changed tenant");
+      }
+    } catch (err) {
+      this.credentialTerminal = err as Error;
+      this.lastRefreshError = err as Error;
+      this.poisoned = true;
+      this.clearBearerCredentials();
+      throw err;
+    }
+  }
+
+  private forgetCredentialPin(): void {
+    this.credentialPin = null;
+    this.credentialTerminal = null;
+    this.credentialNeedsLogin = false;
+    RETAINED_LOGINS.delete(this);
+  }
+
+  /** The auth client renewal calls use: no expired or revoked bearer rides along. */
+  private renewalAuth(): UdbAuthClient {
+    return this.auth.withoutCredentials?.() ?? this.auth;
+  }
+
+  /** Verify a renewed bearer through the broker, check it against the pin, then store
+   *  and install it. Nothing is stored or installed for a bearer that fails. */
+  private async publishVerifiedToken(next: StoredToken): Promise<StoredToken> {
+    const verified: any = await this.renewalAuth().authenticateBearer(next.accessToken);
+    this.checkRenewal(verified?.principal);
+    const expiresAtUnix = Number(verified?.expires_at_unix ?? 0);
+    const published = expiresAtUnix > 0 ? { ...next, expiresAt: expiresAtUnix * 1000 } : next;
+    if (!published.accessToken || (published.expiresAt > 0 && Date.now() >= published.expiresAt)) {
+      throw new Error("udb: renewal returned an empty or expired bearer");
+    }
+    await this.tokenStore.save(published);
+    this.verifiedPrincipal = verified.principal;
+    this.applyCredentials(published.accessToken);
+    return published;
+  }
+
+  private async refreshVerified(current: StoredToken): Promise<StoredToken> {
+    const issuedAt = Date.now();
+    const resp: any = await this.renewalAuth().refreshToken({
+      refresh_token: current.refreshToken ?? "",
+      session_id: current.sessionId ?? "",
+    });
+    const expiresIn = Number(resp?.access_token_expires_in ?? 0);
+    return this.publishVerifiedToken({
+      accessToken: resp?.access_token ?? "",
+      refreshToken: resp?.refresh_token || current.refreshToken,
+      sessionId: current.sessionId,
+      issuedAt,
+      expiresAt: expiresIn > 0 ? issuedAt + expiresIn * 1000 : 0,
+    });
+  }
+
+  private async reloginVerified(credentials: Record<string, string>): Promise<StoredToken> {
+    const issuedAt = Date.now();
+    const resp: any = await this.renewalAuth().login(credentials);
+    const accessToken: string = resp?.access_token || resp?.session_token || "";
+    if (resp?.mfa_required || !accessToken) throw new Error("udb: re-login returned no bearer");
+    const expiresIn = Number(resp?.access_token_expires_in ?? 0);
+    return this.publishVerifiedToken({
+      accessToken,
+      refreshToken: resp?.refresh_token || undefined,
+      sessionId: resp?.session_id || undefined,
+      issuedAt,
+      expiresAt: expiresIn > 0 ? issuedAt + expiresIn * 1000 : 0,
+    });
+  }
+
+  /** Renew an enterprise session: refresh, and on any failure log in again. A token
+   *  whose refresh failed may be spent, so it is never submitted twice. A changed
+   *  principal is not retried at all. */
+  private async renewEnterpriseSession(
+    credentials: Record<string, string>,
+    skewMs: number,
+  ): Promise<StoredToken | null> {
+    // Another caller may have finished a renewal since this one read the store.
+    const current = await this.tokenStore.load();
+    if (!current) return null;
+    if (current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt) return current;
+    let failure: unknown = new Error("udb: prior refresh outcome requires re-login");
+    if (!this.credentialNeedsLogin) {
+      try {
+        return await this.refreshVerified(current);
+      } catch (err) {
+        if (err instanceof CredentialBindingError) throw err;
+        failure = err;
+        this.credentialNeedsLogin = true;
+      }
+    }
+    try {
+      const fresh = await this.reloginVerified(credentials);
+      this.credentialNeedsLogin = false;
+      return fresh;
+    } catch (err) {
+      if (err instanceof CredentialBindingError) throw err;
+      const first = failure instanceof Error ? failure.message : String(failure);
+      const second = err instanceof Error ? err.message : String(err);
+      throw new Error(`udb: renewal and re-login failed: ${first}; ${second}`, { cause: err });
+    }
   }
 
   /**
@@ -1472,6 +1889,7 @@ export class UdbProject {
     // login() already installed credentials; authenticate-bearer verifies them.
     const verified: any = await this.auth.authenticateBearer(token);
     const principal = verified?.principal ?? {};
+    this.verifiedPrincipal = verified?.principal ?? null;
     const tenantId: string = principal?.tenant_id ?? "";
     if (tenantId) this.setTenant(tenantId);
     const projectId: string = principal?.project_id ?? "";
@@ -1515,10 +1933,24 @@ export class UdbProject {
    * re-exchanging the retained API key (same single-flight).
    */
   async refreshIfNeeded(skewMs = 60_000): Promise<StoredToken | null> {
+    if (this.credentialTerminal) throw this.credentialTerminal;
     const current = await this.tokenStore.load();
     if (!current) return null;
     const fresh = current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt;
     if (fresh) return current;
+    const credentials = RETAINED_LOGINS.get(this);
+    if (credentials) {
+      if (!this.refreshInFlight) {
+        this.refreshInFlight = (async () => {
+          try {
+            return await this.renewEnterpriseSession(credentials, skewMs);
+          } finally {
+            this.refreshInFlight = null;
+          }
+        })();
+      }
+      return this.refreshInFlight;
+    }
     if (!current.refreshToken && !current.sessionId) {
       const retainedKey = RETAINED_API_KEYS.get(this);
       if (!retainedKey) return current;
@@ -1656,6 +2088,9 @@ export class UdbProject {
   async logout(): Promise<void> {
     await this.tokenStore.clear();
     RETAINED_API_KEYS.delete(this);
+    this.verifiedPrincipal = null;
+    this.exchangedBearerExpiresAt = 0;
+    this.forgetCredentialPin();
     this.clearBearerCredentials();
   }
 
@@ -1668,6 +2103,9 @@ export class UdbProject {
       this.refreshTimer = null;
     }
     RETAINED_API_KEYS.delete(this);
+    RETAINED_LOGINS.delete(this);
+    this.healthClient?.close();
+    this.healthClient = null;
     this.generated.close();
     this.authGenerated?.close();
     this.webrtcGenerated?.close();

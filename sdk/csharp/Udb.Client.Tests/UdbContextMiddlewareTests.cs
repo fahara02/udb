@@ -57,6 +57,23 @@ public sealed class UdbContextMiddlewareTests
     }
 
     [Fact]
+    public void No_Catalog_Version_Is_Sent_Unless_The_Caller_Pins_One()
+    {
+        // The broker skips its catalog comparison for a blank version. A fixed
+        // default can never match a catalog versioned generator-N.
+        var unpinned = new UdbMetadata(
+            TenantId: "acme",
+            Purpose: "read",
+            CorrelationId: "corr-1",
+            Scopes: Array.Empty<string>(),
+            ServiceIdentity: "svc");
+        Assert.Equal("", unpinned.ClientCatalogVersion);
+        Assert.Equal("", new UdbProjectConfig { Target = "localhost:50051", TenantId = "acme" }.ClientCatalogVersion);
+        var pinned = unpinned with { ClientCatalogVersion = "generator-3" };
+        Assert.Equal("generator-3", pinned.ClientCatalogVersion);
+    }
+
+    [Fact]
     public async Task Applies_Defaults_When_Headers_Absent()
     {
         var ctx = await RunAsync(_ => { });
@@ -67,7 +84,7 @@ public sealed class UdbContextMiddlewareTests
         Assert.Equal("default", meta.ProjectId);
         Assert.Empty(meta.Scopes);
         Assert.False(string.IsNullOrEmpty(meta.CorrelationId)); // generated
-        Assert.Equal(UdbClient.ProtocolVersion, meta.ClientCatalogVersion);
+        Assert.Equal("", meta.ClientCatalogVersion);
         // request id falls back to the trace identifier (non-null on DefaultHttpContext).
         Assert.NotNull(ctx.GetUdbRequestId());
     }

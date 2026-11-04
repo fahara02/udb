@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   const meta: UdbMetadata = {
     tenantId: "acme", projectId: "billing", purpose: "control-plane",
     correlationId: "native-ts-admin", scopes: ["udb:*"],
-    serviceIdentity: "examples.native-ts-admin", userId: "", clientCatalogVersion: "1.0.0",
+    serviceIdentity: "examples.native-ts-admin", userId: "",
   };
   const md = metadata(meta);
   const creds = grpc.credentials.createInsecure();

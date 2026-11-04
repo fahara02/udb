@@ -19,13 +19,12 @@ func main() {
 	defer conn.Close()
 
 	client := udbclient.New(conn, udbclient.Metadata{
-		TenantID:             "tenant-1",
-		Purpose:              "cdc-consume",
-		CorrelationID:        "go-cdc-example",
-		Scopes:               []string{"udb:cdc"},
-		ServiceIdentity:      "example.service",
-		ProjectID:            "default",
-		ClientCatalogVersion: "1.0.0",
+		TenantID:        "tenant-1",
+		Purpose:         "cdc-consume",
+		CorrelationID:   "go-cdc-example",
+		Scopes:          []string{"udb:cdc"},
+		ServiceIdentity: "example.service",
+		ProjectID:       "default",
 	})
 
 	stream, err := client.Broker.PublishCDC(client.Context(context.Background()), &entityv1.CDCSubscriptionRequest{

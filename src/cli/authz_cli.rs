@@ -393,11 +393,25 @@ pub(super) fn client_target_addr(addr: &str) -> String {
     }
 }
 
-/// Attach the bearer token + control-plane identity headers from the
-/// environment, mirroring the `auth` CLI. The bearer claim is the authoritative
-/// caller identity the server authorizes against.
+/// Give one CLI request its own correlation id. Most native RPCs declare
+/// `request_context_required`, and the broker refuses them without
+/// `x-correlation-id`, `x-request-id` or `traceparent`.
+pub(super) fn attach_correlation_id<T>(request: &mut Request<T>) {
+    request.metadata_mut().insert(
+        "x-correlation-id",
+        format!("udb-cli-{}", uuid::Uuid::new_v4())
+            .parse()
+            .expect("generated correlation id is valid gRPC metadata"),
+    );
+}
+
+/// The one request builder for CLI calls to the broker: a correlation id, the
+/// bearer token and the control-plane identity headers from the environment. The
+/// bearer claim is the authoritative caller identity the server authorizes
+/// against.
 pub(super) fn with_metadata<T>(message: T) -> Request<T> {
     let mut request = Request::new(message);
+    attach_correlation_id(&mut request);
     if let Ok(token) = env::var("UDB_AUTH_TOKEN").or_else(|_| env::var("UDB_BEARER_TOKEN")) {
         let token = token.trim();
         if !token.is_empty() {

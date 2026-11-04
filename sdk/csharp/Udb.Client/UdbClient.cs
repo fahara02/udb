@@ -109,7 +109,7 @@ public sealed record UdbMetadata(
     string ServiceIdentity,
     string UserId = "",
     string ProjectId = "default",
-    string ClientCatalogVersion = UdbClient.ProtocolVersion,
+    string ClientCatalogVersion = "",
     string BearerToken = "",
     string ApiKey = "",
     string Consistency = "",

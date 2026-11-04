@@ -57,7 +57,6 @@ public final class Main {
         .serviceIdentity("examples.native-java")
         .correlationId("native-java-example")
         .scopes(List.of("udb:*"))
-        .clientCatalogVersion("1.0.0")
         .build();
 
     try (UdbProject udb = Udb.project(config)) {

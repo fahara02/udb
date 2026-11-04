@@ -53,6 +53,8 @@ sdk/csharp/**/*.snupkg
 # ── TypeScript SDK ───────────────────────────────────────────────────────────
 sdk/typescript/node_modules/
 sdk/typescript/dist/
+sdk/typescript/.typed-gen/
+sdk/python/.typed-gen/
 sdk/typescript/build/
 # proto assets copied into the package by `npm run build` (bundle-proto) to make
 # the published npm tarball self-contained — build artifacts, not source.

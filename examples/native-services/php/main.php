@@ -36,7 +36,7 @@ $auth->bindContext(new UdbMetadata(
     scopes: ['udb:*'],
     serviceIdentity: 'examples.native-php',
     projectId: 'billing',
-    clientCatalogVersion: '1.0.0',
+    clientCatalogVersion: '',
 ));
 
 // ── Step 1 (simplest): authenticate an API key → principal ───────────────────

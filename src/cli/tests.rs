@@ -844,6 +844,41 @@ fn argv(line: &str) -> Vec<String> {
     line.split_whitespace().map(ToString::to_string).collect()
 }
 
+#[test]
+fn parse_args_recognizes_service_account_create_and_activate() {
+    let (command, _, _, _) = parse_args(&argv(
+        "auth service-account create --tenant t1 --username svc.billing --email svc@acme.test \
+         --password-env SVC_PASSWORD --project p1 --reason provisioning",
+    ));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::ServiceAccountCreate {
+            tenant_id,
+            username,
+            email,
+            password_env,
+            password_file,
+            project_id,
+            reason,
+        }) if tenant_id == "t1"
+            && username == "svc.billing"
+            && email == "svc@acme.test"
+            && password_env == "SVC_PASSWORD"
+            && password_file.is_empty()
+            && project_id == "p1"
+            && reason == "provisioning"
+    ));
+
+    let (command, _, _, _) = parse_args(&argv(
+        "auth service-account activate --tenant t1 --user 5f0c --reason rollout",
+    ));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::ServiceAccountActivate { tenant_id, user_id, reason })
+            if tenant_id == "t1" && user_id == "5f0c" && reason == "rollout"
+    ));
+}
+
 /// The role-binding command operators run after applying role-gated policy; it
 /// used to name flags no parser accepted.
 #[test]

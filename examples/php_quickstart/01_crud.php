@@ -46,7 +46,7 @@ $metadata = new UdbMetadata(
     scopes: ['udb:read', 'udb:write'],
     serviceIdentity: 'examples.php.quickstart',
     projectId: 'default',
-    clientCatalogVersion: '1.0.0',
+    clientCatalogVersion: '',
 );
 
 // We own the primary key so every operation targets the same row and re-runs

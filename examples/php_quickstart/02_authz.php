@@ -109,7 +109,7 @@ function identity(array $scopes): UdbMetadata
         scopes: $scopes,
         serviceIdentity: 'examples.php.quickstart',
         projectId: 'default',
-        clientCatalogVersion: '1.0.0',
+        clientCatalogVersion: '',
     );
 }
 

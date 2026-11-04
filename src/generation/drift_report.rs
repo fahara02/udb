@@ -118,7 +118,13 @@ pub fn build_drift_report(old: Option<&CatalogManifest>, new: &CatalogManifest) 
         .iter()
         .map(|change| {
             let severity = classify_severity(change);
-            let suggestion = suggest_for_kind(&change.kind);
+            // A widening needs nothing; a USING expression would make it a rewrite.
+            let suggestion =
+                if change.kind == ChangeKind::ChangeColumnType && !change.data_destructive {
+                    String::new()
+                } else {
+                    suggest_for_kind(&change.kind)
+                };
             DriftItem {
                 severity,
                 kind: kind_label(&change.kind),

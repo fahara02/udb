@@ -1937,3 +1937,101 @@ async fn live_postgres_role_token_scopes_ride_person_bearers_only() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+/// An offline `udb auth bootstrap user` writes the role binding straight to
+/// Postgres while a broker is running. The first sign-in after it must carry the
+/// role's scopes: it used to wait for the interval reload, and the token it issued
+/// meanwhile kept its missing scopes until it expired.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_sign_in_after_offline_bootstrap_carries_the_new_role -- --ignored --nocapture"]
+async fn live_postgres_sign_in_after_offline_bootstrap_carries_the_new_role() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let broker = native_broker_service().await;
+    let (_, authz, _) = broker.build_auth_services();
+    let svc =
+        authn_service_with_jwt(pool.clone()).with_authz_snapshot(Some(broker.authz_snapshot()));
+    let suffix = uuid::Uuid::new_v4().simple().to_string();
+    let (tenant, _) =
+        super::super::ensure_tenant_reporting(&pool, &format!("bootstrap-{suffix}"), None)
+            .await
+            .expect("tenant");
+    let username = format!("bootstrap_{suffix}");
+    let email = format!("{username}@example.test");
+    let password = "CorrectHorse1!";
+    let user = svc
+        .create_user(Request::new(authn_pb::CreateUserRequest {
+            username: username.clone(),
+            email: email.clone(),
+            password: password.to_string(),
+            tenant_id: tenant.clone(),
+            project_id: "billing".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("create the user the bootstrap adopts")
+        .into_inner()
+        .user
+        .expect("user");
+    svc.change_user_status(Request::new(authn_pb::ChangeUserStatusRequest {
+        user_id: user.user_id.clone(),
+        new_status: authn_entity_pb::UserStatus::Active as i32,
+        reason: "fixture".to_string(),
+        ..Default::default()
+    }))
+    .await
+    .expect("activate");
+    let sign_in = || authn_pb::LoginRequest {
+        username: username.clone(),
+        password: password.to_string(),
+        device_name: "bootstrap-live-test".to_string(),
+        tenant_hint: tenant.clone(),
+        project_hint: "billing".to_string(),
+        ..Default::default()
+    };
+
+    // The broker's snapshot is current and the user has no role: the sign-in sees
+    // no newer revision, so a role-less bearer here is the plain negative case.
+    authz.warm_shared_snapshot().await;
+    let before = svc
+        .login(Request::new(sign_in()))
+        .await
+        .expect("login before bootstrap")
+        .into_inner();
+    let validated = validate_access_token(&svc, before.access_token).await;
+    assert!(
+        !validated.scopes.iter().any(|scope| scope == "udb:admin"),
+        "no role yet, got {:?}",
+        validated.scopes
+    );
+
+    // The offline bootstrap, with nothing telling this broker's snapshot.
+    let admin = super::super::bootstrap_admin_user(
+        &live_pg_dsn(),
+        &username,
+        &email,
+        password,
+        &tenant,
+        "billing",
+    )
+    .await
+    .expect("offline bootstrap binds the role");
+    assert_eq!(admin.user_id, user.user_id);
+    assert!(!admin.created_user);
+
+    let after = svc
+        .login(Request::new(sign_in()))
+        .await
+        .expect("login after bootstrap")
+        .into_inner();
+    let validated = validate_access_token(&svc, after.access_token).await;
+    assert!(validated.valid);
+    assert!(
+        validated.scopes.iter().any(|scope| scope == "udb:admin"),
+        "the first sign-in after the bootstrap carries the role's scopes, got {:?}",
+        validated.scopes
+    );
+
+    cleanup_native_auth_db(&pool).await;
+}

@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.6 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.7 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,7 +18,7 @@ version-matched `udb` CLI from a project that installed the package.
 ## Install
 
 ```bash
-npm i @udb_plus/sdk@0.6.6
+npm i @udb_plus/sdk@0.6.7
 ```
 
 Runtime: Node 18+
@@ -83,6 +83,162 @@ const [allowed, decision] = await auth.can(
   "read",
 );
 ```
+
+## Running A Service
+
+Connect from the environment and check who you connected as. Every missing or
+invalid variable is reported in one error:
+
+```ts
+import { UdbProject } from "@udb_plus/sdk";
+
+// UDB_TARGET, UDB_TENANT_ID, UDB_PURPOSE, UDB_API_KEY (or UDB_BEARER); optional
+// UDB_AUTH_TARGET, UDB_PROJECT_ID, UDB_SCOPES, UDB_DEADLINE=10s, UDB_TLS=true, ...
+const udb = await UdbProject.connectFromEnv("", {
+  tenantId: process.env.UDB_TENANT_ID,
+  requiredScopes: ["udb:read"],
+});
+
+await udb.ready(); // readiness probe: gRPC health plus a current credential
+udb.principal(); // the verified principal
+udb.bearerExpiresAt(); // when the exchanged bearer expires
+```
+
+Serving several tenants? A pool keeps one client per tenant, shares it, and replaces
+one whose credential stops refreshing:
+
+```ts
+const pool = newApiKeyTenantPool({ target, purpose: "billing" }, { [tenantId]: apiKey });
+const client = await pool.get(tenantId);
+await pool.close();
+```
+
+A password session verifies its tenant. Use the canonical id, never the human code, in
+records and filters, and check a record before writing it:
+
+```ts
+const session = await UdbProject.connectEnterprise({ target, username, password, tenantCode: "acme" });
+session.validateTenant(record.tenant_id); // throws, naming both, on a mismatch
+```
+
+Call as an end user by passing `asUser` as the call options. The broker verifies the
+token, and the connected tenant and project do not change:
+
+```ts
+await udb.storage.getFile({ tenant_id, file_id }, udb.asUser(userBearer));
+await udb.validateSession(userBearer, udb.asUser(userBearer));
+```
+
+Feature flags, where a flag that does not exist is off:
+
+```ts
+if (await udb.flags.enabled("new-checkout", { user_id: userId })) { /* ... */ }
+```
+
+A live query keeps a view of a filter: the current rows, then every change, resuming
+after reconnects. It runs until `signal` aborts, the handler throws or the broker
+refuses, and it rejects with that reason. A broker with no change feed rejects with
+`NoDeltaFeedError` after the snapshot:
+
+```ts
+await liveQuery(udb, "acme.v1.Order", { where: [lqEq("status", "open")], signal }, (event) => {
+  if (event.isSnapshot) replace(event.snapshot);
+  else apply(event.op, event.row);
+});
+```
+
+Graph traversals and hybrid vector search have builders:
+
+```ts
+const rows = await graphFrom(udb, "acme.v1.Note", noteId).out("RELATED").depth(1, 2).run();
+const hits = await vectorsHybrid(udb, "notes").text("rotate keys").near(embedding).limit(10).run();
+```
+
+Read a table's rules from its annotations instead of restating them: `topic`,
+`eventType`, `partitionKeyField`, `primaryKeys`, `uniqueKeys`, `tenantColumn`,
+`projectColumn`, `ownerColumns`, `maxLen`, `softDelete`, `retentionClass`,
+`exportEligible`, `graphLabel` and `applyColumnDefaults`. Each takes the message's full
+name; for your own messages pass `{ protoRoot }`.
+
+Lift the request identity off inbound gRPC calls in your own server:
+
+```ts
+const server = new grpc.Server({ interceptors: [udbServerInterceptor] });
+// In any handler, across awaits:
+requestTenantId();
+requestMetadata();
+```
+
+## Typed Tables For Your Own Protos
+
+Generate typed code from the protos your project owns. Go, TypeScript and Python
+produce the same parts:
+
+```bash
+udb sdk generate --project-proto ./proto --lang ts --out ./gen --entities-only
+udb sdk diff --project-proto ./proto --against ./gen/typescript/udb_entities_gen.ts # for CI
+```
+
+For each table, `gen/typescript/udb_entities_gen.ts` exports:
+
+| Name | What it is |
+| --- | --- |
+| `X` | The row interface |
+| `XKey`, `XBy<Unique>` | The primary key and each declared unique key |
+| `XFields` | Row property to proto field name |
+| `XColumns` | Column policy by field name (SQL type, nullability, PII, enum tokens) |
+| `XWhere` | Typed predicates |
+| `XToUDBRecord`, `XFromUDBRow` | The mappers |
+| `XTable(project)` | The typed table |
+| `XRepo(project)` | Filter-first access with guarded writes |
+
+```ts
+import { InvoiceTable, InvoiceWhere } from "./gen/typescript/udb_entities_gen";
+import { UdbConflictError, UdbNotFoundError } from "@udb_plus/sdk";
+
+const invoices = InvoiceTable(project); // a UdbProject
+
+await invoices.insert({ invoiceId, tenantId, amountCents: 1200 });
+await invoices.upsert({ invoiceId, amountCents: 1300 });
+const invoice = await invoices.get({ invoiceId }); // throws UdbNotFoundError when absent
+
+await invoices.patch({ invoiceId }, { paidAt: "2031-02-03T04:05:06Z" });
+await invoices.patch({ invoiceId }, { paidAt: null }); // clears the column
+await invoices.increment({ invoiceId }, { retries: 1 }); // atomic on the broker
+
+// A compare-and-swap, and the same with the read and the retry handled for you.
+await invoices.updateIf({ invoiceId, status: "INVOICE_STATUS_PAID" }, { status: "INVOICE_STATUS_OPEN" });
+await invoices.updateWithRetry({ invoiceId }, (row) => ({ ...row, retries: (row.retries ?? 0) + 1 }));
+
+const page = await invoices.select({
+  where: InvoiceWhere.amountCents.gte(1000),
+  orderBy: ["-amountCents"],
+  limit: 50,
+  includeTotal: true,
+});
+await invoices.selectAll(InvoiceWhere.paidAt.isNull(), (row) => console.log(row.invoiceId));
+const unpaid = await invoices.count(InvoiceWhere.paidAt.isNull());
+await invoices.delete({ invoiceId });
+```
+
+- Row properties are protobuf JSON names (`amountCents`); the mappers convert to
+  and from the proto field names the broker uses. A JSON or JSONB value is passed
+  through unchanged, nested keys included.
+- A column that is NULL is absent from the row, not `null` or a zero value. Match it
+  with `InvoiceWhere.paidAt.isNull()`; a filter of `{ paidAt: null }` is refused.
+- A text-stored enum uses its full value name, such as `INVOICE_STATUS_OPEN`.
+- A 64-bit integer stored as `BIGINT` reads as a number when it is exact and as a
+  decimal string past `Number.MAX_SAFE_INTEGER`, so it never loses digits.
+- A property the table does not have is refused, never silently dropped.
+- `get` and `select` leave PII columns out by default. If you hold `udb:pii:read`,
+  pass `{ includePii: true }` to read them. A PII column is always optional in the
+  row type.
+- A missing row throws `UdbNotFoundError` and a lost compare-and-swap throws
+  `UdbConflictError`. `XRepo(project).get` returns `null` instead, and its
+  `updateGuarded` and `deleteGuarded` refuse an empty precondition.
+- Two messages with the same short name in one `--project-proto` directory are
+  refused, because their generated names would collide. A table with no primary key
+  gets its row type and mappers, but no `XTable` or `XRepo`.
 
 ## Storage: Upload And Download
 

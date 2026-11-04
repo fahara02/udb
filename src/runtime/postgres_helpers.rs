@@ -601,7 +601,15 @@ pub(crate) fn bind_one<'q>(
     // column is misrouted into the typed `text[]` bind and PostgreSQL rejects the
     // mutation with SQLSTATE 42846. Typed SQL-array binding (the branch below)
     // stays for a scalar column in a `$in` / `= ANY` filter context only.
+    //
+    // A top-level null is the absence of a document, not the document `null`: it
+    // binds SQL NULL, typed jsonb like the non-null arm, so `col IS NULL`, NOT NULL
+    // constraints and partial indexes all see it. A null INSIDE a document is part
+    // of that document and is stored as written.
     if sql_type.contains("JSON") {
+        if value.is_null() {
+            return Ok(query.bind(Option::<sqlx::types::Json<JsonValue>>::None));
+        }
         return Ok(query.bind(sqlx::types::Json(strip_nul_json(value))));
     }
     // W6 / bug #2 (bytes round-trip): a protobuf `bytes` field maps to a `BYTEA`

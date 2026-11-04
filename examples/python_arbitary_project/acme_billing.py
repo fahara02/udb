@@ -39,7 +39,6 @@ def main() -> None:
         ),
         service_identity="examples.python",
         project_id=PROJECT_ID,
-        client_catalog_version="1.0.0",
     ).to_metadata()
 
     with UdbClient(target, metadata) as client:

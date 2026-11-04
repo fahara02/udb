@@ -44,9 +44,18 @@ from typing import Any, Callable, Sequence
 import grpc
 
 from ._channel import merge_channel_options
+from ._credentials import (
+    RenewalFlight,
+    UdbCredentialError,
+    check_renewed_principal,
+    credential_refusal,
+    identity_from_principal,
+    without_credentials,
+)
+from ._surface import _AsyncProjectSurface, _ProjectSurface
 from .auth import AuthzCache, UdbAuthClient, as_resource
 from .client import UdbAsyncClient, UdbClient
-from .exceptions import UdbConfigurationError, UdbRpcError
+from .exceptions import UdbConfigurationError, UdbError, UdbRpcError
 from .generated_client import RPC_OPERATION_KIND, invoke_unary
 from .metadata import Metadata
 
@@ -159,9 +168,9 @@ class UdbConfig:
     # client verifies every SignedPolicyBundle it fetches before returning it.
     policy_bundle_secret: str | bytes | None = None
 
-    # Retry knobs are surfaced for parity with other SDK config objects; the
-    # generated robustness layer (generated_client.RetryPolicy) owns the actual
-    # retry behaviour, so this is advisory metadata for callers that build one.
+    # The data plane's retry policy (generated_client.RetryPolicy); None uses its
+    # defaults. Reads retry on transient codes; mutations only when replay-safe and
+    # idempotency-keyed.
     retry: Any = None
 
     def metadata(self) -> Metadata:
@@ -521,6 +530,26 @@ class _StorageFacade:
         """``StorageService.DeleteFile`` — delete file + backing object."""
         tenant_id, _ = self._ids(metadata)
         request = _storage.DeleteFileRequest(tenant_id=tenant_id, file_id=file_id)
+        return self._call("DeleteFile", request, metadata)
+
+    def delete_file_mode(
+        self,
+        file_id: str,
+        mode: Any,
+        *,
+        reason: str = "",
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """``StorageService.DeleteFile`` with an explicit mode.
+
+        ``DELETE_MODE_SOFT`` keeps the metadata tombstoned and removes the bytes
+        best-effort; ``DELETE_MODE_HARD`` records a durable object-GC intent.
+        ``reason`` is recorded on a HARD delete.
+        """
+        tenant_id, _ = self._ids(metadata)
+        request = _storage.DeleteFileRequest(
+            tenant_id=tenant_id, file_id=file_id, mode=mode, reason=reason
+        )
         return self._call("DeleteFile", request, metadata)
 
     def list_files(
@@ -1419,7 +1448,7 @@ def _make_channel(
     return grpc.insecure_channel(target, options=opts)
 
 
-class UdbProject:
+class UdbProject(_ProjectSurface):
     """One-stop synchronous facade over the UDB data plane + control plane.
 
     Sub-surfaces:
@@ -1463,6 +1492,9 @@ class UdbProject:
         self._api_key_lock = threading.Lock()
         self._api_key_stop = threading.Event()
         self._api_key_thread: threading.Thread | None = None
+        self._api_key_principal: Any = None
+        self._api_key_pinned: Any = None
+        self._api_key_flight: RenewalFlight | None = None
 
         # Data plane (broker) channel.
         self._data_channel = _make_channel(
@@ -1509,6 +1541,7 @@ class UdbProject:
             self._metadata,
             timeout=config.deadline,
             channel=self._data_channel,
+            retry=config.retry,
         )
         self.auth = UdbAuthClient(
             auth_target,
@@ -1553,7 +1586,11 @@ class UdbProject:
         )
 
         if self.config.api_key and not self.config.bearer_token:
-            self.authenticate_api_key_and_adopt(self.config.api_key)
+            try:
+                self.authenticate_api_key_and_adopt(self.config.api_key)
+            except BaseException:
+                self.close()
+                raise
 
     # ── lifecycle ─────────────────────────────────────────────────────────
     @property
@@ -1565,12 +1602,25 @@ class UdbProject:
         bound tenant/identity/scope context."""
         return self._metadata
 
+    def entity(self, message_type: str, *, key: Sequence[str] = ()) -> Any:
+        """Bind an entity on the data plane; see :meth:`UdbClient.entity`."""
+        return self.data.entity(message_type, key=key)
+
+    def table(self, name: str, *, key: Sequence[str] = ()) -> Any:
+        """Table-shaped alias of :meth:`entity`."""
+        return self.data.table(name, key=key)
+
+    def tx(self, fn: Any, *, metadata: Metadata | None = None, timeout: float | None = None) -> None:
+        """Commit everything ``fn(tx)`` collects atomically; see :meth:`UdbClient.tx`."""
+        self.data.tx(fn, metadata=metadata, timeout=timeout)
+
     def bind_metadata(self, metadata: Metadata) -> None:
         """Rebind the shared metadata across every sub-client."""
-        metadata = self._with_config_credentials(metadata)
+        metadata = self._own_metadata(self._with_config_credentials(metadata))
         self._metadata = metadata
         self.data.bind_metadata(metadata)
         self.auth.bind_metadata(metadata)
+        self._rebind_generated(metadata)
 
     def set_credentials(
         self, *, bearer_token: str = "", api_key: str = ""
@@ -1599,62 +1649,149 @@ class UdbProject:
         verified principal metadata are installed across all future calls. The
         broker mints that bearer WITHOUT a refresh token, so the key is retained
         privately and a background daemon thread re-exchanges it at ~80% of the
-        bearer lifetime (single-flight, hot-swapped like a normal refresh).
+        bearer lifetime (single-flight, hot-swapped like a normal refresh). A call
+        that finds the bearer due joins that same exchange. A renewal must verify as
+        the identity adopted here; one that does not is refused and calls fail closed
+        until a matching exchange succeeds.
 
         The key is never sent as a raw ``x-api-key`` header. If the broker
         returns no access token (no JWT signing key configured) the exchange
-        raises :class:`UdbConfigurationError`. If re-exchange keeps failing, the
-        bearer is kept until it expires and then dropped, so calls fail closed
-        (UNAUTHENTICATED); renewal keeps retrying with backoff and installs the
-        new bearer on success. :meth:`close` stops the renewal thread.
+        raises :class:`UdbConfigurationError`. A failed re-exchange refuses the call
+        that needed it (:class:`UdbCredentialError`) rather than send the old bearer;
+        renewal keeps retrying with backoff and installs the new bearer on success.
+        :meth:`close` stops the renewal thread.
         """
         key = api_key or self.config.api_key or self._api_key_secret
         if not key:
             raise UdbConfigurationError("api_key is required")
-        with self._api_key_lock:
-            authn = self._exchange_api_key_locked(key, metadata)
+        flight = self._join_api_key_flight()
+        try:
+            authn = self._exchange_api_key(key, metadata, adopting=True)
+        except BaseException as exc:
+            flight.error = exc
+            raise
+        finally:
+            self._finish_api_key_flight(flight)
         self._start_api_key_renewal()
         return authn
 
-    def _exchange_api_key_locked(self, key: str, metadata: Metadata | None) -> Any:
-        """One API-key → bearer exchange. Caller holds ``_api_key_lock``."""
+    def _join_api_key_flight(self) -> RenewalFlight:
+        """Wait out a running renewal and start a new flight."""
+        while True:
+            with self._api_key_lock:
+                running = self._api_key_flight
+                if running is None:
+                    self._api_key_flight = RenewalFlight()
+                    return self._api_key_flight
+            running.done.wait()
+
+    def _finish_api_key_flight(self, flight: RenewalFlight) -> None:
+        with self._api_key_lock:
+            self._api_key_flight = None
+        flight.done.set()
+
+    def _exchange_api_key(self, key: str, metadata: Metadata | None, *, adopting: bool) -> Any:
+        """One API-key to bearer exchange, inside a flight.
+
+        ``adopting`` takes the identity from the verified principal and pins it. A
+        renewal must verify as that same identity, and installs only the new bearer.
+        """
         # Authenticate is a public bootstrap RPC: never present a (possibly
         # expired) bearer alongside the key in the body.
-        exchange_meta = replace(
-            metadata or self._metadata, bearer_token="", api_key=""
-        )
+        exchange_meta = without_credentials(metadata or self._metadata)
         authn = self.auth.authenticate_api_key(key, metadata=exchange_meta)
-        self._api_key_secret = key
-        self.config.api_key = ""
         token = getattr(authn, "access_token", "")
-        principal = authn.principal
-        adopted = replace(
-            self._metadata,
-            tenant_id=principal.tenant_id or self._metadata.tenant_id,
-            project_id=principal.project_id or self._metadata.project_id,
-            user_id=principal.user_id or self._metadata.user_id,
-            service_identity=principal.service_identity or self._metadata.service_identity,
-            scopes=tuple(principal.scopes or ()),
-        )
         if not token:
             # An API key is only ever exchanged for a bearer; there is no raw-key
             # fallback, so a broker that mints no token cannot serve this key.
-            self._api_key_secret = ""
-            self._api_key_issued_at = 0.0
-            self._api_key_expires_at = 0.0
+            if adopting:
+                self._api_key_secret = ""
+                self._api_key_issued_at = 0.0
+                self._api_key_expires_at = 0.0
             raise UdbConfigurationError(
                 "the broker returned no access token for the API key; configure a "
                 "JWT signing key on the broker (API keys are exchanged for a bearer, "
                 "never sent raw)"
             )
-        now = time.time()
         expires_at = float(getattr(authn, "expires_at_unix", 0) or 0)
+        now = time.time()
+        if expires_at <= 0:
+            raise UdbConfigurationError(
+                "udb: exchange API key: the broker returned no bearer expiry "
+                "(is the key active and bound to a service account grant?)"
+            )
+        if not authn.HasField("principal"):
+            raise UdbConfigurationError("udb: exchange API key: the broker returned no verified principal")
+        if now >= expires_at:
+            raise UdbConfigurationError("udb: exchange API key: returned bearer is expired")
+        if self._api_key_stop.is_set():
+            raise UdbCredentialError("udb: credential owner is closed", code=grpc.StatusCode.CANCELLED)
+        principal = authn.principal
+        if adopting:
+            identity = identity_from_principal(self._metadata, principal, token)
+            self._api_key_pinned = identity
+        else:
+            check_renewed_principal(principal, self._api_key_principal, self._api_key_pinned, self._metadata)
+            identity = replace(self._metadata, bearer_token=token, api_key="")
+        self._api_key_secret = key
+        self.config.api_key = ""
         self._api_key_issued_at = now
-        self._api_key_expires_at = expires_at if expires_at > 0 else 0.0
+        self._api_key_expires_at = expires_at
         self._api_key_warned = False
+        self._api_key_principal = principal
         self.config.bearer_token = token
-        self.bind_metadata(replace(adopted, bearer_token=token, api_key=""))
+        self.bind_metadata(identity)
         return authn
+
+    def _renew_api_key(self) -> None:
+        """Re-exchange the retained key if it is due or the last attempt failed.
+
+        Concurrent callers share one exchange and one outcome. A failure is recorded
+        and raised. It does not refuse a later call by itself while the bearer is
+        valid, but that call renews again rather than send the old bearer.
+        """
+        with self._api_key_lock:
+            key = self._api_key_secret
+            if not key:
+                return
+            running = self._api_key_flight
+            if running is None and self._api_key_last_error is None and not self._api_key_due(time.time()):
+                return
+            flight = running or RenewalFlight()
+            self._api_key_flight = flight
+        if running is not None:
+            running.done.wait()
+            if running.error is not None:
+                raise running.error
+            return
+        try:
+            self._exchange_api_key(key, None, adopting=False)
+        except Exception as exc:  # noqa: BLE001 - recorded for every waiter
+            flight.error = exc
+            self._api_key_failures += 1
+            self._api_key_last_error = exc
+            if time.time() >= self._api_key_expires_at:
+                self._drop_expired_api_key_bearer()
+        else:
+            self._api_key_failures = 0
+            self._api_key_last_error = None
+        finally:
+            self._finish_api_key_flight(flight)
+        if flight.error is not None:
+            raise flight.error
+
+    def _current_bearer(self) -> str:
+        """The bearer for a call about to be made. Never returns a stale one."""
+        refusal = self._credential_refusal()
+        if refusal is not None:
+            raise refusal
+        try:
+            self._renew_api_key()
+        except Exception as exc:  # noqa: BLE001 - a failed renewal refuses the call
+            raise credential_refusal(exc) from exc
+        if self._api_key_expires_at <= time.time():
+            raise UdbCredentialError("udb: credential renewal failed: API key bearer is expired")
+        return f"Bearer {self.config.bearer_token}"
 
     def _drop_expired_api_key_bearer(self) -> None:
         """Fail closed: remove an expired API-key bearer from every future call."""
@@ -1692,26 +1829,11 @@ class UdbProject:
         return delay
 
     def _api_key_renewal_tick(self) -> None:
-        """Re-exchange the retained key if the bearer is due for renewal.
-
-        Single-flight under ``_api_key_lock``. On failure the error is recorded;
-        the bearer stays installed until it expires and is then dropped so calls
-        fail closed (UNAUTHENTICATED) rather than send a dead credential.
-        """
-        with self._api_key_lock:
-            key = self._api_key_secret
-            if not key or not self._api_key_due(time.time()):
-                return
-            try:
-                self._exchange_api_key_locked(key, None)
-            except Exception as exc:  # noqa: BLE001 - renewal must never crash
-                self._api_key_failures += 1
-                self._api_key_last_error = exc
-                if time.time() >= self._api_key_expires_at:
-                    self._drop_expired_api_key_bearer()
-                return
-            self._api_key_failures = 0
-            self._api_key_last_error = None
+        """The background renewal: failures are recorded, never raised here."""
+        try:
+            self._renew_api_key()
+        except Exception:  # noqa: BLE001 - renewal must never crash, and it is recorded
+            pass
 
     def _api_key_renewal_loop(self) -> None:
         while not self._api_key_stop.wait(self._api_key_next_delay()):
@@ -1744,39 +1866,41 @@ class UdbProject:
         max_wait_ms: int = 0,
         metadata: Metadata | None = None,
     ) -> Any:
-        """Login, then adopt the canonical tenant/project from the VERIFIED principal.
+        """Login, then adopt the identity from the VERIFIED principal.
 
-        Canonical 2-RPC sequence (D11), ALWAYS two RPCs:
-        ``Login`` → ``Authenticate(bearer)`` → adopt ``{tenant_id, project_id}``
-        from the authenticated principal, then ``set_credentials`` +
-        ``bind_metadata`` to install the bearer and canonical tenant/project
-        atomically across every sub-client. Authenticate-bearer always runs (no
-        conditional skip). Returns the ``AuthnResponse`` (the verified principal).
+        Canonical 2-RPC sequence (D11), ALWAYS two RPCs: ``Login``, then
+        ``Authenticate(bearer)``. The tenant, project, user, service identity and
+        scopes all come from the authenticated principal, replacing what was
+        configured, and the bearer is installed across every sub-client. Neither RPC
+        presents an earlier credential. Returns the ``AuthnResponse`` (the verified
+        principal). A login needing a second factor raises :class:`UdbError`.
         """
+        hints = metadata or without_credentials(self._metadata)
         login = self.auth.login(
             username,
             password,
             totp_code=totp_code,
             mfa_otp_id=mfa_otp_id,
-            metadata=metadata,
+            metadata=hints,
         )
         token = login.access_token
-        authn = self.auth.authenticate_bearer(token, metadata=metadata)
+        if not token:
+            raise UdbError(f"udb: Login returned no access token (MFA required: {login.mfa_required})")
+        authn = self.auth.authenticate_bearer(token, metadata=hints)
+        if not authn.HasField("principal"):
+            raise UdbError("udb: AuthenticateBearer returned no principal")
         principal = authn.principal
-        # Adopt identity from the VERIFIED principal, never from the request body.
-        adopted = replace(
-            self._metadata,
-            tenant_id=principal.tenant_id or self._metadata.tenant_id,
-            project_id=principal.project_id or self._metadata.project_id,
-            bearer_token=token,
-            api_key="",
-        )
+        adopted = identity_from_principal(self._metadata, principal, token)
         # A password session supersedes any API-key identity: stop renewing it.
         self._api_key_secret = ""
+        self._api_key_last_error = None
         self.config.bearer_token = token
         self.config.api_key = ""
         self.config.tenant_id = adopted.tenant_id
         self.config.project_id = adopted.project_id
+        self.config.user_id = adopted.user_id
+        self.config.service_identity = adopted.service_identity
+        self.config.scopes = tuple(adopted.scopes)
         self.bind_metadata(adopted)
         return authn
 
@@ -2140,7 +2264,7 @@ def create_udb(config: UdbConfig | None = None, /, **kwargs: Any) -> UdbProject:
     return UdbProject(config)
 
 
-class UdbAsyncProject:
+class UdbAsyncProject(_AsyncProjectSurface):
     """Async facade mirroring the data-plane surface of :class:`UdbProject`.
 
     The native control-plane stubs and the auth client are synchronous gRPC
@@ -2175,6 +2299,7 @@ class UdbAsyncProject:
             root_certificates=config.root_certificates,
             channel_options=config.channel_options,
             timeout=config.deadline,
+            retry=config.retry,
         )
         self.storage = _StorageFacade(self.data)
 
@@ -2197,6 +2322,18 @@ class UdbAsyncProject:
             replace(self._metadata, bearer_token=bearer_token, api_key=api_key)
         )
 
+    def entity(self, message_type: str, *, key: Sequence[str] = ()) -> Any:
+        """Bind an entity on the data plane; see :meth:`UdbAsyncClient.entity`."""
+        return self.data.entity(message_type, key=key)
+
+    def table(self, name: str, *, key: Sequence[str] = ()) -> Any:
+        """Table-shaped alias of :meth:`entity`."""
+        return self.data.table(name, key=key)
+
+    async def tx(self, fn: Any, *, metadata: Metadata | None = None, timeout: float | None = None) -> None:
+        """Commit everything ``fn(tx)`` collects atomically; ``fn`` may be sync or async."""
+        await self.data.tx(fn, metadata=metadata, timeout=timeout)
+
     def sync_project(self) -> UdbProject:
         """A sync :class:`UdbProject` sharing this config (auth/control plane)."""
         return UdbProject(self.config)
@@ -2209,6 +2346,7 @@ class UdbAsyncProject:
         return replace(metadata, bearer_token=bearer_token, api_key=api_key)
 
     async def close(self) -> None:
+        await self._close_surface()
         await self.data.close()
 
     async def __aenter__(self) -> "UdbAsyncProject":

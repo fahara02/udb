@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.6 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.7 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,16 +18,82 @@ every broker RPC, and a version-matched `udb` CLI launcher.
 ## Install
 
 ```bash
-pip install udb-client==0.6.6
+pip install udb-client==0.6.7
 ```
 
 Optional validated command models:
 
 ```bash
-pip install "udb-client[pydantic]==0.6.6"
+pip install "udb-client[pydantic]==0.6.7"
 ```
 
 Runtime: Python 3.10+
+
+
+## Typed Tables For Your Own Protos
+
+Generate typed code from the protos your project owns. Go, TypeScript and Python
+produce the same parts:
+
+```bash
+udb sdk generate --project-proto ./proto --lang python --out ./gen --entities-only
+udb sdk diff --project-proto ./proto --against ./gen/python/udb_entities_gen.py # for CI
+```
+
+For each table, `gen/python/udb_entities_gen.py` provides the `X` row TypedDict, `XKey`
+and `XBy<Unique>` key types, `XFields`, the `XColumns` column policy, `XWhere` typed
+predicates, the `XToUDBRecord` and `XFromUDBRow` mappers, `XTable(project)` and
+`XRepo(project)`.
+
+```python
+from gen.python.udb_entities_gen import InvoiceTable, InvoiceWhere
+from udb_client.exceptions import UdbConflict, UdbNotFound
+
+invoices = InvoiceTable(project)  # a UdbProject
+
+invoices.insert({"invoice_id": invoice_id, "tenant_id": tenant_id, "amount_cents": 1200})
+invoices.upsert({"invoice_id": invoice_id, "amount_cents": 1300})
+invoice = invoices.get({"invoice_id": invoice_id})  # raises UdbNotFound when absent
+
+invoices.patch({"invoice_id": invoice_id}, {"paid_at": "2031-02-03T04:05:06Z"})
+invoices.patch({"invoice_id": invoice_id}, {"paid_at": None})  # clears the column
+invoices.increment({"invoice_id": invoice_id}, {"retries": 1})  # atomic on the broker
+
+# A compare-and-swap, and the same with the read and the retry handled for you.
+invoices.update_if(
+    {"invoice_id": invoice_id, "status": "INVOICE_STATUS_PAID"},
+    {"status": "INVOICE_STATUS_OPEN"},
+)
+invoices.update_with_retry(
+    {"invoice_id": invoice_id},
+    lambda row: {**row, "retries": row.get("retries", 0) + 1},
+)
+
+page = invoices.select(
+    InvoiceWhere.amount_cents.gte(1000),
+    order_by=["-amount_cents"],
+    limit=50,
+    include_total=True,
+)
+invoices.select_all(InvoiceWhere.paid_at.is_null(), lambda row: print(row["invoice_id"]))
+unpaid = invoices.count(InvoiceWhere.paid_at.is_null())
+invoices.delete({"invoice_id": invoice_id})
+```
+
+- Rows are dicts keyed by proto field name. A JSON or JSONB value is passed through
+  unchanged, nested keys included.
+- A column that is NULL is an absent key. Match it with `InvoiceWhere.paid_at.is_null()`;
+  a filter of `{"paid_at": None}` is refused.
+- A text-stored enum uses its full value name, such as `INVOICE_STATUS_OPEN`.
+- A column the table does not have is refused, never silently dropped.
+- `get` and `select` leave PII columns out by default. If you hold `udb:pii:read`,
+  pass `include_pii=True` to read them.
+- A missing row raises `UdbNotFound` and a lost compare-and-swap raises `UdbConflict`.
+  `XRepo(project).get` returns `None` instead, and its `update_guarded` and
+  `delete_guarded` refuse an empty precondition.
+- Two messages with the same short name in one `--project-proto` directory are
+  refused, because their generated names would collide. A table with no primary key
+  gets its row type and mappers, but no `XTable` or `XRepo`.
 
 ## Export UDB Protos For Your App
 
@@ -181,6 +247,102 @@ By default the channel is built with `udb_client.default_channel_options()`, whi
 Pass your own `channel_options=` to override any of these (your options win on
 conflicting keys); `merge_channel_options(...)` is exposed if you want to layer
 yours on top of the defaults yourself.
+
+## Production Connections
+
+`connect_enterprise` logs in, verifies the bearer, adopts the canonical tenant UUID, and
+keeps the bearer current in the background. A refresh token the broker refuses leads to
+a fresh login; a renewal that verifies as a different principal poisons the session, and
+later calls are refused locally with `UNAUTHENTICATED`.
+
+```python
+from udb_client import connect_enterprise
+
+session = connect_enterprise(
+    target="broker:50051",
+    auth_target="broker:50061",
+    username="ops",
+    password=password,
+    tenant_code="acme",  # a hint only
+)
+session.validate_tenant(record["tenant_id"])  # raises UdbTenantError on a mismatch
+session.data.select(message_type="acme.v1.Invoice", filter={"tenant_id": session.canonical_tenant_id})
+session.close()
+```
+
+A service with an API key reads one environment contract. Every missing or invalid
+variable is reported at once, and the verified principal is checked at connect:
+
+```python
+from udb_client import Expect, connect_from_env
+
+# UDB_TARGET, UDB_TENANT_ID, UDB_PURPOSE, UDB_API_KEY (see udb_client.connect_env)
+project = connect_from_env(expect=Expect(required_scopes=["udb:read"]))
+project.ready()  # readiness probe: broker health plus credential state
+project.bearer_expires_at()
+```
+
+A service serving several tenants keeps one client per tenant:
+
+```python
+from udb_client import UdbConfig, api_key_tenant_pool
+
+pool = api_key_tenant_pool(UdbConfig(target="broker:50051"), {tenant_uuid: api_key})
+project = pool.get(tenant_uuid)  # replaced automatically when its credential stops refreshing
+```
+
+To call as an end user, pass `as_user` metadata. The broker verifies the bearer, and the
+connected tenant and project do not change:
+
+```python
+files = project.storage.list_files(metadata=project.as_user(user_bearer))
+user = project.auth.validate_session(user_bearer)
+```
+
+## Live Queries, Graph, Vector, Flags, Migrations
+
+```python
+from udb_client import lq_eq, UdbNoDeltaFeed
+
+# A message class decodes rows; a full type name gives dicts. Reconnects and resumes itself.
+query = project.live_query(Note, where=[lq_eq("owner", me)])
+try:
+    for event in query:
+        if event.is_snapshot:
+            view = {row.note_id: row for row in event.snapshot}
+        else:
+            view[event.row.note_id] = event.row
+except UdbNoDeltaFeed:
+    ...  # the broker has no CDC change feed: the snapshot is all there is
+
+rows = project.graph_from(Note, note_id).out("RELATED").depth(1, 2).run()
+hits = project.vectors_hybrid("notes", Note).text("rotate keys").near(embedding).limit(10).run()
+
+project.flags.enabled("new-editor", {"user_id": me})  # a flag that does not exist is off
+project.admin.apply_current(project_id)  # plan, approve, apply
+project.storage.delete_file_mode(file_id, DELETE_MODE_HARD, reason="gdpr")
+project.generated.LockService.get_lock(request)  # every RPC the facades do not cover
+```
+
+`UdbAsyncProject` has awaited forms of `ready`, `as_user`, `flags`, `admin`, `live_query`
+(`async for`), `graph_from` and `vectors_hybrid`. `connect_enterprise_async` and
+`connect_from_env_async` return one, with the credential owned by a synchronous client
+that stays reachable as `credential_owner`. A tenant pool is synchronous because async
+channels belong to one event loop: use `await asyncio.to_thread(pool.get, tenant)` and
+`UdbAsyncProject.from_project(project, owns=False)`. `generated` is synchronous only.
+
+A gRPC server can lift the UDB request context off inbound metadata:
+
+```python
+from udb_client.adapters import UdbServerInterceptor, metadata_from_context
+
+server = grpc.server(pool, interceptors=[UdbServerInterceptor()])
+# in a handler: metadata_from_context().tenant_id
+```
+
+Schema reflection reads the proto annotations: `topic`, `unique_keys`, `max_len`,
+`apply_column_defaults`, `owner_columns`, `retention_class`, `soft_delete` and
+`graph_label` take a generated message class or instance.
 
 ## Authz Check
 

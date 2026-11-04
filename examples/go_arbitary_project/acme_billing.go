@@ -52,9 +52,8 @@ func main() {
 			"udb:object:presign",
 			"udb:stream",
 		},
-		ServiceIdentity:      "examples.go",
-		ProjectID:            projectID,
-		ClientCatalogVersion: udbclient.ProtocolVersion,
+		ServiceIdentity: "examples.go",
+		ProjectID:       projectID,
 	})
 
 	ctx := context.Background()

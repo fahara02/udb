@@ -42,7 +42,7 @@ $md = (new UdbMetadata(
     scopes: ['udb:*'],
     serviceIdentity: 'examples.native-php-admin',
     projectId: 'billing',
-    clientCatalogVersion: '1.0.0',
+    clientCatalogVersion: '',
 ))->toGrpcMetadata();
 
 $authn = new AuthnServiceClient($endpoint, $opts);

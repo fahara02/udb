@@ -18,6 +18,7 @@ use db_parser::ProtoParser;
 use lexer::Lexer;
 pub use options::{ParserOptionMetadata, documented_option_metadata, parser_option_kind_name};
 use selection::dedupe_canonical_table_schemas;
+pub use selection::DUPLICATE_TABLE_DIAGNOSTIC_CODE;
 
 #[cfg(test)]
 use naming::{infer_sql_type, to_plural, to_snake_case};
@@ -61,7 +62,8 @@ pub fn parse_directory_report(
         }
     }
 
-    let schemas = dedupe_canonical_table_schemas(schemas);
+    let (schemas, duplicate_tables) = dedupe_canonical_table_schemas(schemas);
+    diagnostics.extend(duplicate_tables);
     if errors.is_empty() {
         Ok(ParseReport {
             schemas,

@@ -49,7 +49,7 @@ final class UdbContextSubscriber implements EventSubscriberInterface
         private readonly string $defaultPurpose = 'web.request',
         private readonly string $serviceIdentity = 'symfony.app',
         private readonly string $defaultProjectId = 'default',
-        private readonly string $clientCatalogVersion = '1.0.0',
+        private readonly string $clientCatalogVersion = '',
     ) {
     }
 

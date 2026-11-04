@@ -661,15 +661,452 @@ fn lint_table(table: &ManifestTable, items: &mut Vec<LintItem>) {
         }
     }
 
+    // ── CHECK expressions PostgreSQL cannot parse ────────────────────────────
+    // The DDL quotes column names but embeds a CHECK expression verbatim, so a
+    // column named `to` works everywhere except in an author's `to IN (...)`.
+    for check in &table.checks {
+        for word in unquoted_reserved_words(&check.expression) {
+            items.push(LintItem {
+                severity: LintSeverity::Error,
+                kind: "check_unquoted_reserved_word".to_string(),
+                schema: table.schema.clone(),
+                table: table.table.clone(),
+                column: table
+                    .columns
+                    .iter()
+                    .find(|column| column.column_name.eq_ignore_ascii_case(&word))
+                    .map(|column| column.column_name.clone())
+                    .unwrap_or_default(),
+                description: format!(
+                    "{}.{} CHECK '{}' uses the reserved word `{word}` as a bare identifier in \
+                     `{}`; PostgreSQL refuses the expression when the table is created.",
+                    table.schema, table.table, check.name, check.expression
+                ),
+                suggestion: format!(
+                    "Quote the identifier in the check_constraint: \"{word}\" (in a proto string, \
+                     \\\"{word}\\\")."
+                ),
+                source_file: table.source_file.clone(),
+            });
+        }
+    }
+
     // ── Per-column lint ──────────────────────────────────────────────────────
     for column in &table.columns {
         lint_column(table, column, items);
     }
 }
 
+// ── SQL shape helpers ────────────────────────────────────────────────────────
+
+/// PostgreSQL's reserved keywords, including those that can name a function or
+/// type (Appendix C, "reserved" and "reserved (can be function or type)"). None
+/// of them can be a bare column reference.
+const PG_RESERVED_WORDS: &[&str] = &[
+    "all",
+    "analyse",
+    "analyze",
+    "and",
+    "any",
+    "array",
+    "as",
+    "asc",
+    "asymmetric",
+    "authorization",
+    "binary",
+    "both",
+    "case",
+    "cast",
+    "check",
+    "collate",
+    "collation",
+    "column",
+    "concurrently",
+    "constraint",
+    "create",
+    "cross",
+    "current_catalog",
+    "current_date",
+    "current_role",
+    "current_schema",
+    "current_time",
+    "current_timestamp",
+    "current_user",
+    "default",
+    "deferrable",
+    "desc",
+    "distinct",
+    "do",
+    "else",
+    "end",
+    "except",
+    "false",
+    "fetch",
+    "for",
+    "foreign",
+    "freeze",
+    "from",
+    "full",
+    "grant",
+    "group",
+    "having",
+    "ilike",
+    "in",
+    "initially",
+    "inner",
+    "intersect",
+    "into",
+    "is",
+    "isnull",
+    "join",
+    "lateral",
+    "leading",
+    "left",
+    "like",
+    "limit",
+    "localtime",
+    "localtimestamp",
+    "natural",
+    "not",
+    "notnull",
+    "null",
+    "offset",
+    "on",
+    "only",
+    "or",
+    "order",
+    "outer",
+    "overlaps",
+    "placing",
+    "primary",
+    "references",
+    "returning",
+    "right",
+    "select",
+    "session_user",
+    "similar",
+    "some",
+    "symmetric",
+    "system_user",
+    "table",
+    "tablesample",
+    "then",
+    "to",
+    "trailing",
+    "true",
+    "union",
+    "unique",
+    "user",
+    "using",
+    "variadic",
+    "verbose",
+    "when",
+    "where",
+    "window",
+    "with",
+];
+
+/// A column reference for a generated CHECK expression. Only a reserved word is
+/// quoted, so the expressions (and catalog checksums) of every other column stay
+/// as they are.
+pub(crate) fn check_column_reference(column: &str) -> String {
+    if PG_RESERVED_WORDS.contains(&column.to_ascii_lowercase().as_str()) {
+        format!("\"{}\"", column.replace('"', "\"\""))
+    } else {
+        column.to_string()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SqlToken {
+    /// A bare word, lowercased.
+    Word(String),
+    /// A string literal, quoted identifier or number: an operand of its own.
+    Operand,
+    Symbol(char),
+}
+
+/// Split a SQL expression just far enough to see its bare words.
+fn sql_expression_tokens(expression: &str) -> Vec<SqlToken> {
+    let mut tokens = Vec::new();
+    let mut chars = expression.chars().peekable();
+    while let Some(ch) = chars.next() {
+        match ch {
+            quote @ ('\'' | '"') => {
+                // A doubled quote stays inside the literal: the loop closes and
+                // reopens it, and both halves read as one operand.
+                for inner in chars.by_ref() {
+                    if inner == quote {
+                        break;
+                    }
+                }
+                if tokens.last() != Some(&SqlToken::Operand) {
+                    tokens.push(SqlToken::Operand);
+                }
+            }
+            ch if ch.is_alphabetic() || ch == '_' => {
+                let mut word = ch.to_lowercase().collect::<String>();
+                while let Some(&next) = chars.peek() {
+                    if next.is_alphanumeric() || next == '_' || next == '$' {
+                        word.extend(next.to_lowercase());
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                tokens.push(SqlToken::Word(word));
+            }
+            ch if ch.is_ascii_digit() => {
+                while chars
+                    .peek()
+                    .is_some_and(|next| next.is_alphanumeric() || *next == '.' || *next == '_')
+                {
+                    chars.next();
+                }
+                tokens.push(SqlToken::Operand);
+            }
+            ch if ch.is_whitespace() => {}
+            other => tokens.push(SqlToken::Symbol(other)),
+        }
+    }
+    tokens
+}
+
+/// Whether a reserved word at this position is SQL expression syntax rather than
+/// a column reference. Anything else cannot parse in a CHECK expression (which
+/// also cannot hold a subquery), so an unlisted word is refused.
+fn reserved_word_is_expression_syntax(
+    word: &str,
+    previous: Option<&SqlToken>,
+    next: Option<&SqlToken>,
+    depth: usize,
+    has_case: bool,
+) -> bool {
+    let previous_word = match previous {
+        Some(SqlToken::Word(word)) => word.as_str(),
+        _ => "",
+    };
+    let next_is_open_paren = next == Some(&SqlToken::Symbol('('));
+    let follows_operand = match previous {
+        Some(SqlToken::Word(word)) => !matches!(
+            word.as_str(),
+            "and" | "or" | "not" | "case" | "when" | "then" | "else"
+        ),
+        Some(SqlToken::Operand) => true,
+        Some(SqlToken::Symbol(symbol)) => matches!(symbol, ')' | ']'),
+        None => false,
+    };
+    match word {
+        "and" | "or" | "not" | "in" | "is" | "isnull" | "notnull" | "like" | "ilike"
+        | "similar" | "overlaps" | "null" | "true" | "false" | "case" | "collate" | "symmetric"
+        | "asymmetric" | "current_catalog" | "current_date" | "current_role" | "current_schema"
+        | "current_time" | "current_timestamp" | "current_user" | "localtime"
+        | "localtimestamp" | "session_user" | "system_user" => true,
+        "when" | "then" | "else" | "end" => has_case,
+        // `any (...)`, `array[...]`, `cast (...)`, `left (...)`: only as a call.
+        "any" | "some" | "all" | "cast" | "left" | "right" | "full" | "inner" | "outer"
+        | "cross" | "natural" | "join" | "binary" | "authorization" | "collation"
+        | "concurrently" | "freeze" | "tablesample" | "verbose" => next_is_open_paren,
+        "array" => next_is_open_paren || next == Some(&SqlToken::Symbol('[')),
+        // `x IS [NOT] DISTINCT FROM y`.
+        "distinct" => matches!(previous_word, "is" | "not"),
+        "from" => previous_word == "distinct" || (depth > 0 && follows_operand),
+        // `x SIMILAR TO 'pattern'`.
+        "to" => previous_word == "similar",
+        // `timestamp WITH TIME ZONE` in a cast.
+        "with" => next == Some(&SqlToken::Word("time".to_string())),
+        // Inside a call: `cast(x AS text)`, `substring(x FOR 2)`, `overlay(...)`.
+        "as" | "for" | "placing" | "using" => depth > 0 && follows_operand,
+        // Lead a call's arguments: `trim(BOTH FROM x)`, `f(VARIADIC args)`.
+        "both" | "leading" | "trailing" | "variadic" => depth > 0,
+        _ => false,
+    }
+}
+
+/// The reserved words `expression` uses as bare identifiers, each once.
+fn unquoted_reserved_words(expression: &str) -> Vec<String> {
+    let tokens = sql_expression_tokens(expression);
+    let has_case = tokens.contains(&SqlToken::Word("case".to_string()));
+    let mut found: Vec<String> = Vec::new();
+    let mut depth = 0usize;
+    for (index, token) in tokens.iter().enumerate() {
+        match token {
+            SqlToken::Symbol('(') => depth += 1,
+            SqlToken::Symbol(')') => depth = depth.saturating_sub(1),
+            SqlToken::Word(word) if PG_RESERVED_WORDS.contains(&word.as_str()) => {
+                let previous = index.checked_sub(1).and_then(|at| tokens.get(at));
+                // A qualified name may use any word: `t.to`.
+                if previous == Some(&SqlToken::Symbol('.')) {
+                    continue;
+                }
+                if !reserved_word_is_expression_syntax(
+                    word,
+                    previous,
+                    tokens.get(index + 1),
+                    depth,
+                    has_case,
+                ) && !found.contains(word)
+                {
+                    found.push(word.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+    found
+}
+
+/// The content of a default that is one string literal, optionally cast. `None`
+/// for anything else (a function call, an expression, a concatenation).
+fn string_literal_default(default_value: &str) -> Option<String> {
+    let rest = default_value.trim().strip_prefix('\'')?;
+    let mut content = String::new();
+    let mut chars = rest.char_indices().peekable();
+    while let Some((at, ch)) = chars.next() {
+        if ch != '\'' {
+            content.push(ch);
+            continue;
+        }
+        if chars.peek().is_some_and(|(_, next)| *next == '\'') {
+            content.push('\'');
+            chars.next();
+            continue;
+        }
+        let tail = rest[at + 1..].trim_start();
+        return (tail.is_empty() || tail.starts_with("::")).then_some(content);
+    }
+    None
+}
+
+/// Why PostgreSQL would refuse this default for an array column, if it would. An
+/// array default is `'{...}'`, `ARRAY[...]`, NULL or an expression; a string that
+/// is not an array literal fails with "malformed array literal", and a bare
+/// number or boolean fails on its type.
+fn array_default_problem(default_value: &str) -> Option<&'static str> {
+    if let Some(content) = string_literal_default(default_value) {
+        let content = content.trim();
+        return (!content.starts_with('{') || !content.ends_with('}'))
+            .then_some("is not an array literal (\"malformed array literal\")");
+    }
+    let bare = default_value.trim();
+    (bare.eq_ignore_ascii_case("true")
+        || bare.eq_ignore_ascii_case("false")
+        || bare.parse::<f64>().is_ok())
+    .then_some("is a scalar, not an array")
+}
+
+/// Types whose input function refuses the empty string, so `default_value: "''"`
+/// stops the broker at startup. A custom type is left alone: it may accept it.
+fn sql_type_refuses_empty_string(sql_type: &str) -> bool {
+    let base = sql_type
+        .trim()
+        .split('(')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_uppercase();
+    matches!(
+        base.as_str(),
+        "SMALLINT"
+            | "INT"
+            | "INTEGER"
+            | "BIGINT"
+            | "INT2"
+            | "INT4"
+            | "INT8"
+            | "NUMERIC"
+            | "DECIMAL"
+            | "REAL"
+            | "FLOAT"
+            | "FLOAT4"
+            | "FLOAT8"
+            | "DOUBLE PRECISION"
+            | "BOOLEAN"
+            | "BOOL"
+            | "UUID"
+            | "DATE"
+            | "TIME"
+            | "TIMETZ"
+            | "TIMESTAMP"
+            | "TIMESTAMPTZ"
+            | "JSON"
+            | "JSONB"
+            | "INET"
+            | "CIDR"
+    )
+}
+
+/// The message-level findings the parser leaves as diagnostics, because the
+/// manifest no longer holds the message it dropped. `udb lint` promotes a table
+/// name two messages share to an error.
+pub fn add_parser_findings(
+    report: &mut LintReport,
+    diagnostics: &[crate::parser::ParserDiagnostic],
+) {
+    for diagnostic in diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == crate::parser::DUPLICATE_TABLE_DIAGNOSTIC_CODE)
+    {
+        report.items.push(LintItem {
+            severity: LintSeverity::Error,
+            kind: diagnostic.code.clone(),
+            description: diagnostic.message.clone(),
+            suggestion: "Give each message its own table_name, or put one in a different schema."
+                .to_string(),
+            source_file: diagnostic.file.clone(),
+            ..LintItem::default()
+        });
+        report.error_count += 1;
+        report.passed = false;
+    }
+}
+
 // ── Column-level lint ─────────────────────────────────────────────────────────
 
 fn lint_column(table: &ManifestTable, column: &ManifestColumn, items: &mut Vec<LintItem>) {
+    // ── Default PostgreSQL refuses for the column's type ─────────────────────
+    if !column.default_value.trim().is_empty() {
+        let is_array = column.sql_type.trim_end().ends_with(']')
+            || column
+                .sql_type
+                .trim_end()
+                .to_ascii_uppercase()
+                .ends_with(" ARRAY");
+        let problem = if is_array {
+            array_default_problem(&column.default_value)
+        } else if string_literal_default(&column.default_value).as_deref() == Some("")
+            && sql_type_refuses_empty_string(&column.sql_type)
+        {
+            Some("is the empty string, which this type cannot hold")
+        } else {
+            None
+        };
+        if let Some(problem) = problem {
+            items.push(LintItem {
+                severity: LintSeverity::Error,
+                kind: "default_value_invalid_for_type".to_string(),
+                schema: table.schema.clone(),
+                table: table.table.clone(),
+                column: column.column_name.clone(),
+                description: format!(
+                    "{}.{}.{} default_value `{}` {problem} for sql_type {}; PostgreSQL refuses it \
+                     when the table is created.",
+                    table.schema,
+                    table.table,
+                    column.column_name,
+                    column.default_value,
+                    column.sql_type
+                ),
+                suggestion: if is_array {
+                    "Use an array literal: default_value: \"'{}'\".".to_string()
+                } else {
+                    "Use a value of the column's type, or remove the default.".to_string()
+                },
+                source_file: table.source_file.clone(),
+            });
+        }
+    }
+
     // ── PII not masked in logs ───────────────────────────────────────────────
     if column.security.is_pii && !column.security.mask_in_logs {
         items.push(LintItem {
@@ -1755,6 +2192,229 @@ mod tests {
             report.items
         );
         assert!(!report.passed);
+    }
+
+    fn check_findings(report: &LintReport) -> Vec<&LintItem> {
+        report
+            .items
+            .iter()
+            .filter(|item| item.kind == "check_unquoted_reserved_word")
+            .collect()
+    }
+
+    fn table_with_check(expression: &str) -> ManifestTable {
+        let mut table = fqn_table("acme.mail.v1", "Message", "mail", "messages");
+        table.columns.push(ManifestColumn {
+            field_name: "to".to_string(),
+            column_name: "to".to_string(),
+            sql_type: "TEXT".to_string(),
+            ..ManifestColumn::default()
+        });
+        table.checks = vec![crate::generation::manifest::ManifestCheck {
+            name: "chk_messages_to".to_string(),
+            expression: expression.to_string(),
+        }];
+        table
+    }
+
+    /// PostgreSQL refuses `CHECK (to IN (...))` at startup, so lint must too.
+    #[test]
+    fn lint_refuses_an_unquoted_reserved_word_in_a_check() {
+        let report = lint_catalog(&manifest_of(vec![table_with_check(
+            "to IN ('alice', 'bob')",
+        )]));
+        let findings = check_findings(&report);
+        assert_eq!(findings.len(), 1, "{:#?}", report.items);
+        assert_eq!(findings[0].severity, LintSeverity::Error);
+        assert_eq!(findings[0].column, "to");
+        assert!(findings[0].description.contains("`to`"));
+        assert!(!report.passed);
+
+        // The fix the finding names passes.
+        let report = lint_catalog(&manifest_of(vec![table_with_check(
+            "\"to\" IN ('alice', 'bob')",
+        )]));
+        assert!(check_findings(&report).is_empty(), "{:#?}", report.items);
+    }
+
+    #[test]
+    fn check_reserved_word_scan_accepts_expression_syntax() {
+        for expression in [
+            "status IN ('a', 'b') AND NOT archived",
+            "a IS NOT NULL OR b IS NULL",
+            "a IS DISTINCT FROM b",
+            "a IS NOT DISTINCT FROM b",
+            "code SIMILAR TO '[a-z]+'",
+            "name LIKE 'to%' OR name ILIKE 'from%'",
+            "username ~ '^[a-z][a-z0-9._-]{2,79}$'",
+            "CASE WHEN kind = 'x' THEN total > 0 ELSE TRUE END",
+            "EXTRACT(year FROM created_at) > 2000",
+            "substring(code FROM 1 FOR 2) = 'ab'",
+            "trim(BOTH FROM name) <> ''",
+            "CAST(total AS numeric) > 0",
+            "total = ANY (ARRAY[1, 2])",
+            "tags = ARRAY['a']::text[]",
+            "left(code, 2) = 'ab' AND right(code, 1) = 'z'",
+            "created_at::timestamp with time zone < CURRENT_TIMESTAMP",
+            "name COLLATE \"C\" = 'x'",
+            "m.to = 'x'",
+            "\"to\" <> \"from\"",
+            "note <> 'select from to where'",
+            "note <> 'it''s to'",
+            "num_nonnulls(a, b) <= 1",
+        ] {
+            assert_eq!(
+                unquoted_reserved_words(expression),
+                Vec::<String>::new(),
+                "{expression}"
+            );
+        }
+    }
+
+    #[test]
+    fn check_reserved_word_scan_names_bare_identifiers() {
+        for (expression, word) in [
+            ("to IN ('a')", "to"),
+            ("TO IN ('a')", "to"),
+            ("from <> 'a'", "from"),
+            ("(from IN ('a'))", "from"),
+            ("a = 1 AND from = 2", "from"),
+            ("user = 'x'", "user"),
+            ("order > 0", "order"),
+            ("group IS NOT NULL", "group"),
+            ("end > start_at", "end"),
+            ("all = 1", "all"),
+            ("default = 'x'", "default"),
+        ] {
+            assert_eq!(
+                unquoted_reserved_words(expression),
+                vec![word.to_string()],
+                "{expression}"
+            );
+        }
+    }
+
+    /// A generated check quotes only what must be quoted: the checksum of every
+    /// other column's expression stays the same.
+    #[test]
+    fn generated_check_column_reference_quotes_only_reserved_words() {
+        assert_eq!(check_column_reference("to"), "\"to\"");
+        assert_eq!(check_column_reference("Order"), "\"Order\"");
+        assert_eq!(check_column_reference("status"), "status");
+    }
+
+    fn column_with_default(sql_type: &str, default_value: &str) -> ManifestTable {
+        let mut table = fqn_table("acme.mail.v1", "Message", "mail", "messages");
+        table.columns.push(ManifestColumn {
+            field_name: "c".to_string(),
+            column_name: "c".to_string(),
+            sql_type: sql_type.to_string(),
+            default_value: default_value.to_string(),
+            ..ManifestColumn::default()
+        });
+        table
+    }
+
+    fn default_findings(sql_type: &str, default_value: &str) -> Vec<LintItem> {
+        lint_catalog(&manifest_of(vec![column_with_default(
+            sql_type,
+            default_value,
+        )]))
+        .items
+        .into_iter()
+        .filter(|item| item.kind == "default_value_invalid_for_type")
+        .collect()
+    }
+
+    /// `TEXT[] DEFAULT ''` stops the broker at startup with "malformed array
+    /// literal".
+    #[test]
+    fn lint_refuses_a_default_that_is_not_an_array_literal() {
+        for bad in ["''", "'a'", "'{a'", "'x'::text[]", "0", "1.5", "true"] {
+            let findings = default_findings("TEXT[]", bad);
+            assert_eq!(findings.len(), 1, "TEXT[] DEFAULT {bad}");
+            assert_eq!(findings[0].severity, LintSeverity::Error);
+            assert_eq!(findings[0].column, "c");
+        }
+        for good in [
+            "'{}'",
+            "'{}'::text[]",
+            "'{a,b}'",
+            "ARRAY[]::text[]",
+            "ARRAY['a']",
+            "NULL",
+            "my_default()",
+        ] {
+            assert!(
+                default_findings("TEXT[]", good).is_empty(),
+                "TEXT[] DEFAULT {good}"
+            );
+        }
+    }
+
+    #[test]
+    fn lint_refuses_an_empty_string_default_only_where_the_type_cannot_hold_it() {
+        for sql_type in ["UUID", "INTEGER", "BOOLEAN", "JSONB", "TIMESTAMPTZ"] {
+            assert_eq!(default_findings(sql_type, "''").len(), 1, "{sql_type}");
+        }
+        for sql_type in ["TEXT", "VARCHAR(40)", "CITEXT", "my_enum"] {
+            assert!(default_findings(sql_type, "''").is_empty(), "{sql_type}");
+        }
+        assert!(default_findings("JSONB", "'[]'").is_empty());
+        assert!(default_findings("INTEGER", "0").is_empty());
+    }
+
+    #[test]
+    fn a_table_name_two_messages_share_fails_the_lint_report() {
+        let mut report = lint_catalog(&manifest_of(vec![fqn_table(
+            "acme.notes.v1",
+            "Note",
+            "notes",
+            "notes",
+        )]));
+        assert!(report.passed, "{:#?}", report.items);
+        add_parser_findings(
+            &mut report,
+            &[
+                crate::parser::ParserDiagnostic {
+                    file: "proto/notes.proto".to_string(),
+                    line: 1,
+                    column: 1,
+                    code: "unrelated_style_note".to_string(),
+                    message: "not a duplicate".to_string(),
+                },
+                crate::parser::ParserDiagnostic {
+                    file: "proto/draft.proto".to_string(),
+                    line: 1,
+                    column: 1,
+                    code: crate::parser::DUPLICATE_TABLE_DIAGNOSTIC_CODE.to_string(),
+                    message: "acme.notes.v1.Draft and acme.notes.v1.Note share notes.notes"
+                        .to_string(),
+                },
+            ],
+        );
+        assert!(!report.passed);
+        assert_eq!(report.error_count, 1);
+        assert!(has_kind(
+            &report,
+            crate::parser::DUPLICATE_TABLE_DIAGNOSTIC_CODE
+        ));
+    }
+
+    /// The real native catalog must stay clean under the new checks: lint also
+    /// gates broker startup.
+    #[test]
+    fn real_native_catalog_has_no_invalid_defaults_or_bare_reserved_words() {
+        let report = lint_catalog(&crate::runtime::native_catalog::native_manifest());
+        let found: Vec<_> = report
+            .items
+            .iter()
+            .filter(|item| {
+                item.kind == "check_unquoted_reserved_word"
+                    || item.kind == "default_value_invalid_for_type"
+            })
+            .collect();
+        assert!(found.is_empty(), "{found:#?}");
     }
 
     /// The merged lint exposes EVERY finding as an individual, operator-readable

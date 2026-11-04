@@ -73,7 +73,7 @@ while ($req = $psr7->waitRequest()) {
             scopes: [],
             serviceIdentity: 'php.roadrunner.example',
             projectId: $project,
-            clientCatalogVersion: '1.0.0',
+            clientCatalogVersion: '',
             bearerToken: rr_env('UDB_BEARER_TOKEN', ''),
         );
 

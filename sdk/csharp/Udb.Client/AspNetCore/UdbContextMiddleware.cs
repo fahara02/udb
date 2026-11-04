@@ -97,9 +97,7 @@ public sealed class UdbContextMiddleware
             ServiceIdentity: Header(headers, "x-service-identity"),
             UserId: Header(headers, "x-user-id"),
             ProjectId: string.IsNullOrEmpty(projectId) ? "default" : projectId,
-            ClientCatalogVersion: string.IsNullOrEmpty(catalogVersion)
-                ? UdbClient.ProtocolVersion
-                : catalogVersion,
+            ClientCatalogVersion: catalogVersion ?? "",
             BearerToken: bearerToken,
             ApiKey: Header(headers, "x-api-key"),
             Consistency: Header(headers, "x-udb-consistency"),

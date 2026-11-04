@@ -20,14 +20,6 @@ use udb::proto::udb::core::authz::services::v1::authz_service_client::AuthzServi
 use udb::proto::udb::core::common::v1 as common_pb;
 
 const SECRET_PREFIX_REVEAL_LEN: usize = 6;
-const METADATA_HEADERS: &[(&str, &str)] = &[
-    ("x-tenant-id", "UDB_TENANT_ID"),
-    ("x-udb-project-id", "UDB_PROJECT_ID"),
-    ("x-user-id", "UDB_USER_ID"),
-    ("x-service-identity", "UDB_SERVICE_IDENTITY"),
-    ("x-scopes", "UDB_SCOPES"),
-    ("x-purpose", "UDB_PURPOSE"),
-];
 
 fn grant_json(grant: authn_entity_pb::ServiceAccountGrant) -> serde_json::Value {
     json!({
@@ -195,6 +187,38 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
         // ── `udb auth grant …` / `udb auth cert-binding …` ────────────────────
         // Typed-grant + certificate-binding management goes through the native
         // Authn API, so descriptor scopes and claim tenant binding apply.
+        AuthCommand::ServiceAccountCreate {
+            tenant_id,
+            username,
+            email,
+            password_env,
+            password_file,
+            project_id,
+            reason,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("username", &username)?;
+            require("email", &email)?;
+            super::identity_ops::service_account_create(
+                &tenant_id,
+                &username,
+                &email,
+                &password_env,
+                &password_file,
+                &project_id,
+                &reason,
+            )
+            .await
+        }
+        AuthCommand::ServiceAccountActivate {
+            tenant_id,
+            user_id,
+            reason,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("user", &user_id)?;
+            super::identity_ops::service_account_activate(&tenant_id, &user_id, &reason).await
+        }
         AuthCommand::GrantCreate {
             tenant_id,
             user_id,
@@ -904,55 +928,7 @@ fn request_context() -> common_pb::RequestContext {
 }
 
 fn with_metadata<T>(message: T) -> Request<T> {
-    let mut request = Request::new(message);
-    request.metadata_mut().insert(
-        "x-correlation-id",
-        format!("udb-cli-{}", uuid::Uuid::new_v4())
-            .parse()
-            .expect("generated correlation id is valid gRPC metadata"),
-    );
-    if let Ok(token) = env::var("UDB_AUTH_TOKEN").or_else(|_| env::var("UDB_BEARER_TOKEN")) {
-        let token = token.trim();
-        if !token.is_empty() {
-            if token.bytes().any(|b| matches!(b, b'\r' | b'\n')) {
-                eprintln!(
-                    "warning: UDB_AUTH_TOKEN/UDB_BEARER_TOKEN contains a newline and was not sent"
-                );
-            } else {
-                match format!("Bearer {token}").parse() {
-                    Ok(value) => {
-                        request.metadata_mut().insert("authorization", value);
-                    }
-                    Err(_) => {
-                        eprintln!(
-                            "warning: UDB_AUTH_TOKEN/UDB_BEARER_TOKEN is not a valid gRPC header value \
-                         (likely a stray newline or non-ASCII char); the request will be sent \
-                         UNAUTHENTICATED"
-                        );
-                    }
-                }
-            }
-        }
-    }
-    for (key, env_name) in METADATA_HEADERS {
-        if let Ok(raw) = env::var(env_name) {
-            if !raw.trim().is_empty() {
-                match raw.parse() {
-                    Ok(value) => {
-                        request.metadata_mut().insert(*key, value);
-                    }
-                    Err(err) => {
-                        eprintln!(
-                            "warning: {env_name} is not a valid gRPC metadata value for header \
-                             '{key}' (likely a stray newline or non-ASCII char); it is being \
-                             dropped from the request: {err}"
-                        );
-                    }
-                }
-            }
-        }
-    }
-    request
+    super::authz_cli::with_metadata(message)
 }
 
 fn require_role_binding(principal: &str, role: &str, tenant: &str) -> Result<(), String> {

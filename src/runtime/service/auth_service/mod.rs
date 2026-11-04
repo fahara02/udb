@@ -506,6 +506,10 @@ pub async fn bootstrap_admin_user(
                 "created_by",
             ],
         );
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|err| format!("bootstrap role binding tx begin failed: {err}"))?;
         sqlx::query(&format!(
             "INSERT INTO {rel} \
                ({user_role_id}, {user_id}, {role_id}, {domain}, {assigned_by}, {tenant_id}, {created_by}) \
@@ -524,9 +528,23 @@ pub async fn bootstrap_admin_user(
         .bind(&user_id)
         .bind(SYSTEM_ORG_OWNER_ROLE_ID)
         .bind(&tenant_uuid)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await
         .map_err(|err| format!("assign organization_owner role failed: {err}"))?;
+        // A broker already running sees this binding through the durable revision:
+        // the first sign-in after it reloads the snapshot instead of issuing a
+        // bearer with no scopes (`reload_snapshot_if_unbound_and_stale`).
+        role_bindings::append_role_assignment_revision(&mut tx, &tenant_uuid, project, &user_id)
+            .await
+            .map_err(|status| {
+                format!(
+                    "append role assignment revision failed: {}",
+                    status.message()
+                )
+            })?;
+        tx.commit()
+            .await
+            .map_err(|err| format!("bootstrap role binding commit failed: {err}"))?;
     }
 
     Ok(BootstrapAdmin {
@@ -678,6 +696,19 @@ pub async fn bootstrap_platform_admin_user(
     .execute(&mut *tx)
     .await
     .map_err(|err| format!("assign platform_admin role failed: {err}"))?;
+    role_bindings::append_role_assignment_revision(
+        &mut tx,
+        &admin.tenant_id,
+        project,
+        &admin.user_id,
+    )
+    .await
+    .map_err(|status| {
+        format!(
+            "append role assignment revision failed: {}",
+            status.message()
+        )
+    })?;
     tx.commit()
         .await
         .map_err(|err| format!("platform bootstrap commit failed: {err}"))?;

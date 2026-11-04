@@ -4,6 +4,28 @@ from udb.entity.v1 import types_pb2
 from udb_client import Metadata, to_record_json, to_struct
 
 
+def test_no_catalog_version_is_sent_unless_the_caller_pins_one() -> None:
+    # The broker skips its catalog comparison for a blank version. A fixed default
+    # can never match a catalog versioned `generator-N`.
+    meta = Metadata(
+        tenant_id="tenant-1",
+        user_id="user-1",
+        purpose="billing.test",
+        correlation_id="corr-1",
+    )
+    assert meta.client_catalog_version == ""
+    assert dict(meta.to_grpc_metadata())["x-udb-client-catalog-version"] == ""
+
+    pinned = Metadata(
+        tenant_id="tenant-1",
+        user_id="user-1",
+        purpose="billing.test",
+        correlation_id="corr-1",
+        client_catalog_version="generator-3",
+    )
+    assert dict(pinned.to_grpc_metadata())["x-udb-client-catalog-version"] == "generator-3"
+
+
 def test_metadata_headers_include_required_and_routing_values() -> None:
     meta = Metadata(
         tenant_id="tenant-1",

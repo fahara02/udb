@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.6 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.7 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,7 +18,7 @@ version-matched CLI launcher.
 ## Install
 
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.6.6
+go get github.com/fahara02/udb/sdk/go@v0.6.7
 ```
 
 Supported Go versions: 1.22 (the `go.mod` floor) through 1.27. CI vets, builds
@@ -27,7 +27,7 @@ and tests the SDK on both ends of that range.
 Install the `udb` CLI launcher:
 
 ```bash
-go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.6.6
+go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.6.7
 ```
 
 The launcher finds or downloads the matching UDB release binary, then forwards
@@ -81,7 +81,6 @@ meta := udbclient.Metadata{
     Scopes:               []string{"udb:read", "udb:write"},
     ServiceIdentity:      "billing.api",
     ProjectID:            "billing",
-    ClientCatalogVersion: udbclient.ProtocolVersion,
 }
 
 udb := udbclient.New(conn, meta)

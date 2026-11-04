@@ -313,19 +313,18 @@ async fn postgres_jsonb_structured_round_trip_served_live() {
         "nested": { "x": true, "y": "z" }
     });
     let insert_sql = format!("INSERT INTO \"{schema}\".docs (id, doc) VALUES ($1, $2)");
-    // obj / arr / json-null all go through the served JSONB bind.
+    // obj / arr / explicit null all go through the served JSONB bind.
     for (id, value) in [
         ("obj", structured.clone()),
         ("arr", json!([1, 2, 3])),
-        ("jnull", json!(null)), // a JSON null VALUE → stored as jsonb 'null'
+        ("jnull", json!(null)), // an explicit top-level null → SQL NULL
     ] {
         let mut q = sqlx::query(&insert_sql);
         q = bind_one(q, Some(&col("id", "TEXT")), &json!(id)).expect("bind id");
         q = bind_one(q, Some(&col("doc", "JSONB")), &value).expect("bind jsonb");
         q.execute(&pool).await.expect("data-plane insert of jsonb");
     }
-    // A genuine SQL NULL: omit the column so the row's doc is SQL NULL, not a
-    // jsonb 'null' — the distinction #10 must preserve.
+    // Omitting the column is also SQL NULL, the same as writing an explicit null.
     sqlx::query(&format!(
         "INSERT INTO \"{schema}\".docs (id) VALUES ('sqlnull')"
     ))
@@ -389,13 +388,13 @@ async fn postgres_jsonb_structured_round_trip_served_live() {
         json!("array"),
         "#10: jsonb_typeof(arr) = array"
     );
-    // JSON null vs SQL NULL: the JSON-null value is stored as jsonb 'null'
-    // (jsonb_typeof = 'null'); the omitted column is SQL NULL (jsonb_typeof =
-    // SQL NULL → serialized as JSON null). The two are distinguishable here.
+    // An explicit top-level null clears the column: SQL NULL, so jsonb_typeof is
+    // SQL NULL rather than 'null'. A null nested inside a document stays a JSON
+    // null, which the exact `structured` round-trip above already pins.
     assert_eq!(
         type_of("jnull"),
-        json!("null"),
-        "#10: a JSON null VALUE is stored as jsonb 'null', distinct from SQL NULL"
+        JsonValue::Null,
+        "an explicit top-level null is SQL NULL, not jsonb 'null'"
     );
     assert_eq!(
         type_of("sqlnull"),

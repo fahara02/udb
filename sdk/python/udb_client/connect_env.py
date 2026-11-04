@@ -1,0 +1,172 @@
+"""The one environment contract a service connects with.
+
+With prefix ``UDB_`` (the default):
+
+=======================  =========================================================
+``UDB_TARGET``           broker gRPC target, host:port (required)
+``UDB_AUTH_TARGET``      control-plane target; defaults to ``UDB_TARGET``
+``UDB_WEBRTC_TARGET``    WebRTC signalling target; defaults to the auth target
+``UDB_TENANT_ID``        the service's tenant UUID (required)
+``UDB_PROJECT_ID``       project (``UDB_PROJECT`` is accepted too)
+``UDB_PURPOSE``          purpose sent on every call (required)
+``UDB_API_KEY``          service-account key, exchanged for a bearer
+                         (required unless ``UDB_BEARER``)
+``UDB_BEARER``           a ready bearer token instead of an API key
+``UDB_SCOPES``           requested scopes, comma or space separated
+``UDB_SERVICE_IDENTITY`` the service identity the grant is bound to
+``UDB_DEADLINE``         per-call deadline, a duration such as ``10s`` or ``1m30s``
+``UDB_TLS``              ``true`` or ``1`` to dial with TLS (system roots)
+``UDB_TLS_SERVER_NAME``  TLS server name override
+=======================  =========================================================
+"""
+
+from __future__ import annotations
+
+import asyncio
+import os
+import re
+from dataclasses import dataclass, field
+from typing import Sequence
+
+from .exceptions import UdbConfigurationError
+from .project import UdbAsyncProject, UdbConfig, UdbProject
+
+_DURATION_PART = re.compile(r"((?:\d+(?:\.\d*)?)|(?:\.\d+))(ns|us|µs|μs|ms|s|m|h)")
+_DURATION_UNITS = {
+    "ns": 1e-9,
+    "us": 1e-6,
+    "µs": 1e-6,
+    "μs": 1e-6,
+    "ms": 1e-3,
+    "s": 1.0,
+    "m": 60.0,
+    "h": 3600.0,
+}
+
+
+def _parse_duration(raw: str) -> float | None:
+    """Seconds for a duration such as ``10s`` or ``1h30m``; ``None`` when invalid."""
+    text = raw[1:] if raw[:1] == "+" else raw
+    position = 0
+    total = 0.0
+    while position < len(text):
+        part = _DURATION_PART.match(text, position)
+        if part is None:
+            return None
+        total += float(part.group(1)) * _DURATION_UNITS[part.group(2)]
+        position = part.end()
+    return total if position > 0 else None
+
+
+def _split_scopes(raw: str) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(scope for scope in re.split(r"[, \t]+", raw) if scope))
+
+
+def config_from_env(prefix: str = "") -> UdbConfig:
+    """Read the environment contract into a :class:`UdbConfig`.
+
+    Every missing or invalid variable is reported in one
+    :class:`UdbConfigurationError`, so a misconfigured deployment is fixed in one
+    pass instead of one restart per variable.
+    """
+    prefix = prefix or "UDB_"
+
+    def get(name: str) -> str:
+        return os.environ.get(prefix + name, "").strip()
+
+    problems: list[str] = []
+
+    def require(name: str) -> str:
+        value = get(name)
+        if not value:
+            problems.append(f"{prefix}{name} is not set")
+        return value
+
+    target = require("TARGET")
+    tenant_id = require("TENANT_ID")
+    purpose = require("PURPOSE")
+    api_key = get("API_KEY")
+    bearer = get("BEARER")
+    if not api_key and not bearer:
+        problems.append(f"{prefix}API_KEY (or {prefix}BEARER) is not set")
+    auth_target = get("AUTH_TARGET")
+    webrtc_target = get("WEBRTC_TARGET")
+    for name, value in (("TARGET", target), ("AUTH_TARGET", auth_target), ("WEBRTC_TARGET", webrtc_target)):
+        if value and ":" not in value:
+            problems.append(f"{prefix}{name} must be host:port, got {value!r}")
+    deadline: float | None = 30.0
+    raw_deadline = get("DEADLINE")
+    if raw_deadline:
+        parsed = _parse_duration(raw_deadline)
+        if parsed is None or parsed <= 0:
+            problems.append(
+                f"{prefix}DEADLINE must be a positive duration such as 10s, got {raw_deadline!r}"
+            )
+        else:
+            deadline = parsed
+    if problems:
+        raise UdbConfigurationError(f"udb: environment is incomplete: {'; '.join(problems)}")
+
+    tls = get("TLS").lower() == "true" or get("TLS") == "1"
+    server_name = get("TLS_SERVER_NAME")
+    return UdbConfig(
+        target=target,
+        auth_target=auth_target,
+        webrtc_target=webrtc_target,
+        tenant_id=tenant_id,
+        project_id=get("PROJECT_ID") or get("PROJECT"),
+        purpose=purpose,
+        service_identity=get("SERVICE_IDENTITY"),
+        scopes=_split_scopes(get("SCOPES")),
+        api_key=api_key,
+        bearer_token=bearer,
+        deadline=deadline,
+        tls=tls,
+        channel_options=(
+            (("grpc.ssl_target_name_override", server_name),) if tls and server_name else None
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class Expect:
+    """What a service asserts about the principal it connected as. Every field is optional."""
+
+    tenant_id: str = ""
+    project_id: str = ""
+    service_identity: str = ""
+    #: All must be granted, so a missing scope fails at connect rather than on the
+    #: first call that needs it.
+    required_scopes: Sequence[str] = field(default_factory=tuple)
+
+
+def connect_from_env(prefix: str = "", expect: Expect | None = None) -> UdbProject:
+    """Read :func:`config_from_env`, connect, and check the principal against ``expect``.
+
+    The project carries an exchanged, self-refreshing bearer when an API key was
+    configured. A failed check raises :class:`UdbConfigurationError` and closes the
+    connection.
+    """
+    config = config_from_env(prefix)
+    if config.api_key and config.bearer_token:
+        raise UdbConfigurationError(
+            f"udb: {prefix or 'UDB_'}API_KEY and {prefix or 'UDB_'}BEARER are mutually exclusive"
+        )
+    project = UdbProject(config)
+    try:
+        project.verify(expect)
+    except BaseException:
+        project.close()
+        raise
+    return project
+
+
+async def connect_from_env_async(prefix: str = "", expect: Expect | None = None) -> UdbAsyncProject:
+    """:func:`connect_from_env` for async code.
+
+    The synchronous project keeps owning the exchanged key and its renewal; the
+    returned project sends data and native calls over ``grpc.aio`` with it, and closes
+    it. A call that finds the bearer stale waits for the re-exchange on the event loop,
+    bounded by the deadline; the background renewal normally gets there first.
+    """
+    return UdbAsyncProject.from_project(await asyncio.to_thread(connect_from_env, prefix, expect))

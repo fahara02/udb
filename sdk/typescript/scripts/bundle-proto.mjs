@@ -19,6 +19,8 @@ const copies = [
     path.join(repo, "third_party", "googleapis"),
     path.join(pkg, "third_party", "googleapis"),
   ],
+  // The shared typed-store cases, for `@udb_plus/sdk/udbtest`'s runTableCases.
+  [path.join(repo, "sdk", "conformance"), path.join(pkg, "dist", "conformance")],
 ];
 
 for (const [src, dst] of copies) {

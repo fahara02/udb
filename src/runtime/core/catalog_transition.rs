@@ -258,18 +258,27 @@ fn allowed_changes(
                     } else {
                         format!(": {}", change.blocked_reason)
                     },
-                ),
+                ) + if change.kind == ChangeKind::ChangeColumnType {
+                    "; only a lossless widening with no using_expression can use it (VARCHAR(n) \
+                     to a longer VARCHAR or TEXT, INTEGER to BIGINT)"
+                } else {
+                    ""
+                },
             ));
         }
         // These operations have native transactional SQL and observable target
         // verification. New backend/nontransactional capabilities need their own
         // durable application proof rather than a catalog-only approval bypass.
+        // `ChangeColumnType` reaches this list only as a lossless widening: the
+        // data-destructive check above refuses every other type change, and the
+        // complete-shape check after apply proves the new type on the live table.
         if !matches!(
             change.kind,
             ChangeKind::HintWarning
                 | ChangeKind::AddSchema
                 | ChangeKind::CreateTable
                 | ChangeKind::AddColumn
+                | ChangeKind::ChangeColumnType
                 | ChangeKind::DropNotNull
                 | ChangeKind::AddForeignKey
                 | ChangeKind::CreateIndex
@@ -280,8 +289,8 @@ fn allowed_changes(
                 "reviewed_operation_unsupported",
                 format!(
                     "native reviewed proof is unavailable for {:?} on {}.{}; reviewed transitions \
-                     apply only AddSchema, CreateTable, AddColumn, DropNotNull, AddForeignKey, \
-                     CreateIndex, DropIndex and retention_class changes",
+                     apply only AddSchema, CreateTable, AddColumn, column type widening, \
+                     DropNotNull, AddForeignKey, CreateIndex, DropIndex and retention_class changes",
                     change.kind, change.schema, change.table
                 ),
             ));
@@ -2159,7 +2168,54 @@ impl DataBrokerRuntime {
 #[cfg(test)]
 mod refusal_message_tests {
     use super::*;
-    use crate::generation::manifest::ManifestTableSecurity;
+    use crate::generation::manifest::{ManifestColumn, ManifestTableSecurity};
+
+    fn single_column_catalog(sql_type: &str) -> CatalogManifest {
+        CatalogManifest {
+            tables: vec![ManifestTable {
+                schema: "catalogue".to_string(),
+                table: "products".to_string(),
+                columns: vec![ManifestColumn {
+                    field_name: "form_name".to_string(),
+                    column_name: "form_name".to_string(),
+                    sql_type: sql_type.to_string(),
+                    ..ManifestColumn::default()
+                }],
+                checksum_sha256: format!("table-{sql_type}"),
+                ..ManifestTable::default()
+            }],
+            checksum_sha256: format!("catalog-{sql_type}"),
+            ..CatalogManifest::default()
+        }
+    }
+
+    fn reviewed_refusal(from: &str, to: &str) -> Option<String> {
+        let (base, target) = (single_column_catalog(from), single_column_catalog(to));
+        let changes = crate::migration::plan::canonical_change_set(Some(&base), &target);
+        allowed_changes(&base, &target, &changes)
+            .err()
+            .map(|status| status.message().to_string())
+    }
+
+    #[test]
+    fn reviewed_activation_takes_a_widening_and_refuses_a_narrowing() {
+        for (from, to) in [
+            ("VARCHAR(80)", "VARCHAR(400)"),
+            ("VARCHAR(80)", "TEXT"),
+            ("INTEGER", "BIGINT"),
+        ] {
+            assert_eq!(reviewed_refusal(from, to), None, "{from} -> {to}");
+        }
+        for (from, to) in [
+            ("VARCHAR(400)", "VARCHAR(80)"),
+            ("TEXT", "VARCHAR(80)"),
+            ("BIGINT", "INTEGER"),
+        ] {
+            let message = reviewed_refusal(from, to).expect("a narrowing is refused");
+            assert!(message.contains("data-destructive"), "{message}");
+            assert!(message.contains("lossless widening"), "{message}");
+        }
+    }
 
     #[test]
     fn a_non_retention_security_change_names_the_field_values_and_the_path() {

@@ -239,6 +239,36 @@ impl AuthnServiceImpl {
         (scopes, roles)
     }
 
+    /// Reload the shared snapshot before a sign-in that would otherwise issue a
+    /// bearer with no roles, when the durable authz revision has moved past it.
+    /// A binding written outside this process (an offline `udb auth bootstrap
+    /// user`, another node) reaches this node only at the next interval reload,
+    /// and a token issued before then keeps its missing scopes until it expires.
+    /// A user with roles skips the revision read, so ordinary logins cost nothing.
+    pub(super) async fn reload_snapshot_if_unbound_and_stale(
+        &self,
+        user_id: &str,
+        tenant_id: &str,
+        project_id: &str,
+    ) {
+        if !self
+            .bound_role_codes(user_id, tenant_id, project_id)
+            .is_empty()
+        {
+            return;
+        }
+        let (Some(cell), Some(pool)) = (self.authz_snapshot.as_ref(), self.pg_pool.as_ref()) else {
+            return;
+        };
+        if !crate::runtime::authz::snapshot_behind_durable_revision().await {
+            return;
+        }
+        super::super::AuthzServiceImpl::shared(cell.clone())
+            .with_postgres(Some(pool.clone()))
+            .warm_shared_snapshot()
+            .await;
+    }
+
     /// The configured `token_scopes` of every role bound to `user_id` in the
     /// tenant/project domain: a binding matched exactly as in
     /// [`Self::bound_role_codes`] contributes the scopes of the role row with

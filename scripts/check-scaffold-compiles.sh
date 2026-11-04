@@ -229,6 +229,140 @@ ln -s "$REPO/proto" "$TS_DIR/proto"
     --target ES2020 --module Node16 examples/typescript/client.ts )
 echo "    TypeScript scaffold example type-checked OK"
 
+# ── TypeScript ENTITIES: the real generator's typed tables, compiled the way a
+# consumer's are (strict, against the built package), for both the repo's protos
+# and the consumer fixture, whose shapes include maps, oneofs and enum arrays.
+echo "==> compiling and running generated TypeScript entity tables"
+( cd "$REPO/sdk/typescript" && npm ci --no-audit --no-fund --silent && npm run build --silent )
+TS_ENT_DIR="$WORK/tsentities"
+mkdir -p "$TS_ENT_DIR/node_modules/@udb_plus"
+ln -s "$REPO/sdk/typescript" "$TS_ENT_DIR/node_modules/@udb_plus/sdk"
+"${GENERATOR[@]}" sdk generate --project-proto "$REPO/tests/fixtures/consumer_protos" \
+  --lang ts --out "$TS_ENT_DIR/consumer"
+"${GENERATOR[@]}" sdk generate --project-proto "$REPO/proto" \
+  --lang typescript --out "$TS_ENT_DIR/repo"
+require_file "$TS_ENT_DIR/consumer/typescript/udb_entities_gen.ts"
+require_file "$TS_ENT_DIR/repo/typescript/udb_entities_gen.ts"
+if grep -q "Record<string, unknown>>;" "$TS_ENT_DIR/consumer/typescript/udb_entities_gen.ts"; then
+  echo "generated TypeScript fell back to an untyped table" >&2
+  exit 1
+fi
+for tree in consumer repo; do
+  ( cd "$TS_ENT_DIR"
+    "$REPO/sdk/typescript/node_modules/.bin/tsc" --outDir "$tree/js" --module node16 \
+      --moduleResolution node16 --target ES2022 --strict --skipLibCheck --esModuleInterop \
+      --typeRoots "$REPO/sdk/typescript/node_modules/@types" --types node \
+      "$tree/typescript/udb_entities_gen.ts" )
+done
+( cd "$TS_ENT_DIR" && node - <<'JS'
+const assert = require("node:assert/strict");
+const { ShapeToUDBRecord, ShapeFromUDBRow, ShapeFields, ShapeColumns, ShapeWhere } = require("./consumer/js/udb_entities_gen.js");
+
+const record = ShapeToUDBRecord({
+  id: "a",
+  tenantId: "t",
+  state: "STATE_READY",
+  nickname: null,
+  detailsByName: { first_key: { label: "x" } },
+});
+assert.deepEqual(
+  record,
+  { id: "a", tenant_id: "t", state: "READY", nickname: null, details_by_name: { first_key: { label: "x" } } },
+  "undefined is omitted, null is kept, field names and enum text are mapped, nested keys are untouched",
+);
+
+const row = ShapeFromUDBRow({
+  id: "a",
+  tenant_id: "t",
+  exact: "9007199254740993",
+  port: 7,
+  nickname: null,
+  state: "CLOSED",
+  observed_at: "2031-02-03T04:05:06Z",
+});
+assert.equal(row.tenantId, "t");
+assert.equal(row.exact, "9007199254740993", "a BIGINT past 2^53 keeps its digits");
+assert.equal(row.port, 7);
+assert.equal(row.state, "STATE_CLOSED");
+assert.equal(row.observedAt, "2031-02-03T04:05:06Z");
+assert.equal("nickname" in row, false, "a NULL column is absent");
+assert.equal("tenant_id" in row, false);
+assert.equal(ShapeFromUDBRow({ exact: 12 }).exact, 12, "a safe BIGINT is a number");
+assert.equal(ShapeFields.detailsByName, "details_by_name");
+assert.equal(ShapeColumns.exact.sqlType, "BIGINT");
+assert.deepEqual(ShapeWhere.state.eq("STATE_READY"), { state: { $eq: "READY" } }, "predicates store enum text");
+assert.deepEqual(ShapeWhere.nickname.isNull(), { nickname: { $is_null: true } });
+assert.throws(() => ShapeWhere.nickname.eq(null), /use isNull/);
+assert.throws(() => ShapeWhere.exact.eq(2 ** 60), /exact filter number/);
+JS
+)
+echo "    Generated TypeScript entity tables compiled and mapped OK"
+
+# ── Python ENTITIES: the real generator's typed tables, imported against the SDK
+# for both trees, with the same mapper assertions as TypeScript.
+echo "==> importing and running generated Python entity tables"
+PY_ENT_DIR="$WORK/pyentities"
+"${GENERATOR[@]}" sdk generate --project-proto "$REPO/tests/fixtures/consumer_protos" \
+  --lang py --out "$PY_ENT_DIR/consumer"
+"${GENERATOR[@]}" sdk generate --project-proto "$REPO/proto" \
+  --lang python --out "$PY_ENT_DIR/repo"
+require_file "$PY_ENT_DIR/consumer/python/udb_entities_gen.py"
+require_file "$PY_ENT_DIR/repo/python/udb_entities_gen.py"
+( cd "$PY_ENT_DIR"
+  python -m pip install --quiet --disable-pip-version-check "grpcio>=1.80" "protobuf>=6.31.1,<7"
+  PYTHONPATH="$REPO/sdk/python/gen:$REPO/sdk/python" python - <<'PY'
+import importlib.util
+
+def load(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+load("repo_entities", "repo/python/udb_entities_gen.py")
+g = load("consumer_entities", "consumer/python/udb_entities_gen.py")
+
+assert g.ShapeToUDBRecord({
+    "id": "a", "tenant_id": "t", "state": "STATE_READY", "nickname": None,
+    "details_by_name": {"first_key": {"label": "x"}},
+}) == {
+    "id": "a", "tenant_id": "t", "state": "READY", "nickname": None,
+    "details_by_name": {"first_key": {"label": "x"}},
+}, "an absent key is omitted, None is kept, enum text is mapped, nested keys are untouched"
+
+row = g.ShapeFromUDBRow({
+    "id": "a", "tenant_id": "t", "exact": "9007199254740993", "port": 7,
+    "nickname": None, "state": "CLOSED", "observed_at": "2031-02-03T04:05:06Z",
+})
+assert row["exact"] == 9007199254740993, "a BIGINT past 2^53 keeps its digits"
+assert row["state"] == "STATE_CLOSED"
+assert "nickname" not in row, "a NULL column is absent"
+assert g.ShapeColumns["exact"].sql_type == "BIGINT"
+assert g.ShapeWhere.state.eq("STATE_READY") == {"state": {"$eq": "READY"}}
+assert g.ShapeWhere.nickname.is_null() == {"nickname": {"$is_null": True}}
+try:
+    g.ShapeWhere.nickname.eq(None)
+except ValueError as error:
+    assert "use is_null" in str(error)
+else:
+    raise AssertionError("a NULL predicate value must be refused")
+assert "MetadataByEmail" in dir(g) and "MetadataRepo" in dir(g) and "MetadataTable" in dir(g)
+PY
+)
+echo "    Generated Python entity tables imported and mapped OK"
+
+# `sdk diff` knows every generated language: current passes, an edit is stale.
+for generated in \
+  "$TS_ENT_DIR/consumer/typescript/udb_entities_gen.ts" \
+  "$PY_ENT_DIR/consumer/python/udb_entities_gen.py"; do
+  "${GENERATOR[@]}" sdk diff --project-proto "$REPO/tests/fixtures/consumer_protos" --against "$generated"
+  printf '\n// hand edit\n' >> "$generated"
+  if "${GENERATOR[@]}" sdk diff --project-proto "$REPO/tests/fixtures/consumer_protos" --against "$generated" 2>/dev/null; then
+    echo "sdk diff accepted a hand-edited $generated" >&2
+    exit 1
+  fi
+done
+
 # ── Python: syntax-compile and import the generated UDB stubs it references ───
 echo "==> compiling Python scaffold example"
 PY_DIR="$WORK/pycheck"

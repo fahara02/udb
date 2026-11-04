@@ -18,13 +18,12 @@ func main() {
 	defer conn.Close()
 
 	client := udbclient.New(conn, udbclient.Metadata{
-		TenantID:             "tenant-1",
-		Purpose:              "workflow-write",
-		CorrelationID:        "go-upsert-example",
-		Scopes:               []string{"udb:write"},
-		ServiceIdentity:      "example.service",
-		ProjectID:            "default",
-		ClientCatalogVersion: "1.0.0",
+		TenantID:        "tenant-1",
+		Purpose:         "workflow-write",
+		CorrelationID:   "go-upsert-example",
+		Scopes:          []string{"udb:write"},
+		ServiceIdentity: "example.service",
+		ProjectID:       "default",
 	})
 
 	_, err = client.Upsert(context.Background(), &entityv1.UpsertRequest{

@@ -18,8 +18,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
+	commonv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
+	storagev1 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -70,8 +73,8 @@ func entityRepoGeneratedCallShapes(c *Client, ctx context.Context) {
 
 // ── message-valued JSON/JSONB columns ────────────────────────────────────────
 //
-// A protobuf message stored in a JSON/JSONB column round-trips through
-// protojson. The emitter previously reached its TEXT arm for these columns and
+// A protobuf message stored in a JSON/JSONB column is written by EncodeField and
+// read by protojson. The emitter previously reached its TEXT arm for these columns and
 // wrote `json.RawMessage(m.GetX())` (not a legal conversion) and
 // `m.X = encoded` (a string into a message pointer), so the generated package
 // did not compile — reported against v0.5.6, v0.5.8 and v0.5.17 in turn, each
@@ -82,17 +85,6 @@ func entityRepoGeneratedCallShapes(c *Client, ctx context.Context) {
 // so the same class of type error fails `go build ./...` HERE. Keep them in
 // step with the emitter; the Rust side pins the emitted strings, this side
 // pins that those strings are valid Go.
-
-func udbEncodeJSONMessageContract(v proto.Message) (json.RawMessage, error) {
-	if v == nil || !v.ProtoReflect().IsValid() {
-		return nil, nil
-	}
-	b, err := protojson.Marshal(v)
-	if err != nil {
-		return nil, fmt.Errorf("encode JSON message: %w", err)
-	}
-	return json.RawMessage(b), nil
-}
 
 func udbDecodeJSONMessageContract(m proto.Message, field string, raw any) error {
 	if raw == nil {
@@ -138,11 +130,13 @@ func TestGeneratedMessageJSONColumnRoundTrips(t *testing.T) {
 	// Emitted ToUDBRecord arm.
 	r := map[string]any{}
 	if src.Options != nil {
-		v, err := udbEncodeJSONMessageContract(src.GetOptions())
+		v, ok, err := EncodeField(src, "options")
 		if err != nil {
 			t.Fatalf("encode column %q: %v", "options", err)
 		}
-		r["options"] = v
+		if ok {
+			r["options"] = v
+		}
 	}
 	if _, ok := r["options"]; !ok {
 		t.Fatal("a populated message column must be written")
@@ -151,7 +145,7 @@ func TestGeneratedMessageJSONColumnRoundTrips(t *testing.T) {
 	// Emitted FromUDBRow arm.
 	dst := &descriptorpb.FileDescriptorProto{}
 	if raw, ok := r["options"]; ok && raw != nil {
-		if err := udbDecodeJSONMessageContract(dst, "options", string(raw.(json.RawMessage))); err != nil {
+		if err := udbDecodeJSONMessageContract(dst, "options", raw); err != nil {
 			t.Fatalf("decode column %q: %v", "options", err)
 		}
 	}
@@ -176,5 +170,85 @@ func TestGeneratedMessageJSONColumnRoundTrips(t *testing.T) {
 	// A non-message field is rejected instead of panicking.
 	if err := udbDecodeJSONMessageContract(&descriptorpb.FileDescriptorProto{}, "name", `"x"`); err == nil {
 		t.Fatal("a non-message field must be rejected")
+	}
+}
+
+// A generated *ToUDBRecord helper and a typed-table write must store one document
+// for one value, or a full-row CAS expectation built from the helper fails against
+// a row the table wrote. The helper's message arm is EncodeField, so this pins
+// EncodeField against the record codec.
+func TestGeneratedMessageJSONColumnMatchesTheRecordCodec(t *testing.T) {
+	file := &storagev1.File{
+		TenantId:  codecTenant,
+		AuditInfo: &commonv1.AuditInfo{CreatedBy: "synthetic-user"},
+	}
+	helper, ok, err := EncodeField(file, "audit_info")
+	if err != nil || !ok {
+		t.Fatalf("encode field: ok=%v err=%v", ok, err)
+	}
+	for _, mode := range []WriteMode{WriteInsert, WriteUpdate} {
+		rec, err := EncodeRecord(file, mode)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, err := json.Marshal(rec["audit_info"])
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := json.Marshal(helper)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != string(want) {
+			t.Fatalf("mode %v: helper stores %s, the record codec stores %s", mode, got, want)
+		}
+	}
+	got, err := json.Marshal(helper)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"created_by":"synthetic-user"`, `"updated_by":""`} {
+		if !strings.Contains(string(got), want) {
+			t.Fatalf("expected proto names and emitted defaults (%s) in %s", want, got)
+		}
+	}
+
+	// Enums are numbers in this shape.
+	src := &descriptorpb.FileDescriptorProto{
+		Options: &descriptorpb.FileOptions{
+			GoPackage:   proto.String("example.com/d;dv1"),
+			OptimizeFor: descriptorpb.FileOptions_CODE_SIZE.Enum(),
+		},
+	}
+	canonical, ok, err := EncodeField(src, "options")
+	if err != nil || !ok {
+		t.Fatalf("encode options: ok=%v err=%v", ok, err)
+	}
+	encoded, err := json.Marshal(canonical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"optimize_for":2`) {
+		t.Fatalf("expected a numeric enum under its proto name in %s", encoded)
+	}
+
+	// Rows written by earlier generated helpers hold camelCase names and enum
+	// symbols with defaults omitted. They are not rewritten, so the emitted read
+	// must keep decoding them alongside the canonical shape.
+	legacy, err := protojson.Marshal(src.GetOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(legacy), "optimizeFor") {
+		t.Fatalf("not the legacy shape: %s", legacy)
+	}
+	for name, stored := range map[string]any{"canonical": canonical, "legacy": string(legacy)} {
+		dst := &descriptorpb.FileDescriptorProto{}
+		if err := udbDecodeJSONMessageContract(dst, "options", stored); err != nil {
+			t.Fatalf("decode %s shape: %v", name, err)
+		}
+		if !proto.Equal(src.GetOptions(), dst.GetOptions()) {
+			t.Fatalf("%s shape decoded to %v, want %v", name, dst.GetOptions(), src.GetOptions())
+		}
 	}
 }

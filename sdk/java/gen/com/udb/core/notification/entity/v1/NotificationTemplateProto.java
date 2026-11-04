@@ -45,7 +45,7 @@ public final class NotificationTemplateProto {
       "tion.entity.v1\032\037google/protobuf/timestam" +
       "p.proto\032\033udb/core/common/v1/db.proto\032!ud" +
       "b/core/common/v1/security.proto\032+udb/cor" +
-      "e/notification/entity/v1/enums.proto\"\326\026\n" +
+      "e/notification/entity/v1/enums.proto\"\323\026\n" +
       "\024NotificationTemplate\022O\n\013template_id\030\001 \001" +
       "(\tB.\202\267\030*\n\013template_id\022\004UUID\030\001(\001:\021gen_ran" +
       "dom_uuid()R\ntemplateId\022>\n\nevent_type\030\002 \001" +
@@ -86,8 +86,8 @@ public final class NotificationTemplateProto {
       "project-global default template\230\002\001R\010tena" +
       "ntId\022o\n\nproject_id\030\016 \001(\tBP\202\267\030L\n\nproject_" +
       "id\022\014VARCHAR(120)\030\001:\002\'\'R\'\n\036idx_notif_temp" +
-      "lates_project_id\022\005BTREE\240\002\001R\tprojectId:\355\t" +
-      "\372\266\030\335\007\n\026notification_templates\022\020udb_notif" +
+      "lates_project_id\022\005BTREE\240\002\001R\tprojectId:\352\t" +
+      "\372\266\030\332\007\n\026notification_templates\022\020udb_notif" +
       "ication\030\001 \001*8Message templates for each " +
       "notification type and channel0\0018\001@\001b\320\001\n\030" +
       "tenant_project_isolation\022\003ALL\032\254\001((tenant" +
@@ -105,28 +105,28 @@ public final class NotificationTemplateProto {
       "ect_idZ\nevent_typeZ\007channelZ\006locale\252\001g\n+" +
       "trg_notification_templates_touch_updated" +
       "_at\022\006BEFORE\032\006UPDATE\"#udb_notification.to" +
-      "uch_updated_at()*\003ROW\270\001\001\302\001\341\001\n\031touch_upda" +
-      "ted_at_function\022\010postgres\032\017before_trigge" +
-      "rs\"\250\001CREATE OR REPLACE FUNCTION udb_noti" +
-      "fication.touch_updated_at()\nRETURNS trig" +
-      "ger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  NEW.u" +
-      "pdated_at = CURRENT_TIMESTAMP;\n  RETURN " +
-      "NEW;\nEND;\n$$;\372\001\022notification:admin\212\262\031\206\002\n" +
-      "\006tenant\022\007project\032\ttenant_id\"\nproject_id*" +
-      "\206\001(tenant_id IS NULL OR tenant_id = curr" +
-      "ent_setting(\'app.current_tenant_id\')) AN" +
-      "D project_id = current_setting(\'app.curr" +
-      "ent_project_id\')2\013soft_delete:\030notificat" +
-      "ion.operational@\373\023H\002R\006tenantZ\010standardr\025" +
-      "tenant.data_residencyB\256\002\n#com.udb.core.n" +
-      "otification.entity.v1B\031NotificationTempl" +
-      "ateProtoP\001ZKgithub.com/fahara02/udb/sdk/" +
-      "go/gen/udb/core/notification/entity/v1;e" +
-      "ntityv1\242\002\004UCNE\252\002\037Udb.Core.Notification.E" +
-      "ntity.V1\312\002\037Udb\\Core\\Notification\\Entity\\" +
-      "V1\342\002+Udb\\GPBMetadata\\Core\\Notification\\E" +
-      "ntity\\V1\352\002#Udb::Core::Notification::Enti" +
-      "ty::V1b\006proto3"
+      "uch_updated_at()*\003ROW\302\001\341\001\n\031touch_updated" +
+      "_at_function\022\010postgres\032\017before_triggers\"" +
+      "\250\001CREATE OR REPLACE FUNCTION udb_notific" +
+      "ation.touch_updated_at()\nRETURNS trigger" +
+      "\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  NEW.upda" +
+      "ted_at = CURRENT_TIMESTAMP;\n  RETURN NEW" +
+      ";\nEND;\n$$;\372\001\022notification:admin\212\262\031\206\002\n\006te" +
+      "nant\022\007project\032\ttenant_id\"\nproject_id*\206\001(" +
+      "tenant_id IS NULL OR tenant_id = current" +
+      "_setting(\'app.current_tenant_id\')) AND p" +
+      "roject_id = current_setting(\'app.current" +
+      "_project_id\')2\013soft_delete:\030notification" +
+      ".operational@\373\023H\002R\006tenantZ\010standardr\025ten" +
+      "ant.data_residencyB\256\002\n#com.udb.core.noti" +
+      "fication.entity.v1B\031NotificationTemplate" +
+      "ProtoP\001ZKgithub.com/fahara02/udb/sdk/go/" +
+      "gen/udb/core/notification/entity/v1;enti" +
+      "tyv1\242\002\004UCNE\252\002\037Udb.Core.Notification.Enti" +
+      "ty.V1\312\002\037Udb\\Core\\Notification\\Entity\\V1\342" +
+      "\002+Udb\\GPBMetadata\\Core\\Notification\\Enti" +
+      "ty\\V1\352\002#Udb::Core::Notification::Entity:" +
+      ":V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -82,10 +82,7 @@ public record UdbMetadata(
     projectId = projectId == null || projectId.isBlank() ? DEFAULT_PROJECT_ID : projectId;
     bearerToken = bearerToken == null ? "" : bearerToken;
     apiKey = apiKey == null ? "" : apiKey;
-    clientCatalogVersion =
-        clientCatalogVersion == null || clientCatalogVersion.isBlank()
-            ? UdbClient.PROTOCOL_VERSION
-            : clientCatalogVersion;
+    clientCatalogVersion = clientCatalogVersion == null ? "" : clientCatalogVersion.trim();
     consistency = consistency == null ? "" : consistency;
     maxReplicaLagMs = Math.max(0, maxReplicaLagMs);
     readFenceJson = readFenceJson == null ? "" : readFenceJson;

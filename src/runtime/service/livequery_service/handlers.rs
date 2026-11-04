@@ -234,7 +234,10 @@ pub(crate) async fn subscribe(
             .tables
             .iter()
             .find(|table| {
-                crate::runtime::projection::message_type_matches(&table.message_name, &message_type)
+                crate::runtime::projection::message_type_matches(
+                    &table.message_fqn(),
+                    &message_type,
+                )
             })
             .map(|table| {
                 table

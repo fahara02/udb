@@ -24,7 +24,6 @@ async function main(): Promise<void> {
     scopes: ["udb:*"],
     serviceIdentity: "examples.native-ts",
     userId: "",
-    clientCatalogVersion: "1.0.0",
   };
   // protoRoot defaults to the repo `proto/` dir (resolved relative to the SDK).
   const auth = new UdbAuthClient(TARGET, meta);

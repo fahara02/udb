@@ -499,7 +499,7 @@ final class UdbProject
             scopes: $scopes,
             serviceIdentity: (string) ($this->config['serviceIdentity'] ?? ''),
             projectId: (string) ($this->config['projectId'] ?? 'default'),
-            clientCatalogVersion: (string) ($this->config['clientCatalogVersion'] ?? '1.0.0'),
+            clientCatalogVersion: (string) ($this->config['clientCatalogVersion'] ?? ''),
             bearerToken: $bearerToken,
             apiKey: $apiKey,
         );

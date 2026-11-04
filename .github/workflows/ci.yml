@@ -616,6 +616,7 @@ jobs:
       - uses: ./.github/actions/setup-sdk-toolchains
         with:
           go: "true"
+          node: "true"
       - uses: actions/download-artifact@v4
         with:
           name: udb-embedded-dev-${{ runner.os }}
@@ -627,6 +628,21 @@ jobs:
         run: python scripts/check-embedded-dev.py --selftest
       - name: Prove first start, authenticated stores, restart and shutdown
         run: python scripts/check-embedded-dev.py target/debug/udb${{ runner.os == 'Windows' && '.exe' || '' }}
+      - name: TypeScript and Python meet the table contract on an embedded broker
+        shell: bash
+        env:
+          UDB_EMBEDDED_SDK_TESTS: "1"
+        run: |
+          set -euo pipefail
+          export UDB_TEST_BINARY="$PWD/target/debug/udb${{ runner.os == 'Windows' && '.exe' || '' }}"
+          ( cd sdk/typescript
+            npm ci --no-audit --no-fund
+            npm run bundle-proto
+            npx tsc -p tsconfig.test.json
+            node --test dist-test/udbtest.test.js )
+          ( cd sdk/python
+            python -m pip install -e ".[dev]"
+            python -m pytest -v tests/test_embedded_table_contract.py )
       - name: Preserve required embedded lifecycle receipt
         if: always()
         uses: actions/upload-artifact@v4
@@ -1536,6 +1552,40 @@ jobs:
           npm run bundle-proto
           npx tsc -p tsconfig.test.json
           node --test dist-test/live-refresh-rotation.test.js
+      # The real generator's TypeScript output, compiled the way a consumer's is
+      # (against the built package) and driven against this broker.
+      - name: TypeScript generated typed tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          target/debug/udb sdk generate --project-proto proto --lang ts --out sdk/typescript/.typed-gen
+          cd sdk/typescript
+          npm run build
+          npx tsc --outDir .typed-gen/js --module node16 --moduleResolution node16 --target ES2022 \
+            --strict --skipLibCheck --esModuleInterop .typed-gen/typescript/udb_entities_gen.ts
+          UDB_TS_ENTITIES_JS="$PWD/.typed-gen/js/udb_entities_gen.js" \
+            node --test dist-test/live-typed-table.test.js
+      - name: TypeScript SDK parity with Go
+        working-directory: sdk/typescript
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test dist-test/live-parity-data.test.js
+          node --test dist-test/live-parity-surface.test.js
+      - name: Python generated typed tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          target/debug/udb sdk generate --project-proto proto --lang python --out sdk/python/.typed-gen
+          cd sdk/python
+          UDB_PY_ENTITIES="$PWD/.typed-gen/python/udb_entities_gen.py" \
+            python -m pytest -v tests/test_live_typed_table.py
+      - name: Python SDK parity with Go
+        working-directory: sdk/python
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -v tests/test_live_parity_data.py tests/test_live_parity_surface.py
       - name: PHP SDK refresh rotation
         working-directory: sdk/php
         run: |

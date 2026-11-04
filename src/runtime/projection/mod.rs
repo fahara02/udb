@@ -109,6 +109,7 @@ impl ProjectionPlan {
             .filter_map(|table| {
                 // Collect projections: per-table projections take precedence;
                 // fall back to manifest-level projections keyed to this message.
+                let table_fqn = table.message_fqn();
                 let projections: Vec<&crate::generation::manifest::ManifestProjection> =
                     if !table.projections.is_empty() {
                         table.projections.iter().collect()
@@ -116,7 +117,7 @@ impl ProjectionPlan {
                         manifest
                             .projections
                             .iter()
-                            .filter(|p| message_type_matches(&p.message_type, &table.message_name))
+                            .filter(|p| message_type_matches(&p.message_fqn(), &table_fqn))
                             .collect()
                     };
                 if projections.is_empty() {
@@ -140,7 +141,9 @@ impl ProjectionPlan {
                     return None;
                 }
                 Some(ProjectionPlan {
-                    message_type: table.message_name.clone(),
+                    // The qualified identity: `message_name` is the bare proto name,
+                    // which every package's `Session` shares.
+                    message_type: table.message_fqn(),
                     source_schema: table.schema.clone(),
                     source_table: table.table.clone(),
                     primary_key_columns: table.primary_key.clone(),
@@ -323,7 +326,7 @@ pub(crate) fn scoped_delete_payload(
     let Some(table) = manifest
         .tables
         .iter()
-        .find(|table| message_type_matches(&table.message_name, message_type))
+        .find(|table| message_type_matches(&table.message_fqn(), message_type))
     else {
         return filter.clone();
     };
@@ -779,7 +782,7 @@ impl ProjectionEngine {
         let table = manifest
             .tables
             .iter()
-            .find(|table| message_type_matches(&table.message_name, message_type))
+            .find(|table| message_type_matches(&table.message_fqn(), message_type))
             .ok_or_else(|| format!("unknown message_type {message_type}"))?;
         let mut predicates = Vec::new();
         let mut binds = Vec::new();
@@ -864,6 +867,11 @@ fn strip_nul_json(value: &serde_json::Value) -> serde_json::Value {
     }
 }
 
+/// Whether two message identities name the same message. Two qualified names must
+/// be equal: `meddesk.board.entity.v1.Session` is not `udb.core.authn.entity.v1.Session`.
+/// The bare-name alias applies only when at least one side is unqualified. Pass a
+/// table's `message_fqn()`, not its bare `message_name`, or the alias matches every
+/// package's message of that name.
 pub(crate) fn message_type_matches(
     catalog_message_type: &str,
     requested_message_type: &str,
@@ -872,6 +880,9 @@ pub(crate) fn message_type_matches(
     let requested = requested_message_type.trim();
     if catalog.eq_ignore_ascii_case(requested) {
         return true;
+    }
+    if catalog.contains('.') && requested.contains('.') {
+        return false;
     }
     let catalog_leaf = catalog.rsplit('.').next().unwrap_or(catalog);
     let requested_leaf = requested.rsplit('.').next().unwrap_or(requested);
@@ -3844,6 +3855,91 @@ mod tests {
             "udb.sdk.live.v1.SdkLiveRecord",
             "udb.sdk.live.v1.OtherRecord"
         ));
+        assert!(!message_type_matches(
+            "udb.core.authn.entity.v1.Session",
+            "meddesk.board.entity.v1.Session"
+        ));
+    }
+
+    /// A consumer's `meddesk.board.entity.v1.Session` matched the native
+    /// `udb.core.authn.entity.v1.Session` projection plan by its short name. Each
+    /// write enqueued a task for the native Redis cache target, whose key pattern
+    /// `udb:session:{session_id}` the consumer's row cannot fill, so the task never
+    /// completed and the read-your-writes fence always timed out into
+    /// `projection_missing`. Built on the real native manifest so the premise (the
+    /// native `Session` really has a materialized target) is checked too.
+    #[test]
+    fn consumer_entity_does_not_inherit_a_native_entity_projection_by_short_name() {
+        const CONSUMER: &str = "meddesk.board.entity.v1.Session";
+        const NATIVE: &str = "udb.core.authn.entity.v1.Session";
+        let mut manifest = crate::runtime::native_catalog::native_manifest().clone();
+        manifest.tables.push(ManifestTable {
+            proto_package: "meddesk.board.entity.v1".to_string(),
+            message_name: "Session".to_string(),
+            schema: "meddesk".to_string(),
+            table: "board_sessions".to_string(),
+            primary_key: vec!["id".to_string(), "tenant_id".to_string()],
+            ..ManifestTable::default()
+        });
+
+        let plans = ProjectionPlan::build_from_manifest(&manifest);
+        let matching = |message: &str| -> Vec<&ProjectionPlan> {
+            plans
+                .iter()
+                .filter(|plan| message_type_matches(&plan.message_type, message))
+                .collect()
+        };
+        assert!(
+            matching(CONSUMER).is_empty(),
+            "the consumer entity declares no projection, so no task may be enqueued for it"
+        );
+        let native = matching(NATIVE);
+        assert_eq!(native.len(), 1, "the native entity keeps its own plan");
+        assert_eq!(native[0].source_table, "sessions");
+        assert!(
+            native[0].targets.iter().any(|t| t.backend == "redis"),
+            "the native Session is the entity with a Redis cache target"
+        );
+        // The source table of a consumer row resolves to the consumer's table.
+        assert_eq!(
+            scoped_delete_payload(&manifest, CONSUMER, &json!({"id": "s1"}), "tenant-a"),
+            json!({"id": "s1"}),
+            "the consumer table has no tenant column, the native one must not lend it"
+        );
+    }
+
+    /// A manifest-level projection attaches by qualified identity too.
+    #[test]
+    fn manifest_level_projection_attaches_only_to_its_own_package() {
+        let table = |package: &str, name: &str| ManifestTable {
+            proto_package: package.to_string(),
+            message_name: "Session".to_string(),
+            schema: name.to_string(),
+            table: name.to_string(),
+            primary_key: vec!["id".to_string()],
+            ..ManifestTable::default()
+        };
+        let manifest = CatalogManifest {
+            tables: vec![
+                table("acme.a.v1", "a_sessions"),
+                table("acme.b.v1", "b_sessions"),
+            ],
+            projections: vec![ManifestProjection {
+                message_type: "Session".to_string(),
+                proto_package: "acme.a.v1".to_string(),
+                projection_kind: "vector".to_string(),
+                backend: "qdrant".to_string(),
+                resource_name: "a_sessions".to_string(),
+                write_policy: "projection".to_string(),
+                fanout_policy: "async_projection".to_string(),
+                ..ManifestProjection::default()
+            }],
+            ..CatalogManifest::default()
+        };
+        let plans = ProjectionPlan::build_from_manifest(&manifest);
+        assert_eq!(plans.len(), 1);
+        assert_eq!(plans[0].message_type, "acme.a.v1.Session");
+        assert_eq!(plans[0].source_table, "a_sessions");
     }
 
     #[test]

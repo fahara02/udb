@@ -118,6 +118,39 @@ pub(crate) fn record_loaded_revision(fingerprint: &str) {
     }
 }
 
+/// Whether a loaded snapshot is behind the durable revision: both fingerprints
+/// are known and differ.
+fn snapshot_predates_revision(loaded: Option<&str>, durable: Option<&str>) -> bool {
+    match (loaded, durable) {
+        (Some(loaded), Some(durable)) => {
+            !loaded.is_empty() && !durable.is_empty() && loaded != durable
+        }
+        _ => false,
+    }
+}
+
+/// Read the durable revision now and report whether the loaded snapshot is
+/// behind it. Unlike [`stale_snapshot_hint`] this never answers from the
+/// rate-limited cache: a caller about to act on a miss needs the current answer.
+/// An unknown or failed read reports `false`, leaving the interval reload to it.
+pub(crate) async fn snapshot_behind_durable_revision() -> bool {
+    let (probe, loaded) = match revision_state().lock() {
+        Ok(state) => (state.probe.clone(), state.loaded.clone()),
+        Err(_) => return false,
+    };
+    let (Some(probe), Some(loaded)) = (probe, loaded) else {
+        return false;
+    };
+    let durable = tokio::time::timeout(REVISION_PROBE_TIMEOUT, probe())
+        .await
+        .ok()
+        .flatten();
+    if let Ok(mut state) = revision_state().lock() {
+        state.last_probe = Some((std::time::Instant::now(), durable.clone()));
+    }
+    snapshot_predates_revision(Some(&loaded), durable.as_deref())
+}
+
 /// The message suffix for a deny decided on a snapshot older than the durable
 /// revision. Pure for testing: `None` unless both fingerprints are known and
 /// differ.
@@ -127,8 +160,7 @@ pub(crate) fn stale_snapshot_message(
     reload_every_secs: u64,
     loaded_age_secs: u64,
 ) -> Option<String> {
-    let (loaded, durable) = (loaded?, durable?);
-    if loaded.is_empty() || durable.is_empty() || loaded == durable {
+    if !snapshot_predates_revision(loaded, durable) {
         return None;
     }
     let retry_after = reload_every_secs

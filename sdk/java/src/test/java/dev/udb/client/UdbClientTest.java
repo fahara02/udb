@@ -34,6 +34,21 @@ final class UdbClientTest {
     assertEquals("catalog-v1", header(headers, "x-udb-client-catalog-version"));
   }
 
+  // The broker skips its catalog comparison for a blank version. A fixed default
+  // can never match a catalog versioned generator-N.
+  @Test
+  void noCatalogVersionIsSentUnlessTheCallerPinsOne() {
+    UdbMetadata unpinned =
+        new UdbMetadata("tenant-a", "read", "corr-1", List.of(), "orders.service", "", "p", "");
+    assertEquals("", unpinned.clientCatalogVersion());
+    assertEquals("", header(UdbClient.headers(unpinned), "x-udb-client-catalog-version"));
+
+    UdbMetadata pinned =
+        new UdbMetadata(
+            "tenant-a", "read", "corr-1", List.of(), "orders.service", "", "p", "generator-3");
+    assertEquals("generator-3", header(UdbClient.headers(pinned), "x-udb-client-catalog-version"));
+  }
+
   @Test
   void headersAlwaysCarryARequestContext() {
     UdbMetadata metadata =

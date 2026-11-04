@@ -17,23 +17,30 @@ import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Iterator, Protocol, Sequence, runtime_checkable
+from datetime import timezone
+from typing import TYPE_CHECKING, Any, Iterator, Protocol, Sequence, runtime_checkable
 
 import grpc
 
+from udb.core.authn.entity.v1 import enums_pb2 as authn_enums
 from udb.core.authn.services.v1 import authn_service_pb2_grpc
 from udb.core.authn.services.v1 import core_pb2 as authn
 from udb.core.authz.services.v1 import authz_service_pb2_grpc
 from udb.core.authz.services.v1 import core_pb2 as authz
 
 from ._channel import default_channel_options
+from ._credentials import normalized_bearer
 from .exceptions import (
     UdbAuthzDenied,
     UdbConfigurationError,
+    UdbNotFound,
     UdbPolicyBundleError,
     UdbRpcError,
 )
 from .metadata import Metadata
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from .facades import UserSession
 
 # Algorithm the broker stamps on a SignedPolicyBundle (see
 # src/runtime/authz/bundle.rs). Only HMAC-SHA256 is supported by this verifier.
@@ -260,6 +267,38 @@ class UdbAuthClient:
             refresh_token=refresh_token, session_id=session_id
         )
         return self._call(self.authn.RefreshToken, "RefreshToken", request, metadata)
+
+    def validate_session(self, token: str, *, metadata: Metadata | None = None) -> "UserSession":
+        """Check a user's bearer token, with or without the ``Bearer `` prefix.
+
+        An invalid or expired token raises :class:`UdbNotFound`. Requires the native
+        token-validation authority on the calling credential.
+        """
+        from .facades import UserSession
+
+        token = normalized_bearer(token)
+        response = self._call(
+            self.authn.ValidateToken,
+            "ValidateToken",
+            authn.ValidateTokenRequest(token=token, token_type=authn_enums.TOKEN_TYPE_JWT_ACCESS),
+            metadata,
+        )
+        if not response.valid:
+            raise UdbNotFound("udb: not found: the session token is not valid")
+        return UserSession(
+            public_id=response.session_public_id,
+            user_id=response.user_id,
+            tenant_id=response.tenant_id,
+            project_id=response.project_id,
+            scopes=tuple(response.scopes),
+            roles=tuple(response.roles),
+            expires_at=(
+                response.expires_at.ToDatetime(timezone.utc)
+                if response.HasField("expires_at")
+                else None
+            ),
+            principal=response.principal if response.HasField("principal") else None,
+        )
 
     # ── Authorization ─────────────────────────────────────────────────────
     def authorize(self, request: authz.AuthzRequest, *, metadata: Metadata | None = None) -> authz.Decision:

@@ -1285,6 +1285,7 @@ pub(crate) async fn run_consumer_doctor(key: &str, entity: &str, action: &str, j
     };
 
     let with_key = |mut request: tonic::Request<entity_pb::HealthReportRequest>| {
+        super::authz_cli::attach_correlation_id(&mut request);
         if !key.is_empty()
             && let Ok(value) = key.parse()
         {
@@ -1348,6 +1349,7 @@ pub(crate) async fn run_consumer_doctor(key: &str, entity: &str, action: &str, j
                 }),
                 ..Default::default()
             });
+            super::authz_cli::attach_correlation_id(&mut request);
             if let Ok(value) = key.parse() {
                 request.metadata_mut().insert("x-api-key", value);
             }

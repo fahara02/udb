@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from udb.entity.v1 import types_pb2
 
 from .client import to_record_json, to_struct
-from .metadata import Metadata, UDB_PROTOCOL_VERSION
+from .metadata import Metadata
 
 
 class UdbModel(BaseModel):
@@ -22,7 +22,7 @@ class MetadataModel(UdbModel):
     service_identity: str = "python.app"
     user_id: str = ""
     project_id: str = "default"
-    client_catalog_version: str = UDB_PROTOCOL_VERSION
+    client_catalog_version: str = ""
     consistency: str = ""
     target_backend: str = ""
     target_instance: str = ""

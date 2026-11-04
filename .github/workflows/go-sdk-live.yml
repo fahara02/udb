@@ -79,6 +79,7 @@ jobs:
         with:
           go: "true"
           node: "true"
+          python: "true"
 
       - name: Resolve served binary
         uses: ./.github/actions/resolve-served-binary
@@ -156,6 +157,13 @@ jobs:
           npm run bundle-proto
           npx tsc -p tsconfig.test.json
           node --test dist-test/live-admin.test.js
+          UDB_LIVE_CDC_TESTS=1 node --test dist-test/live-parity-data.test.js
+
+      - name: Run Python durable consumer against the CDC lane
+        working-directory: sdk/python
+        run: |
+          python -m pip install -e ".[dev]"
+          UDB_LIVE_CDC_TESTS=1 python -m pytest -v tests/test_live_parity_data.py
 
       - name: Upload broker log
         if: failure()
