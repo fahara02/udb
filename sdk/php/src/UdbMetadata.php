@@ -78,7 +78,7 @@ final class UdbMetadata
             scopes: $scopes ?? (array) ($meta['default_scopes'] ?? []),
             serviceIdentity: (string) ($meta['service_identity'] ?? 'laravel.app'),
             projectId: $projectId ?? (string) ($meta['default_project_id'] ?? 'default'),
-            clientCatalogVersion: (string) ($meta['client_catalog_version'] ?? '1.0.0'),
+            clientCatalogVersion: (string) ($meta['client_catalog_version'] ?? ''),
             bearerToken: (string) ($meta['bearer_token'] ?? ''),
             apiKey: (string) ($meta['api_key'] ?? ''),
         );

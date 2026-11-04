@@ -17,8 +17,8 @@ use ast_parser::ProtoAstParser;
 use db_parser::ProtoParser;
 use lexer::Lexer;
 pub use options::{ParserOptionMetadata, documented_option_metadata, parser_option_kind_name};
-use selection::dedupe_canonical_table_schemas;
 pub use selection::DUPLICATE_TABLE_DIAGNOSTIC_CODE;
+use selection::dedupe_canonical_table_schemas;
 
 #[cfg(test)]
 use naming::{infer_sql_type, to_plural, to_snake_case};

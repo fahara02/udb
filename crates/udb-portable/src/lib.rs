@@ -120,6 +120,9 @@ pub mod generation {
     #[path = "../../../../src/generation/neo4j_labels.rs"]
     pub mod neo4j_labels;
 
+    #[path = "../../../../src/generation/pg_reserved.rs"]
+    pub(crate) mod pg_reserved;
+
     #[path = "../../../../src/generation/sql/mod.rs"]
     pub mod sql;
 
@@ -310,7 +313,7 @@ pub mod parser {
     /// from multiple proto files can apply this to merge canonical
     /// duplicates before checksumming.
     pub fn dedupe_schemas(schemas: Vec<ProtoSchema>) -> Vec<ProtoSchema> {
-        dedupe_canonical_table_schemas(schemas)
+        dedupe_canonical_table_schemas(schemas).0
     }
 }
 

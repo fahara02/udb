@@ -372,7 +372,7 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
                     name: format!("chk_{}_{}_enum", schema.table_name, column.column_name),
                     expression: format!(
                         "{} IN ({})",
-                        crate::generation::lint::check_column_reference(&column.column_name),
+                        crate::generation::pg_reserved::check_column_reference(&column.column_name),
                         literals.join(",")
                     ),
                 });
@@ -407,7 +407,9 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
                     "num_nonnulls({}) <= 1",
                     member_cols
                         .iter()
-                        .map(|column| crate::generation::lint::check_column_reference(column))
+                        .map(
+                            |column| crate::generation::pg_reserved::check_column_reference(column)
+                        )
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
