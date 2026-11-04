@@ -3,10 +3,10 @@ pub mod backends;
 pub mod drift_report;
 pub mod dsn;
 pub mod lint;
-pub(crate) mod pg_reserved;
 pub mod manifest;
 pub mod manifest_index;
 pub mod neo4j_labels;
+pub(crate) mod pg_reserved;
 pub mod sql;
 
 pub use backends::{

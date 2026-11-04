@@ -135,8 +135,6 @@ const protoConsts = [
   ["protocol typescript", "sdk/typescript/client.ts", /(UDB_PROTOCOL_VERSION = ")([^"]*)(")/],
   ["protocol csharp", "sdk/csharp/Udb.Client/UdbClient.cs", /(ProtocolVersion = ")([^"]*)(")/],
   ["protocol java", "sdk/java/src/main/java/dev/udb/client/UdbClient.java", /(PROTOCOL_VERSION = ")([^"]*)(")/],
-  ["protocol php (metadata)", "sdk/php/src/UdbMetadata.php", /(client_catalog_version'\]\s*\?\?\s*')([^']*)(')/],
-  ["protocol php (config)", "sdk/php/config/udb.php", /(UDB_CLIENT_CATALOG_VERSION',\s*')([^']*)(')/],
 ];
 for (const [name, file, re] of protoConsts) {
   processTriple(name, file, PROTOCOL, re);
