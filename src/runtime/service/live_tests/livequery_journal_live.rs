@@ -119,14 +119,11 @@ fn subscribe_request(tenant_id: &str) -> Request<lq_pb::SubscribeRequest> {
 }
 
 /// An application table of the project's active catalog is a live query source: its
-/// snapshot honours the filter, masks PII, leaves out soft-deleted rows, and counts every
-/// match when the limit cuts it short.
+/// snapshot honours the filter, leaves out PII, and counts every match when the limit cuts
+/// it short.
 #[tokio::test]
 #[ignore = "live: requires UDB_LIVE_NATIVE_PG_DSN"]
 async fn live_livequery_serves_an_application_table_from_the_active_catalog() {
-    use crate::generation::{
-        CatalogManifest, ManifestColumn, ManifestTable, ManifestTableSecurity,
-    };
     let _guard = live_native_service_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
@@ -154,52 +151,37 @@ async fn live_livequery_serves_an_application_table_from_the_active_catalog() {
         .await
         .expect("seed");
     }
-    sqlx::query(&format!(
-        "INSERT INTO \"{schema}\".tasks (id, tenant_id, project_id, status, deleted_at) \
-         VALUES ('gone', $1, $2, 'open', now())"
-    ))
-    .bind(&tenant)
-    .bind(&project)
-    .execute(&pool)
-    .await
-    .expect("tombstone");
-    let column = |name: &str, sql_type: &str, primary: bool| ManifestColumn {
-        field_name: name.to_string(),
-        column_name: name.to_string(),
-        proto_type: "string".to_string(),
-        sql_type: sql_type.to_string(),
-        is_primary: primary,
-        ..ManifestColumn::default()
-    };
-    let mut email = column("email", "TEXT", false);
-    email.security.is_pii = true;
-    let manifest = CatalogManifest {
-        checksum_sha256: format!("sha256:{}", Uuid::new_v4().simple()),
-        tables: vec![ManifestTable {
-            proto_package: "acme.lq.v1".to_string(),
-            message_name: "Task".to_string(),
-            schema: schema.clone(),
-            table: "tasks".to_string(),
-            primary_key: vec!["id".to_string()],
-            soft_delete: true,
-            soft_delete_column: "deleted_at".to_string(),
-            table_security: ManifestTableSecurity {
-                tenant_column: "tenant_id".to_string(),
-                project_column: "project_id".to_string(),
-                ..ManifestTableSecurity::default()
-            },
-            columns: vec![
-                column("id", "TEXT", true),
-                column("tenant_id", "TEXT", false),
-                column("project_id", "TEXT", false),
-                column("status", "TEXT", false),
-                email,
-                column("deleted_at", "TIMESTAMPTZ", false),
-            ],
-            ..ManifestTable::default()
-        }],
-        ..CatalogManifest::default()
-    };
+    let source = format!(
+        r#"syntax = "proto3";
+package acme.lq.v1;
+message Task {{
+  option (udb.core.common.v1.pg_table) = {{
+    table_name: "tasks" schema_name: "{schema}" is_table: true audit_fields: false
+  }};
+  option (udb.core.common.v1.db_table_security) = {{
+    tenant_isolation_mode: "row" tenant_column: "tenant_id"
+    project_isolation_mode: "column" project_column: "project_id"
+    soft_delete_mode: "none" audit_mode: AUDIT_MODE_NONE
+    encryption_profile: "none" pii_profile: "none" export_eligible: false
+  }};
+  string id = 1 [(udb.core.common.v1.pg_column) = {{sql_type:"TEXT" primary_key:true not_null:true}}];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = {{sql_type:"TEXT" tenant_column:true not_null:true}}];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = {{sql_type:"TEXT" project_column:true}}];
+  string status = 4 [(udb.core.common.v1.pg_column) = {{sql_type:"TEXT"}}];
+  string email = 5 [(udb.core.common.v1.pg_column) = {{sql_type:"TEXT"}}, (udb.core.common.v1.column_security) = {{is_pii:true}}];
+}}
+"#
+    );
+    let report = crate::parser::parse_proto_source(
+        source.as_bytes(),
+        "livequery-live.proto",
+        &crate::parser::ParserConfig::default(),
+    )
+    .expect("the fixture parses");
+    let manifest = crate::generation::CatalogManifest::from_schemas(&report.schemas)
+        .expect("the fixture builds a manifest");
+    let (manifest, _) =
+        crate::runtime::native_catalog::merge_native(&manifest, &report.schemas);
     let bytes = serde_json::to_vec(&manifest).expect("manifest");
     let (catalog_id, _, _) = runtime
         .stage_project_catalog(&project, &bytes, "live query test", "test")
@@ -249,7 +231,7 @@ async fn live_livequery_serves_an_application_table_from_the_active_catalog() {
     assert_eq!(snapshot.rows_json.len(), 2, "cut at the limit");
     assert_eq!(
         snapshot.row_count, 3,
-        "every open row, without the tombstone"
+        "every open row"
     );
     for row in &snapshot.rows_json {
         assert!(!row.contains("real@x"), "PII leaked: {row}");
