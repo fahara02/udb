@@ -9,6 +9,60 @@ release line was tagged.
 
 ### Breaking for callers
 
+- **A written or filtered value is stored exactly or refused, on every verb.** `Upsert`,
+  `Insert`, `Update`, `BeginTx` and every filter now share one rule, and these return
+  `INVALID_ARGUMENT` instead of being changed:
+  - a fraction for an integer column (Upsert rounded it);
+  - a double at or above 2^53 for an integer column, because 2^53 + 1 rounds to 2^53. Send
+    the integer literal in `record_json`, or a decimal string;
+  - anything but true or false for a boolean column (Update stored `false`, and a filter
+    matched false rows);
+  - `""` for a date, time, timestamp, UUID, network, geography or numeric column (it became
+    NULL, or `= NULL` in a filter). Send null to clear;
+  - a null element in an array column (Update wrote `""` or `false`);
+  - the redaction placeholder `***MASKED***` for any column.
+  - detect: code: writes that send `""`, a stringified boolean or a large number as a double
+  - fix: send the real value, or null.
+- **`Update` refuses a column marked `exclude_from_update` or generated.** It used to write
+  it, or fail with INTERNAL.
+  - detect: code: `Update` changes naming such a column
+  - fix: remove the column from the change.
+- **Filters refuse what they used to ignore or never match.** An operator outside a column,
+  such as a top-level `$not`, returned every row. `$eq`, `$ne`, `$gt`, `$gte`, `$lt` and
+  `$lte` with null matched nothing.
+  - detect: code: filters of those shapes
+  - fix: put the operator inside its column, and use `$is_null` or `$not_null`.
+- **A paged read cannot sort by an encrypted column, or by a masked one without
+  `udb:pii:read`.** The cursor was built from the value the client received, so pages
+  repeated or skipped rows.
+  - detect: code: `sort` on such a column with `limit` or `page_token`
+  - fix: sort by another column.
+- **A join read refuses `sort`, `page_token`, `include_total` and encrypted fields,** which it
+  used to ignore or return as ciphertext, and it sets `has_more`.
+  - detect: code: `Select` with a comma-joined `message_type`
+  - fix: read one table for those features.
+- **SDK guarded and transactional writes are stricter.**
+  - `Tx` `patch`, `update_if` and `delete` fail with not-found when no row matches, and
+    `update_if` with an empty `expected` is refused rather than writing unconditionally.
+  - Go `Entity.Upsert` returns `ErrNotFound`, and a TypeScript and Go `Entity.Select` that
+    hit its page limit reports it (`ErrMoreRows` in Go, a thrown error in TypeScript).
+  - A full-row write from a message leaves out an unset PII or encrypted column, because a
+    default read does not return it. Clear one with `patch` and null.
+  - detect: code: `Tx`, `UpdateIf(`, `Entity.Select(`, `Entity.Upsert(`
+  - fix: handle not-found, pass `expected`, and walk pages with `SelectPage`.
+- **Change events for `Update` carry the row, one event per changed row.** A range update
+  used to emit one event with a random partition key.
+  - detect: code: consumers counting events per `Update`
+  - fix: expect one event per row, and read the `row` field.
+- **LiveQuery reports a row leaving a filter as a `DELETE`, forwards every delete, and
+  `row_count` counts all matches.** Above `rows_json`'s length, the snapshot was cut.
+  - detect: code: LiveQuery consumers using `row_count` as the page length
+  - fix: use the length of `rows_json`, and ignore a delete for an id you do not hold.
+- **`udb up` and `udb policy apply` no longer remove policy rules unless asked.** A stale
+  policy file used to soft-delete every rule it left out and exit 0, which removes access
+  for every service. They now stop with nothing changed.
+  - detect: code: `udb up` or `udb policy apply` in a script that relies on removal
+  - fix: add `--allow-policy-removal` where removing rules is intended.
 - **Startup refuses a declared schema change UDB cannot apply, instead of recording it.**
   This covers partition settings and retention, a primary key, a column's identity,
   generated or serial behavior, an index UDB derives from a column, a renamed column that
@@ -66,6 +120,11 @@ release line was tagged.
 
 ### Added
 
+- **LiveQuery serves application tables** from the project's active catalog. It served native
+  entities only, so `liveQuery` in the SDKs failed for every application table.
+- **Retry-safe writes in every SDK.** `WithWriteKey` on Go `Table`, `idempotencyKey` on
+  TypeScript `Table`, and `TxWithKey` / `replayKey` / `replay_key` for transactions, which
+  also give events a stable id.
 - **`udb plan sign` and `udb plan seal`** produce the signed plan `serve` requires when an
   approval signing key is configured. Keys come from the environment, never a flag.
 - **Rate-limit denials are visible on the broker.** `udb_rate_limit_denied_total` counts
@@ -74,6 +133,43 @@ release line was tagged.
 
 ### Fixed
 
+- **Every column type reads and writes.** `TIME`, `TIMETZ`, `INTERVAL`, `MONEY`, `BIT`,
+  `XML` and `TSVECTOR` read as hex of their wire form and now read as PostgreSQL's text.
+  Writes of `TIME`, `TIMETZ`, `INTERVAL`, custom enums and `BYTEA` work on every verb, as do
+  `TIMESTAMPTZ(3)` and `JSON` on Upsert. `INET[]`, `JSONB[]`, `INTERVAL[]` and `BYTEA[]` no
+  longer fail the whole read. `REAL 0.1` reads as `0.1`, NaN and infinity no longer read as
+  null, and IPv6 reads compressed.
+- **`BeginTx` writes match unary writes.** It wrote no blind index, so a row could not be
+  found by its encrypted value, stored JSON text as a JSON string, bound a delete's values
+  to the wrong columns when a field name differed from its column, and refused a delete by
+  encrypted value.
+- **A blind index follows its column.** Clearing an encrypted column left the old token
+  matching, and a tenant named by column flag or convention gave every tenant one token.
+- **A non-string tenant value cannot write into another tenant.**
+- **`Increment` on a NULL counter counts from zero,** and a non-finite delta is refused. It
+  reported success and left NULL, or wrote NULL.
+- **A stale `expected_revision` no longer passes after a range update or an upsert on another
+  key.** Those did not move the row's revision, which allowed a lost update.
+- **Database refusals name themselves.** A CHECK, foreign key, length or range violation, a
+  deadlock and a statement timeout were INTERNAL, sometimes with driver text.
+- **A replayed `BulkCas` returns its per-item results.**
+- **Cached reads belong to one reader.** The key now covers the target instance, the user and
+  the consistency level, and a write under `Note` invalidates a read cached under `pkg.Note`.
+- **`routing_policy: primary` reads the primary,** a `max_replica_lag_ms` limit applies to
+  every replica read, and a named instance is not served by a shared replica.
+- **A page token continues the walk without a limit.** It used to return page one forever.
+- **A join masks a PII field however it is spelled.** A bare `email` came back in clear text.
+- **`$has_key` works,** and an unprefixed `is_null` no longer breaks `include_total`.
+- **`SelectV2` reports the real total.**
+- **SDKs.** Go and Python keep integers beyond 2^53 exact in patches and filters.
+  `UpdateWithRetry` no longer reports a false conflict on NULL, `""`, REAL or unread columns.
+  A broken stream after a commit acknowledgement is no longer reported as a failed
+  transaction. Go, TypeScript and Python read `Timestamp` fields from `TIMESTAMP` and `DATE`
+  columns and write them to `DATE` columns.
+- **Generated Go compiles when protos in one folder give one import path different
+  aliases.** A path now gets one alias, and an alias one path.
+- **`udb auth grant create` says when the account already holds a grant,** and names
+  `udb auth grant replace`.
 - **More schema changes reach the database or stop the migration:** an index's operator
   class and parameters, a change inside a string literal in a rule or predicate, a rule
   moved to another name, an extension version (now `ALTER EXTENSION`, where it could be

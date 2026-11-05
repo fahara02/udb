@@ -239,9 +239,12 @@ fn per_event_scope_drops_foreign_and_tenantless_keeps_match() {
 #[test]
 fn unknown_source_fails_closed() {
     // `.err()` first: the Ok variant `SourceBinding` is not `Debug`.
-    let err = resolve_source("not.a.real.Entity")
-        .err()
-        .expect("unknown source must fail closed");
+    let err = resolve_source(
+        "not.a.real.Entity",
+        crate::runtime::native_catalog::native_manifest(),
+    )
+    .err()
+    .expect("unknown source must fail closed");
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
     assert_eq!(
         err.message(),

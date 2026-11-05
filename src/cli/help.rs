@@ -515,10 +515,11 @@ const COMMANDS: &[CmdHelp] = &[
         name: "policy apply",
         group: "Auth & policy",
         summary: "Reconcile a tenant's policies to a policy file (one transaction).",
-        usage: "udb policy apply -f <policies.yaml|json> --tenant <uuid> [--overlay <file>]… [--dsn <dsn>] [--by <name>]",
-        details: "  Adds the declared rules that are missing and soft-deletes active rules the
-  file no longer declares, for that tenant only, then appends an authz revision
-  so every replica reloads. Applying the same file twice changes nothing.",
+        usage: "udb policy apply -f <policies.yaml|json> --tenant <uuid> [--overlay <file>]… [--dsn <dsn>] [--by <name>] [--allow-policy-removal]",
+        details: "  Adds the declared rules that are missing, for that tenant only, then appends
+  an authz revision so every replica reloads. Applying the same file twice changes
+  nothing. Active rules the file no longer declares stop the run with nothing changed;
+  --allow-policy-removal soft-deletes them.",
     },
     CmdHelp {
         name: "identity diff",
@@ -576,7 +577,7 @@ const COMMANDS: &[CmdHelp] = &[
         name: "up",
         group: "Admin",
         summary: "Take a project from its protos to a served catalog, then apply its udb.yaml.",
-        usage: "udb up [-f udb.yaml] [--project <id>] [--tenant <uuid>] [--dsn <dsn>] [--proto <dir>] [--dry-run] [--yes] [--approve <run-id>] [--allow-transfer] [--json]",
+        usage: "udb up [-f udb.yaml] [--project <id>] [--tenant <uuid>] [--dsn <dsn>] [--proto <dir>] [--dry-run] [--yes] [--approve <run-id>] [--allow-transfer] [--allow-policy-removal] [--json]",
         details: "  Steps, one stderr line each ([ok] [done] [skipped] [next] [failed]):
     inputs        project, tenant, DSN, protos (flags > udb.yaml > UDB_PROJECT_ID,
                   UDB_TENANT_ID, UDB_PG_DSN, UDB_PROTO_ROOT)
@@ -587,7 +588,8 @@ const COMMANDS: &[CmdHelp] = &[
                   (UDB_AUTH_TOKEN, UDB_GRPC_TARGET or catalog.target); it stops
                   at the plan until --approve <run-id> names that run (or you
                   confirm at the terminal). Responses: .udb/transitions/
-    policies      `udb policy apply`; soft-deletes rules the file dropped
+    policies      `udb policy apply`; rules the file dropped stop the run until
+                  --allow-policy-removal asks for their removal
     identities    `udb identity apply`
     embedding     RegisterModel/RegisterSource (+ first backfill)
     seed          `udb data seed`

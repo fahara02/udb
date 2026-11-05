@@ -39,6 +39,8 @@ pub(crate) struct UpOptions {
     /// under UDB_ENV=production). Never approves a reviewed transition.
     pub yes: bool,
     pub allow_transfer: bool,
+    /// Soft-delete active policy rules the file no longer declares.
+    pub allow_policy_removal: bool,
     /// Machine mode: the JSON report on stdout only, no step lines on stderr.
     pub json: bool,
 }
@@ -249,6 +251,9 @@ impl UpContext {
         }
         if self.options.allow_transfer {
             command.push_str(" --allow-transfer");
+        }
+        if self.options.allow_policy_removal {
+            command.push_str(" --allow-policy-removal");
         }
         if !extra.is_empty() {
             command.push(' ');
@@ -795,6 +800,21 @@ async fn policy_step<B: UpBackend>(
         diff.removed.len(),
         diff.duplicates.len()
     );
+    // A stale file must not remove every service's access. Removal is asked for by name.
+    if !diff.removed.is_empty() && !ctx.options.allow_policy_removal && !ctx.options.dry_run {
+        return (
+            StepOutcome::next(
+                "policies",
+                format!(
+                    "udb up stopped before changing policies: it would {summary}. Check that the \
+                     policy file is current"
+                ),
+                ctx.up_command("--allow-policy-removal"),
+                Some(NEEDS_PG),
+            ),
+            Some(to_json(&diff)),
+        );
+    }
     if ctx.options.dry_run {
         return (
             StepOutcome::next(

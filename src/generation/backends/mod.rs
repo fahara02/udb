@@ -23,7 +23,10 @@ pub fn store_ensure_spec(
 ) -> serde_json::Value {
     let backend = store.backend.to_ascii_lowercase();
     let fields = if backend.contains("clickhouse") {
-        clickhouse::ensure_spec(store, manifest.table(&store.owner_schema, &store.owner_table))
+        clickhouse::ensure_spec(
+            store,
+            manifest.table(&store.owner_schema, &store.owner_table),
+        )
     } else if backend.contains("mongo") {
         mongodb::ensure_spec(store)
     } else if backend.contains("neo4j") {

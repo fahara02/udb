@@ -1326,7 +1326,71 @@ fn entity_manifest_hash(entities: &[EntityDescriptor]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+/// Protos in one folder may name the same Go import differently, and two imports may
+/// share a name. A Go file imports a path once under one name, so settle that first:
+/// the lexically first alias a path was given, and a numbered one on a collision.
+fn entities_with_settled_go_aliases(entities: &[EntityDescriptor]) -> Vec<EntityDescriptor> {
+    let mut given: BTreeMap<String, String> = BTreeMap::new();
+    let mut note = |token: Option<&str>| {
+        if let Some((path, alias, _)) = token.and_then(parse_go_type) {
+            given
+                .entry(path)
+                .and_modify(|current| {
+                    if alias < *current {
+                        current.clone_from(&alias);
+                    }
+                })
+                .or_insert(alias);
+        }
+    };
+    for entity in entities {
+        note(entity.language_classes.get("go").map(String::as_str));
+        for column in &entity.columns {
+            note(column.enum_go_import.as_deref());
+            note(column.predicate_go_import.as_deref());
+        }
+    }
+    let mut taken: BTreeMap<String, String> = BTreeMap::new();
+    let mut settled: BTreeMap<String, String> = BTreeMap::new();
+    for (path, alias) in given {
+        let mut unique = alias.clone();
+        let mut suffix = 2;
+        while taken.contains_key(&unique) {
+            unique = format!("{alias}{suffix}");
+            suffix += 1;
+        }
+        taken.insert(unique.clone(), path.clone());
+        settled.insert(path, unique);
+    }
+    let settle = |token: &str| -> String {
+        match parse_go_type(token) {
+            Some((path, _, type_name)) => {
+                format!("{path};{}.{type_name}", settled[&path])
+            }
+            None => token.to_string(),
+        }
+    };
+    entities
+        .iter()
+        .cloned()
+        .map(|mut entity| {
+            if let Some(token) = entity.language_classes.get("go").cloned() {
+                entity
+                    .language_classes
+                    .insert("go".to_string(), settle(&token));
+            }
+            for column in &mut entity.columns {
+                column.enum_go_import = column.enum_go_import.as_deref().map(&settle);
+                column.predicate_go_import = column.predicate_go_import.as_deref().map(&settle);
+            }
+            entity
+        })
+        .collect()
+}
+
 fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Result<String, String> {
+    let entities = entities_with_settled_go_aliases(entities);
+    let entities = entities.as_slice();
     // First pass: which entities are renderable + what imports/helpers are needed.
     let mut proto_imports: BTreeMap<String, String> = BTreeMap::new();
     let mut needs_time = false;
@@ -4662,6 +4726,35 @@ mod tests {
         }
         assert_eq!(canonical_lang("all"), "all");
         assert_eq!(canonical_lang("my-custom-lang"), "my-custom-lang");
+    }
+
+    #[test]
+    fn one_go_import_path_gets_one_alias_and_one_alias_one_path() {
+        let entity = |name: &str, token: &str| {
+            let mut entity = ts_entity(name, &["id"], vec![column("id", "string")]);
+            entity
+                .language_classes
+                .insert("go".to_string(), format!("{token}.{name}"));
+            entity
+        };
+        let settled = entities_with_settled_go_aliases(&[
+            entity("A", "x.io/billing/v1;billingv1"),
+            entity("B", "x.io/billing/v1;entityv1"),
+            entity("C", "x.io/other/v1;billingv1"),
+        ]);
+        let token = |index: usize| settled[index].language_classes["go"].clone();
+        assert_eq!(token(0), "x.io/billing/v1;billingv1.A");
+        assert_eq!(token(1), "x.io/billing/v1;billingv1.B");
+        assert_eq!(token(2), "x.io/other/v1;billingv12.C");
+        let go = render_go_entities_file(
+            &[
+                entity("A", "x.io/billing/v1;billingv1"),
+                entity("B", "x.io/billing/v1;entityv1"),
+            ],
+            "gen",
+        )
+        .expect("render Go");
+        assert!(!go.contains("entityv1"), "{go}");
     }
 
     #[test]

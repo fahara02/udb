@@ -335,6 +335,10 @@ async fn a_changed_check_changes_what_the_database_accepts_live() {
 
     let with_rule = |expression: Option<&str>| {
         let mut manifest = widget_manifest(&schema);
+        // A real manifest's checksums differ when its rules do; the diff relies on them.
+        let checksum = expression.unwrap_or("none").to_string();
+        manifest.checksum_sha256.clone_from(&checksum);
+        manifest.tables[0].checksum_sha256 = checksum;
         manifest.tables[0].checks = expression
             .map(|expression| ManifestCheck {
                 name: "chk_widgets_status".to_string(),
@@ -346,12 +350,20 @@ async fn a_changed_check_changes_what_the_database_accepts_live() {
     };
     let migrate = async |from: CatalogManifest, to: CatalogManifest| -> Result<(), sqlx::Error> {
         let changes = crate::migration::diff::diff_manifests(Some(&from), &to);
+        let mut connection = pool.acquire().await?;
         for artifact in crate::generation::sql::generate_delta_sql(
             &to,
             &changes,
             &crate::generation::sql::SqlGenerationConfig::default(),
         ) {
-            sqlx::raw_sql(&artifact.content).execute(&pool).await?;
+            if let Err(err) = sqlx::raw_sql(&artifact.content)
+                .execute(&mut *connection)
+                .await
+            {
+                // The artifact's own BEGIN is still open on this connection.
+                let _ = sqlx::raw_sql("ROLLBACK").execute(&mut *connection).await;
+                return Err(err);
+            }
         }
         Ok(())
     };
@@ -387,7 +399,9 @@ async fn a_changed_check_changes_what_the_database_accepts_live() {
             .collect::<Vec<_>>()
     };
     assert!(
-        mismatches(&with_rule(Some("status IN ('a')"))).await.is_empty(),
+        mismatches(&with_rule(Some("status IN ('a')")))
+            .await
+            .is_empty(),
         "a rule PostgreSQL rewrote still matches"
     );
     assert_eq!(

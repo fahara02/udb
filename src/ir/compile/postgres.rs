@@ -192,14 +192,24 @@ impl SqlDialect for Postgres {
             format!("{placeholder}::{cast}")
         } else if ty.eq_ignore_ascii_case("uuid") {
             format!("{placeholder}::UUID")
-        } else if ty.eq_ignore_ascii_case("timestamptz")
-            || ty.eq_ignore_ascii_case("timestamp with time zone")
+        } else if base_type_name(ty) == "timestamptz"
+            || ty
+                .to_ascii_lowercase()
+                .starts_with("timestamp with time zone")
+            || ty.to_ascii_lowercase().contains(") with time zone")
         {
             format!("{placeholder}::TIMESTAMPTZ")
-        } else if ty.eq_ignore_ascii_case("timestamp")
-            || ty.eq_ignore_ascii_case("timestamp without time zone")
-        {
+        } else if base_type_name(ty) == "timestamp" {
             format!("{placeholder}::TIMESTAMP")
+        } else if base_type_name(ty) == "time" && ty.to_ascii_lowercase().contains("with time zone")
+        {
+            format!("{placeholder}::TIMETZ")
+        } else if base_type_name(ty) == "time" {
+            format!("{placeholder}::TIME")
+        } else if ty.eq_ignore_ascii_case("json") {
+            format!("{placeholder}::JSON")
+        } else if ty.eq_ignore_ascii_case("bytea") {
+            format!("{placeholder}::BYTEA")
         } else if ty.eq_ignore_ascii_case("jsonb") {
             // A text-bound param (e.g. a `Null` placeholder, which sqlx sends as
             // text) meeting a jsonb column makes Postgres reject the expression
@@ -233,6 +243,14 @@ impl SqlDialect for Postgres {
                     | "date"
                     | "numeric"
                     | "decimal"
+                    | "timetz"
+                    | "interval"
+                    | "money"
+                    | "bit"
+                    | "varbit"
+                    | "tsvector"
+                    | "tsquery"
+                    | "xml"
             )
         } {
             let base = ty
@@ -242,10 +260,62 @@ impl SqlDialect for Postgres {
                 .trim()
                 .to_ascii_uppercase();
             format!("{placeholder}::{base}")
+        } else if !bind_carries_column_type(ty) {
+            // A type UDB does not know by name, such as a custom enum or domain. Its
+            // declared name is the only spelling that reaches its text input function.
+            format!("{placeholder}::{ty}")
         } else {
             placeholder.to_string()
         }
     }
+}
+
+/// The lowercase type name before any typmod or qualifier.
+fn base_type_name(declared: &str) -> String {
+    declared
+        .trim()
+        .split(['(', ' '])
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+}
+
+/// Types a bound text or number parameter reaches without a cast.
+fn bind_carries_column_type(declared: &str) -> bool {
+    declared.is_empty()
+        || matches!(
+            base_type_name(declared).as_str(),
+            "text"
+                | "varchar"
+                | "character"
+                | "char"
+                | "bpchar"
+                | "citext"
+                | "name"
+                | "bool"
+                | "boolean"
+                | "smallint"
+                | "int2"
+                | "integer"
+                | "int"
+                | "int4"
+                | "bigint"
+                | "int8"
+                | "serial"
+                | "serial2"
+                | "serial4"
+                | "serial8"
+                | "smallserial"
+                | "bigserial"
+                | "real"
+                | "float4"
+                | "float8"
+                | "float"
+                | "double"
+                | "vector"
+                | "halfvec"
+                | "sparsevec"
+        )
 }
 
 type Pg = SqlCompiler<Postgres>;

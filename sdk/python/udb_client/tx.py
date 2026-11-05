@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from inspect import isawaitable
 from typing import Any, AsyncIterator, Callable, Iterator, Mapping
+import hashlib
 import uuid
 
 import grpc
@@ -69,11 +70,25 @@ class TxScope:
     ``tx.upsert(File(...))`` or ``tx.upsert(files_table, {"file_id": ...})``.
     """
 
-    def __init__(self, correlation_id: str):
+    def __init__(self, correlation_id: str, replay_key: str = ""):
+        self._replay_key = replay_key
         self._tx_id = str(uuid.uuid4())
         self._correlation_id = correlation_id or self._tx_id
         self._mutations: list[types_pb2.Mutation] = []
         self._error: Exception | None = None
+
+    def _add(self, mutation: types_pb2.Mutation) -> None:
+        # A replay key on each write of a keyed transaction, so a retry repeats none.
+        if self._replay_key and mutation.operation in ("upsert", "update", "delete"):
+            mutation.idempotency_key = f"{self._replay_key}:{len(self._mutations)}"
+        self._mutations.append(mutation)
+
+    def _event_id(self) -> str:
+        """Random, or stable across retries of a keyed transaction."""
+        if not self._replay_key:
+            return str(uuid.uuid4())
+        digest = hashlib.sha256(f"{self._replay_key}:{len(self._mutations)}".encode()).digest()
+        return str(uuid.UUID(bytes=digest[:16], version=5))
 
     def _fail(self, error: Exception) -> Exception:
         # Remembered, so a function that catches the error still commits nothing.
@@ -99,7 +114,7 @@ class TxScope:
             raw = to_record_json(record)
         except (ValueError, TypeError, AttributeError) as error:
             raise self._fail(error) from error
-        self._mutations.append(
+        self._add(
             types_pb2.Mutation(operation=operation, message_type=_entity_name(entity), record_json=raw)
         )
 
@@ -113,9 +128,18 @@ class TxScope:
         ``expected``; otherwise the whole transaction fails with ``UdbConflict``. To
         use a typed table, pass it first and the dict row as ``row``."""
         try:
+            if not expected:
+                raise ValueError("udb: guarded write requires a non-empty expected precondition")
             if isinstance(next_row, Message):
                 record = encode_record(next_row, WRITE_INSERT)
                 key = {column: record.get(column) for column in primary_keys(next_row)}
+                if not key:
+                    raise ValueError(f"udb: {message_type(next_row)} declares no primary key")
+                for column, value in key.items():
+                    if value is None or value == "":
+                        raise ValueError(
+                            f"udb: {message_type(next_row)} has no value for primary-key column {column}"
+                        )
                 changes = encode_record(next_row, WRITE_UPDATE)
                 name = message_type(next_row)
             else:
@@ -132,8 +156,13 @@ class TxScope:
             filter_ = to_struct(key)
         except (ValueError, TypeError) as error:
             raise self._fail(error) from error
-        self._mutations.append(
-            types_pb2.Mutation(operation="delete", message_type=_entity_name(entity), filter=filter_)
+        self._add(
+            types_pb2.Mutation(
+                operation="delete",
+                message_type=_entity_name(entity),
+                filter=filter_,
+                require_affected=1,
+            )
         )
 
     def _update(
@@ -144,14 +173,16 @@ class TxScope:
         expected: Mapping[str, Any] | None,
     ) -> None:
         try:
-            mutation = types_pb2.Mutation(operation="update", message_type=name, filter=to_struct(key))
+            mutation = types_pb2.Mutation(
+                operation="update", message_type=name, filter=to_struct(key), require_affected=1
+            )
             if changes:
                 mutation.changes.CopyFrom(to_struct(changes))
             if expected:
                 mutation.expected.CopyFrom(to_struct(expected))
         except (ValueError, TypeError) as error:
             raise self._fail(error) from error
-        self._mutations.append(mutation)
+        self._add(mutation)
 
     def emit(self, event: Message) -> None:
         """Queue ``event`` on the outbox, committed with the transaction. The topic is
@@ -175,7 +206,7 @@ class TxScope:
         envelope = to_struct(
             _json_safe(
                 {
-                    "event_id": str(uuid.uuid4()),
+                    "event_id": self._event_id(),
                     "event_type": event_type(event),
                     "correlation_id": self._correlation_id,
                     "document_id": document,
@@ -241,8 +272,8 @@ def _raise_refusal(error: grpc.RpcError) -> None:
     raise classified from mapped
 
 
-def _scope_for(client: Any, metadata: Metadata | None) -> TxScope:
-    return TxScope(client._effective_metadata(metadata).correlation_id)
+def _scope_for(client: Any, metadata: Metadata | None, replay_key: str = "") -> TxScope:
+    return TxScope(client._effective_metadata(metadata).correlation_id, replay_key)
 
 
 def run_tx(
@@ -251,11 +282,15 @@ def run_tx(
     *,
     metadata: Metadata | None = None,
     timeout: float | None = None,
+    replay_key: str = "",
 ) -> None:
     """Run ``fn`` and commit what it collected. An exception from ``fn`` commits
     nothing. A conditional write that lost a race fails the transaction with
-    ``UdbConflict``. A transaction is never retried automatically."""
-    scope = _scope_for(client, metadata)
+    ``UdbConflict``. A transaction is never retried automatically. ``replay_key`` makes
+    a retry safe after a lost response: each write gets a key derived from it, and each
+    event a stable id. ``fn`` must make the same writes on a retry, and ``insert`` has no
+    replay form, so use ``upsert``."""
+    scope = _scope_for(client, metadata, replay_key)
     fn(scope)
     if scope._error is not None:
         raise scope._error
@@ -271,6 +306,9 @@ def run_tx(
         for frame in stream:
             outcome.read(frame)
     except grpc.RpcError as error:
+        # Once the broker said it committed, a broken stream loses nothing.
+        if outcome.committed:
+            return
         _raise_refusal(error)
     outcome.finish()
 
@@ -286,9 +324,10 @@ async def run_tx_async(
     *,
     metadata: Metadata | None = None,
     timeout: float | None = None,
+    replay_key: str = "",
 ) -> None:
     """See :func:`run_tx`; ``fn`` may be sync or async."""
-    scope = _scope_for(client, metadata)
+    scope = _scope_for(client, metadata, replay_key)
     result = fn(scope)
     if isawaitable(result):
         await result
@@ -306,5 +345,7 @@ async def run_tx_async(
         async for frame in stream:
             outcome.read(frame)
     except grpc.RpcError as error:
+        if outcome.committed:
+            return
         _raise_refusal(error)
     outcome.finish()

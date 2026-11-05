@@ -399,6 +399,14 @@ function enumNumberOrZero(field: FieldSchema, value: unknown): number {
   return enumNumber(field, value, field.name);
 }
 
+/** RFC 3339 from the text a TIMESTAMP or DATE column reads as, taking no zone as UTC. */
+function columnTimeText(text: string): string {
+  const trimmed = text.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return `${trimmed}T00:00:00Z`;
+  const spaced = /^\d{4}-\d{2}-\d{2} /.test(trimmed) ? `${trimmed.slice(0, 10)}T${trimmed.slice(11)}` : trimmed;
+  return /[Zz+-]/.test(spaced.slice(10)) ? spaced : `${spaced}Z`;
+}
+
 function timestampJson(value: unknown, path: string): string {
   if (value instanceof Date) {
     const ms = value.getTime();
@@ -406,7 +414,7 @@ function timestampJson(value: unknown, path: string): string {
     return protoTimestamp(Math.floor(ms / 1000), ((ms % 1000) + 1000) % 1000 * 1e6);
   }
   if (typeof value === "string") {
-    const parts = parseRfc3339(value);
+    const parts = parseRfc3339(columnTimeText(value));
     if (!parts) throw new Error(`udb: ${path}: "${value}" is not an RFC 3339 timestamp`);
     return protoTimestamp(parts.seconds, parts.nanos);
   }
@@ -603,9 +611,25 @@ function enumTokens(field: FieldSchema, value: unknown): unknown {
 /** Apply the column rules to `record[field.name]`, which holds proto JSON. */
 function encodeColumn(schema: MessageSchema, field: FieldSchema, isSet: boolean, record: UdbRecord): void {
   const name = field.name;
+  // A default read leaves PII and encrypted columns out, so an unset one here may only be
+  // unread. A full-row write must not erase it: clear it with patch and null.
+  if (!isSet && !field.repeated && !field.map && (field.pii || field.encrypted)) {
+    delete record[name];
+    return;
+  }
   if (field.hasPresence && !isSet) {
     if (field.column?.not_null) delete record[name];
     else record[name] = null;
+    return;
+  }
+  // A strict DATE bind takes the date alone.
+  if (
+    field.kind === "message" &&
+    field.messageType?.fullName === ".google.protobuf.Timestamp" &&
+    field.column?.sql_type?.trim().toUpperCase() === "DATE" &&
+    typeof record[name] === "string"
+  ) {
+    record[name] = (record[name] as string).slice(0, 10);
     return;
   }
   if (is64BitField(field)) {
@@ -635,6 +659,7 @@ function encodeColumn(schema: MessageSchema, field: FieldSchema, isSet: boolean,
  *   - fields without a column annotation, generated columns and the columns `mode`
  *     excludes are dropped;
  *   - enums are numbers, or short tokens in a text column; 64-bit integers are exact;
+ *   - an unset PII or encrypted column is dropped, because a default read does not return it;
  *   - an unset field with presence is NULL, or dropped when its column is NOT NULL;
  *   - an empty string without presence in a nullable column is NULL; in a NOT NULL
  *     UUID, CHAR(n), DATE, TIMESTAMP or JSON column it is dropped, and a NOT NULL

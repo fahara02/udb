@@ -494,13 +494,33 @@ async fn forward_event(
         return Forwarded::Continue;
     }
     let row = change_row(&payload);
-    if let Some(filter) = user_filter {
-        if !filter_matches_row(filter, &row) {
+    let op = super::predicate::change_op(&envelope.topic, &payload);
+    // A delete names only its key, so the filter cannot judge it. A subscriber drops an
+    // id it does not hold, and must not keep one it does.
+    let mut frame = None;
+    if let Some(filter) = user_filter
+        && op != lq_pb::LiveQueryChangeOp::Delete
+        && !filter_matches_row(filter, &row)
+    {
+        // With the whole row in the event, an update that no longer matches is the row
+        // leaving the result. A subscriber left holding it would show a stale row.
+        let has_row_image = payload
+            .get("payload")
+            .and_then(|inner| inner.get("row"))
+            .is_some_and(serde_json::Value::is_object);
+        if op == lq_pb::LiveQueryChangeOp::Update && has_row_image {
+            frame = Some(super::predicate::left_filter_frame(
+                envelope,
+                &payload,
+                masked_columns,
+            ));
+        } else {
             metrics.record_livequery_delta_dropped(tenant_id, "filter");
             return Forwarded::Continue;
         }
     }
-    match tx.try_send(Ok(change_frame(envelope, &payload, masked_columns))) {
+    let frame = frame.unwrap_or_else(|| change_frame(envelope, &payload, masked_columns));
+    match tx.try_send(Ok(frame)) {
         Ok(()) => {
             metrics.record_livequery_delta_forwarded(tenant_id);
             Forwarded::Continue

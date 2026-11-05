@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
@@ -114,6 +115,26 @@ type TablePage[T proto.Message] struct {
 	Redacted []string
 }
 
+// WriteOption shapes one write of a Table.
+type WriteOption func(*writeOptions)
+
+type writeOptions struct{ idempotencyKey string }
+
+// WithWriteKey makes the write safe to retry after a lost response: the broker replays
+// the first result for the same key instead of writing twice. Reusing a key with
+// different inputs is refused.
+func WithWriteKey(key string) WriteOption {
+	return func(o *writeOptions) { o.idempotencyKey = key }
+}
+
+func writeKey(opts []WriteOption) string {
+	var o writeOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	return o.idempotencyKey
+}
+
 // Get reads the row with key. A missing row is ErrNotFound.
 func (t *Table[T]) Get(ctx context.Context, key RowKey) (T, error) {
 	var zero T
@@ -133,9 +154,15 @@ func (t *Table[T]) Get(ctx context.Context, key RowKey) (T, error) {
 
 // Select reads one page of rows matching where.
 func (t *Table[T]) Select(ctx context.Context, where Filter, opts SelectOptions) (TablePage[T], error) {
+	page, _, err := t.selectRecords(ctx, where, opts)
+	return page, err
+}
+
+// selectRecords also returns each row's stored values, as a retry's guard must compare them.
+func (t *Table[T]) selectRecords(ctx context.Context, where Filter, opts SelectOptions) (TablePage[T], []Record, error) {
 	filter, err := structpb.NewStruct(jsonSafe(where))
 	if err != nil {
-		return TablePage[T]{}, fmt.Errorf("udb: %s filter: %w", t.messageType, err)
+		return TablePage[T]{}, nil, fmt.Errorf("udb: %s filter: %w", t.messageType, err)
 	}
 	req := &entityv1.SelectRequest{
 		MessageType:  t.messageType,
@@ -155,7 +182,7 @@ func (t *Table[T]) Select(ctx context.Context, where Filter, opts SelectOptions)
 	req.Context = t.u.readFence()
 	res, err := t.u.Data.Broker.Select(ctx, req)
 	if err != nil {
-		return TablePage[T]{}, classify(err)
+		return TablePage[T]{}, nil, classify(err)
 	}
 	page := TablePage[T]{
 		HasMore:  res.GetHasMore(),
@@ -163,14 +190,22 @@ func (t *Table[T]) Select(ctx context.Context, where Filter, opts SelectOptions)
 		Total:    res.GetExactTotal(),
 		Redacted: res.GetRedactedFields(),
 	}
+	records := make([]Record, 0, len(res.GetRecordsJson()))
 	for _, raw := range res.GetRecordsJson() {
 		row, err := t.decode(raw)
 		if err != nil {
-			return TablePage[T]{}, err
+			return TablePage[T]{}, nil, err
+		}
+		var record Record
+		dec := json.NewDecoder(bytes.NewReader(raw))
+		dec.UseNumber()
+		if err := dec.Decode(&record); err != nil {
+			return TablePage[T]{}, nil, fmt.Errorf("udb: decode %s row: %w", t.messageType, err)
 		}
 		page.Rows = append(page.Rows, row)
+		records = append(records, record)
 	}
-	return page, nil
+	return page, records, nil
 }
 
 // SelectAll walks every row matching where, page by page, calling fn for each.
@@ -207,18 +242,18 @@ func (t *Table[T]) Count(ctx context.Context, where Filter) (int64, error) {
 // exists. To change some columns of an existing row use Patch or UpdateIf.
 // ErrNotFound means the conflict target was outside the verified scope and
 // the broker left it untouched.
-func (t *Table[T]) Upsert(ctx context.Context, m T) error {
-	return t.write(ctx, m, false)
+func (t *Table[T]) Upsert(ctx context.Context, m T, opts ...WriteOption) error {
+	return t.write(ctx, m, false, writeKey(opts))
 }
 
 // Insert creates the complete row m in one broker call. A primary or unique-key
 // collision returns CodeUnique and never replaces the existing row. The broker
 // supplies the verified tenant. Older brokers return Unimplemented.
-func (t *Table[T]) Insert(ctx context.Context, m T) error {
-	return t.write(ctx, m, true)
+func (t *Table[T]) Insert(ctx context.Context, m T, opts ...WriteOption) error {
+	return t.write(ctx, m, true, writeKey(opts))
 }
 
-func (t *Table[T]) write(ctx context.Context, m T, insertOnly bool) error {
+func (t *Table[T]) write(ctx context.Context, m T, insertOnly bool, idempotencyKey string) error {
 	rec, err := EncodeRecord(m, WriteInsert)
 	if err != nil {
 		return err
@@ -227,7 +262,7 @@ func (t *Table[T]) write(ctx context.Context, m T, insertOnly bool) error {
 	if err != nil {
 		return fmt.Errorf("udb: encode %s: %w", t.messageType, err)
 	}
-	request := &entityv1.UpsertRequest{MessageType: t.messageType, RecordJson: raw}
+	request := &entityv1.UpsertRequest{MessageType: t.messageType, RecordJson: raw, IdempotencyKey: idempotencyKey}
 	var res *entityv1.MutationResponse
 	if insertOnly {
 		res, err = t.u.Data.Broker.Insert(ctx, request)
@@ -237,7 +272,7 @@ func (t *Table[T]) write(ctx context.Context, m T, insertOnly bool) error {
 	if err != nil {
 		return classify(err)
 	}
-	if res.GetAffectedRows() == 0 {
+	if res.GetAffectedRows() == 0 && !res.GetWasDuplicate() {
 		return ErrNotFound
 	}
 	t.u.rememberWrite(res)
@@ -246,14 +281,17 @@ func (t *Table[T]) write(ctx context.Context, m T, insertOnly bool) error {
 
 // Patch sets only the given columns on the row with key. The row must exist
 // (a missing row is ErrNotFound and nothing is written).
-func (t *Table[T]) Patch(ctx context.Context, key RowKey, fields Record) error {
-	return t.update(ctx, key, fields, nil, nil)
+func (t *Table[T]) Patch(ctx context.Context, key RowKey, fields Record, opts ...WriteOption) error {
+	return t.update(ctx, key, fields, nil, nil, writeKey(opts))
 }
 
 // UpdateIf writes next's updatable columns only if the stored row still holds
 // expected (column → value, compared by type on the broker). A lost race is
 // ErrConflict and nothing is written.
-func (t *Table[T]) UpdateIf(ctx context.Context, next T, expected Record) error {
+func (t *Table[T]) UpdateIf(ctx context.Context, next T, expected Record, opts ...WriteOption) error {
+	if len(expected) == 0 {
+		return errEmptyCAS
+	}
 	key, err := t.KeyOf(next)
 	if err != nil {
 		return err
@@ -262,7 +300,7 @@ func (t *Table[T]) UpdateIf(ctx context.Context, next T, expected Record) error 
 	if err != nil {
 		return err
 	}
-	return t.update(ctx, key, changes, expected, nil)
+	return t.update(ctx, key, changes, expected, nil, writeKey(opts))
 }
 
 // UpdateWithRetry reads the row, applies change, and writes back only the
@@ -274,10 +312,17 @@ func (t *Table[T]) UpdateWithRetry(ctx context.Context, key RowKey, attempts int
 		attempts = 5
 	}
 	for attempt := 0; attempt < attempts; attempt++ {
-		current, err := t.Get(ctx, key)
+		page, records, err := t.selectRecords(ctx, Filter(key), SelectOptions{Limit: 2})
 		if err != nil {
 			return zero, err
 		}
+		if len(page.Rows) == 0 {
+			return zero, fmt.Errorf("%w: %s %v", ErrNotFound, t.messageType, map[string]any(key))
+		}
+		if len(page.Rows) > 1 {
+			return zero, fmt.Errorf("udb: %s key %v matched more than one row; address a primary or unique key", t.messageType, map[string]any(key))
+		}
+		current, stored := page.Rows[0], records[0]
 		before, err := EncodeRecord(current, WriteUpdate)
 		if err != nil {
 			return zero, err
@@ -294,13 +339,18 @@ func (t *Table[T]) UpdateWithRetry(ctx context.Context, key RowKey, attempts int
 		for column, value := range after {
 			if !reflect.DeepEqual(before[column], value) {
 				changes[column] = value
-				expected[column] = before[column]
+				// The guard compares what the row holds, not how this SDK would encode
+				// it: NULL, "" and a REAL's digits do not survive re-encoding. A column
+				// the read did not return cannot be guarded.
+				if held, read := stored[column]; read {
+					expected[column] = held
+				}
 			}
 		}
 		if len(changes) == 0 {
 			return current, nil
 		}
-		err = t.update(ctx, key, changes, expected, nil)
+		err = t.update(ctx, key, changes, expected, nil, "")
 		if errors.Is(err, ErrConflict) {
 			continue
 		}
@@ -314,12 +364,12 @@ func (t *Table[T]) UpdateWithRetry(ctx context.Context, key RowKey, attempts int
 
 // Increment adds deltas to numeric columns of the row with key, atomically on
 // the broker (col = col + delta), with no read-modify-write window.
-func (t *Table[T]) Increment(ctx context.Context, key RowKey, deltas map[string]float64) error {
-	return t.update(ctx, key, nil, nil, deltas)
+func (t *Table[T]) Increment(ctx context.Context, key RowKey, deltas map[string]float64, opts ...WriteOption) error {
+	return t.update(ctx, key, nil, nil, deltas, writeKey(opts))
 }
 
 // Delete removes the row with key. A missing row is ErrNotFound.
-func (t *Table[T]) Delete(ctx context.Context, key RowKey) error {
+func (t *Table[T]) Delete(ctx context.Context, key RowKey, opts ...WriteOption) error {
 	filter, err := structpb.NewStruct(jsonSafe(Filter(key)))
 	if err != nil {
 		return fmt.Errorf("udb: %s key: %w", t.messageType, err)
@@ -328,6 +378,7 @@ func (t *Table[T]) Delete(ctx context.Context, key RowKey) error {
 		MessageType:     t.messageType,
 		Filter:          filter,
 		RequireAffected: 1,
+		IdempotencyKey:  writeKey(opts),
 	})
 	if err != nil {
 		return classify(err)
@@ -336,7 +387,7 @@ func (t *Table[T]) Delete(ctx context.Context, key RowKey) error {
 	return nil
 }
 
-func (t *Table[T]) update(ctx context.Context, key RowKey, changes, expected Record, deltas map[string]float64) error {
+func (t *Table[T]) update(ctx context.Context, key RowKey, changes, expected Record, deltas map[string]float64, idempotencyKey string) error {
 	filter, err := structpb.NewStruct(jsonSafe(Filter(key)))
 	if err != nil {
 		return fmt.Errorf("udb: %s key: %w", t.messageType, err)
@@ -345,6 +396,7 @@ func (t *Table[T]) update(ctx context.Context, key RowKey, changes, expected Rec
 		MessageType:     t.messageType,
 		Filter:          filter,
 		RequireAffected: 1,
+		IdempotencyKey:  idempotencyKey,
 	}
 	if len(changes) > 0 {
 		if req.Changes, err = structpb.NewStruct(jsonSafe(changes)); err != nil {
@@ -402,6 +454,19 @@ func classify(err error) error {
 
 // jsonSafe turns json.Number values (from records decoded with UseNumber) into
 // numbers structpb accepts.
+// maxExactDoubleInteger is the largest integer a Struct's double carries unambiguously:
+// 2^53 + 1 rounds to 2^53.
+const maxExactDoubleInteger = int64(1)<<53 - 1
+
+// exactInteger keeps an integer exact through a Struct: beyond 2^53 it travels as its
+// decimal string, which the broker reads back as that exact integer.
+func exactInteger(i int64) any {
+	if i > maxExactDoubleInteger || i < -maxExactDoubleInteger {
+		return strconv.FormatInt(i, 10)
+	}
+	return i
+}
+
 func jsonSafe(m map[string]any) map[string]any {
 	out := make(map[string]any, len(m))
 	for k, v := range m {
@@ -414,10 +479,22 @@ func jsonSafeValue(v any) any {
 	switch x := v.(type) {
 	case json.Number:
 		if i, err := x.Int64(); err == nil {
-			return i
+			return exactInteger(i)
+		}
+		if _, err := strconv.ParseUint(x.String(), 10, 64); err == nil {
+			return x.String()
 		}
 		f, _ := x.Float64()
 		return f
+	case int:
+		return exactInteger(int64(x))
+	case int64:
+		return exactInteger(x)
+	case uint64:
+		if x > uint64(maxExactDoubleInteger) {
+			return strconv.FormatUint(x, 10)
+		}
+		return int64(x)
 	case json.RawMessage:
 		var decoded any
 		if err := json.Unmarshal(x, &decoded); err == nil {

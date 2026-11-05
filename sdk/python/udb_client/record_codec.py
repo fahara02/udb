@@ -23,6 +23,7 @@ from google.protobuf.descriptor import EnumDescriptor, FieldDescriptor
 from google.protobuf.message import Message
 
 from .schema import (
+    legacy_column_security_options,
     column_options,
     is_map,
     is_repeated,
@@ -217,6 +218,14 @@ def _encode_column(message: Message, field: FieldDescriptor, column: Any, value:
     not_null = bool(column is not None and column.not_null)
     if field.has_presence and not is_repeated(field) and not message.HasField(field.name):
         return _ABSENT if not_null else None
+    if (
+        isinstance(value, str)
+        and field.message_type is not None
+        and field.message_type.full_name == "google.protobuf.Timestamp"
+        and _sql_type(column).strip().upper() == "DATE"
+    ):
+        # A strict DATE bind takes the date alone.
+        return value[:10]
     if field.type in _INT64_TYPES:
         return _exact_ints(value)
     if field.type == FieldDescriptor.TYPE_ENUM and _text_column(column):
@@ -238,6 +247,13 @@ def _encode_column(message: Message, field: FieldDescriptor, column: Any, value:
     return value
 
 
+def _is_sensitive(field: FieldDescriptor, column: Any) -> bool:
+    legacy = legacy_column_security_options(field)
+    if legacy is not None and (legacy.is_pii or legacy.is_encrypted):
+        return True
+    return bool(column is not None and column.encrypted)
+
+
 def encode_record(message: Message, mode: WriteMode = WriteMode.INSERT) -> Record:
     """Turn an entity message into a udb record keyed by proto field names.
 
@@ -253,8 +269,13 @@ def encode_record(message: Message, mode: WriteMode = WriteMode.INSERT) -> Recor
     if mode is WriteMode.UPDATE:
         tenant, project = tenant_column(message), project_column(message)
     record: Record = {}
+    present = {field.name for field, _ in message.ListFields()}
     for field in message.DESCRIPTOR.fields:
         column = column_options(field)
+        # A default read leaves PII and encrypted columns out, so an unset one may only be
+        # unread. A full-row write must not erase it: clear it with patch and None.
+        if _is_sensitive(field, column) and not is_repeated(field) and field.name not in present:
+            continue
         if not _carries(column, mode) or (mode is WriteMode.UPDATE and field.name in (tenant, project)):
             continue
         value = _encode_column(message, field, column, encoded.get(field.name))
@@ -396,9 +417,27 @@ def _parse_bool(text: str) -> bool:
         raise ValueError(f"invalid boolean {text!r}") from None
 
 
+def _column_time_text(text: str) -> str:
+    """RFC 3339 from the text a TIMESTAMP or DATE column reads as, taking no zone as UTC."""
+    trimmed = text.strip()
+    if len(trimmed) == 10:
+        return f"{trimmed}T00:00:00Z"
+    if len(trimmed) > 10 and trimmed[10] == " ":
+        trimmed = f"{trimmed[:10]}T{trimmed[11:]}"
+    if any(mark in trimmed[10:] for mark in "Zz+-"):
+        return trimmed
+    return f"{trimmed}Z"
+
+
 def _normalise(field: FieldDescriptor, value: Any) -> Any:
     """Rewrite one column value into the proto JSON form of its field."""
     if field.message_type is not None:
+        if (
+            isinstance(value, str)
+            and not is_repeated(field)
+            and field.message_type.full_name == "google.protobuf.Timestamp"
+        ):
+            return _column_time_text(value)
         return value
     if is_repeated(field):
         if not isinstance(value, str):

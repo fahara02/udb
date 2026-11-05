@@ -740,9 +740,6 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                 // placeholders can still receive an untyped text/null bind.
                 match value {
                     JsonValue::Null => query.bind(Option::<chrono::DateTime<chrono::Utc>>::None),
-                    JsonValue::String(raw) if raw.trim().is_empty() => {
-                        query.bind(Option::<chrono::DateTime<chrono::Utc>>::None)
-                    }
                     JsonValue::String(raw) => {
                         let dt = chrono::DateTime::parse_from_rfc3339(raw).map_err(|err| {
                             core_helper_invalid_field(
@@ -762,11 +759,30 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                     }
                 }
             }
+            "bytes" => {
+                use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+                match value {
+                    JsonValue::Null => query.bind(Option::<Vec<u8>>::None),
+                    JsonValue::String(raw) => {
+                        query.bind(B64.decode(raw.trim()).map_err(|err| {
+                            core_helper_invalid_field(
+                                "params",
+                                "bytea params must be base64 strings",
+                                format!("invalid base64 for bytea value: {err}"),
+                            )
+                        })?)
+                    }
+                    _ => {
+                        return Err(core_helper_invalid_field(
+                            "params",
+                            "bytea params must be base64 strings or null",
+                            "bytea params must be base64 strings or null",
+                        ));
+                    }
+                }
+            }
             "uuid" => match value {
                 JsonValue::Null => query.bind(Option::<uuid::Uuid>::None),
-                JsonValue::String(raw) if raw.trim().is_empty() => {
-                    query.bind(Option::<uuid::Uuid>::None)
-                }
                 JsonValue::String(raw) => {
                     let parsed = uuid::Uuid::parse_str(raw).map_err(|err| {
                         core_helper_invalid_field(
@@ -1934,6 +1950,8 @@ fn postgres_placeholder_cast_type(statement: &str, position: usize) -> Option<&'
         Some("timestamptz")
     } else if lower.starts_with("uuid") {
         Some("uuid")
+    } else if lower.starts_with("bytea") && postgres_array_cast_param_type(&lower).is_none() {
+        Some("bytes")
     } else if (lower.starts_with("numeric") || lower.starts_with("decimal"))
         && postgres_array_cast_param_type(&lower).is_none()
     {

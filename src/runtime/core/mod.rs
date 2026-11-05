@@ -3176,6 +3176,198 @@ fn decrypt_record_value(
     }
 }
 
+/// JSON has no NaN or infinity, so they travel as the strings protobuf JSON uses.
+fn float_to_json(value: f64) -> JsonValue {
+    if value.is_nan() {
+        JsonValue::String("NaN".to_string())
+    } else if value.is_infinite() {
+        JsonValue::String(if value > 0.0 { "Infinity" } else { "-Infinity" }.to_string())
+    } else {
+        JsonValue::from(value)
+    }
+}
+
+fn pg_time_text(micros: i64) -> String {
+    let (hours, rest) = (micros / 3_600_000_000, micros % 3_600_000_000);
+    let (minutes, rest) = (rest / 60_000_000, rest % 60_000_000);
+    let (seconds, fraction) = (rest / 1_000_000, rest % 1_000_000);
+    let mut text = format!("{hours:02}:{minutes:02}:{seconds:02}");
+    if fraction != 0 {
+        let digits = format!("{fraction:06}");
+        text.push('.');
+        text.push_str(digits.trim_end_matches('0'));
+    }
+    text
+}
+
+/// PostgreSQL's own default text form of an interval, which its input function accepts.
+fn pg_interval_text(micros: i64, days: i32, months: i32) -> String {
+    let mut parts = Vec::new();
+    let (years, months) = (months / 12, months % 12);
+    let unit = |count: i64, name: &str| {
+        format!("{count} {name}{}", if count.abs() == 1 { "" } else { "s" })
+    };
+    if years != 0 {
+        parts.push(unit(i64::from(years), "year"));
+    }
+    if months != 0 {
+        parts.push(format!(
+            "{months} mon{}",
+            if months.abs() == 1 { "" } else { "s" }
+        ));
+    }
+    if days != 0 {
+        parts.push(unit(i64::from(days), "day"));
+    }
+    if micros != 0 || parts.is_empty() {
+        let sign = if micros < 0 { "-" } else { "" };
+        parts.push(format!("{sign}{}", pg_time_text(micros.abs())));
+    }
+    parts.join(" ")
+}
+
+fn pg_tsvector_text(bytes: &[u8]) -> Option<String> {
+    let count = i32::from_be_bytes(bytes.get(..4)?.try_into().ok()?);
+    let mut offset = 4;
+    let mut lexemes = Vec::with_capacity(usize::try_from(count).ok()?);
+    for _ in 0..count {
+        let end = offset + bytes.get(offset..)?.iter().position(|byte| *byte == 0)?;
+        let word = std::str::from_utf8(&bytes[offset..end])
+            .ok()?
+            .replace('\'', "''");
+        offset = end + 1;
+        let positions = u16::from_be_bytes(bytes.get(offset..offset + 2)?.try_into().ok()?);
+        offset += 2;
+        let mut rendered = Vec::with_capacity(usize::from(positions));
+        for _ in 0..positions {
+            let raw = u16::from_be_bytes(bytes.get(offset..offset + 2)?.try_into().ok()?);
+            offset += 2;
+            let weight = match raw >> 14 {
+                3 => "A",
+                2 => "B",
+                1 => "C",
+                _ => "",
+            };
+            rendered.push(format!("{}{weight}", raw & 0x3FFF));
+        }
+        lexemes.push(if rendered.is_empty() {
+            format!("'{word}'")
+        } else {
+            format!("'{word}':{}", rendered.join(","))
+        });
+    }
+    Some(lexemes.join(" "))
+}
+
+/// A column type sqlx has no decoder for, from its binary wire form to the same text
+/// PostgreSQL prints, so a read can be written straight back. `None` keeps the hex form,
+/// which is the input form of PostGIS types.
+fn pg_binary_to_json(type_name: &str, bytes: &[u8]) -> Option<JsonValue> {
+    let text = |value: String| Some(JsonValue::String(value));
+    let int64 = |range: std::ops::Range<usize>| {
+        Some(i64::from_be_bytes(bytes.get(range)?.try_into().ok()?))
+    };
+    let int32 = |range: std::ops::Range<usize>| {
+        Some(i32::from_be_bytes(bytes.get(range)?.try_into().ok()?))
+    };
+    match type_name.split(['(', ' ']).next().unwrap_or_default() {
+        "TIME" => text(pg_time_text(int64(0..8)?)),
+        "TIMETZ" => {
+            // The wire offset counts seconds west of UTC.
+            let east = -int32(8..12)?;
+            let (sign, east) = (if east < 0 { '-' } else { '+' }, east.abs());
+            let mut zone = format!("{sign}{:02}", east / 3600);
+            if east % 3600 != 0 {
+                zone.push_str(&format!(":{:02}", east % 3600 / 60));
+            }
+            text(format!("{}{zone}", pg_time_text(int64(0..8)?)))
+        }
+        "INTERVAL" => text(pg_interval_text(
+            int64(0..8)?,
+            int32(8..12)?,
+            int32(12..16)?,
+        )),
+        "MONEY" => {
+            let cents = int64(0..8)?;
+            let sign = if cents < 0 { "-" } else { "" };
+            let cents = cents.unsigned_abs();
+            text(format!("{sign}{}.{:02}", cents / 100, cents % 100))
+        }
+        "BIT" | "VARBIT" | "VARBIT[]" => {
+            let length = usize::try_from(int32(0..4)?).ok()?;
+            let body = bytes.get(4..)?;
+            let digits = (0..length)
+                .map(|bit| {
+                    let byte = body.get(bit / 8)?;
+                    Some(if byte & (0x80 >> (bit % 8)) != 0 {
+                        '1'
+                    } else {
+                        '0'
+                    })
+                })
+                .collect::<Option<String>>()?;
+            text(digits)
+        }
+        "XML" => text(String::from_utf8(bytes.to_vec()).ok()?),
+        "TSVECTOR" => text(pg_tsvector_text(bytes)?),
+        "INET" | "CIDR" => text(pg_inet_to_text(bytes)?),
+        "MACADDR" | "MACADDR8" => text(
+            bytes
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect::<Vec<_>>()
+                .join(":"),
+        ),
+        "JSONB" => serde_json::from_slice(bytes.get(1..)?).ok(),
+        "JSON" => serde_json::from_slice(bytes).ok(),
+        "BYTEA" => {
+            use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+            text(B64.encode(bytes))
+        }
+        "UUID" => text(uuid::Uuid::from_slice(bytes).ok()?.to_string()),
+        _ => None,
+    }
+}
+
+/// A one-dimensional array of a type with no sqlx array decoder, element by element.
+fn pg_array_to_json(row: &PgRow, idx: usize, element: &str) -> Option<JsonValue> {
+    use sqlx::ValueRef as _;
+    let raw = row.try_get_raw(idx).ok()?;
+    if raw.is_null() {
+        return Some(JsonValue::Null);
+    }
+    if !matches!(raw.format(), sqlx::postgres::PgValueFormat::Binary) {
+        return None;
+    }
+    let bytes = raw.as_bytes().ok()?;
+    let word = |at: usize| Some(i32::from_be_bytes(bytes.get(at..at + 4)?.try_into().ok()?));
+    let dimensions = word(0)?;
+    if dimensions == 0 {
+        return Some(JsonValue::Array(Vec::new()));
+    }
+    if dimensions != 1 {
+        return None;
+    }
+    let count = usize::try_from(word(12)?).ok()?;
+    let mut offset = 20;
+    let mut items = Vec::with_capacity(count);
+    for _ in 0..count {
+        let length = word(offset)?;
+        offset += 4;
+        if length < 0 {
+            items.push(JsonValue::Null);
+            continue;
+        }
+        let length = usize::try_from(length).ok()?;
+        items.push(pg_binary_to_json(
+            element,
+            bytes.get(offset..offset + length)?,
+        )?);
+        offset += length;
+    }
+    Some(JsonValue::Array(items))
+}
+
 /// Decode the PostgreSQL binary wire format of an `inet`/`cidr` value to its
 /// canonical text form. Layout: `[family, netmask_bits, is_cidr, addr_len, addr…]`
 /// (family 2 = IPv4, 3 = IPv6). A host `inet` (full mask, non-cidr) renders without
@@ -3196,10 +3388,8 @@ fn pg_inet_to_text(bytes: &[u8]) -> Option<String> {
             32u8,
         ),
         3 if addr_len == 16 => {
-            let segments: Vec<String> = (0..8)
-                .map(|i| format!("{:x}", u16::from_be_bytes([addr[2 * i], addr[2 * i + 1]])))
-                .collect();
-            (segments.join(":"), 128u8)
+            let octets: [u8; 16] = addr.try_into().ok()?;
+            (std::net::Ipv6Addr::from(octets).to_string(), 128u8)
         }
         _ => return None,
     };
@@ -3472,7 +3662,10 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             "CHAR" | "BPCHAR" | "CHARACTER" => row
                 .try_get::<Option<Vec<Option<String>>>, _>(idx)
                 .map(|items| wrap_rendered(items, |value| value.trim_end_matches(' ').to_string())),
-            _ => row.try_get::<Option<Vec<Option<String>>>, _>(idx).map(wrap),
+            _ => row
+                .try_get::<Option<Vec<Option<String>>>, _>(idx)
+                .map(wrap)
+                .or_else(|err| pg_array_to_json(row, idx, element).ok_or(err)),
         }
         .map_err(|err| {
             core_internal_status(
@@ -3514,10 +3707,19 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
         return row
             .try_get::<Option<f64>, _>(idx)
             .or_else(|_| {
-                row.try_get::<Option<f32>, _>(idx)
-                    .map(|value| value.map(f64::from))
+                // Through its shortest text, so REAL 0.1 reads as 0.1 rather than as the
+                // double nearest the float, 0.10000000149011612.
+                row.try_get::<Option<f32>, _>(idx).map(|value| {
+                    value.map(|float| {
+                        if float.is_finite() {
+                            float.to_string().parse::<f64>().unwrap_or(f64::from(float))
+                        } else {
+                            f64::from(float)
+                        }
+                    })
+                })
             })
-            .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
+            .map(|value| value.map(float_to_json).unwrap_or(JsonValue::Null))
             .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     // NUMERIC / DECIMAL: an exact decimal string that keeps the declared scale.
@@ -3681,9 +3883,10 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
                 core_internal_status("read_column", format!("raw column read failed: {err}"))
             })?;
             match format {
-                sqlx::postgres::PgValueFormat::Binary => Ok(JsonValue::String(
-                    bytes.iter().map(|b| format!("{b:02X}")).collect(),
-                )),
+                sqlx::postgres::PgValueFormat::Binary => Ok(pg_binary_to_json(&type_name, bytes)
+                    .unwrap_or_else(|| {
+                        JsonValue::String(bytes.iter().map(|b| format!("{b:02X}")).collect())
+                    })),
                 sqlx::postgres::PgValueFormat::Text => Ok(JsonValue::String(
                     String::from_utf8_lossy(bytes).into_owned(),
                 )),

@@ -39,6 +39,7 @@ async fn run_ops_command_async(command: OpsCommand) -> Result<serde_json::Value,
             tenant,
             dsn,
             changed_by,
+            allow_removal,
         } => {
             if file.trim().is_empty() {
                 return Err("provide -f <policies.json|yaml>".to_string());
@@ -67,6 +68,24 @@ async fn run_ops_command_async(command: OpsCommand) -> Result<serde_json::Value,
             } else {
                 changed_by.trim().to_string()
             };
+            if apply && !allow_removal {
+                let preview = udb::runtime::service::reconcile_authz_policies_offline(
+                    &dsn,
+                    &tenant,
+                    declared.clone(),
+                    false,
+                    &changed_by,
+                )
+                .await?;
+                if !preview.removed.is_empty() {
+                    return Err(format!(
+                        "this would soft-delete {} active rule(s) the file no longer declares, \
+                         and nothing was changed. Check that {file} is current; `udb policy diff` \
+                         lists them. To remove them, add --allow-policy-removal",
+                        preview.removed.len()
+                    ));
+                }
+            }
             let report = udb::runtime::service::reconcile_authz_policies_offline(
                 &dsn,
                 &tenant,

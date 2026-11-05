@@ -5,7 +5,7 @@
 // `UdbCore.unary`/`serverStream`/`bidiStream` shape), so tests can swap in
 // `InMemoryDataPlane` instead of a broker.
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import * as grpc from "@grpc/grpc-js";
 import { SessionFence, receiptFromProto } from "./consistency";
 import { UdbConflictError, UdbNotFoundError, parseRecordJson } from "./entity";
@@ -337,6 +337,15 @@ function writeRecord(schema: MessageSchema | undefined, schemas: ProtoSchemas, m
   return encodeRecord(messageType, decodeRecord(messageType, row, schemas), WriteMode.Insert, schemas);
 }
 
+/** Shapes one write of a {@link Table}. */
+export interface TableWriteOptions {
+  /** Makes the write safe to retry after a lost response: the broker replays the first
+   *  result for the key. Reusing a key with different inputs is refused. */
+  idempotencyKey?: string;
+}
+
+const EMPTY_GUARD = "udb: guarded write requires a non-empty expected precondition";
+
 /** A typed store over one entity. Writes go through the broker's data plane, so
  *  policies, tenancy, projections and events apply as for any write. After a
  *  write, the next reads through the same fence carry that write's read fence. */
@@ -455,46 +464,48 @@ export class Table<T extends Record<string, unknown> = Record<string, unknown>> 
   /** Write the whole row: inserted when its key is new, replaced when it exists.
    *  To change some columns use {@link patch} or {@link updateIf}. NotFoundError
    *  means the broker's scope guard left a conflicting row untouched. */
-  async upsert(row: T): Promise<void> {
-    await this.write("Upsert", row);
+  async upsert(row: T, opts: TableWriteOptions = {}): Promise<void> {
+    await this.write("Upsert", row, opts);
   }
 
   /** Create the row. A primary or unique-key collision throws with code `unique`
    *  and never replaces the existing row. */
-  async insert(row: T): Promise<void> {
-    await this.write("Insert", row);
+  async insert(row: T, opts: TableWriteOptions = {}): Promise<void> {
+    await this.write("Insert", row, opts);
   }
 
-  private async write(rpc: "Upsert" | "Insert", row: T): Promise<void> {
+  private async write(rpc: "Upsert" | "Insert", row: T, opts: TableWriteOptions): Promise<void> {
     const request: Record<string, unknown> = {
       message_type: this.messageType,
       record_json: jsonBytes(writeRecord(this.schema, this.schemas, this.messageType, row)),
     };
     if (rpc === "Upsert" && this.explicitKey) request.conflict_fields = this.explicitKey;
+    if (opts.idempotencyKey) request.idempotency_key = opts.idempotencyKey;
     const response = await this.plane.unary(DATABROKER, rpc, request).catch((err) => {
       throw classify(err);
     });
-    if (String(response?.affected_rows ?? "0") === "0") {
+    if (String(response?.affected_rows ?? "0") === "0" && !response?.was_duplicate) {
       throw new NotFoundError(`${this.messageType}: write target not found in the verified scope`);
     }
     this.fence?.rememberWrite(response);
   }
 
   /** Set some columns of an existing row; NotFoundError when it does not exist. */
-  async patch(key: RowKey, changes: Partial<T>): Promise<void> {
-    await this.update(key, changes);
+  async patch(key: RowKey, changes: Partial<T>, opts: TableWriteOptions = {}): Promise<void> {
+    await this.update(key, changes, undefined, undefined, opts);
   }
 
   /** Set columns only while the row still holds `expected`; ConflictError when
    *  it changed or is gone. */
-  async updateIf(key: RowKey, expected: Partial<T>, changes: Partial<T>): Promise<void> {
-    await this.update(key, changes, expected);
+  async updateIf(key: RowKey, expected: Partial<T>, changes: Partial<T>, opts: TableWriteOptions = {}): Promise<void> {
+    if (Object.keys(expected).length === 0) throw new Error(EMPTY_GUARD);
+    await this.update(key, changes, expected, undefined, opts);
   }
 
   /** Add `deltas` to numeric columns of the row with `key`, atomically on the
    *  broker, with no read-modify-write window. */
-  async increment(key: RowKey, deltas: Readonly<Record<string, number>>): Promise<void> {
-    await this.update(key, undefined, undefined, deltas);
+  async increment(key: RowKey, deltas: Readonly<Record<string, number>>, opts: TableWriteOptions = {}): Promise<void> {
+    await this.update(key, undefined, undefined, deltas, opts);
   }
 
   /** Read the row, apply `change`, and write back only the columns it modified,
@@ -512,7 +523,10 @@ export class Table<T extends Record<string, unknown> = Record<string, unknown>> 
       for (const [column, value] of Object.entries(after)) {
         if (recordToJson(before[column]) !== recordToJson(value)) {
           changes[column] = value;
-          expected[column] = before[column] ?? null;
+          // What the row holds, not how this SDK re-encodes it: NULL, "" and a REAL's digits
+          // do not survive that. A column the read did not return cannot be guarded.
+          const stored = current as Record<string, unknown>;
+          if (column in stored) expected[column] = stored[column];
         }
       }
       if (Object.keys(changes).length === 0) return current;
@@ -537,12 +551,13 @@ export class Table<T extends Record<string, unknown> = Record<string, unknown>> 
     return out;
   }
 
-  async delete(key: RowKey): Promise<void> {
+  async delete(key: RowKey, opts: TableWriteOptions = {}): Promise<void> {
     const response = await this.plane
       .unary(DATABROKER, "Delete", {
         message_type: this.messageType,
         filter: this.keyFilter(key),
         require_affected: 1,
+        ...(opts.idempotencyKey ? { idempotency_key: opts.idempotencyKey } : {}),
       })
       .catch((err) => {
         throw classify(err, this.messageType, key);
@@ -555,12 +570,14 @@ export class Table<T extends Record<string, unknown> = Record<string, unknown>> 
     changes?: Partial<T>,
     expected?: Partial<T>,
     deltas?: Readonly<Record<string, number>>,
+    opts: TableWriteOptions = {},
   ): Promise<void> {
     const request: Record<string, unknown> = {
       message_type: this.messageType,
       filter: this.keyFilter(key),
       require_affected: 1,
     };
+    if (opts.idempotencyKey) request.idempotency_key = opts.idempotencyKey;
     if (changes && Object.keys(changes).length > 0) request.changes = structMap(changes);
     if (expected && Object.keys(expected).length > 0) request.expected = structMap(expected);
     if (deltas) {
@@ -614,6 +631,7 @@ export class TxScope {
   constructor(
     readonly correlationId: string,
     private readonly schemas: ProtoSchemas = protoSchemas(),
+    private readonly replayKey?: string,
   ) {}
 
   private fail(err: unknown): never {
@@ -628,7 +646,7 @@ export class TxScope {
     } catch (err) {
       this.fail(err);
     }
-    this.mutations.push({ operation, message_type: messageType, record_json: jsonBytes(record) });
+    this.push({ operation, message_type: messageType, record_json: jsonBytes(record) });
   }
 
   /** Write the whole row in the transaction. */
@@ -650,6 +668,7 @@ export class TxScope {
   /** Set columns if the stored row still holds `expected`; otherwise the whole
    *  transaction fails with code `conflict`. */
   updateIf(messageType: string, key: RowKey, expected: Record<string, unknown>, changes: Record<string, unknown>): void {
+    if (Object.keys(expected).length === 0) this.fail(new Error(EMPTY_GUARD));
     this.update(messageType, key, changes, expected);
   }
 
@@ -662,7 +681,15 @@ export class TxScope {
       const schema = this.schemas.message(messageType);
       const message = decodeRecord(messageType, next, this.schemas);
       const record = encodeRecord(messageType, message, WriteMode.Insert, this.schemas);
-      for (const column of schema.primaryKeys) key[column] = record[column];
+      if (Object.keys(expected).length === 0) throw new Error(EMPTY_GUARD);
+      if (schema.primaryKeys.length === 0) throw new Error(`udb: ${messageType} declares no primary key`);
+      for (const column of schema.primaryKeys) {
+        const value = record[column];
+        if (value === undefined || value === null || value === "") {
+          throw new Error(`udb: ${messageType} has no value for primary-key column ${column}`);
+        }
+        key[column] = value;
+      }
       changes = encodeRecord(messageType, message, WriteMode.Update, this.schemas);
     } catch (err) {
       this.fail(err);
@@ -672,14 +699,19 @@ export class TxScope {
 
   /** Remove the row with `key` in the transaction. */
   delete(messageType: string, key: RowKey): void {
-    this.mutations.push({ operation: "delete", message_type: messageType, filter: structMap(key) });
+    this.push({ operation: "delete", message_type: messageType, filter: structMap(key), require_affected: 1 });
   }
 
   private update(messageType: string, key: RowKey, changes: Record<string, unknown>, expected?: Record<string, unknown>): void {
-    const mutation: Record<string, unknown> = { operation: "update", message_type: messageType, filter: structMap(key) };
+    const mutation: Record<string, unknown> = {
+      operation: "update",
+      message_type: messageType,
+      filter: structMap(key),
+      require_affected: 1,
+    };
     if (Object.keys(changes).length > 0) mutation.changes = structMap(changes);
     if (expected && Object.keys(expected).length > 0) mutation.expected = structMap(expected);
-    this.mutations.push(mutation);
+    this.push(mutation);
   }
 
   /** Queue an event on the outbox, committed with the transaction. The topic is the
@@ -716,6 +748,24 @@ export class TxScope {
     this.enqueue(messageType, topic, eventType, document as string, payload);
   }
 
+  /** A replay key on each write of a keyed transaction, so a retry repeats none of them. */
+  private push(mutation: Record<string, unknown>): void {
+    if (this.replayKey && ["upsert", "update", "delete"].includes(String(mutation.operation))) {
+      mutation.idempotency_key = `${this.replayKey}:${this.mutations.length}`;
+    }
+    this.mutations.push(mutation);
+  }
+
+  /** Random, or stable across retries of a keyed transaction. */
+  private eventId(): string {
+    if (!this.replayKey) return randomUUID();
+    const sum = createHash("sha256").update(`${this.replayKey}:${this.mutations.length}`).digest();
+    sum[6] = (sum[6] & 0x0f) | 0x50;
+    sum[8] = (sum[8] & 0x3f) | 0x80;
+    const hex = sum.subarray(0, 16).toString("hex");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
   private enqueue(messageType: string, topic: string, eventType: string, document: string, payload: Record<string, unknown>): void {
     this.mutations.push({
       operation: "enqueue_outbox_event",
@@ -723,7 +773,7 @@ export class TxScope {
       collection: topic,
       object_key: document,
       payload: {
-        event_id: randomUUID(),
+        event_id: this.eventId(),
         event_type: eventType,
         correlation_id: this.correlationId,
         document_id: document,
@@ -742,6 +792,11 @@ export interface TxOptions {
   fence?: SessionFence;
   schemas?: ProtoSchemas;
   call?: CallOptions;
+  /** Makes the transaction safe to retry after a lost response: each write gets a key
+   *  derived from this, so the broker replays it, and each event a stable id for consumers
+   *  to deduplicate. `body` must make the same writes on a retry. `insert` has no replay
+   *  form; use `upsert` in a retried transaction. */
+  replayKey?: string;
 }
 
 /** The error a rolled-back status frame describes. The terminal trailer stays
@@ -768,7 +823,7 @@ export async function tx(
   if (!plane.bidiStream) throw new Error("udb: this transport does not support transactions");
   const txId = randomUUID();
   const correlationId = opts.correlationId || plane.opts?.meta?.correlationId || txId;
-  const scope = new TxScope(correlationId, schemasOf(plane, opts.schemas));
+  const scope = new TxScope(correlationId, schemasOf(plane, opts.schemas), opts.replayKey);
   await body(scope);
   if (scope.failure !== undefined) throw scope.failure;
   if (scope.mutations.length === 0) return;
@@ -788,9 +843,10 @@ export async function tx(
     });
     // The trailer carries the typed mutation error; an ERROR data frame must
     // not reject first and hide the Conflict/Unique classification.
-    stream.on("error", (err: unknown) => reject((err as any)?.udb ?? err));
+    // Once the broker said it committed, a broken stream loses nothing.
+    stream.on("error", (err: unknown) => (committed ? resolve() : reject(classify((err as any)?.udb ?? err))));
     stream.on("end", () => {
-      if (refused) reject(refused);
+      if (refused) reject(classify(refused));
       else if (!committed) reject(new Error(`udb: transaction ${txId} ended without a commit acknowledgement`));
       else resolve();
     });

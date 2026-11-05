@@ -3,7 +3,16 @@ use super::*;
 #[test]
 fn plan_sign_and_seal_are_commands_and_plain_plan_is_unchanged() {
     let args = [
-        "plan", "sign", "--plan", "p.json", "--approver", "dba", "--reason", "ok", "--out", "s.json",
+        "plan",
+        "sign",
+        "--plan",
+        "p.json",
+        "--approver",
+        "dba",
+        "--reason",
+        "ok",
+        "--out",
+        "s.json",
     ]
     .map(str::to_string);
     assert!(matches!(
@@ -12,7 +21,15 @@ fn plan_sign_and_seal_are_commands_and_plain_plan_is_unchanged() {
             if plan == "p.json" && approver == "dba" && reason == "ok" && out == "s.json"
     ));
     let args = [
-        "plan", "seal", "--plan", "p.json", "--signature", "a.json", "--signature", "b.json", "--out",
+        "plan",
+        "seal",
+        "--plan",
+        "p.json",
+        "--signature",
+        "a.json",
+        "--signature",
+        "b.json",
+        "--out",
         "o.json",
     ]
     .map(str::to_string);
@@ -250,6 +267,7 @@ fn parse_args_reads_every_udb_up_flag() {
             dry_run: true,
             yes: true,
             allow_transfer: true,
+            allow_policy_removal: false,
             json: true,
         }
     );

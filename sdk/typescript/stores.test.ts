@@ -102,7 +102,7 @@ test("tx requires a commit acknowledgement and preserves the typed failure trail
     },
   }, (scope) => scope.delete("acme.v1.Order", { id: "o1" }));
   await assert.rejects(run([{ state: "TX_STATE_OPEN" }]), /without a commit acknowledgement/);
-  await assert.rejects(run([{ state: "TX_STATE_ERROR", message: "CAS failed" }], { udb: conflict }), (err) => err === conflict && codeOf(err) === ErrorCode.Conflict);
+  await assert.rejects(run([{ state: "TX_STATE_ERROR", message: "CAS failed" }], { udb: conflict }), (err) => codeOf(err) === ErrorCode.Conflict);
   await assert.rejects(run([{ state: "TX_STATE_ERROR", message: "opaque operator text", code: 9,
     error_detail: { reason: "UDB_CAS_CONFLICT" } }]), (err) => codeOf(err) === ErrorCode.Conflict);
   await run([{ state: "TX_STATE_COMMITTED" }]);

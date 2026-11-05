@@ -27,7 +27,7 @@ type recordingBroker struct {
 func (b *recordingBroker) Upsert(_ context.Context, in *entityv1.UpsertRequest, _ ...grpc.CallOption) (*entityv1.MutationResponse, error) {
 	*b.seq = append(*b.seq, "Upsert")
 	b.lastUpsert = in
-	return &entityv1.MutationResponse{RecordJson: []byte(`{"record_id":"r1","n":7}`)}, nil
+	return &entityv1.MutationResponse{AffectedRows: 1, RecordJson: []byte(`{"record_id":"r1","n":7}`)}, nil
 }
 
 func (b *recordingBroker) Select(_ context.Context, in *entityv1.SelectRequest, _ ...grpc.CallOption) (*entityv1.RecordSet, error) {

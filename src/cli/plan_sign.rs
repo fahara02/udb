@@ -12,9 +12,8 @@ use udb::control::plan_approval::{
 use super::catalog_transition::{read_json, write_new_json};
 
 fn read_plan(path: &str) -> Result<ExportedPlan, String> {
-    serde_json::from_value(read_json(path)?).map_err(|err| {
-        format!("{path} is not a plan from `udb plan --emit-approval-plan`: {err}")
-    })
+    serde_json::from_value(read_json(path)?)
+        .map_err(|err| format!("{path} is not a plan from `udb plan --emit-approval-plan`: {err}"))
 }
 
 fn now_unix_ms() -> i64 {
@@ -93,7 +92,11 @@ pub(crate) fn run_sign(
 }
 
 /// `udb plan seal`: check the signatures and write the plan `serve` accepts.
-pub(crate) fn run_seal(plan_path: &str, signature_paths: &[String], out: &str) -> Result<(), String> {
+pub(crate) fn run_seal(
+    plan_path: &str,
+    signature_paths: &[String],
+    out: &str,
+) -> Result<(), String> {
     let plan = read_plan(plan_path)?;
     let mut signatures = Vec::with_capacity(signature_paths.len());
     for path in signature_paths {

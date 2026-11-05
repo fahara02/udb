@@ -181,8 +181,9 @@ pub(crate) fn autofill_record(
             Some((key, JsonValue::Null)) => {
                 map.insert(key, JsonValue::String(value));
             }
-            Some((_, JsonValue::String(given)))
-                if tenant_column.as_deref() == Some(column) && given != value =>
+            Some((_, given))
+                if tenant_column.as_deref() == Some(column)
+                    && given.as_str() != Some(value.as_str()) =>
             {
                 return Err(tenant_mismatch(column));
             }

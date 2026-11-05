@@ -65,6 +65,10 @@ fn postgres_json_i64(field: &str, value: &JsonValue) -> Result<i64, tonic::Statu
         .or_else(|| value.as_str()?.parse().ok())
         .or_else(|| {
             let number = value.as_f64()?;
+            // From 2^53 up a whole double may already be a rounded value.
+            if number.abs() >= 9_007_199_254_740_992.0 {
+                return None;
+            }
             let truncated = number as i64;
             (truncated as f64 == number).then_some(truncated)
         })
@@ -141,7 +145,21 @@ fn postgres_is_integer_type(sql_type: &str) -> bool {
 fn postgres_type_needs_sql_cast(sql_type: &str) -> bool {
     matches!(
         postgres_base_sql_type(sql_type),
-        "GEOGRAPHY" | "GEOMETRY" | "INET" | "CIDR" | "MACADDR" | "MACADDR8"
+        "GEOGRAPHY"
+            | "GEOMETRY"
+            | "INET"
+            | "CIDR"
+            | "MACADDR"
+            | "MACADDR8"
+            | "TIME"
+            | "TIMETZ"
+            | "INTERVAL"
+            | "MONEY"
+            | "BIT"
+            | "VARBIT"
+            | "TSVECTOR"
+            | "TSQUERY"
+            | "XML"
     )
 }
 
@@ -382,8 +400,9 @@ pub(crate) fn build_join_fusion_sql(
         sql.push_str(" WHERE ");
         sql.push_str(&predicates.join(" AND "));
     }
+    // One row past the limit tells the caller there is more.
     if request.limit > 0 {
-        sql.push_str(&format!(" LIMIT {}", request.limit));
+        sql.push_str(&format!(" LIMIT {}", i64::from(request.limit) + 1));
     }
     // Mask set in this plan's ALIASED output names. Computed over every joined
     // column, not just the projected ones — a name absent from the row simply
@@ -398,6 +417,21 @@ pub(crate) fn build_join_fusion_sql(
                 .map(move |column| format!("{}__{}", table.message_name, column.column_name))
         })
         .collect::<Vec<_>>();
+    // A requested field is aliased as the caller spelled it, so its mask must be too.
+    let mut masked_columns = masked_columns;
+    let message_names = tables
+        .iter()
+        .map(|table| table.message_name.clone())
+        .collect::<Vec<_>>();
+    for field in &request.fields {
+        let (table_idx, column_name) = parse_join_field(field, &message_names)?;
+        if tables[table_idx].columns.iter().any(|column| {
+            column.column_name == column_name
+                && (column.security.is_pii || column.security.mask_in_logs)
+        }) {
+            masked_columns.push(field.replace('.', "__"));
+        }
+    }
 
     Ok(JoinFusionPlan {
         sql,
@@ -465,6 +499,17 @@ fn join_select_list(
                     "fields",
                     "must reference columns from the joined tables",
                     format!("unknown join selected field {field}"),
+                ));
+            }
+            // A join decodes aliased columns with no table to decrypt them against.
+            if tables[table_idx].columns.iter().any(|column| {
+                column.column_name == column_name
+                    && crate::runtime::executor_utils::is_encrypted_column(column)
+            }) {
+                return Err(postgres_invalid_field(
+                    "fields",
+                    "a join cannot read an encrypted column; read it from its own table",
+                    format!("join selected encrypted field {field}"),
                 ));
             }
             Ok(format!(
@@ -752,7 +797,16 @@ pub(crate) fn bind_one<'q>(
             return Ok(query.bind(arr));
         }
         if sql_type.contains("BOOL") {
-            let arr: Vec<bool> = items.iter().map(|i| i.as_bool().unwrap_or(false)).collect();
+            let mut arr: Vec<bool> = Vec::with_capacity(items.len());
+            for item in items {
+                arr.push(item.as_bool().ok_or_else(|| {
+                    postgres_invalid_field(
+                        field,
+                        "a boolean array takes only true or false",
+                        format!("expected a boolean element, got {item}"),
+                    )
+                })?);
+            }
             return Ok(query.bind(arr));
         }
         // text / varchar / enum / timestamp and friends: a text[] compares
@@ -779,7 +833,6 @@ pub(crate) fn bind_one<'q>(
     if sql_type == "UUID" {
         return match value {
             JsonValue::Null => Ok(query.bind(Option::<Uuid>::None)),
-            JsonValue::String(raw) if raw.trim().is_empty() => Ok(query.bind(Option::<Uuid>::None)),
             JsonValue::String(raw) => {
                 raw.parse::<Uuid>()
                     .map(|uuid| query.bind(uuid))
@@ -801,9 +854,6 @@ pub(crate) fn bind_one<'q>(
     if sql_type.contains("TIMESTAMPTZ") || sql_type.contains("TIMESTAMP WITH TIME ZONE") {
         return match value {
             JsonValue::Null => Ok(query.bind(Option::<chrono::DateTime<chrono::Utc>>::None)),
-            JsonValue::String(raw) if raw.trim().is_empty() => {
-                Ok(query.bind(Option::<chrono::DateTime<chrono::Utc>>::None))
-            }
             JsonValue::String(raw) => chrono::DateTime::parse_from_rfc3339(raw)
                 .map(|dt| query.bind(dt.with_timezone(&chrono::Utc)))
                 .map_err(|err| {
@@ -823,9 +873,6 @@ pub(crate) fn bind_one<'q>(
     if sql_type.contains("TIMESTAMP") {
         return match value {
             JsonValue::Null => Ok(query.bind(Option::<chrono::NaiveDateTime>::None)),
-            JsonValue::String(raw) if raw.trim().is_empty() => {
-                Ok(query.bind(Option::<chrono::NaiveDateTime>::None))
-            }
             JsonValue::String(raw) => parse_naive_datetime(raw)
                 .map(|dt| query.bind(dt))
                 .ok_or_else(|| {
@@ -845,9 +892,6 @@ pub(crate) fn bind_one<'q>(
     if sql_type.contains("DATE") {
         return match value {
             JsonValue::Null => Ok(query.bind(Option::<chrono::NaiveDate>::None)),
-            JsonValue::String(raw) if raw.trim().is_empty() => {
-                Ok(query.bind(Option::<chrono::NaiveDate>::None))
-            }
             JsonValue::String(raw) => raw
                 .parse::<chrono::NaiveDate>()
                 .map(|date| query.bind(date))
@@ -874,9 +918,11 @@ pub(crate) fn bind_one<'q>(
     if postgres_type_needs_sql_cast(&sql_type) {
         return match value {
             JsonValue::Null => Ok(query.bind(Option::<String>::None)),
-            JsonValue::String(raw) if raw.trim().is_empty() => {
-                Ok(query.bind(Option::<String>::None))
-            }
+            JsonValue::String(raw) if raw.trim().is_empty() => Err(postgres_invalid_field(
+                field,
+                "send a value, or null to clear the column",
+                "this column cannot store an empty string",
+            )),
             JsonValue::String(raw) => Ok(query.bind(strip_nul(raw))),
             _ => Err(postgres_invalid_field(
                 field,
@@ -908,7 +954,13 @@ pub(crate) fn bind_one<'q>(
         return Ok(query.bind(Option::<String>::None));
     }
     if sql_type.contains("BOOL") {
-        return Ok(query.bind(value.as_bool().unwrap_or(false)));
+        return value.as_bool().map(|flag| query.bind(flag)).ok_or_else(|| {
+            postgres_invalid_field(
+                field,
+                "a boolean column takes true or false",
+                format!("expected a boolean, got {value}"),
+            )
+        });
     }
     if postgres_is_integer_type(&sql_type) {
         return Ok(query.bind(postgres_json_i64(field, value)?));
@@ -1044,6 +1096,9 @@ fn collect_filter_values(value: &JsonValue, out: &mut Vec<JsonValue>) {
         JsonValue::Object(map) => {
             for (key, nested) in map {
                 let normalized = key.to_ascii_lowercase();
+                if matches!(normalized.as_str(), "is_null" | "not_null" | "is_not_null") {
+                    continue;
+                }
                 if matches!(
                     normalized.as_str(),
                     "$and" | "and" | "$or" | "or" | "$not" | "not"
@@ -1060,7 +1115,10 @@ fn collect_filter_values(value: &JsonValue, out: &mut Vec<JsonValue>) {
                     // `IS NULL` / `IS NOT NULL`, which bind no SQL parameter. Pushing
                     // a value for them would desync the placeholder↔value count and
                     // make `bind_values` fail (or bind onto the wrong $N).
-                    if !matches!(normalized.as_str(), "$is_null" | "$not_null") {
+                    if !matches!(
+                        normalized.as_str(),
+                        "$is_null" | "$not_null" | "$is_not_null"
+                    ) {
                         out.push(nested.clone());
                     }
                 } else if let JsonValue::Object(_) = nested {
@@ -1170,13 +1228,16 @@ mod tests {
             json!("0101000020e6100000fc1873d7129a564080b74082e2c73740"),
             json!("SRID=4326;POINT(90.40725 23.7995375)"),
             json!(null),
-            json!(""),
         ] {
             assert!(
                 bind_one(sqlx::query("SELECT $1"), Some(&geography), &value).is_ok(),
                 "geography must bind {value}"
             );
         }
+        assert!(
+            bind_one(sqlx::query("SELECT $1"), Some(&geography), &json!("")).is_err(),
+            "an empty string is no geography and must not become NULL"
+        );
         let err = expect_status(bind_one(
             sqlx::query("SELECT $1"),
             Some(&geography),
@@ -1269,12 +1330,11 @@ mod tests {
     fn cast_bound_columns_bind_null_as_text_not_as_a_typed_null() {
         let mut inet = col("last_seen_ip");
         inet.sql_type = "INET".to_string();
-        for value in [json!(null), json!("")] {
-            assert!(
-                bind_one(sqlx::query("SELECT $1::INET"), Some(&inet), &value).is_ok(),
-                "inet must bind {value} as a castable text null"
-            );
-        }
+        assert!(bind_one(sqlx::query("SELECT $1::INET"), Some(&inet), &json!(null)).is_ok());
+        assert!(
+            bind_one(sqlx::query("SELECT $1::INET"), Some(&inet), &json!("")).is_err(),
+            "an empty string is no inet and must not become NULL"
+        );
     }
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status

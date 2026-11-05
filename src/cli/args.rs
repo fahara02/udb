@@ -680,6 +680,8 @@ pub(crate) enum OpsCommand {
         tenant: String,
         dsn: String,
         changed_by: String,
+        /// `--allow-policy-removal`: soft-delete active rules the file no longer declares.
+        allow_removal: bool,
     },
     /// `udb identity diff|apply -f <identities.(yaml|json)> [--tenant <uuid>]
     ///   [--allow-transfer]`
@@ -1184,6 +1186,7 @@ fn parse_ops_subcommand(args: &[String]) -> Option<(OpsCommand, usize)> {
             tenant: flag_value("--tenant").unwrap_or_default(),
             dsn: flag_value("--dsn").unwrap_or_default(),
             changed_by: flag_value("--by").unwrap_or_default(),
+            allow_removal: has_flag("--allow-policy-removal"),
         },
         (Some("identity"), Some(verb @ ("diff" | "apply"))) => OpsCommand::Identity {
             apply: verb == "apply",
@@ -1226,6 +1229,7 @@ fn parse_ops_subcommand(args: &[String]) -> Option<(OpsCommand, usize)> {
             dry_run: has_flag("--dry-run"),
             yes: has_flag("--yes"),
             allow_transfer: has_flag("--allow-transfer"),
+            allow_policy_removal: has_flag("--allow-policy-removal"),
             json: has_flag("--json"),
         }),
         (Some("subject"), Some("purge")) => OpsCommand::SubjectPurge {
@@ -1492,7 +1496,9 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     reason,
                     out,
                 },
-                _ => invalid_usage("plan sign: --plan, --approver, --reason and --out are required"),
+                _ => {
+                    invalid_usage("plan sign: --plan, --approver, --reason and --out are required")
+                }
             }
         }
         Some("plan") if args.get(1).map(String::as_str) == Some("seal") => {
@@ -2075,6 +2081,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                         | "--dry-run"
                         | "--persist"
                         | "--live"
+                        | "--allow-policy-removal"
                         | "--all"
                         | "--allow-transfer"
                         | "--consumer"

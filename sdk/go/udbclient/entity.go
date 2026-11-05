@@ -179,6 +179,10 @@ func (e *Entity) Upsert(ctx context.Context, record any, opts ...UpsertOption) (
 	if err != nil {
 		return nil, err
 	}
+	// The broker left the row alone because its conflict target was outside the scope.
+	if resp.GetAffectedRows() == 0 && !resp.GetWasDuplicate() {
+		return nil, ErrNotFound
+	}
 	out := &UpsertResult{Response: resp, WasDuplicate: resp.GetWasDuplicate()}
 	if o.returnRecord {
 		if rb := resp.GetRecordJson(); len(rb) > 0 {
@@ -194,6 +198,9 @@ func (e *Entity) Upsert(ctx context.Context, record any, opts ...UpsertOption) (
 
 // Select issues exactly ONE Select RPC for the bound FQN with a Struct filter
 // built from where, and decodes the RecordSet rows into []map[string]any.
+//
+// A response with more rows returns the page and ErrMoreRows, so a capped read is never
+// taken for the whole answer; walk with SelectPage.
 func (e *Entity) Select(ctx context.Context, where map[string]any) ([]map[string]any, error) {
 	filter, err := structFilter(where)
 	if err != nil {
@@ -207,8 +214,18 @@ func (e *Entity) Select(ctx context.Context, where map[string]any) ([]map[string
 	if err != nil {
 		return nil, err
 	}
-	return decodeRecordSet(rs)
+	rows, err := decodeRecordSet(rs)
+	if err != nil {
+		return nil, err
+	}
+	if rs.GetHasMore() {
+		return rows, ErrMoreRows
+	}
+	return rows, nil
 }
+
+// ErrMoreRows reports that Entity.Select returned only the first page of its matches.
+var ErrMoreRows = errors.New("udb: more rows match than one page; walk them with SelectPage")
 
 // SortKey is one ordering key for a paged Select.
 type SortKey struct {
@@ -287,13 +304,20 @@ func (e *Entity) SelectPage(ctx context.Context, where map[string]any, opts Page
 // DeleteOption configures Delete.
 type DeleteOption func(*deleteOptions)
 
+// WithDeleteRequireAffected fails the delete, changing nothing, unless it removes exactly
+// this many rows. Set 1 so a delete of a missing row is an error.
+func WithDeleteRequireAffected(rows uint32) DeleteOption {
+	return func(o *deleteOptions) { o.requireAffected = rows }
+}
+
 type deleteOptions struct {
 	expected map[string]any
 	// expectedSet records that WithDeleteExpected was applied — i.e. a guarded
 	// (CAS) Delete was requested. It is distinct from expected being nil/empty:
 	// that combination is the empty-CAS footgun errEmptyCAS rejects.
-	expectedSet    bool
-	idempotencyKey string
+	expectedSet     bool
+	idempotencyKey  string
+	requireAffected uint32
 }
 
 // WithDeleteExpected makes the Delete a compare-and-swap (G-2): the row the filter
@@ -357,20 +381,28 @@ func (e *Entity) Delete(ctx context.Context, where map[string]any, opts ...Delet
 		Filter:         filter,
 		Expected:       expected,
 		IdempotencyKey: o.idempotencyKey,
+		RequireAffected: o.requireAffected,
 	})
 }
 
 // UpdateOption configures Update / Increment.
 type UpdateOption func(*updateOptions)
 
+// WithUpdateRequireAffected fails the update, changing nothing, unless it changes exactly
+// this many rows. Set 1 so an update of a missing row is an error.
+func WithUpdateRequireAffected(rows uint32) UpdateOption {
+	return func(o *updateOptions) { o.requireAffected = rows }
+}
+
 type updateOptions struct {
 	expected map[string]any
 	// expectedSet records that WithUpdateExpected was applied — i.e. a guarded
 	// (CAS) Update/Increment was requested. Distinct from expected being
 	// nil/empty, which errEmptyCAS rejects.
-	expectedSet    bool
-	idempotencyKey string
-	returnRecord   bool
+	expectedSet     bool
+	idempotencyKey  string
+	returnRecord    bool
+	requireAffected uint32
 }
 
 // WithUpdateExpected makes the Update a compare-and-swap: every field -> value
@@ -464,6 +496,7 @@ func (e *Entity) update(ctx context.Context, where map[string]any, changes map[s
 		Increments:     increments,
 		IdempotencyKey: o.idempotencyKey,
 		ReturnRecord:   o.returnRecord,
+		RequireAffected: o.requireAffected,
 	})
 }
 

@@ -78,6 +78,10 @@ def _json_safe(value: Any) -> Any:
         return [_json_safe(item) for item in value]
     if isinstance(value, datetime):
         return format_timestamp(value)
+    # A Struct number is a double: beyond 2^53 an integer travels as its decimal string,
+    # which the broker reads back exactly.
+    if isinstance(value, int) and not isinstance(value, bool) and abs(value) >= 2**53:
+        return str(value)
     return value
 
 

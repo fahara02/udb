@@ -882,7 +882,8 @@ impl DataBrokerRuntime {
         // P-1: keyset pagination engages only for an EXPLICITLY bounded read
         // (`limit > 0` BEFORE the default-limit clamp below), so unbounded selects
         // are unchanged. `page_token` continues an existing walk.
-        let paginate = request.limit > 0;
+        // A page token continues a walk whatever the limit, or the caller loops on page 1.
+        let paginate = request.limit > 0 || !request.page_token.trim().is_empty();
         let page_token = request.page_token.trim().to_string();
         // GAP 16: Prevent unbounded SELECT queries that return millions of rows.
         let default_limit = if self.config.default_limit > 0 {
@@ -936,11 +937,7 @@ impl DataBrokerRuntime {
         // the rewrite cannot express).
         if let Ok(table_for_encryption) = resolve_table_for_message(manifest, &request.message_type)
         {
-            filter = self.rewrite_encrypted_equality_filters(
-                table_for_encryption,
-                &filter,
-                &context.tenant_id,
-            );
+            filter = self.prepare_filter(table_for_encryption, &filter, &context.tenant_id)?;
         }
         let mut fields = request.fields.clone();
         // #5: an include_revision read must carry every primary-key column in its
@@ -988,6 +985,26 @@ impl DataBrokerRuntime {
                         )
                     })
                     .collect();
+                // A cursor is built from the row a client receives, so a key the client
+                // sees masked or as ciphertext cannot continue a walk.
+                let can_read_pii = context.scopes.iter().any(|scope| scope == "udb:pii:read");
+                for (column, _) in &resolved_sort {
+                    let unreadable = table_for_keys.columns.iter().any(|candidate| {
+                        candidate.column_name == *column
+                            && (crate::runtime::executor_utils::is_encrypted_column(candidate)
+                                || ((candidate.security.is_pii || candidate.security.mask_in_logs)
+                                    && !can_read_pii))
+                    });
+                    if unreadable {
+                        return Err(setup_data_invalid_field(
+                            "sort",
+                            "a paged read cannot sort by an encrypted or masked column",
+                            format!(
+                                "a paged read cannot sort by encrypted or masked column {column}"
+                            ),
+                        ));
+                    }
+                }
                 // NULL-aware keyset: a NOT NULL / primary-key sort column needs no
                 // NULL branches in the cursor predicate.
                 let keys = pagination::with_nullability(
@@ -1113,7 +1130,10 @@ impl DataBrokerRuntime {
         } else {
             Some(cache_key(
                 "select",
-                &request.message_type,
+                &crate::runtime::executor_utils::cache_message_identity(
+                    manifest,
+                    &request.message_type,
+                ),
                 &context,
                 &manifest.checksum_sha256,
                 &filter,
@@ -1228,10 +1248,7 @@ impl DataBrokerRuntime {
             .fetch_all(conn.connection_mut()?)
             .await
             .map_err(|err| {
-                setup_data_internal_status(
-                    "select_query",
-                    format!("PostgreSQL select failed: {err}"),
-                )
+                crate::runtime::executor_utils::sqlx_error_to_status("select_query", &err)
             });
         // include_total: COUNT the same scoped filter (no page cursor, no sort,
         // no limit) on the same connection, under the same RLS settings.
@@ -1367,6 +1384,16 @@ impl DataBrokerRuntime {
         ),
         tonic::Status,
     > {
+        if !request.sort.is_empty()
+            || !request.page_token.trim().is_empty()
+            || request.include_total
+        {
+            return Err(setup_data_invalid_field(
+                "message_type",
+                "a join read has no sort, page token or total",
+                "a join read has no sort, page token or total; read one table to use them",
+            ));
+        }
         let plan = build_join_fusion_sql(manifest, &request, &context, &filter)?;
         let mut query = sqlx::query(&plan.sql);
         for (column, value) in &plan.bindings {
@@ -1408,16 +1435,18 @@ impl DataBrokerRuntime {
             .fetch_all(conn.connection_mut()?)
             .await
             .map_err(|err| {
-                setup_data_internal_status(
-                    "join_query",
-                    format!("PostgreSQL join select failed: {err}"),
-                )
+                crate::runtime::executor_utils::sqlx_error_to_status("join_query", &err)
             });
         let reset_result = conn.reset_context(&context).await;
         drop(conn);
-        let rows = rows_result?;
+        let mut rows = rows_result?;
         reset_result?;
-        let record_set = rows_to_record_set(
+        let limit = usize::try_from(request.limit).unwrap_or_default();
+        let has_more = limit > 0 && rows.len() > limit;
+        if has_more {
+            rows.truncate(limit);
+        }
+        let mut record_set = rows_to_record_set(
             rows,
             None,
             // Fused rows carry `{Message}__{column}` aliases, so the plan hands
@@ -1428,6 +1457,7 @@ impl DataBrokerRuntime {
             self.encryption.as_ref(),
             &self.encryption_metrics,
         )?;
+        record_set.has_more = has_more;
         Ok((record_set, stale_warning))
     }
 
@@ -1645,9 +1675,13 @@ impl DataBrokerRuntime {
         // Refuse planted ciphertext / caller-chosen blind-index tokens before
         // the encryptor (which skips already-encrypted-looking values) sees them.
         crate::runtime::executor_utils::validate_client_encrypted_write(&table.columns, &record)?;
-        // Only the verdict is used: the string stays as sent, so PostgreSQL parses the
-        // caller's exact text and keeps number precision that a parsed value would lose.
-        crate::runtime::executor_utils::json_column_strings_parsed(table, &record)?;
+        // A JSON string stays as sent, so PostgreSQL parses the caller's exact text and
+        // keeps number precision that a parsed value would lose.
+        let record = crate::runtime::executor_utils::canonical_record(
+            table,
+            &record,
+            crate::runtime::executor_utils::JsonText::AsSent,
+        )?;
         // GO-005 (compare-and-swap): when the caller asserts an `expected`
         // column=value precondition, evaluate it in THIS write tx — after the
         // tenant/RLS GUCs are installed (line above) and holding a row lock — so
@@ -1669,7 +1703,25 @@ impl DataBrokerRuntime {
                 ..plan_request.clone()
             },
         );
-        let values = record_values(&encrypted_record, &plan.parameter_columns)?;
+        // The planner path binds JSON itself, and its columns must include what the
+        // encryptor added: the blind index is not in the plaintext record.
+        let planner_record = if bridged.is_none() {
+            crate::runtime::executor_utils::json_column_strings_parsed(table, &encrypted_record)?
+        } else {
+            encrypted_record.clone()
+        };
+        let plan = if bridged.is_none() {
+            build_upsert_plan(
+                manifest,
+                &UpsertPlanRequest {
+                    record: planner_record.clone(),
+                    ..plan_request.clone()
+                },
+            )
+        } else {
+            plan
+        };
+        let values = record_values(&planner_record, &plan.parameter_columns)?;
         let query = match bridged.as_ref() {
             Some(stmt) => bind_typed_generic_pg_params(
                 sqlx::query(&stmt.sql),
@@ -1781,17 +1833,51 @@ impl DataBrokerRuntime {
             // the response. Keyed by the (normalized, column-keyed) primary key of
             // the record we just wrote — the exact tuple a later conditional
             // Update/Delete or an include_revision Select will look up.
-            let pk_values = record_values(&record, &table.primary_key)?;
-            let revision = bump_row_revision_in_tx(
-                &mut tx,
-                &crate::runtime::system::SystemCatalogConfig::current(),
-                &context.tenant_id,
-                &context.project_id,
-                &request.message_type,
-                &pk_values,
-            )
-            .await?;
-            row_revision = revision.to_string();
+            let mut pk_values = record_values(&record, &table.primary_key)?;
+            // A database-assigned key, or a conflict on another unique key: the record does
+            // not name the row, so find it. A brand-new row without a key has no revision
+            // yet; bumping an all-NULL key would share one revision across every such row.
+            if pk_values.iter().any(JsonValue::is_null) && !request.conflict_fields.is_empty() {
+                let conflict_columns: Vec<String> = request
+                    .conflict_fields
+                    .iter()
+                    .map(|field| {
+                        crate::planning::broker::resolve_column(
+                            &crate::planning::broker::column_resolver(table),
+                            field,
+                        )
+                    })
+                    .collect();
+                if let Ok(conflict_values) = record_values(&record, &conflict_columns)
+                    && let Some(row) = self
+                        .read_locked_row_json(
+                            &mut tx,
+                            table,
+                            &conflict_columns,
+                            &conflict_values,
+                            &context,
+                        )
+                        .await?
+                {
+                    pk_values = table
+                        .primary_key
+                        .iter()
+                        .map(|column| row.get(column).cloned().unwrap_or(JsonValue::Null))
+                        .collect();
+                }
+            }
+            if !pk_values.is_empty() && !pk_values.iter().any(JsonValue::is_null) {
+                let revision = bump_row_revision_in_tx(
+                    &mut tx,
+                    &crate::runtime::system::SystemCatalogConfig::current(),
+                    &context.tenant_id,
+                    &context.project_id,
+                    &request.message_type,
+                    &pk_values,
+                )
+                .await?;
+                row_revision = revision.to_string();
+            }
         }
         // NW1-3e: route through SystemStores trait.
         let receipt = match self.default_system_stores_clone() {
@@ -1857,7 +1943,13 @@ impl DataBrokerRuntime {
         })?;
 
         let _ = self
-            .cache_delete_pattern(&cache_invalidation_pattern("select", &request.message_type))
+            .cache_delete_pattern(&cache_invalidation_pattern(
+                "select",
+                &crate::runtime::executor_utils::cache_message_identity(
+                    manifest,
+                    &request.message_type,
+                ),
+            ))
             .await;
         // F-1: audit the committed mutation to the configured sink — but only when
         // it changed something; a 0-affected write must never be recorded as a
@@ -2141,8 +2233,7 @@ impl DataBrokerRuntime {
                 .as_ref()
                 .map(struct_to_json)
                 .unwrap_or(JsonValue::Null);
-            let filter =
-                self.rewrite_encrypted_equality_filters(table, &filter, &context.tenant_id);
+            let filter = self.prepare_filter(table, &filter, &context.tenant_id)?;
             let normalized = crate::planning::broker::normalize_filter_keys(
                 &crate::planning::broker::column_resolver(table),
                 &filter,
@@ -2388,11 +2479,9 @@ impl DataBrokerRuntime {
             )?;
         }
         let filter = match resolve_table_for_message(manifest, message_type) {
-            Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
-                table_for_encryption,
-                &filter,
-                &context.tenant_id,
-            ),
+            Ok(table_for_encryption) => {
+                self.prepare_filter(table_for_encryption, &filter, &context.tenant_id)?
+            }
             Err(_) => filter,
         };
         let plan_request = DeletePlanRequest {
@@ -2558,7 +2647,7 @@ impl DataBrokerRuntime {
             .await?;
         }
         let result = query.execute(&mut *tx).await.map_err(|err| {
-            setup_data_internal_status("delete_query", format!("PostgreSQL delete failed: {err}"))
+            crate::runtime::executor_utils::sqlx_error_to_status("delete_query", &err)
         })?;
         enforce_require_affected(guards.require_affected, result.rows_affected())?;
         let mut projection_task_ids = Vec::new();
@@ -2653,7 +2742,10 @@ impl DataBrokerRuntime {
             )
         })?;
         let _ = self
-            .cache_delete_pattern(&cache_invalidation_pattern("select", message_type))
+            .cache_delete_pattern(&cache_invalidation_pattern(
+                "select",
+                &crate::runtime::executor_utils::cache_message_identity(manifest, message_type),
+            ))
             .await;
         // F-1: audit the committed delete — only when it removed something; a
         // 0-affected delete is not a mutation (audit integrity).
@@ -2745,7 +2837,23 @@ impl DataBrokerRuntime {
         let has_projections = projection_plans.iter().any(|plan| {
             crate::runtime::projection::message_type_matches(&plan.message_type, message_type)
         });
-        let need_rows = return_record || has_projections;
+        // A range update names no single key, so only the changed rows themselves can say
+        // whose revision moved. Left unmoved, a stale expected_revision would still pass.
+        let range_update = match resolve_table_for_message(manifest, message_type) {
+            Ok(table) => pk_equality_values_from_filter(
+                &crate::planning::broker::normalize_filter_keys(
+                    &crate::planning::broker::column_resolver(table),
+                    filter,
+                ),
+                &table.primary_key,
+            )
+            .is_err(),
+            Err(_) => false,
+        };
+        // A change event carries the whole row, which a filtered subscriber needs to judge.
+        let has_change_events = resolve_table_for_message(manifest, message_type)
+            .is_ok_and(|table| !table.cdc_topic.trim().is_empty());
+        let need_rows = return_record || has_projections || range_update || has_change_events;
         // Encrypt BEFORE planning, exactly as the upsert path does: the plan's
         // SET list, the bound values and the CDC change event must all carry the
         // ciphertext (and the refreshed blind-index token), never the caller's
@@ -2810,6 +2918,13 @@ impl DataBrokerRuntime {
                     .unwrap_or(JsonValue::Null)
             })
             .collect();
+        if increments.iter().any(|(_, delta)| !delta.is_finite()) {
+            return Err(setup_data_invalid_field(
+                "increments",
+                "an increment must be a finite number",
+                "an increment must be a finite number",
+            ));
+        }
         values.extend(increments.iter().map(|(_, delta)| serde_json::json!(delta)));
         values.extend(filter_bind_values(&normalized_filter));
         // The plan appends VERIFIED tenant/project isolation predicates beyond
@@ -2848,6 +2963,27 @@ impl DataBrokerRuntime {
                 // hold different ciphertext than the source row (and than
                 // replay, which reads the stored row back).
                 let stored_rows_json = stored_row_values(&rows)?;
+                if range_update {
+                    for row in &stored_rows_json {
+                        let key: Vec<JsonValue> = table
+                            .primary_key
+                            .iter()
+                            .map(|column| row.get(column).cloned().unwrap_or(JsonValue::Null))
+                            .collect();
+                        if table.primary_key.is_empty() || key.iter().any(JsonValue::is_null) {
+                            continue;
+                        }
+                        bump_row_revision_in_tx(
+                            tx,
+                            &crate::runtime::system::SystemCatalogConfig::current(),
+                            &context.tenant_id,
+                            &context.project_id,
+                            message_type,
+                            &key,
+                        )
+                        .await?;
+                    }
+                }
                 // Decode ONCE, unmasked, for the caller's returned record. The
                 // caller's returned record is masked separately.
                 let record_set = rows_to_record_set(
@@ -2942,7 +3078,7 @@ impl DataBrokerRuntime {
             projection_task_ids.dedup();
             // CDC change event carries the row identity AND the delta so
             // consumers see what changed without a read-back.
-            let cdc_payload = serde_json::json!({
+            let mut cdc_payload = serde_json::json!({
                 "filter": filter,
                 "changes": changes,
                 "increments": increments
@@ -2950,16 +3086,47 @@ impl DataBrokerRuntime {
                     .map(|(column, delta)| serde_json::json!({"column": column, "delta": delta}))
                     .collect::<Vec<_>>(),
             });
-            self.emit_cdc_outbox_on_mutation_checked(
-                &mut *tx,
-                manifest,
-                message_type,
-                "update",
-                &cdc_payload,
-                context,
-                cdc_required,
-            )
-            .await?;
+            // The event's partition key is the row's first primary-key value, so a change
+            // to one row stays ordered with that row's other events.
+            for column in &table.primary_key {
+                let pinned = normalized_filter
+                    .get(column)
+                    .filter(|value| !value.is_object() && !value.is_null())
+                    .cloned();
+                if let Some(value) = pinned {
+                    cdc_payload[column.as_str()] = value;
+                }
+            }
+            // One event per changed row, so each stays ordered with that row's others.
+            let events: Vec<JsonValue> = if stored_rows_json.is_empty() {
+                vec![cdc_payload]
+            } else {
+                stored_rows_json
+                    .iter()
+                    .map(|row| {
+                        let mut event = cdc_payload.clone();
+                        for column in &table.primary_key {
+                            if let Some(value) = row.get(column) {
+                                event[column.as_str()] = value.clone();
+                            }
+                        }
+                        event["row"] = row.clone();
+                        event
+                    })
+                    .collect()
+            };
+            for event in &events {
+                self.emit_cdc_outbox_on_mutation_checked(
+                    &mut *tx,
+                    manifest,
+                    message_type,
+                    "update",
+                    event,
+                    context,
+                    cdc_required,
+                )
+                .await?;
+            }
         }
         Ok((affected_rows, record_json, projection_task_ids))
     }
@@ -2991,11 +3158,9 @@ impl DataBrokerRuntime {
             )?;
         }
         let filter = match resolve_table_for_message(manifest, message_type) {
-            Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
-                table_for_encryption,
-                &filter,
-                &context.tenant_id,
-            ),
+            Ok(table_for_encryption) => {
+                self.prepare_filter(table_for_encryption, &filter, &context.tenant_id)?
+            }
             Err(_) => filter,
         };
         let pool = self.pg_pool()?;
@@ -3210,7 +3375,10 @@ impl DataBrokerRuntime {
             )
         })?;
         let _ = self
-            .cache_delete_pattern(&cache_invalidation_pattern("select", message_type))
+            .cache_delete_pattern(&cache_invalidation_pattern(
+                "select",
+                &crate::runtime::executor_utils::cache_message_identity(manifest, message_type),
+            ))
             .await;
         // Audit the committed update — only when it changed a row. A filter that
         // matched nothing (e.g. the `col = NULL` trap) is a no-op, not a mutation,
@@ -3362,8 +3530,7 @@ impl DataBrokerRuntime {
                 &context,
                 crate::runtime::core::scope_autofill::FilterUse::Write,
             )?;
-            let filter =
-                self.rewrite_encrypted_equality_filters(table, &filter_json, &context.tenant_id);
+            let filter = self.prepare_filter(table, &filter_json, &context.tenant_id)?;
             let normalized_filter =
                 crate::planning::broker::normalize_filter_keys(&resolver, &filter);
             // Single-row addressing: every PK column pinned by equality.
@@ -3483,6 +3650,7 @@ impl DataBrokerRuntime {
                 changed,
                 conflicted,
                 &write_receipt_json,
+                &results,
             )
             .await?;
         }
@@ -3493,7 +3661,13 @@ impl DataBrokerRuntime {
             )
         })?;
         let _ = self
-            .cache_delete_pattern(&cache_invalidation_pattern("select", &request.message_type))
+            .cache_delete_pattern(&cache_invalidation_pattern(
+                "select",
+                &crate::runtime::executor_utils::cache_message_identity(
+                    manifest,
+                    &request.message_type,
+                ),
+            ))
             .await;
         // One audit event for the committed batch (the resource is the table) —
         // only when the batch changed at least one row (audit integrity).
@@ -6468,13 +6642,24 @@ async fn persist_bulk_cas_idempotency_in_tx(
     changed: i32,
     conflicted: i32,
     write_receipt_json: &str,
+    results: &[crate::proto::BulkCasItemResult],
 ) -> Result<(), tonic::Status> {
+    // A replay must be the original answer, per-item outcomes included.
     let summary = serde_json::json!({
         "op": "bulk_cas",
         "matched": matched,
         "changed": changed,
         "conflicted": conflicted,
         "write_receipt_json": write_receipt_json,
+        "results": results
+            .iter()
+            .map(|item| serde_json::json!({
+                "matched": item.matched,
+                "changed": item.changed,
+                "conflicted": item.conflicted,
+                "revision": item.revision,
+            }))
+            .collect::<Vec<_>>(),
     });
     let rel = dedup_ctx.config.idempotency_keys_relation();
     let sql = idempotency_response_persist_sql(&rel);
@@ -6525,7 +6710,21 @@ fn bulk_cas_response_from_idempotency_json(
         changed: counts[1],
         conflicted: counts[2],
         write_receipt_json,
-        results: Vec::new(),
+        results: prior
+            .get("results")
+            .and_then(JsonValue::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .map(|item| crate::proto::BulkCasItemResult {
+                        matched: item["matched"].as_bool().unwrap_or_default(),
+                        changed: item["changed"].as_bool().unwrap_or_default(),
+                        conflicted: item["conflicted"].as_bool().unwrap_or_default(),
+                        revision: item["revision"].as_str().unwrap_or_default().to_string(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
     })
 }
 
@@ -6623,8 +6822,7 @@ impl DataBrokerRuntime {
                 .as_ref()
                 .map(struct_to_json)
                 .unwrap_or(JsonValue::Null);
-            let filter =
-                self.rewrite_encrypted_equality_filters(table, &filter, &context.tenant_id);
+            let filter = self.prepare_filter(table, &filter, &context.tenant_id)?;
             authoritative["filter"] =
                 crate::planning::broker::normalize_filter_keys(&resolver, &filter);
             if operation == "update" {

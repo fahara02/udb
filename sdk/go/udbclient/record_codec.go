@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fahara02/udb/sdk/go/internal/protoschema"
 	udbcommonv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -48,7 +49,8 @@ const (
 //     or JSON column it is dropped (it is no value of those types: the default applies, or the write
 //     fails closed); a NOT NULL VARCHAR/TEXT column keeps it, an empty string being a value there;
 //   - a JSON column (is_json, JSON/JSONB) carries its text as a JSON value; text that is not JSON is
-//     an error, never stored as a string.
+//     an error, never stored as a string;
+//   - an unset PII or encrypted column is left out, because a default read does not return it.
 func EncodeRecord(m proto.Message, mode WriteMode) (Record, error) {
 	raw, err := protojson.MarshalOptions{UseProtoNames: true, EmitUnpopulated: true, UseEnumNumbers: true}.Marshal(m)
 	if err != nil {
@@ -81,10 +83,21 @@ func EncodeRecord(m proto.Message, mode WriteMode) (Record, error) {
 	return rec, nil
 }
 
+// columnIsSensitive reports a column a default read leaves out.
+func columnIsSensitive(fd protoreflect.FieldDescriptor) bool {
+	return protoschema.PII(fd) || protoschema.Encrypted(fd)
+}
+
 // encodeColumn applies the column rules to rec[fd.Name()], which holds the
 // field's protojson form.
 func encodeColumn(pr protoreflect.Message, fd protoreflect.FieldDescriptor, c *udbcommonv1.ColumnOptions, rec Record) error {
 	name := string(fd.Name())
+	// A default read leaves PII and encrypted columns out, so an unset one here may
+	// only be unread. A full-row write must not erase it: clear it with Patch and nil.
+	if !fd.IsList() && !pr.Has(fd) && (c.GetEncrypted() || columnIsSensitive(fd)) {
+		delete(rec, name)
+		return nil
+	}
 	if fd.HasPresence() && !fd.IsList() && !pr.Has(fd) {
 		if c.GetNotNull() {
 			delete(rec, name)
@@ -95,6 +108,14 @@ func encodeColumn(pr protoreflect.Message, fd protoreflect.FieldDescriptor, c *u
 	}
 	if is64Bit(fd.Kind()) {
 		rec[name] = exactInts(rec[name])
+		return nil
+	}
+	// A strict DATE bind takes the date alone.
+	if fd.Message() != nil && !fd.IsList() && fd.Message().FullName() == timestampMessage &&
+		strings.EqualFold(strings.TrimSpace(c.GetSqlType()), "DATE") {
+		if s, ok := rec[name].(string); ok && len(s) > len(time.DateOnly) {
+			rec[name] = s[:len(time.DateOnly)]
+		}
 		return nil
 	}
 	if fd.Kind() == protoreflect.EnumKind && textColumn(c) {
@@ -354,6 +375,24 @@ func DecodeRecord(r Record, m proto.Message) error {
 	return nil
 }
 
+const timestampMessage = protoreflect.FullName("google.protobuf.Timestamp")
+
+// timestampJSON makes the RFC 3339 a Timestamp field requires from the text a TIMESTAMP or
+// DATE column reads as. A column without a zone is taken as UTC.
+func timestampJSON(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) == len(time.DateOnly) {
+		return s + "T00:00:00Z"
+	}
+	if len(s) > len(time.DateOnly) && s[len(time.DateOnly)] == ' ' {
+		s = s[:len(time.DateOnly)] + "T" + s[len(time.DateOnly)+1:]
+	}
+	if strings.ContainsAny(s[min(len(s), len(time.DateOnly)):], "Z+-") {
+		return s
+	}
+	return s + "Z"
+}
+
 // normalise rewrites one column value into the proto JSON form of its field.
 func normalise(fd protoreflect.FieldDescriptor, v json.RawMessage) (json.RawMessage, error) {
 	var s string
@@ -364,6 +403,8 @@ func normalise(fd protoreflect.FieldDescriptor, v json.RawMessage) (json.RawMess
 		}
 	}
 	switch {
+	case isString && fd.Message() != nil && !fd.IsList() && fd.Message().FullName() == timestampMessage:
+		return json.Marshal(timestampJSON(s))
 	case fd.IsMap() || fd.Message() != nil:
 		return v, nil
 	case fd.IsList():

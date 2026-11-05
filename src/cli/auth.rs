@@ -246,7 +246,15 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                     },
                 ))
                 .await
-                .map_err(|error| format!("grant create failed: {error}"))?
+                .map_err(|error| {
+                    if error.message().contains("already exists") {
+                        "grant create: this account already holds a grant, which was left \
+                         unchanged. To change its scopes, run `udb auth grant replace`"
+                            .to_string()
+                    } else {
+                        format!("grant create failed: {error}")
+                    }
+                })?
                 .into_inner();
             response
                 .grant

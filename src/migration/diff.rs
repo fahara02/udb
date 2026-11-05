@@ -2780,8 +2780,7 @@ mod tests {
         assert!(kinds_between(sample_table(), changed).contains(&ChangeKind::ManualChange));
 
         for change in [
-            (|column: &mut ManifestColumn| column.is_identity = true)
-                as fn(&mut ManifestColumn),
+            (|column: &mut ManifestColumn| column.is_identity = true) as fn(&mut ManifestColumn),
             |column| column.auto_increment = true,
             |column| column.generated_expr = "1".to_string(),
             |column| column.json_path_ops = true,

@@ -21,8 +21,10 @@ pub(crate) struct SourceBinding {
 /// and search service use) plus its manifest `cdc_topic`. Fails CLOSED when the
 /// source message type is unknown or declares no tenant column — a live query we
 /// cannot tenant-scope must never be served.
-pub(crate) fn resolve_source(message_type: &str) -> Result<SourceBinding, Status> {
-    let manifest = crate::runtime::native_catalog::native_manifest();
+pub(crate) fn resolve_source(
+    message_type: &str,
+    manifest: &crate::generation::CatalogManifest,
+) -> Result<SourceBinding, Status> {
     let table =
         crate::broker::resolve_table_for_message(manifest, message_type).map_err(|_error| {
             crate::runtime::executor_utils::invalid_argument_fields(
@@ -264,6 +266,10 @@ pub(crate) fn change_row(payload: &serde_json::Value) -> serde_json::Value {
     for key in ROW_KEYS {
         if let Some(value) = payload.get(key) {
             if value.is_object() {
+                // An Update's change event nests the whole row beside its delta.
+                if let Some(row) = value.get("row").filter(|row| row.is_object()) {
+                    return row.clone();
+                }
                 return value.clone();
             }
         }
@@ -273,7 +279,7 @@ pub(crate) fn change_row(payload: &serde_json::Value) -> serde_json::Value {
 
 /// Classify the delta operation from the payload's `op`/`operation` field, else
 /// from the topic verb suffix; defaults to UPDATE.
-fn change_op(topic: &str, payload: &serde_json::Value) -> lq_pb::LiveQueryChangeOp {
+pub(crate) fn change_op(topic: &str, payload: &serde_json::Value) -> lq_pb::LiveQueryChangeOp {
     use lq_pb::LiveQueryChangeOp as Op;
     let topic_lower = topic.to_ascii_lowercase();
     // Whether the topic verb suffix names a row CREATION event; shared by the
@@ -482,6 +488,77 @@ pub(crate) fn mask_row(mut row: serde_json::Value, masked_columns: &[String]) ->
         }
     }
     row
+}
+
+/// A subscription's filter as a data-plane filter, for a snapshot served by `Select`.
+pub(crate) fn logical_filter_to_json(filter: &LogicalFilter) -> Result<serde_json::Value, Status> {
+    let unsupported = || {
+        crate::runtime::executor_utils::invalid_argument_fields(
+            "this live query filter cannot be applied to an application table",
+            [(
+                "filters",
+                "use eq, ne, lt, lte, gt, gte, like, ilike, in or is_null",
+            )],
+        )
+    };
+    let value_json = |value: &LogicalValue| -> Result<serde_json::Value, Status> {
+        Ok(match value {
+            LogicalValue::Null => serde_json::Value::Null,
+            LogicalValue::Bool(flag) => serde_json::json!(flag),
+            LogicalValue::Int(number) => serde_json::json!(number),
+            LogicalValue::Float(number) => serde_json::json!(number),
+            LogicalValue::String(text) => serde_json::json!(text),
+            _ => return Err(unsupported()),
+        })
+    };
+    Ok(match filter {
+        LogicalFilter::And(branches) => serde_json::json!({
+            "$and": branches.iter().map(logical_filter_to_json).collect::<Result<Vec<_>, _>>()?
+        }),
+        LogicalFilter::Or(branches) => serde_json::json!({
+            "$or": branches.iter().map(logical_filter_to_json).collect::<Result<Vec<_>, _>>()?
+        }),
+        LogicalFilter::Not(inner) => match inner.as_ref() {
+            LogicalFilter::InList { field, values } => serde_json::json!({
+                field: {"$nin": values.iter().map(value_json).collect::<Result<Vec<_>, _>>()?}
+            }),
+            LogicalFilter::IsNull(field) => serde_json::json!({field: {"$not_null": true}}),
+            _ => return Err(unsupported()),
+        },
+        LogicalFilter::Comparison { field, op, value } => {
+            let operator = match op {
+                ComparisonOp::Eq => "$eq",
+                ComparisonOp::Ne => "$ne",
+                ComparisonOp::Lt => "$lt",
+                ComparisonOp::Le => "$lte",
+                ComparisonOp::Gt => "$gt",
+                ComparisonOp::Ge => "$gte",
+                ComparisonOp::Like => "$like",
+                ComparisonOp::ILike => "$ilike",
+                _ => return Err(unsupported()),
+            };
+            serde_json::json!({field: {operator: value_json(value)?}})
+        }
+        LogicalFilter::IsNull(field) => serde_json::json!({field: {"$is_null": true}}),
+        LogicalFilter::InList { field, values } => serde_json::json!({
+            field: {"$in": values.iter().map(value_json).collect::<Result<Vec<_>, _>>()?}
+        }),
+        #[allow(unreachable_patterns)]
+        _ => return Err(unsupported()),
+    })
+}
+
+/// The row left the subscription's filter: to this subscriber it is gone.
+pub(crate) fn left_filter_frame(
+    envelope: &crate::cdc::CdcEnvelope,
+    payload: &serde_json::Value,
+    masked_columns: &[String],
+) -> lq_pb::SubscribeResponse {
+    let mut frame = change_frame(envelope, payload, masked_columns);
+    if let Some(lq_pb::subscribe_response::Payload::Change(change)) = frame.payload.as_mut() {
+        change.op = lq_pb::LiveQueryChangeOp::Delete as i32;
+    }
+    frame
 }
 
 pub(crate) fn change_frame(

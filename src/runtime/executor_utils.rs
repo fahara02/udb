@@ -813,6 +813,62 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         None,
                     );
                 }
+                "23514" | "23P01" => {
+                    let message = match db.constraint() {
+                        Some(name) => format!("the value breaks constraint {name}"),
+                        None => "the value breaks a table constraint".to_string(),
+                    };
+                    return schema_status(
+                        tonic::Code::FailedPrecondition,
+                        "database",
+                        "check_constraint",
+                        "check_violation",
+                        message,
+                    );
+                }
+                "22001" | "22003" | "22008" | "428C9" | "42883" => {
+                    let message = match code.as_ref() {
+                        "22001" => "the value is too long for the column",
+                        "22003" => "the number is out of range for the column",
+                        "22008" => "the date or time is out of range",
+                        "428C9" => "a generated column cannot be written",
+                        _ => "the value's type cannot be compared with the column's",
+                    };
+                    return crate::runtime::error_reasons::annotate(
+                        executor_utils_invalid_field(
+                            "parameter",
+                            "must be a valid value for the target column",
+                            message,
+                        ),
+                        crate::runtime::error_reasons::TYPE_MISMATCH,
+                        None,
+                        None,
+                    );
+                }
+                "40001" | "40P01" => {
+                    return retryable_aborted_status(
+                        "database",
+                        context,
+                        HTTP_RETRYABLE_BACKOFF_MS,
+                        format!("{context}: the transaction conflicted with another; retry it"),
+                    );
+                }
+                "57014" => {
+                    return deadline_exceeded_status(
+                        "database",
+                        context,
+                        HTTP_RETRYABLE_BACKOFF_MS,
+                        format!("{context}: the statement ran past its time limit"),
+                    );
+                }
+                "42501" => {
+                    return policy_status_with_code(
+                        tonic::Code::PermissionDenied,
+                        context,
+                        "database_privilege",
+                        "the database role lacks a privilege this statement needs",
+                    );
+                }
                 "22P02" | "22007" => {
                     let message = invalid_input_message(db.message());
                     return crate::runtime::error_reasons::annotate(
@@ -1914,11 +1970,17 @@ pub(crate) fn record_batch_v2_from_record_set(
     // The batch's page length is the number of records it carries; RecordSet
     // no longer has a count field to copy it from.
     let page_len = rows.len() as i32;
+    // A counted read's total is every match, not this page.
+    let total = if set.exact_total > 0 {
+        i32::try_from(set.exact_total).unwrap_or(i32::MAX)
+    } else {
+        page_len
+    };
     Ok(record_batch_v2_from_json_rows(
         &rows,
         schema_version,
         set.next_page_token.clone(),
-        page_len,
+        total,
     ))
 }
 
@@ -1946,8 +2008,19 @@ pub(crate) fn cache_key(
     // globs the whole tail. The project is part of a read's identity too: two
     // projects of one tenant read different rows for the same filter, so they
     // must never share an entry (appended last for the same glob reason).
+    // Who reads, from where and how fresh are part of a read's identity too: an entry
+    // filled by an eventual read must not answer a strong one, nor one instance's or
+    // user's rows another's.
+    let reader = format!(
+        "{}|{}|{}|{}",
+        context.target_instance.trim(),
+        context.user_id.trim(),
+        crate::runtime::consistency::ConsistencyMode::parse_or_default(&context.consistency)
+            .as_str(),
+        context.eventual_consistency_allowed,
+    );
     format!(
-        "udb:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
+        "udb:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
         kind,
         sanitize_cache_part(&context.tenant_id),
         sanitize_cache_part(&context.purpose),
@@ -1959,7 +2032,19 @@ pub(crate) fn cache_key(
         limit,
         checksum_str(sort_repr),
         checksum_str(&context.project_id),
+        checksum_str(&reader),
     )
+}
+
+/// The one spelling of a message in cache keys, so a write under `Note` invalidates a
+/// read cached under `pkg.Note`.
+pub(crate) fn cache_message_identity(
+    manifest: &crate::generation::CatalogManifest,
+    message_type: &str,
+) -> String {
+    crate::planning::broker::resolve_table_for_message(manifest, message_type)
+        .map(|table| table.message_fqn())
+        .unwrap_or_else(|_| message_type.to_string())
 }
 
 pub(crate) fn cache_invalidation_pattern(kind: &str, message_type: &str) -> String {
@@ -2143,15 +2228,31 @@ pub(crate) fn json_column_strings_parsed(
     table: &crate::generation::ManifestTable,
     record: &JsonValue,
 ) -> Result<JsonValue, tonic::Status> {
+    canonical_record(table, record, JsonText::Parsed)
+}
+
+/// What a canonical record does with a string written to a JSON column.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum JsonText {
+    /// Keep the text, so PostgreSQL parses the caller's exact digits (a `$n::JSONB` bind).
+    AsSent,
+    /// Replace it with the document, for a binder that encodes the value as JSON itself.
+    Parsed,
+}
+
+/// The write contract, applied before any binder sees a value: a value is stored exactly
+/// or refused. Nothing is coerced, rounded or turned into NULL, so every verb agrees.
+pub(crate) fn canonical_record(
+    table: &crate::generation::ManifestTable,
+    record: &JsonValue,
+    json_text: JsonText,
+) -> Result<JsonValue, tonic::Status> {
     let Some(object) = record.as_object() else {
         return Ok(record.clone());
     };
     let resolver = crate::planning::broker::column_resolver(table);
-    let mut parsed = object.clone();
+    let mut canonical = object.clone();
     for (key, value) in object {
-        let JsonValue::String(text) = value else {
-            continue;
-        };
         let lower = key.to_ascii_lowercase();
         let name = resolver.get(&lower).unwrap_or(&lower);
         let Some(column) = table
@@ -2161,36 +2262,278 @@ pub(crate) fn json_column_strings_parsed(
         else {
             continue;
         };
-        let is_json = column.is_json
-            || column.is_jsonb
-            || column.sql_type.to_ascii_uppercase().contains("JSON");
-        if !is_json || is_encrypted_column(column) {
+        // A caller who read this column masked must not store the mask over the real value.
+        if value.as_str() == Some("***MASKED***") {
+            return Err(value_refused(
+                name,
+                "this is the redaction placeholder, not a value",
+                format!("column '{name}' cannot store the redaction placeholder"),
+            ));
+        }
+        if is_encrypted_column(column) {
             continue;
         }
-        let refused = match serde_json::from_str::<JsonValue>(text) {
-            Ok(JsonValue::Null) => format!(
-                "the text null is not accepted for JSON column '{name}': send a real null to clear the column"
-            ),
-            Ok(document) => {
-                parsed.insert(key.clone(), document);
-                continue;
-            }
-            Err(_) => format!(
-                "value for JSON column '{name}' is not valid JSON: send a JSON document, or null to clear the column; to store text, JSON-encode it"
-            ),
-        };
-        return Err(crate::runtime::error_reasons::annotate(
-            executor_utils_invalid_field(
-                name.as_str(),
-                "a string written to a JSON column must be JSON text",
-                refused,
-            ),
-            crate::runtime::error_reasons::TYPE_MISMATCH,
-            Some(name.as_str()),
-            None,
-        ));
+        canonical.insert(
+            key.clone(),
+            canonical_column_value(column, name, value, json_text)?,
+        );
     }
-    Ok(JsonValue::Object(parsed))
+    Ok(JsonValue::Object(canonical))
+}
+
+/// A filter's values under the write contract: `{"active": "true"}` must not read as
+/// false, and a rounded integer must not match its neighbour.
+pub(crate) fn canonical_filter(
+    table: &crate::generation::ManifestTable,
+    filter: &JsonValue,
+) -> Result<JsonValue, tonic::Status> {
+    let resolver = crate::planning::broker::column_resolver(table);
+    canonical_filter_node(table, &resolver, filter)
+}
+
+fn canonical_filter_node(
+    table: &crate::generation::ManifestTable,
+    resolver: &std::collections::HashMap<String, String>,
+    node: &JsonValue,
+) -> Result<JsonValue, tonic::Status> {
+    match node {
+        JsonValue::Array(items) => items
+            .iter()
+            .map(|item| canonical_filter_node(table, resolver, item))
+            .collect::<Result<Vec<_>, _>>()
+            .map(JsonValue::Array),
+        JsonValue::Object(map) => {
+            let mut out = map.clone();
+            for (key, value) in map {
+                let lower = key.to_ascii_lowercase();
+                if matches!(lower.as_str(), "$and" | "and" | "$or" | "or") {
+                    out.insert(key.clone(), canonical_filter_node(table, resolver, value)?);
+                    continue;
+                }
+                let name = resolver.get(&lower).unwrap_or(&lower);
+                let Some(column) = table
+                    .columns
+                    .iter()
+                    .find(|column| column.column_name == *name)
+                else {
+                    continue;
+                };
+                let declared = column.sql_type.to_ascii_uppercase();
+                if is_encrypted_column(column)
+                    || column.is_json
+                    || column.is_jsonb
+                    || declared.contains("JSON")
+                    || declared.trim_end().ends_with("[]")
+                {
+                    continue;
+                }
+                out.insert(key.clone(), canonical_filter_value(column, name, value)?);
+            }
+            Ok(JsonValue::Object(out))
+        }
+        other => Ok(other.clone()),
+    }
+}
+
+fn canonical_filter_value(
+    column: &crate::generation::ManifestColumn,
+    name: &str,
+    value: &JsonValue,
+) -> Result<JsonValue, tonic::Status> {
+    let scalar = |item: &JsonValue| canonical_column_value(column, name, item, JsonText::AsSent);
+    match value {
+        JsonValue::Null => Ok(JsonValue::Null),
+        JsonValue::Array(items) => items
+            .iter()
+            .map(scalar)
+            .collect::<Result<Vec<_>, _>>()
+            .map(JsonValue::Array),
+        JsonValue::Object(operators) => {
+            let mut out = operators.clone();
+            for (operator, operand) in operators {
+                // One spelling downstream: the row and count paths read only the `$` form.
+                let spelled = match operator.to_ascii_lowercase().as_str() {
+                    "is_null" => Some("$is_null"),
+                    "not_null" | "is_not_null" | "$is_not_null" => Some("$not_null"),
+                    _ => None,
+                };
+                if let Some(spelled) = spelled {
+                    out.remove(operator);
+                    out.insert(spelled.to_string(), operand.clone());
+                    continue;
+                }
+                match operator.to_ascii_lowercase().trim_start_matches('$') {
+                    "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "in" | "nin" | "between" => {
+                        out.insert(
+                            operator.clone(),
+                            canonical_filter_value(column, name, operand)?,
+                        );
+                    }
+                    "not" => {
+                        out.insert(
+                            operator.clone(),
+                            canonical_filter_value(column, name, operand)?,
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            Ok(JsonValue::Object(out))
+        }
+        other => scalar(other),
+    }
+}
+
+fn value_refused(column: &str, expected: &str, message: String) -> tonic::Status {
+    crate::runtime::error_reasons::annotate(
+        executor_utils_invalid_field(column, expected, message),
+        crate::runtime::error_reasons::TYPE_MISMATCH,
+        None,
+        None,
+    )
+}
+
+/// From 2^53 up a whole double may be a rounded value (2^53 + 1 rounds to 2^53), so only an
+/// integer literal or a decimal string is accepted there.
+const MAX_EXACT_DOUBLE_INTEGER: f64 = 9_007_199_254_740_992.0;
+
+fn canonical_integer(column: &str, value: &JsonValue) -> Result<JsonValue, tonic::Status> {
+    let refuse = |detail: String| {
+        value_refused(
+            column,
+            "must be an integer, or a decimal string for a value above 2^53",
+            format!("integer column '{column}' cannot store {detail}"),
+        )
+    };
+    match value {
+        JsonValue::Number(number) => {
+            if let Some(exact) = number.as_i64() {
+                return Ok(JsonValue::from(exact));
+            }
+            let Some(float) = number.as_f64() else {
+                return Err(refuse(format!("{number}")));
+            };
+            if number.is_u64() || float.fract() != 0.0 || float.abs() >= MAX_EXACT_DOUBLE_INTEGER {
+                return Err(refuse(format!("{number}")));
+            }
+            Ok(JsonValue::from(float as i64))
+        }
+        JsonValue::String(text) => text
+            .trim()
+            .parse::<i64>()
+            .map(JsonValue::from)
+            .map_err(|_| refuse("this text".to_string())),
+        _ => Err(refuse(format!("a {}", json_kind(value)))),
+    }
+}
+
+fn json_kind(value: &JsonValue) -> &'static str {
+    match value {
+        JsonValue::Null => "null",
+        JsonValue::Bool(_) => "boolean",
+        JsonValue::Number(_) => "number",
+        JsonValue::String(_) => "string",
+        JsonValue::Array(_) => "array",
+        JsonValue::Object(_) => "object",
+    }
+}
+
+fn canonical_column_value(
+    column: &crate::generation::ManifestColumn,
+    name: &str,
+    value: &JsonValue,
+    json_text: JsonText,
+) -> Result<JsonValue, tonic::Status> {
+    if value.is_null() {
+        return Ok(JsonValue::Null);
+    }
+    let declared = column.sql_type.trim().to_ascii_uppercase();
+    if declared.contains("JSON") || column.is_json || column.is_jsonb {
+        let JsonValue::String(text) = value else {
+            return Ok(value.clone());
+        };
+        return match serde_json::from_str::<JsonValue>(text) {
+            Ok(JsonValue::Null) => Err(value_refused(
+                name,
+                "a string written to a JSON column must be JSON text",
+                format!(
+                    "the text null is not accepted for JSON column '{name}': send a real null to clear it"
+                ),
+            )),
+            Ok(document) => Ok(match json_text {
+                JsonText::AsSent => value.clone(),
+                JsonText::Parsed => document,
+            }),
+            Err(_) => Err(value_refused(
+                name,
+                "a string written to a JSON column must be JSON text",
+                format!(
+                    "value for JSON column '{name}' is not valid JSON: send a JSON document, or null to clear it"
+                ),
+            )),
+        };
+    }
+    if declared.ends_with("[]") {
+        let JsonValue::Array(items) = value else {
+            return Err(value_refused(
+                name,
+                "an array column takes a JSON array",
+                format!("array column '{name}' cannot store a {}", json_kind(value)),
+            ));
+        };
+        let mut element = column.clone();
+        element.sql_type = column.sql_type.trim().trim_end_matches("[]").to_string();
+        let mut out = Vec::with_capacity(items.len());
+        for item in items {
+            if item.is_null() {
+                return Err(value_refused(
+                    name,
+                    "array elements must not be null",
+                    format!("array column '{name}' cannot store a null element"),
+                ));
+            }
+            out.push(canonical_column_value(&element, name, item, json_text)?);
+        }
+        return Ok(JsonValue::Array(out));
+    }
+    let base = declared
+        .split(['(', ' '])
+        .next()
+        .unwrap_or_default()
+        .to_string();
+    match base.as_str() {
+        "SMALLINT" | "INT2" | "INTEGER" | "INT" | "INT4" | "BIGINT" | "INT8" | "SERIAL"
+        | "SERIAL4" | "BIGSERIAL" | "SERIAL8" | "SMALLSERIAL" | "SERIAL2" => {
+            canonical_integer(name, value)
+        }
+        "BOOLEAN" | "BOOL" => match value {
+            JsonValue::Bool(_) => Ok(value.clone()),
+            _ => Err(value_refused(
+                name,
+                "a boolean column takes true or false",
+                format!(
+                    "boolean column '{name}' cannot store a {}",
+                    json_kind(value)
+                ),
+            )),
+        },
+        "UUID" | "DATE" | "TIME" | "TIMETZ" | "TIMESTAMP" | "TIMESTAMPTZ" | "INTERVAL" | "INET"
+        | "CIDR" | "MACADDR" | "MACADDR8" | "GEOGRAPHY" | "GEOMETRY" | "NUMERIC" | "DECIMAL"
+        | "MONEY" => match value {
+            JsonValue::String(text) if text.trim().is_empty() => Err(value_refused(
+                name,
+                "send a value, or null to clear the column",
+                format!("column '{name}' cannot store an empty string: send null to clear it"),
+            )),
+            _ => Ok(value.clone()),
+        },
+        // A number's digits are its text, and every binder then agrees on the type.
+        "TEXT" | "VARCHAR" | "CHARACTER" | "CHAR" | "BPCHAR" | "CITEXT" | "NAME" => match value {
+            JsonValue::Number(number) => Ok(JsonValue::String(number.to_string())),
+            _ => Ok(value.clone()),
+        },
+        _ => Ok(value.clone()),
+    }
 }
 
 #[cfg(test)]
@@ -4909,6 +5252,38 @@ mod merge_context_scope_authority_tests {
         };
         let merged = merge_context(Some(&proto), meta);
         assert_eq!(merged.consistency, "strong");
+    }
+
+    #[test]
+    fn a_cache_entry_belongs_to_one_reader_instance_and_freshness() {
+        let key = |context: &RequestContext| {
+            cache_key(
+                "select",
+                "udb.Person",
+                context,
+                "chk",
+                &json!({}),
+                &[],
+                10,
+                "",
+            )
+        };
+        let base = RequestContext {
+            tenant_id: "t".to_string(),
+            ..RequestContext::default()
+        };
+        let mut other_instance = base.clone();
+        other_instance.target_instance = "replica-2".to_string();
+        assert_ne!(key(&base), key(&other_instance));
+        let mut other_user = base.clone();
+        other_user.user_id = "u2".to_string();
+        assert_ne!(key(&base), key(&other_user));
+        let mut eventual = base.clone();
+        eventual.consistency = "eventual".to_string();
+        assert_ne!(key(&base), key(&eventual));
+        let mut strong = base.clone();
+        strong.consistency = "strong".to_string();
+        assert_eq!(key(&base), key(&strong), "blank means strong");
     }
 
     #[test]

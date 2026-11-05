@@ -25,11 +25,16 @@ struct PendingSagaStep {
 /// keeps serving pre-transaction rows. `tx_mutations` is already filtered to
 /// the applied (non-`commit`) mutations. Empty message types are skipped and
 /// duplicates collapsed so one pattern is issued per touched table.
-fn select_invalidation_patterns(tx_mutations: &[&Mutation]) -> Vec<String> {
+fn select_invalidation_patterns(
+    manifest: &CatalogManifest,
+    tx_mutations: &[&Mutation],
+) -> Vec<String> {
     let mut types: Vec<String> = tx_mutations
         .iter()
-        .map(|mutation| mutation.message_type.clone())
-        .filter(|message_type| !message_type.trim().is_empty())
+        .filter(|mutation| !mutation.message_type.trim().is_empty())
+        .map(|mutation| {
+            crate::runtime::executor_utils::cache_message_identity(manifest, &mutation.message_type)
+        })
         .collect();
     types.sort();
     types.dedup();
@@ -616,9 +621,10 @@ impl DataBrokerRuntime {
                                         crate::runtime::executor_utils::json_column_strings_parsed(
                                             table, &record,
                                         )
-                                        .map(drop)
                                     })
-                                    .and_then(|()| self.encrypt_record_for_table(table, &record))
+                                    .and_then(|canonical| {
+                                        self.encrypt_record_for_table(table, &canonical)
+                                    })
                                 }
                                 Err(error) => Err(tx_object_invalid_field(
                                     "message_type",
@@ -633,7 +639,9 @@ impl DataBrokerRuntime {
                                     &UpsertPlanRequest {
                                         context: context.clone(),
                                         message_type: mutation.message_type.clone(),
-                                        record: record.clone(),
+                                        // Encrypted, because the blind index is not in the
+                                        // plaintext record and a column absent here is not written.
+                                        record: encrypted_record.clone(),
                                         insert_only: operation == "insert",
                                         conflict_fields: mutation.conflict_fields.clone(),
                                         ..UpsertPlanRequest::default()
@@ -722,12 +730,35 @@ impl DataBrokerRuntime {
                     }
                     Err(err) => Err(err),
                 }
+            } else if let Some(refusal) = (operation == "delete")
+                .then(|| resolve_table_for_message(manifest, &mutation.message_type).ok())
+                .flatten()
+                .and_then(|table| {
+                    let filter = mutation
+                        .filter
+                        .as_ref()
+                        .map(struct_to_json)
+                        .unwrap_or(JsonValue::Null);
+                    self.prepare_filter(table, &filter, &context.tenant_id)
+                        .err()
+                })
+            {
+                Err(refusal)
             } else if operation == "delete" {
                 let filter = mutation
                     .filter
                     .as_ref()
                     .map(struct_to_json)
                     .unwrap_or(JsonValue::Null);
+                let filter = match resolve_table_for_message(manifest, &mutation.message_type) {
+                    Ok(table) => crate::planning::broker::normalize_filter_keys(
+                        &crate::planning::broker::column_resolver(table),
+                        &self
+                            .prepare_filter(table, &filter, &context.tenant_id)
+                            .unwrap_or_else(|_| filter.clone()),
+                    ),
+                    Err(_) => filter,
+                };
                 let plan = build_delete_plan(
                     manifest,
                     &DeletePlanRequest {
@@ -839,28 +870,28 @@ impl DataBrokerRuntime {
                 // Encryption-rewrite the equality filter exactly as unary update()
                 // does before planning; the shared helper does not re-apply it.
                 let filter = match resolve_table_for_message(manifest, &mutation.message_type) {
-                    Ok(table) => self.rewrite_encrypted_equality_filters(
-                        table,
-                        &filter_raw,
-                        &context.tenant_id,
-                    ),
-                    Err(_) => filter_raw,
+                    Ok(table) => self.prepare_filter(table, &filter_raw, &context.tenant_id),
+                    Err(_) => Ok(filter_raw),
                 };
                 // return_record=false: a TxStatus carries no per-row body; the
                 // helper still RETURNs internally when projections need the rows.
-                self.execute_update_in_tx_checked(
-                    &mut tx,
-                    manifest,
-                    &mutation.message_type,
-                    &filter,
-                    &changes,
-                    &increments,
-                    &context,
-                    false,
-                    mutation.cdc_required,
-                )
-                .await
-                .map(|(affected, _record_json, _task_ids)| affected as u64)
+                match filter {
+                    Ok(filter) => self
+                        .execute_update_in_tx_checked(
+                            &mut tx,
+                            manifest,
+                            &mutation.message_type,
+                            &filter,
+                            &changes,
+                            &increments,
+                            &context,
+                            false,
+                            mutation.cdc_required,
+                        )
+                        .await
+                        .map(|(affected, _record_json, _task_ids)| affected as u64),
+                    Err(err) => Err(err),
+                }
             } else if operation == "vector_upsert" {
                 let request = VectorUpsertRequest {
                     context: mutation.context.clone(),
@@ -1441,7 +1472,7 @@ impl DataBrokerRuntime {
                     tx_status.write_receipt = Some(receipt_proto.clone());
                 }
             }
-            for pattern in select_invalidation_patterns(&tx_mutations) {
+            for pattern in select_invalidation_patterns(manifest, &tx_mutations) {
                 let _ = self.cache_delete_pattern(&pattern).await;
             }
             // Audit each committed SQL mutation to the configured sink, mirroring
@@ -1557,8 +1588,7 @@ impl DataBrokerRuntime {
                 .as_ref()
                 .map(struct_to_json)
                 .unwrap_or(JsonValue::Null);
-            let filter =
-                self.rewrite_encrypted_equality_filters(table, &filter_raw, &context.tenant_id);
+            let filter = self.prepare_filter(table, &filter_raw, &context.tenant_id)?;
             let normalized_filter = crate::planning::broker::normalize_filter_keys(
                 &crate::planning::broker::column_resolver(table),
                 &filter,
@@ -2282,6 +2312,18 @@ impl DataBrokerRuntime {
         Err("redis projection target is unavailable: redis feature is disabled".to_string())
     }
 
+    /// The one door a filter passes through on every verb: its values obey the same
+    /// contract as written values, then encrypted equality routes through the blind index.
+    pub(crate) fn prepare_filter(
+        &self,
+        table: &ManifestTable,
+        filter: &JsonValue,
+        tenant: &str,
+    ) -> Result<JsonValue, tonic::Status> {
+        let canonical = crate::runtime::executor_utils::canonical_filter(table, filter)?;
+        Ok(self.rewrite_encrypted_equality_filters(table, &canonical, tenant))
+    }
+
     /// W11 read side: transparently rewrite STRING-equality predicates on
     /// encrypted columns to their blind-index sibling + tenant-scoped HMAC
     /// token, at every depth of the filter tree. Consumers filter plaintext;
@@ -2390,18 +2432,27 @@ impl DataBrokerRuntime {
             let Some(value) = encrypted.get(&column.column_name).cloned() else {
                 continue;
             };
-            if value.is_null() || json_is_ciphertext(&value) {
+            let index_column = format!("{}_idx", column.column_name);
+            let has_index = table
+                .columns
+                .iter()
+                .any(|c| c.column_name == index_column && c.security.is_blind_index);
+            if json_is_ciphertext(&value) {
+                continue;
+            }
+            // No plaintext string means no token: an old token left here would keep
+            // matching a value the column no longer holds.
+            if has_index && value.as_str().is_none() {
+                encrypted.insert(index_column.clone(), JsonValue::Null);
+            }
+            if value.is_null() {
                 continue;
             }
             // W11: populate the blind-index sibling (`<col>_idx`, declared
             // is_blind_index) from the PLAINTEXT before encryption, so equality
             // lookups go through the deterministic tenant-scoped HMAC token and
             // consumers stop hand-deriving it. Caller-provided idx values win.
-            let index_column = format!("{}_idx", column.column_name);
-            if table
-                .columns
-                .iter()
-                .any(|c| c.column_name == index_column && c.security.is_blind_index)
+            if has_index
                 && encrypted
                     .get(&index_column)
                     .map(|existing| existing.is_null())
@@ -2455,7 +2506,9 @@ impl DataBrokerRuntime {
             return Ok(normalized);
         };
         let mut probe = object.clone();
-        let tenant_column = table.table_security.tenant_column.trim().to_string();
+        let tenant_column = crate::generation::sql::resolve_tenant_column(table)
+            .unwrap_or_default()
+            .to_string();
         let injected_tenant = !tenant_column.is_empty()
             && !probe.contains_key(&tenant_column)
             && !context.tenant_id.trim().is_empty();
@@ -3215,7 +3268,7 @@ mod materialized_view_refresh_tests {
         };
         let refs: Vec<&Mutation> = vec![&invoice, &product, &invoice_again, &empty];
         assert_eq!(
-            select_invalidation_patterns(&refs),
+            select_invalidation_patterns(&CatalogManifest::default(), &refs),
             vec![
                 "udb:select:*:*:*:acme.billing.v1.Invoice:*".to_string(),
                 "udb:select:*:*:*:acme.billing.v1.Product:*".to_string(),
@@ -3330,10 +3383,10 @@ fn table_tenant_value(
     table: &ManifestTable,
     record: &serde_json::Map<String, JsonValue>,
 ) -> String {
-    let tenant_column = table.table_security.tenant_column.trim();
-    if tenant_column.is_empty() {
+    // Declared, flagged or conventional: the same column a filter's token is scoped by.
+    let Some(tenant_column) = crate::generation::sql::resolve_tenant_column(table) else {
         return String::new();
-    }
+    };
     record
         .get(tenant_column)
         .and_then(|value| value.as_str())

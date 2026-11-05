@@ -2023,9 +2023,7 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
         .execute(self.pg_pool()?)
         .await
         .map(|_| ())
-        .map_err(|err| {
-            catalog_sql_internal_status("forget_applied_deltas", err.to_string())
-        })
+        .map_err(|err| catalog_sql_internal_status("forget_applied_deltas", err.to_string()))
     }
 
     /// Compare each table's CHECK rules with what the protos declare.
@@ -2051,17 +2049,12 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
             .map_err(|err| status("deadline", err))?;
         let mut findings = Vec::new();
         for (table_index, table) in manifest.tables.iter().enumerate() {
-            let relation = format!(
-                "{}.{}",
-                qi_runtime(&table.schema),
-                qi_runtime(&table.table)
-            );
-            let live_oid: Option<i64> =
-                sqlx::query_scalar("SELECT to_regclass($1)::OID::BIGINT")
-                    .bind(&relation)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .map_err(|err| status("find table", err))?;
+            let relation = format!("{}.{}", qi_runtime(&table.schema), qi_runtime(&table.table));
+            let live_oid: Option<i64> = sqlx::query_scalar("SELECT to_regclass($1)::OID::BIGINT")
+                .bind(&relation)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|err| status("find table", err))?;
             // A missing table is already a `missing_table` finding.
             let Some(live_oid) = live_oid else {
                 continue;
@@ -2100,11 +2093,8 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
             };
             for (check_index, check) in table.checks.iter().enumerate() {
                 let constraint = format!("c{check_index}");
-                let fix = crate::generation::sql::render_add_check(
-                    &table.schema,
-                    &table.table,
-                    check,
-                );
+                let fix =
+                    crate::generation::sql::render_add_check(&table.schema, &table.table, check);
                 let mut savepoint = sqlx::Connection::begin(&mut *tx)
                     .await
                     .map_err(|err| status("savepoint", err))?;
@@ -2170,9 +2160,7 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
                 ));
             }
         }
-        tx.rollback()
-            .await
-            .map_err(|err| status("rollback", err))?;
+        tx.rollback().await.map_err(|err| status("rollback", err))?;
         Ok(findings)
     }
 

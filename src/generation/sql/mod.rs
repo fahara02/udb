@@ -446,7 +446,11 @@ pub fn render_bootstrap_table(
 
     // Columns no longer carry their rule inline, so a table that already existed gets
     // any rule it lacks here. A changed rule keeps its name and is the delta's to replace.
-    for check in table.checks.iter().filter(|check| !check.name.trim().is_empty()) {
+    for check in table
+        .checks
+        .iter()
+        .filter(|check| !check.name.trim().is_empty())
+    {
         sql.push_str(&render_missing_check(&table.schema, &table.table, check));
     }
 
@@ -838,8 +842,14 @@ pub(crate) mod tests {
             ..ManifestTable::default()
         };
         let sql = render_bootstrap_table(&table, "sum", &SqlGenerationConfig::default());
-        assert!(sql.contains("CONSTRAINT \"chk_orders_status\" CHECK (status IN ('a'))"), "{sql}");
-        assert!(sql.contains("IF NOT EXISTS (SELECT 1 FROM pg_constraint"), "{sql}");
+        assert!(
+            sql.contains("CONSTRAINT \"chk_orders_status\" CHECK (status IN ('a'))"),
+            "{sql}"
+        );
+        assert!(
+            sql.contains("IF NOT EXISTS (SELECT 1 FROM pg_constraint"),
+            "{sql}"
+        );
         assert!(sql.contains("NOT VALID"), "{sql}");
     }
 
@@ -859,7 +869,10 @@ pub(crate) mod tests {
             ..ManifestTable::default()
         };
         let sql = render_bootstrap_table(&table, "sum", &SqlGenerationConfig::default());
-        assert!(sql.contains("DROP POLICY IF EXISTS \"tenant_isolation\""), "{sql}");
+        assert!(
+            sql.contains("DROP POLICY IF EXISTS \"tenant_isolation\""),
+            "{sql}"
+        );
     }
 
     #[test]
@@ -931,7 +944,11 @@ pub(crate) mod tests {
             ..CatalogManifest::default()
         };
         let changes = crate::migration::diff::diff_manifests(Some(&old), &new);
-        assert!(changes.iter().any(|op| op.kind == ChangeKind::AddForeignKey));
+        assert!(
+            changes
+                .iter()
+                .any(|op| op.kind == ChangeKind::AddForeignKey)
+        );
         let artifacts = generate_delta_sql(&new, &changes, &SqlGenerationConfig::default());
         let position = |needle: &str| {
             artifacts

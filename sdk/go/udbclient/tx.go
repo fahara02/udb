@@ -3,10 +3,12 @@ package udbclient
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -30,13 +32,29 @@ type TxScope struct {
 	correlationID string
 	muts          []*entityv1.Mutation
 	err           error
+	replayKey     string
+}
+
+// TxWithKey runs Tx so it is safe to retry after a lost response: each write gets a key
+// derived from replayKey, so the broker replays it instead of applying it twice, and each
+// event a stable event id for consumers to deduplicate. fn must make the same writes on a
+// retry. Insert has no replay form; use Upsert for a retried transaction.
+func (u *Udb) TxWithKey(ctx context.Context, replayKey string, fn func(tx *TxScope) error) error {
+	if strings.TrimSpace(replayKey) == "" {
+		return errors.New("udb: a transaction replay key must not be empty")
+	}
+	return u.runTx(ctx, replayKey, fn)
 }
 
 // Tx runs fn and commits everything it collected atomically. fn returning an
 // error commits nothing. A conditional write that lost a race fails the whole
 // transaction with ErrConflict.
 func (u *Udb) Tx(ctx context.Context, fn func(tx *TxScope) error) error {
-	tx := &TxScope{u: u, txID: newUUID(), correlationID: MetadataFromContext(ctx).CorrelationID}
+	return u.runTx(ctx, "", fn)
+}
+
+func (u *Udb) runTx(ctx context.Context, replayKey string, fn func(tx *TxScope) error) error {
+	tx := &TxScope{u: u, txID: newUUID(), correlationID: MetadataFromContext(ctx).CorrelationID, replayKey: replayKey}
 	if tx.correlationID == "" {
 		tx.correlationID = u.Meta.CorrelationID
 	}
@@ -80,6 +98,10 @@ func (u *Udb) Tx(ctx context.Context, fn func(tx *TxScope) error) error {
 			break
 		}
 		if err != nil {
+			// The broker said it committed. A broken stream after that loses nothing.
+			if committed {
+				return nil
+			}
 			// A stream's refusal carries its typed detail in the trailer; map it
 			// the way unary calls are mapped so the reason survives.
 			return classify(mapError("/udb.services.v1.DataBroker/BeginTx", err, stream.Trailer()))
@@ -105,7 +127,21 @@ func (u *Udb) Tx(ctx context.Context, fn func(tx *TxScope) error) error {
 }
 
 func (tx *TxScope) add(m *entityv1.Mutation) {
+	if tx.replayKey != "" && (m.Operation == "upsert" || m.Operation == "update" || m.Operation == "delete") {
+		m.IdempotencyKey = fmt.Sprintf("%s:%d", tx.replayKey, len(tx.muts))
+	}
 	tx.muts = append(tx.muts, m)
+}
+
+// eventID is random, or stable across retries of a keyed transaction.
+func (tx *TxScope) eventID() string {
+	if tx.replayKey == "" {
+		return newUUID()
+	}
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s:%d", tx.replayKey, len(tx.muts))))
+	sum[6] = sum[6]&0x0f | 0x50
+	sum[8] = sum[8]&0x3f | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", sum[0:4], sum[4:6], sum[6:8], sum[8:10], sum[10:16])
 }
 
 func (tx *TxScope) fail(err error) error {
@@ -148,13 +184,23 @@ func (tx *TxScope) Patch(entity proto.Message, key RowKey, fields Record) error 
 // UpdateIf writes next's updatable columns if the stored row still holds
 // expected; otherwise the whole transaction fails with ErrConflict.
 func (tx *TxScope) UpdateIf(next proto.Message, expected Record) error {
+	if len(expected) == 0 {
+		return tx.fail(errEmptyCAS)
+	}
 	key := RowKey{}
 	rec, err := EncodeRecord(next, WriteInsert)
 	if err != nil {
 		return tx.fail(err)
 	}
 	for _, column := range PrimaryKeys(next) {
-		key[column] = rec[column]
+		value, ok := rec[column]
+		if !ok || value == nil || value == "" {
+			return tx.fail(fmt.Errorf("udb: %s has no value for primary-key column %s", MessageType(next), column))
+		}
+		key[column] = value
+	}
+	if len(key) == 0 {
+		return tx.fail(fmt.Errorf("udb: %s declares no primary key", MessageType(next)))
 	}
 	changes, err := EncodeRecord(next, WriteUpdate)
 	if err != nil {
@@ -169,7 +215,7 @@ func (tx *TxScope) Delete(entity proto.Message, key RowKey) error {
 	if err != nil {
 		return tx.fail(err)
 	}
-	tx.add(&entityv1.Mutation{Operation: "delete", MessageType: MessageType(entity), Filter: filter})
+	tx.add(&entityv1.Mutation{Operation: "delete", MessageType: MessageType(entity), Filter: filter, RequireAffected: 1})
 	return nil
 }
 
@@ -178,7 +224,7 @@ func (tx *TxScope) update(messageType string, key RowKey, changes, expected Reco
 	if err != nil {
 		return tx.fail(err)
 	}
-	m := &entityv1.Mutation{Operation: "update", MessageType: messageType, Filter: filter}
+	m := &entityv1.Mutation{Operation: "update", MessageType: messageType, Filter: filter, RequireAffected: 1}
 	if len(changes) > 0 {
 		if m.Changes, err = structpb.NewStruct(jsonSafe(changes)); err != nil {
 			return tx.fail(err)
@@ -219,7 +265,7 @@ func (tx *TxScope) Emit(event proto.Message) error {
 		return tx.fail(fmt.Errorf("udb: event %s has no value in its partition key field %s", MessageType(event), keyField))
 	}
 	envelope, err := structpb.NewStruct(map[string]any{
-		"event_id":         newUUID(),
+		"event_id":         tx.eventID(),
 		"event_type":       EventType(event),
 		"correlation_id":   tx.correlationID,
 		"document_id":      document,

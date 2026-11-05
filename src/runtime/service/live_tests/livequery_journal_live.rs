@@ -118,6 +118,148 @@ fn subscribe_request(tenant_id: &str) -> Request<lq_pb::SubscribeRequest> {
     request
 }
 
+/// An application table of the project's active catalog is a live query source: its
+/// snapshot honours the filter, masks PII, leaves out soft-deleted rows, and counts every
+/// match when the limit cuts it short.
+#[tokio::test]
+#[ignore = "live: requires UDB_LIVE_NATIVE_PG_DSN"]
+async fn live_livequery_serves_an_application_table_from_the_active_catalog() {
+    use crate::generation::{
+        CatalogManifest, ManifestColumn, ManifestTable, ManifestTableSecurity,
+    };
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let runtime = live_runtime().await;
+    let schema = format!("udb_lq_{}", Uuid::new_v4().simple());
+    let tenant = Uuid::new_v4().to_string();
+    let project = format!("lq-{}", Uuid::new_v4().simple());
+    sqlx::raw_sql(&format!(
+        "CREATE SCHEMA \"{schema}\"; CREATE TABLE \"{schema}\".tasks (id TEXT PRIMARY KEY, \
+         tenant_id TEXT NOT NULL, project_id TEXT, status TEXT, email TEXT, deleted_at TIMESTAMPTZ)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("application table");
+    for (id, status) in [("a", "open"), ("b", "open"), ("c", "open"), ("d", "closed")] {
+        sqlx::query(&format!(
+            "INSERT INTO \"{schema}\".tasks (id, tenant_id, project_id, status, email) \
+             VALUES ($1, $2, $3, $4, 'real@x')"
+        ))
+        .bind(id)
+        .bind(&tenant)
+        .bind(&project)
+        .bind(status)
+        .execute(&pool)
+        .await
+        .expect("seed");
+    }
+    sqlx::query(&format!(
+        "INSERT INTO \"{schema}\".tasks (id, tenant_id, project_id, status, deleted_at) \
+         VALUES ('gone', $1, $2, 'open', now())"
+    ))
+    .bind(&tenant)
+    .bind(&project)
+    .execute(&pool)
+    .await
+    .expect("tombstone");
+    let column = |name: &str, sql_type: &str, primary: bool| ManifestColumn {
+        field_name: name.to_string(),
+        column_name: name.to_string(),
+        proto_type: "string".to_string(),
+        sql_type: sql_type.to_string(),
+        is_primary: primary,
+        ..ManifestColumn::default()
+    };
+    let mut email = column("email", "TEXT", false);
+    email.security.is_pii = true;
+    let manifest = CatalogManifest {
+        checksum_sha256: format!("sha256:{}", Uuid::new_v4().simple()),
+        tables: vec![ManifestTable {
+            proto_package: "acme.lq.v1".to_string(),
+            message_name: "Task".to_string(),
+            schema: schema.clone(),
+            table: "tasks".to_string(),
+            primary_key: vec!["id".to_string()],
+            soft_delete: true,
+            soft_delete_column: "deleted_at".to_string(),
+            table_security: ManifestTableSecurity {
+                tenant_column: "tenant_id".to_string(),
+                project_column: "project_id".to_string(),
+                ..ManifestTableSecurity::default()
+            },
+            columns: vec![
+                column("id", "TEXT", true),
+                column("tenant_id", "TEXT", false),
+                column("project_id", "TEXT", false),
+                column("status", "TEXT", false),
+                email,
+                column("deleted_at", "TIMESTAMPTZ", false),
+            ],
+            ..ManifestTable::default()
+        }],
+        ..CatalogManifest::default()
+    };
+    let bytes = serde_json::to_vec(&manifest).expect("manifest");
+    let (catalog_id, _, _) = runtime
+        .stage_project_catalog(&project, &bytes, "live query test", "test")
+        .await
+        .expect("stage");
+    runtime
+        .activate_project_catalog(&project, &catalog_id, "live query test", "test")
+        .await
+        .expect("activate");
+
+    let service = LiveQueryServiceImpl::new()
+        .with_runtime(Some(runtime.clone()))
+        .with_channels(Some(runtime.channels().clone()));
+    let mut request = Request::new(lq_pb::SubscribeRequest {
+        tenant_id: tenant.clone(),
+        message_type: "acme.lq.v1.Task".to_string(),
+        project_id: project.clone(),
+        snapshot_limit: 2,
+        filters: vec![lq_pb::LiveQueryPredicate {
+            field: "status".to_string(),
+            value: "open".to_string(),
+            op: lq_pb::LiveQueryComparison::Eq as i32,
+            ..Default::default()
+        }],
+        ..Default::default()
+    });
+    let metadata = request.metadata_mut();
+    metadata.insert("x-tenant-id", tenant.parse().expect("tenant"));
+    metadata.insert("x-udb-project-id", project.parse().expect("project"));
+    metadata.insert(
+        "x-request-id",
+        Uuid::new_v4().to_string().parse().expect("request id"),
+    );
+    let mut stream = service
+        .subscribe(request)
+        .await
+        .expect("an application table is a live query source")
+        .into_inner();
+    let first = tokio::time::timeout(Duration::from_secs(10), stream.next())
+        .await
+        .expect("the snapshot arrives")
+        .expect("the stream has a snapshot")
+        .expect("the snapshot is no error");
+    let Some(lq_pb::subscribe_response::Payload::Snapshot(snapshot)) = first.payload else {
+        panic!("the first frame is the snapshot");
+    };
+    assert_eq!(snapshot.rows_json.len(), 2, "cut at the limit");
+    assert_eq!(
+        snapshot.row_count, 3,
+        "every open row, without the tombstone"
+    );
+    for row in &snapshot.rows_json {
+        assert!(!row.contains("real@x"), "PII leaked: {row}");
+    }
+    drop(stream);
+    let _ = sqlx::raw_sql(&format!("DROP SCHEMA \"{schema}\" CASCADE"))
+        .execute(&pool)
+        .await;
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; runs in the CI native live lane (UDB_LIVE_AUTH_TESTS=1 ... -- --ignored)"]
 async fn live_livequery_non_leader_streams_own_tenant_deltas_from_the_journal() {

@@ -84,8 +84,21 @@ pub(crate) async fn subscribe(
             "message_type is required",
         ));
     }
-    // Fail closed BEFORE any read/stream if the source has no tenant column.
-    let source = resolve_source(&message_type)?;
+    // A native entity, else a table of the project's active catalog. Fail closed BEFORE
+    // any read/stream if the source is unknown or has no tenant column.
+    let native = crate::runtime::native_catalog::native_manifest();
+    let project_catalog = if crate::broker::resolve_table_for_message(native, &message_type).is_ok()
+    {
+        None
+    } else {
+        svc.require_runtime()?
+            .load_active_catalog_for_project(&project_id)
+            .await?
+    };
+    let source_manifest = project_catalog
+        .as_ref()
+        .map_or(native, |catalog| &catalog.manifest);
+    let source = resolve_source(&message_type, source_manifest)?;
     let user_filter = build_user_filter(&req.filters, &req.any_of)?;
 
     // Durable-resume cursor (optional): the client's last-delivered event_id.
@@ -216,10 +229,39 @@ pub(crate) async fn subscribe(
         pagination: Some(LogicalPagination::limit(limit)),
     };
     // MEDIATED snapshot: IR query plan + read-fence (carried on the context),
-    // tenant predicate injected server-side. Never a raw query.
-    let rows = runtime
-        .native_entity_read_for_service(SERVICE_ID, &context, read)
-        .await?;
+    // tenant predicate injected server-side. Never a raw query. A catalog table reads
+    // through Select, so masking, soft delete and RLS apply as on any other read.
+    let mut matched_rows = None;
+    let rows = if project_catalog.is_some() {
+        let filter = user_filter
+            .as_ref()
+            .map(super::predicate::logical_filter_to_json)
+            .transpose()?
+            .unwrap_or(serde_json::Value::Null);
+        let (records, _warning) = runtime
+            .select(
+                source_manifest,
+                crate::proto::SelectRequest {
+                    message_type: message_type.clone(),
+                    filter: crate::runtime::executor_utils::json_to_struct(&filter),
+                    limit: i32::try_from(limit).unwrap_or(i32::MAX),
+                    include_total: true,
+                    ..Default::default()
+                },
+                context.clone(),
+            )
+            .await?;
+        matched_rows = Some(records.exact_total);
+        records
+            .records_json
+            .iter()
+            .filter_map(|raw| serde_json::from_slice(raw).ok())
+            .collect::<Vec<serde_json::Value>>()
+    } else {
+        runtime
+            .native_entity_read_for_service(SERVICE_ID, &context, read)
+            .await?
+    };
     // PII masking for BOTH the snapshot and the live deltas. The relational read
     // path masks these columns; LiveQuery shipped the raw row image, so a
     // subscriber with only `udb:stream` saw them in clear text.
@@ -230,7 +272,7 @@ pub(crate) async fn subscribe(
     let masked_columns: Vec<String> = if can_read_pii {
         Vec::new()
     } else {
-        crate::runtime::native_catalog::native_manifest()
+        source_manifest
             .tables
             .iter()
             .find(|table| {
@@ -243,7 +285,11 @@ pub(crate) async fn subscribe(
                 table
                     .columns
                     .iter()
-                    .filter(|c| c.security.is_pii || c.security.mask_in_logs)
+                    .filter(|c| {
+                        c.security.is_pii
+                            || c.security.mask_in_logs
+                            || crate::runtime::executor_utils::is_encrypted_column(c)
+                    })
                     .map(|c| c.column_name.clone())
                     .collect()
             })
@@ -259,7 +305,9 @@ pub(crate) async fn subscribe(
     let snapshot = lq_pb::SubscribeResponse {
         payload: Some(lq_pb::subscribe_response::Payload::Snapshot(
             lq_pb::LiveQuerySnapshot {
-                row_count: rows_json.len() as i64,
+                // Every row that matched: above rows_json's length, the snapshot was
+                // cut at its limit.
+                row_count: matched_rows.unwrap_or(rows_json.len() as i64),
                 rows_json,
             },
         )),

@@ -1518,6 +1518,12 @@ impl DataBrokerRuntime {
         use crate::runtime::consistency::{ConsistencyPolicy, ReadFence, ReadRouting};
         use crate::runtime::replica::BoundedReplicaRead;
 
+        // An explicit primary route is honoured on every consistency level.
+        let is_write = is_write
+            || matches!(
+                context.routing_policy.trim().to_ascii_lowercase().as_str(),
+                "primary" | "write" | "strong"
+            );
         let tenant = {
             let tenant = context.tenant_id.trim();
             (!tenant.is_empty()).then_some(tenant)
@@ -1553,6 +1559,20 @@ impl DataBrokerRuntime {
         match policy.route_read(is_write, backend_label) {
             ReadRouting::RefusedBounded(refused) => Err(bounded_read_refused_status(refused)),
             ReadRouting::Primary => self.routed_primary_pool(context, tenant).await,
+            // A named instance is not one of the shared replicas.
+            ReadRouting::ReplicaUnfenced if !context.target_instance.trim().is_empty() => {
+                self.routed_primary_pool(context, tenant).await
+            }
+            // A caller's lag limit applies here too: no replica within it means primary.
+            ReadRouting::ReplicaUnfenced if context.replica_lag_override().is_some() => {
+                let budget = context.replica_lag_override().unwrap_or_default();
+                match self.pg_replicas.choose_bounded_replica(None, budget).await {
+                    BoundedReplicaRead::Replica(pool) => {
+                        self.routed_replica_pool(pool, tenant).await
+                    }
+                    _ => self.routed_primary_pool(context, tenant).await,
+                }
+            }
             ReadRouting::ReplicaUnfenced => match self.pg_replicas.choose_pool() {
                 Some(pool) => self.routed_replica_pool(pool, tenant).await,
                 None => self.routed_primary_pool(context, tenant).await,

@@ -923,9 +923,7 @@ pub fn build_upsert_plan(
         .map(|(offset, column)| {
             let placeholder = format!("${}", offset + 1);
             match column_sql_type(table, column) {
-                Some(sql_type)
-                    if casts_array_placeholders && sql_type.trim_end().ends_with("[]") =>
-                {
+                Some(sql_type) if casts_array_placeholders => {
                     crate::ir::compile::postgres::cast_placeholder_to_column_type(
                         sql_type,
                         &placeholder,
@@ -1407,6 +1405,13 @@ pub fn build_update_plan(
         .iter()
         .cloned()
         .chain([tenant.clone(), project.clone()])
+        .chain(
+            table
+                .columns
+                .iter()
+                .filter(|column| column.exclude_from_update || column.generated)
+                .map(|column| column.column_name.clone()),
+        )
         .filter(|column| !column.is_empty())
         .collect();
     let mut set_fragments: Vec<String> = Vec::new();
@@ -1427,7 +1432,7 @@ pub fn build_update_plan(
         }
         if immutable.contains(&normalized) {
             errors.push(format!(
-                "column {normalized} is immutable through Update (primary key / tenant / project); use Upsert for identity changes"
+                "column {normalized} is immutable through Update (primary key, tenant, project, generated or exclude_from_update); use Upsert for identity changes"
             ));
             continue;
         }
@@ -1473,7 +1478,7 @@ pub fn build_update_plan(
             continue;
         }
         set_fragments.push(format!(
-            "{col} = {col} + ${next_param}",
+            "{col} = COALESCE({col}, 0) + ${next_param}",
             col = qi(&normalized)
         ));
         parameter_columns.push(normalized);
@@ -2130,6 +2135,21 @@ fn collect_filter_columns(
                     continue;
                 }
                 if allowed.contains(&normalized) {
+                    if let Value::Object(operators) = nested {
+                        for (operator, operand) in operators {
+                            if operand.is_null()
+                                && matches!(
+                                    operator.to_ascii_lowercase().trim_start_matches('$'),
+                                    "eq" | "ne" | "gt" | "gte" | "lt" | "lte"
+                                )
+                            {
+                                errors.push(format!(
+                                    "comparison with NULL on field '{normalized}' matches no \
+                                     rows; use {{\"$is_null\": true}} or {{\"$not_null\": true}}"
+                                ));
+                            }
+                        }
+                    }
                     out.push(normalized);
                     collect_filter_columns(nested, allowed, errors, out);
                 } else if !is_operator(&normalized) {
@@ -2523,9 +2543,14 @@ fn compile_filter_predicates(
                     continue;
                 }
                 if !allowed.contains(&normalized) {
-                    if !is_operator(&normalized) {
-                        errors.push(format!("unknown filter field {}", key));
-                    }
+                    errors.push(if is_operator(&normalized) {
+                        format!(
+                            "operator {key} must be inside a column, e.g. \
+                             {{\"column\": {{\"{key}\": ...}}}}"
+                        )
+                    } else {
+                        format!("unknown filter field {key}")
+                    });
                     continue;
                 }
                 // W2: FAIL CLOSED on encrypted columns — AEAD ciphertext is
@@ -2723,10 +2748,15 @@ fn compile_column_predicate(
                 next_param += 1;
                 continue;
             }
-            // GAP 6: JSONB key-exists operator takes a text key, no cast needed
+            // The key binds as a JSON string because this column binds as JSON, and `?`
+            // takes text, so unwrap it.
             if sql_op == "?" {
                 parameter_columns.push(column.to_string());
-                parts.push(format!("{} ? ${}", qi(column), next_param));
+                parts.push(format!(
+                    "jsonb_exists({}, (${}::jsonb #>> '{{}}'))",
+                    qi(column),
+                    next_param
+                ));
                 next_param += 1;
                 continue;
             }
@@ -2898,9 +2928,14 @@ fn logical_filter_from_planner_json(
             continue;
         }
         if !allowed.contains(&normalized) {
-            if !is_operator(&normalized) {
-                errors.push(format!("unknown filter field {}", key));
-            }
+            errors.push(if is_operator(&normalized) {
+                format!(
+                    "operator {key} must be inside a column, e.g. \
+                     {{\"column\": {{\"{key}\": ...}}}}"
+                )
+            } else {
+                format!("unknown filter field {key}")
+            });
             continue;
         }
         if let Some(clause) = logical_column_filter_from_json(&normalized, nested, errors) {
@@ -3416,7 +3451,7 @@ mod tests {
         // SET params first (changes sorted by column, then increments), filter after.
         assert!(
             plan.sql.starts_with(
-                "UPDATE \"public\".\"widgets\" SET \"status\" = $1, \"login_attempts\" = \"login_attempts\" + $2 WHERE "
+                "UPDATE \"public\".\"widgets\" SET \"status\" = $1, \"login_attempts\" = COALESCE(\"login_attempts\", 0) + $2 WHERE "
             ),
             "unexpected sql: {}",
             plan.sql
