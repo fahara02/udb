@@ -1645,6 +1645,9 @@ impl DataBrokerRuntime {
         // Refuse planted ciphertext / caller-chosen blind-index tokens before
         // the encryptor (which skips already-encrypted-looking values) sees them.
         crate::runtime::executor_utils::validate_client_encrypted_write(&table.columns, &record)?;
+        // Only the verdict is used: the string stays as sent, so PostgreSQL parses the
+        // caller's exact text and keeps number precision that a parsed value would lose.
+        crate::runtime::executor_utils::json_column_strings_parsed(table, &record)?;
         // GO-005 (compare-and-swap): when the caller asserts an `expected`
         // column=value precondition, evaluate it in THIS write tx — after the
         // tenant/RLS GUCs are installed (line above) and holding a row lock — so
@@ -2757,7 +2760,10 @@ impl DataBrokerRuntime {
                     &table.columns,
                     &crate::broker::normalize_record_keys(table, changes),
                 )?;
-                encrypted_changes = self.encrypt_update_changes(table, changes, context)?;
+                // A string for a JSON column is JSON text, as on Upsert and Insert.
+                let parsed_changes =
+                    crate::runtime::executor_utils::json_column_strings_parsed(table, changes)?;
+                encrypted_changes = self.encrypt_update_changes(table, &parsed_changes, context)?;
                 &encrypted_changes
             }
             Err(_) => changes,

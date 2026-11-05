@@ -1530,16 +1530,25 @@ pub fn build_update_plan(
         &request.context,
     );
 
+    // A deleted row is absent to Select and Delete, so it is absent here too, and the
+    // caller gets the same not-found. Grouping stops an OR bypassing the guard. An
+    // Update that writes the tombstone column itself addresses the tombstone on
+    // purpose, which is how a row is restored. Malformed metadata fails closed.
+    let soft_delete_column = resolve_soft_delete_column(table, &allowed, &mut errors);
+    let where_clause = if compiled.sql.is_empty() {
+        "FALSE".to_string()
+    } else {
+        match soft_delete_column.filter(|column| !change_columns.contains(column)) {
+            Some(column) => format!("({}) AND {} IS NULL", compiled.sql, qi(&column)),
+            None => compiled.sql,
+        }
+    };
     let sql = format!(
         "UPDATE {}.{} SET {} WHERE {}{}",
         qi(&table.schema),
         qi(&table.table),
         set_fragments.join(", "),
-        if compiled.sql.is_empty() {
-            "FALSE".to_string()
-        } else {
-            compiled.sql
-        },
+        where_clause,
         if request.return_record {
             " RETURNING *"
         } else {

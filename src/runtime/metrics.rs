@@ -55,6 +55,7 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     fn record_grpc(&self, _method: &str, _status: &str, _seconds: f64) {}
     /// W4: a request served under the rate limiter's failure-mode fallback.
     fn record_rate_limit_degraded(&self, _mode: &str) {}
+    fn record_rate_limit_denied(&self, _operation: &str) {}
     fn observe_pg_query(&self, _op: &str, _table: &str, _seconds: f64) {}
     fn inc_cache_op(&self, _op: &str, _hit: bool) {}
     fn inc_vector_op(&self, _collection: &str, _op: &str) {}
@@ -467,6 +468,7 @@ pub struct PrometheusMetrics {
     grpc_requests: prometheus::IntCounterVec,
     /// W4: limiter running on its declared failure-mode fallback, by mode.
     rate_limit_degraded: prometheus::IntCounterVec,
+    rate_limit_denied: prometheus::IntCounterVec,
     grpc_duration: prometheus::HistogramVec,
     pg_duration: prometheus::HistogramVec,
     cache_ops: prometheus::IntCounterVec,
@@ -573,6 +575,13 @@ impl PrometheusMetrics {
                 "UDB gRPC requests by method and status",
             ),
             &["method", "status"],
+        )?;
+        let rate_limit_denied = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_rate_limit_denied_total",
+                "Data-plane requests refused by the rate limiter, by operation",
+            ),
+            &["operation"],
         )?;
         let rate_limit_degraded = prometheus::IntCounterVec::new(
             prometheus::Opts::new(
@@ -1026,6 +1035,7 @@ impl PrometheusMetrics {
         for collector in [
             Box::new(grpc_requests.clone()) as Box<dyn prometheus::core::Collector>,
             Box::new(rate_limit_degraded.clone()) as Box<dyn prometheus::core::Collector>,
+            Box::new(rate_limit_denied.clone()),
             Box::new(grpc_duration.clone()),
             Box::new(pg_duration.clone()),
             Box::new(cache_ops.clone()),
@@ -1113,6 +1123,7 @@ impl PrometheusMetrics {
             registry,
             grpc_requests,
             rate_limit_degraded,
+            rate_limit_denied,
             grpc_duration,
             pg_duration,
             cache_ops,
@@ -1197,6 +1208,10 @@ impl PrometheusMetrics {
     /// W4: count a request served under the limiter's failure-mode fallback.
     pub fn record_rate_limit_degraded(&self, mode: &str) {
         self.rate_limit_degraded.with_label_values(&[mode]).inc();
+    }
+
+    pub fn record_rate_limit_denied(&self, operation: &str) {
+        self.rate_limit_denied.with_label_values(&[operation]).inc();
     }
 
     pub fn record_grpc(&self, method: &str, status: &str, seconds: f64) {
@@ -1465,6 +1480,9 @@ impl MetricsRecorder for PrometheusMetrics {
     }
     fn record_rate_limit_degraded(&self, mode: &str) {
         PrometheusMetrics::record_rate_limit_degraded(self, mode);
+    }
+    fn record_rate_limit_denied(&self, operation: &str) {
+        PrometheusMetrics::record_rate_limit_denied(self, operation);
     }
     fn observe_pg_query(&self, op: &str, table: &str, seconds: f64) {
         PrometheusMetrics::observe_pg_query(self, op, table, seconds);

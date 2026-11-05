@@ -612,6 +612,12 @@ impl DataBrokerRuntime {
                                         &table.columns,
                                         &record,
                                     )
+                                    .and_then(|()| {
+                                        crate::runtime::executor_utils::json_column_strings_parsed(
+                                            table, &record,
+                                        )
+                                        .map(drop)
+                                    })
                                     .and_then(|()| self.encrypt_record_for_table(table, &record))
                                 }
                                 Err(error) => Err(tx_object_invalid_field(

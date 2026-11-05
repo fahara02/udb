@@ -33,8 +33,8 @@ the auth/session/encryption/authz/redis subset.
 | `UDB_ENCRYPTION_KEY` | 32-byte object/native-state encryption key (base64/hex/raw). Required when encryption-at-rest is mandated, else config validation fails. |
 | `UDB_AUTH_GRPC_ADDR=0.0.0.0:50061` | Exposes the auth control plane — see §3. Defaults to loopback-only. |
 | `UDB_SERVICE_IDENTITY_REQUIRED=true` | Require a verified service identity (forced on in production). |
-| `REDIS_URL` (or `UDB_REDIS_DSN`) | Redis for the distributed rate limiter / sessions. Without it the rate limiter no-ops. |
-| `UDB_RATE_LIMIT_MAX_PER_WINDOW=1000` | **The data-plane budget.** Max DataBroker requests per `(tenant, operation)` bucket per window (default `1000`). This is the knob that governs `Select`/`Upsert`/… — raise it for high-throughput tenants. Short alias: `UDB_RATE_LIMIT_MAX`. |
+| `REDIS_URL` (or `UDB_REDIS_DSN`) | Redis for the distributed rate limiter / sessions. Without it each broker process enforces the budget on its own, unless `UDB_RATE_LIMIT_FAILURE_MODE=open`. |
+| `UDB_RATE_LIMIT_MAX_PER_WINDOW=10000` | **The data-plane budget.** Max DataBroker requests per `(tenant, operation)` bucket per window (default `10000`). This is the knob that governs `Select`/`Upsert`/… — raise it for high-throughput tenants. Short alias: `UDB_RATE_LIMIT_MAX`. |
 | `UDB_RATE_LIMIT_WINDOW_SECS=60` | Fixed-window length in seconds (default `60`). Short alias: `UDB_RATE_LIMIT_WINDOW`. |
 | `UDB_RATE_LIMIT_ENABLED=true` | Master switch for the data-plane limiter (default on). Set `false` to disable entirely. |
 | `UDB_RATE_LIMIT_PER_KEY=false` | Opt-in **per-key** limiting (default off). When on, each credential gets its own window bucket and a key's `api_keys.rate_limit_per_minute` column **raises** its budget above the tenant default (raise-only — never lowers below it). Off = one shared `(tenant, operation)` bucket. |
@@ -57,6 +57,16 @@ offline with `udb auth bootstrap user`.
 > cross-referencing logs. The `UDB_API_KEY_RATE_LIMIT_*` /
 > `UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_*` env vars govern the auth control-plane /
 > public-bootstrap paths, **not** DataBroker.
+>
+> **Size the budget for your read pattern.** The default of 10,000 requests a minute
+> is shared by the whole tenant for each operation, and every table read is one
+> `Select`. A schema with one table per kind makes many small reads per screen, so a
+> few busy screens can spend the budget. SDK reads retry a refused call a few times
+> with a short backoff before raising the error, and those retries spend the budget
+> too, so the first symptom can be slow screens rather than errors. To diagnose it,
+> watch `udb_rate_limit_denied_total{operation}` and the broker's warning, written
+> once per bucket per window. Then raise `UDB_RATE_LIMIT_MAX_PER_WINDOW` to your
+> measured peak plus headroom.
 >
 > **Per-key budgets (`UDB_RATE_LIMIT_PER_KEY=true`).** With the shared per-tenant
 > bucket, one noisy principal exhausts the whole tenant. Enable per-key limiting

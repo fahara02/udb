@@ -1299,6 +1299,137 @@ async fn served_update_by_unique_non_pk_key_never_silently_affects_zero_live() {
     teardown(&pool, &schema, &tenant).await;
 }
 
+// ── a string written to a JSON column ────────────────────────────────────────
+
+/// A string for a JSONB column means the same on Upsert and Update: JSON text. Update
+/// is served from planner SQL + `bind_one` and Upsert from the bridged IR emitter, so
+/// each path has to be proven.
+///
+/// Revert-proof: drop `json_column_strings_parsed` from the update path and Update
+/// stores `""` and the encoded object as JSON strings; drop it from the upsert path
+/// and the text `null` stores a JSON null document.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn served_json_column_strings_mean_the_same_on_every_verb_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        eprintln!("data-plane live DSN unset — skipping JSON column strings");
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool)
+        .await
+        .expect("bootstrap system catalog");
+
+    let schema = format!("udb_dp_{}", Uuid::new_v4().simple());
+    let tenant = Uuid::new_v4().to_string();
+    create_schema(&pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".docs (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, doc JSONB)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create docs");
+
+    const MSG: &str = "acme.dp.v1.DocRow";
+    let mut table = ManifestTable {
+        proto_package: "acme.dp.v1".to_string(),
+        message_name: "DocRow".to_string(),
+        schema: schema.clone(),
+        table: "docs".to_string(),
+        primary_key: vec!["id".to_string()],
+        table_security: ManifestTableSecurity {
+            tenant_column: "tenant_id".to_string(),
+            ..ManifestTableSecurity::default()
+        },
+        ..ManifestTable::default()
+    };
+    table.columns = vec![
+        col("id", "TEXT", true),
+        col("tenant_id", "TEXT", false),
+        col("doc", "JSONB", false),
+    ];
+    let svc = dp_service(
+        &dsn,
+        CatalogManifest {
+            tables: vec![table],
+            ..CatalogManifest::default()
+        },
+    )
+    .await;
+    let id = format!("row-{}", Uuid::new_v4().simple());
+    let key = json!({"id": id, "tenant_id": tenant});
+    let select =
+        format!("SELECT jsonb_typeof(doc), doc::text FROM \"{schema}\".docs WHERE id = $1");
+    let stored = || {
+        sqlx::query_as::<_, (Option<String>, Option<String>)>(&select)
+            .bind(&id)
+            .fetch_one(&pool)
+    };
+    let row = |doc: serde_json::Value| json!({"id": id, "tenant_id": tenant, "doc": doc});
+    served_upsert(&svc, &tenant, MSG, row(json!({"seed": 1})), "")
+        .await
+        .expect("seed row");
+
+    // JSON text is stored as the document it encodes, by both verbs.
+    for (text, kind, document) in [
+        ("{\"a\": 1}", "object", "{\"a\": 1}"),
+        ("[1]", "array", "[1]"),
+        ("\"\"", "string", "\"\""),
+    ] {
+        super::data_plane_live::served_update(
+            &svc,
+            &tenant,
+            MSG,
+            key.clone(),
+            json!({"doc": text}),
+        )
+        .await
+        .unwrap_or_else(|status| panic!("Update {text}: {status}"));
+        let by_update = stored().await.expect("read after Update");
+        assert_eq!(
+            by_update,
+            (Some(kind.to_string()), Some(document.to_string()))
+        );
+        served_upsert(&svc, &tenant, MSG, row(json!(text)), "")
+            .await
+            .unwrap_or_else(|status| panic!("Upsert {text}: {status}"));
+        assert_eq!(
+            stored().await.expect("read after Upsert"),
+            by_update,
+            "{text}"
+        );
+    }
+
+    // Anything else is refused by both verbs, naming the column, and writes nothing.
+    let before = stored().await.expect("read before refusals");
+    for text in ["", "x", "null"] {
+        let update = super::data_plane_live::served_update(
+            &svc,
+            &tenant,
+            MSG,
+            key.clone(),
+            json!({"doc": text}),
+        )
+        .await
+        .expect_err("Update must refuse");
+        let upsert = served_upsert(&svc, &tenant, MSG, row(json!(text)), "")
+            .await
+            .expect_err("Upsert must refuse");
+        for status in [update, upsert] {
+            assert_eq!(status.code(), tonic::Code::InvalidArgument, "{text:?}");
+            assert!(status.message().contains("'doc'"), "{}", status.message());
+        }
+        assert_eq!(
+            stored().await.expect("read after refusal"),
+            before,
+            "{text:?}"
+        );
+    }
+    teardown(&pool, &schema, &tenant).await;
+}
+
 // ── explicit null on a write ─────────────────────────────────────────────────
 
 /// `IS NULL` for one column of one row, read past every served scope.

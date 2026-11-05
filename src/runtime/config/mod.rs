@@ -413,7 +413,7 @@ impl Default for ServiceSettings {
             catalog_compatibility_level: "backward".to_string(),
             rate_limit_enabled: true,
             rate_limit_window_secs: 60,
-            rate_limit_max_per_window: 1000,
+            rate_limit_max_per_window: 10_000,
             rate_limit_max_per_operation: BTreeMap::new(),
             rate_limit_per_key_enabled: false,
             rate_limit_failure_mode: "closed".to_string(),

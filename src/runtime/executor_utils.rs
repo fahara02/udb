@@ -686,6 +686,57 @@ fn referential_constraint_status() -> tonic::Status {
     )
 }
 
+/// The client message for a value its column type refused. It names the type from
+/// PostgreSQL's text and drops the rest, because that text quotes the value, which
+/// may be PII.
+fn invalid_input_message(database_message: &str) -> String {
+    let type_name = database_message
+        .strip_prefix("invalid input syntax for type ")
+        .map(|rest| rest.split(':').next().unwrap_or(rest).trim())
+        .filter(|name| {
+            !name.is_empty()
+                && name
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == ' ' || c == '_')
+        });
+    match type_name {
+        Some("json" | "jsonb") => "value is not valid JSON for a JSON column (send a JSON \
+             document, or null to clear the column; an empty string is not JSON)"
+            .to_string(),
+        Some(name) => format!("value is not valid for a column of type {name}"),
+        None => "a value is not valid for the target column type".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod invalid_input_message_tests {
+    use super::invalid_input_message;
+
+    #[test]
+    fn names_the_type_and_never_the_value() {
+        let json = invalid_input_message("invalid input syntax for type json");
+        assert!(json.contains("not valid JSON"), "{json}");
+        assert!(!json.contains("identifier"), "{json}");
+
+        let uuid = invalid_input_message("invalid input syntax for type uuid: \"secret-value\"");
+        assert_eq!(uuid, "value is not valid for a column of type uuid");
+
+        let time = invalid_input_message(
+            "invalid input syntax for type timestamp with time zone: \"secret-value\"",
+        );
+        assert_eq!(
+            time,
+            "value is not valid for a column of type timestamp with time zone"
+        );
+    }
+
+    #[test]
+    fn an_unrecognised_message_is_not_echoed() {
+        let other = invalid_input_message("invalid input value for enum kind: \"secret-value\"");
+        assert_eq!(other, "a value is not valid for the target column type");
+    }
+}
+
 /// Central classifier for `sqlx::Error` -> typed `tonic::Status` (bug_report.md
 /// B1/B2/B3). When the failure is a database error carrying a SQLSTATE we
 /// recognise, map it to the correct gRPC code with a clean, leak-free message;
@@ -697,7 +748,7 @@ fn referential_constraint_status() -> tonic::Status {
 ///   - `23505` unique_violation        -> `AlreadyExists` ("resource already exists")
 ///   - `23502` not_null_violation       -> `InvalidArgument` ("required field <col> is missing")
 ///   - `22P02` invalid_text_representation / `22007` invalid_datetime_format
-///                                      -> `InvalidArgument` ("invalid identifier format ...")
+///                                      -> `InvalidArgument` (names the refused type, never the value)
 ///   - `23503` foreign_key_violation    -> `FailedPrecondition`
 ///   - everything else                  -> `Internal` ("{context}") — raw DB text suppressed
 pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::Status {
@@ -763,11 +814,12 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                     );
                 }
                 "22P02" | "22007" => {
+                    let message = invalid_input_message(db.message());
                     return crate::runtime::error_reasons::annotate(
                         executor_utils_invalid_field(
                             "parameter",
-                            "must be a valid UUID/value for the target column",
-                            "invalid identifier format (a parameter must be a valid UUID/value)",
+                            "must be a valid value for the target column type",
+                            message,
                         ),
                         crate::runtime::error_reasons::TYPE_MISMATCH,
                         None,
@@ -2079,6 +2131,134 @@ pub(crate) fn unix_now() -> i64 {
 }
 
 // ── Manifest helpers ──────────────────────────────────────────────────────────
+
+/// One rule for a string written to a JSON or JSONB column, on every write verb: the
+/// string is JSON text. A document comes back parsed. Text that is not JSON is
+/// refused, and so is the text `null`, which would otherwise store a JSON null
+/// document that `IS NULL` does not see. To store a JSON string, JSON-encode it.
+///
+/// Refusals name the column and never quote the value, which may be PII. An encrypted
+/// column is skipped: its plaintext is opaque here and its stored form is ciphertext.
+pub(crate) fn json_column_strings_parsed(
+    table: &crate::generation::ManifestTable,
+    record: &JsonValue,
+) -> Result<JsonValue, tonic::Status> {
+    let Some(object) = record.as_object() else {
+        return Ok(record.clone());
+    };
+    let resolver = crate::planning::broker::column_resolver(table);
+    let mut parsed = object.clone();
+    for (key, value) in object {
+        let JsonValue::String(text) = value else {
+            continue;
+        };
+        let lower = key.to_ascii_lowercase();
+        let name = resolver.get(&lower).unwrap_or(&lower);
+        let Some(column) = table
+            .columns
+            .iter()
+            .find(|column| column.column_name == *name)
+        else {
+            continue;
+        };
+        let is_json = column.is_json
+            || column.is_jsonb
+            || column.sql_type.to_ascii_uppercase().contains("JSON");
+        if !is_json || is_encrypted_column(column) {
+            continue;
+        }
+        let refused = match serde_json::from_str::<JsonValue>(text) {
+            Ok(JsonValue::Null) => format!(
+                "the text null is not accepted for JSON column '{name}': send a real null to clear the column"
+            ),
+            Ok(document) => {
+                parsed.insert(key.clone(), document);
+                continue;
+            }
+            Err(_) => format!(
+                "value for JSON column '{name}' is not valid JSON: send a JSON document, or null to clear the column; to store text, JSON-encode it"
+            ),
+        };
+        return Err(crate::runtime::error_reasons::annotate(
+            executor_utils_invalid_field(
+                name.as_str(),
+                "a string written to a JSON column must be JSON text",
+                refused,
+            ),
+            crate::runtime::error_reasons::TYPE_MISMATCH,
+            Some(name.as_str()),
+            None,
+        ));
+    }
+    Ok(JsonValue::Object(parsed))
+}
+
+#[cfg(test)]
+mod json_column_string_tests {
+    use super::json_column_strings_parsed;
+    use crate::generation::{ManifestColumn, ManifestTable};
+    use serde_json::json;
+
+    fn table() -> ManifestTable {
+        let column = |name: &str, sql_type: &str| ManifestColumn {
+            column_name: name.to_string(),
+            field_name: name.to_string(),
+            sql_type: sql_type.to_string(),
+            ..ManifestColumn::default()
+        };
+        let mut sealed = column("sealed", "JSONB");
+        sealed.encrypted = true;
+        ManifestTable {
+            columns: vec![column("doc", "JSONB"), column("note", "TEXT"), sealed],
+            ..ManifestTable::default()
+        }
+    }
+
+    #[test]
+    fn json_text_becomes_the_document_it_encodes() {
+        for (text, document) in [
+            ("{\"a\":1}", json!({"a": 1})),
+            ("[1,2]", json!([1, 2])),
+            ("7", json!(7)),
+            ("true", json!(true)),
+            ("\"x\"", json!("x")),
+            ("\"\"", json!("")),
+            (" {} ", json!({})),
+        ] {
+            let parsed = json_column_strings_parsed(&table(), &json!({"doc": text})).unwrap();
+            assert_eq!(parsed, json!({"doc": document}), "{text}");
+        }
+    }
+
+    #[test]
+    fn text_that_is_not_a_document_is_refused_by_column() {
+        for text in ["", "x", "secret-value", "{", "null", " null "] {
+            let status = json_column_strings_parsed(&table(), &json!({"doc": text})).unwrap_err();
+            assert_eq!(status.code(), tonic::Code::InvalidArgument, "{text:?}");
+            assert!(status.message().contains("'doc'"), "{}", status.message());
+            assert!(!status.message().contains("secret-value"));
+        }
+    }
+
+    #[test]
+    fn other_values_and_other_columns_are_untouched() {
+        let record = json!({
+            "doc": {"a": null},
+            "note": "null",
+            "sealed": "plain text",
+            "unknown": "x",
+        });
+        assert_eq!(
+            json_column_strings_parsed(&table(), &record).unwrap(),
+            record
+        );
+        let cleared = json!({"doc": null});
+        assert_eq!(
+            json_column_strings_parsed(&table(), &cleared).unwrap(),
+            cleared
+        );
+    }
+}
 
 pub(crate) fn is_encrypted_column(column: &ManifestColumn) -> bool {
     column.encrypted || column.security.is_encrypted

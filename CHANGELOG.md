@@ -5,6 +5,42 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [Unreleased]
+
+### Breaking for callers
+
+- **A string written to a JSON or JSONB column now means JSON text on every verb.**
+  Upsert and Insert already parsed it; Update stored it as a JSON string, so the same
+  value could produce different data. Update now parses it too, and all three refuse
+  the text `null`, which Upsert and Insert stored as a JSON null document that
+  `IS NULL` does not see. Refusals are `UDB_TYPE_MISMATCH` and name the column.
+  - **Detect:** an Update to a JSON column that sends plain text now fails. Rows it
+    wrote earlier hold `jsonb_typeof(col) = 'string'`; rows from the text `null` on
+    Upsert or Insert hold `jsonb_typeof(col) = 'null'`.
+  - **Fix:** send a JSON document, or null to clear the column. To store text,
+    JSON-encode it, so `"\"note\""` stores the JSON string `note`.
+- **Update no longer changes a soft-deleted row.** Select and Delete already treated a
+  deleted row as absent, while Update and Increment rewrote it and reported success.
+  They now affect no rows, so a typed `patch` or `increment` raises not-found.
+  - **Detect:** an Update that relied on reaching a deleted row now reports zero
+    affected rows, or not-found with `require_affected`.
+  - **Fix:** to restore a row, write its soft-delete column in the Update, for example
+    `{"deleted_at": null}`, or Upsert it.
+- **The default data-plane rate limit is 10,000 requests a minute, up from 1,000.** The
+  budget is still per tenant, per operation. A deployment that relied on the old default
+  as a ceiling must set `UDB_RATE_LIMIT_MAX_PER_WINDOW=1000`.
+
+### Added
+
+- **Rate-limit denials are visible on the broker.** `udb_rate_limit_denied_total` counts
+  them by operation, and the first denial per bucket per window logs a warning naming
+  `UDB_RATE_LIMIT_MAX_PER_WINDOW`. The deployment guide now covers sizing that budget.
+
+### Fixed
+
+- A value refused by its column type no longer reports `invalid identifier format`. The
+  message names the type, and never the value.
+
 ## [0.6.7] - 2026-11-05
 
 ### Added

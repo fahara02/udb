@@ -5495,6 +5495,7 @@ impl RateLimitHandle {
             return self
                 .apply_local_rate_limit(
                     &key,
+                    operation,
                     window_secs,
                     max_rps,
                     unix_epoch,
@@ -5520,6 +5521,7 @@ impl RateLimitHandle {
                         return self
                             .rate_limit_failure_fallback(
                                 &key,
+                                operation,
                                 window_secs,
                                 max_rps,
                                 unix_epoch,
@@ -5574,6 +5576,7 @@ impl RateLimitHandle {
                 return self
                     .rate_limit_failure_fallback(
                         &key,
+                        operation,
                         window_secs,
                         max_rps,
                         unix_epoch,
@@ -5585,6 +5588,19 @@ impl RateLimitHandle {
         };
 
         if count > u64::from(max_rps) {
+            self.metrics.record_rate_limit_denied(operation);
+            // The first refusal of a window logs, so a sustained overload writes one
+            // line per bucket per window rather than one per request.
+            if count == u64::from(max_rps) + 1 {
+                tracing::warn!(
+                    tenant_id,
+                    operation,
+                    limit = max_rps,
+                    window_secs,
+                    "data-plane rate limit reached; refusing requests until the window ends \
+                     (raise UDB_RATE_LIMIT_MAX_PER_WINDOW to increase the budget)"
+                );
+            }
             let retry_after_ms =
                 (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
             let limit = max_rps.to_string();
@@ -5624,9 +5640,11 @@ impl RateLimitHandle {
     /// health report surfaces the degraded state. `N×limit` across N replicas —
     /// degraded but NOT absent (never a silent fail-open).
     #[cfg(feature = "redis")]
+    #[allow(clippy::too_many_arguments)]
     async fn apply_local_rate_limit(
         &self,
         key: &str,
+        operation: &str,
         window_secs: u64,
         max_rps: u32,
         unix_epoch: u64,
@@ -5647,6 +5665,18 @@ impl RateLimitHandle {
             entry.1
         };
         if count > u64::from(max_rps) {
+            self.metrics.record_rate_limit_denied(operation);
+            if count == u64::from(max_rps) + 1 {
+                tracing::warn!(
+                    bucket = key,
+                    operation,
+                    limit = max_rps,
+                    window_secs,
+                    "data-plane rate limit reached on the per-process limiter; refusing \
+                     requests until the window ends (raise UDB_RATE_LIMIT_MAX_PER_WINDOW to \
+                     increase the budget)"
+                );
+            }
             let retry_after_ms =
                 (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
             let limit = max_rps.to_string();
@@ -5684,9 +5714,11 @@ impl RateLimitHandle {
     /// absent); `open` allows. `local`/`open` set the degraded flag, which the
     /// health report surfaces as a warning until Redis recovers.
     #[cfg(feature = "redis")]
+    #[allow(clippy::too_many_arguments)]
     async fn rate_limit_failure_fallback(
         &self,
         key: &str,
+        operation: &str,
         window_secs: u64,
         max_rps: u32,
         unix_epoch: u64,
@@ -5701,8 +5733,16 @@ impl RateLimitHandle {
             .clone();
         match mode.as_str() {
             "local" => {
-                self.apply_local_rate_limit(key, window_secs, max_rps, unix_epoch, "local", subject)
-                    .await
+                self.apply_local_rate_limit(
+                    key,
+                    operation,
+                    window_secs,
+                    max_rps,
+                    unix_epoch,
+                    "local",
+                    subject,
+                )
+                .await
             }
             "open" => {
                 self.degraded

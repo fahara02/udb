@@ -1100,6 +1100,83 @@ async fn served_soft_delete_tombstones_and_reads_exclude_it_live() {
         "a get-by-id on the tombstoned row must return nothing on the served read path"
     );
 
+    // Update treats the tombstoned row as absent too, and a live row as normal. An
+    // OR in the caller's filter cannot reach the tombstone. Revert-proof: without the
+    // guard in `build_update_plan`, the first Update reports one row and rewrites it.
+    let raw_status = |id: String| {
+        let pool = pool.clone();
+        let select = format!("SELECT status FROM \"{schema}\".sd_widgets WHERE id = $1");
+        async move {
+            sqlx::query_scalar::<_, Option<String>>(&select)
+                .bind(id)
+                .fetch_one(&pool)
+                .await
+                .expect("raw status")
+        }
+    };
+    let on_deleted = served_update(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id_deleted, "tenant_id": tenant}),
+        json!({"status": "CHANGED"}),
+    )
+    .await
+    .expect("Update of a tombstoned row");
+    assert_eq!(on_deleted.affected_rows, 0, "a tombstoned row is absent");
+    let through_or = served_update(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"tenant_id": tenant, "$or": [{"id": id_deleted}, {"id": "no-such-row"}]}),
+        json!({"status": "CHANGED"}),
+    )
+    .await
+    .expect("Update through an OR");
+    assert_eq!(
+        through_or.affected_rows, 0,
+        "an OR cannot reach the tombstone"
+    );
+    assert_eq!(
+        raw_status(id_deleted.clone()).await.as_deref(),
+        Some("LIVE")
+    );
+    let on_kept = served_update(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id_kept, "tenant_id": tenant}),
+        json!({"status": "CHANGED"}),
+    )
+    .await
+    .expect("Update of a live row");
+    assert_eq!(on_kept.affected_rows, 1);
+
+    // Writing the tombstone column itself restores the row.
+    let restored = served_update(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id_deleted, "tenant_id": tenant}),
+        json!({"deleted_at": null}),
+    )
+    .await
+    .expect("restore a tombstoned row");
+    assert_eq!(restored.affected_rows, 1);
+    let get_restored = served_select_rows(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id_deleted, "tenant_id": tenant}),
+        false,
+    )
+    .await;
+    assert_eq!(
+        get_restored.records_json.len(),
+        1,
+        "a restored row reads again"
+    );
+
     teardown(&pool, &schema, &tenant).await;
 }
 

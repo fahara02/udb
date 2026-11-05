@@ -205,6 +205,12 @@ def test_live_generated_typed_table_has_the_go_table_surface():
         # that addresses one.
         with pytest.raises(UdbNotFound):
             table.get(key)
+        with pytest.raises(UdbNotFound):
+            table.patch(key, {"last_error": "x"})
+        with pytest.raises(UdbNotFound):
+            table.increment(key, {"current_step": 1})
+        with pytest.raises(UdbNotFound):
+            table.delete(key)
         absent = {"workflow_id": str(uuid.uuid4())}
         with pytest.raises(UdbNotFound):
             table.get(absent)

@@ -213,6 +213,9 @@ test("live generated typed table has the Go table surface", {
     // A deleted row reads as absent, and an absent row is not found on each verb
     // that addresses one.
     await assert.rejects(() => table.get(key), isNotFound);
+    await assert.rejects(() => table.patch(key, { lastError: "x" }), isNotFound);
+    await assert.rejects(() => table.increment(key, { currentStep: 1 }), isNotFound);
+    await assert.rejects(() => table.delete(key), isNotFound);
     const absent = { workflowId: randomUUID() };
     await assert.rejects(() => table.get(absent), isNotFound);
     await assert.rejects(() => table.patch(absent, { lastError: "x" }), isNotFound);
