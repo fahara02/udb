@@ -285,6 +285,7 @@ fn allowed_changes(
                 | ChangeKind::DropIndex
                 | ChangeKind::AddCheck
                 | ChangeKind::DropCheck
+                | ChangeKind::CreateEnum
                 | ChangeKind::AlterTableSecurity
         ) {
             return Err(refusal(
@@ -338,9 +339,7 @@ fn allowed_changes(
                 )
             })?;
             if change.kind == ChangeKind::CreateTable
-                && (!table.foreign_keys.is_empty()
-                    || !table.checks.is_empty()
-                    || !table.triggers.is_empty()
+                && (!table.triggers.is_empty()
                     || !table.materialized_views.is_empty()
                     || !table.sql_artifacts.is_empty()
                     || !table.partition_strategy.is_empty())
@@ -354,12 +353,11 @@ fn allowed_changes(
                 if column.generated
                     || column.is_identity
                     || column.auto_increment
-                    || !column.enum_values.is_empty()
                     || !column.collation.is_empty()
                 {
                     return Err(refusal(
                         "reviewed_column_verification_unsupported",
-                        "affected table has generated, identity, enum, serial or collation properties without native reviewed proof",
+                        "affected table has generated, identity, serial or collation properties without native reviewed proof",
                     ));
                 }
             }

@@ -375,6 +375,27 @@ async fn a_changed_check_changes_what_the_database_accepts_live() {
         .expect("read constraints")
     };
 
+    let verify_service = DataBrokerRuntime::from_config(ops_config(&dsn)).await;
+    let mismatches = async |manifest: &CatalogManifest| {
+        verify_service
+            .verify_postgres_check_rules(manifest)
+            .await
+            .expect("compare the CHECK rules")
+            .into_iter()
+            .filter(|finding| finding.schema == schema)
+            .map(|finding| finding.kind)
+            .collect::<Vec<_>>()
+    };
+    assert!(
+        mismatches(&with_rule(Some("status IN ('a')"))).await.is_empty(),
+        "a rule PostgreSQL rewrote still matches"
+    );
+    assert_eq!(
+        mismatches(&with_rule(Some("status IN ('a','b')"))).await,
+        vec!["check_mismatch".to_string(), "check_undeclared".to_string()],
+        "the database still holds the old rule"
+    );
+
     assert!(insert("before", "b").await.is_err(), "the old rule holds");
     migrate(
         with_rule(Some("status IN ('a')")),

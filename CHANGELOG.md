@@ -9,6 +9,14 @@ release line was tagged.
 
 ### Breaking for callers
 
+- **`udb verify --live` and `udb up` now fail on a table missing a declared `CHECK`.** A rule
+  an earlier release skipped shows up here.
+  - detect: code: run `udb verify --live`, finding `check_mismatch`
+  - fix: run the statement the finding prints, or change the proto.
+- **Generated migration files show as stale once,** because a column no longer writes its
+  `CHECK` inline.
+  - detect: code: `udb sync-migrations`
+  - fix: run `udb sync-migrations` and commit.
 - **A migration now applies `CHECK` changes it used to skip.** A rule changed or removed
   in the protos since the table was created takes effect, and a new rule that existing
   rows break fails the migration with the old rule still in place.
@@ -37,6 +45,8 @@ release line was tagged.
 
 ### Added
 
+- **`udb plan sign` and `udb plan seal`** produce the signed plan `serve` requires when an
+  approval signing key is configured. Keys come from the environment, never a flag.
 - **Rate-limit denials are visible on the broker.** `udb_rate_limit_denied_total` counts
   them by operation, and the first denial per bucket per window logs a warning naming
   `UDB_RATE_LIMIT_MAX_PER_WINDOW`. The deployment guide now covers sizing that budget.
@@ -56,8 +66,16 @@ release line was tagged.
 - **A `CHECK` removed from the protos is dropped.** Before, the database kept enforcing it.
 - **A changed trigger or materialized view survives its migration.** The drop ran after
   the create of the same name and removed the new object.
-- **Reviewed transitions can apply `CHECK` changes,** and a rule held under two names
-  counts once when the table is verified.
+- **Reviewed transitions apply `CHECK` changes and new tables with `CHECK` rules,
+  foreign keys and enum columns,** and a rule held under two names counts once when the
+  table is verified.
+- **A table added to an existing catalog gets its foreign keys on every path.** A reviewed
+  transition had no operation for them.
+- **`udb verify --live` and `udb up` compare `CHECK` rules with the protos.** A database
+  still holding an old rule passed before. A missing rule fails and prints the statement
+  that applies it; an undeclared one is reported and does not fail.
+- **A column `CHECK` has one name.** A new table held the rule twice, once under a name
+  Postgres chose, which no migration tracked.
 - **`udb verify --live` runs.** It failed with `cannot read --live`, because the flag was
   read as the proto folder. `--all`, `--allow-transfer`, `--consumer`, `--decode`,
   `--embedded` and `--platform-admin` had the same fault, and 21 flags that take a value

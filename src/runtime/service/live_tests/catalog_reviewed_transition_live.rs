@@ -1935,6 +1935,92 @@ async fn run_reviewed_catalog_fixture(single_connection: bool, primary_as_target
         "VARCHAR(400) to VARCHAR(80) stays destructive"
     );
     assert_active(&control, &project, &widened_active.catalog_id).await;
+
+    // A new table with a CHECK and a foreign key takes the reviewed path end to end,
+    // then a changed rule and a removed rule do too.
+    let slot = |rule: &str| {
+        format!(
+            r#"message Slot {{
+  option (udb.core.common.v1.pg_table) = {{
+    table_name: "slots" schema_name: "{schema}" is_table: true
+    audit_fields: false enable_rls: true force_rls: true
+    foreign_keys: {{ columns: "round_item_id" references_table: "rounds" references_schema: "{schema}" references_column: "round_item_id" }}
+  }};
+  option (udb.core.common.v1.db_table_security) = {{
+    tenant_isolation_mode: "row" tenant_column: "tenant_id"
+    project_isolation_mode: "column" project_column: "project_id"
+    soft_delete_mode: "none" audit_mode: AUDIT_MODE_NONE
+    encryption_profile: "none" pii_profile: "none" export_eligible: false
+  }};
+  string slot_id = 1 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" primary_key:true not_null:true}}];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" tenant_column:true not_null:true}}];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" project_column:true not_null:true}}];
+  string round_item_id = 4 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" not_null:true}}];
+  string state = 5 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(20)"{rule}}}];
+}}
+"#
+        )
+    };
+    let rules_on_slots = async || -> Vec<String> {
+        sqlx::query_scalar(
+            "SELECT pg_get_constraintdef(oid) FROM pg_constraint \
+             WHERE conrelid = to_regclass($1) AND contype = 'c'",
+        )
+        .bind(format!("\"{schema}\".slots"))
+        .fetch_all(&target)
+        .await
+        .expect("read the live rules")
+    };
+    let mut base = widened_active;
+    for (step, rule, expect_value, expect_rules) in [
+        ("slot-new", " check_constraint:\"state IN ('open')\"", "open", 1),
+        ("slot-changed", " check_constraint:\"state IN ('open','held')\"", "held", 1),
+        ("slot-removed", "", "", 0),
+    ] {
+        let source = format!("{widened_source}\n{}", slot(rule));
+        let (next, _) = parsed(&source);
+        let bytes = serde_json::to_vec(&next).unwrap();
+        let reviewed = plan(&mut restarted.client, &owner, &project, &base, &bytes, step)
+            .await
+            .unwrap_or_else(|err| panic!("{step}: the reviewed path takes it: {err:?}"));
+        let approved = approve(&mut restarted.client, &owner, &reviewed)
+            .await
+            .unwrap_or_else(|err| panic!("{step}: approve: {err:?}"));
+        let applied = apply(&mut restarted.client, &owner, &approved)
+            .await
+            .unwrap_or_else(|err| panic!("{step}: apply and verify: {err:?}"));
+        assert_eq!(applied.state, "COMPLETED", "{step}");
+        let staged = stage(
+            &mut restarted.client,
+            &owner,
+            &project,
+            &bytes,
+            &reviewed.run_id,
+            &format!("{step}-stage"),
+        )
+        .await
+        .unwrap_or_else(|err| panic!("{step}: stage: {err:?}"));
+        base = activate(
+            &mut restarted.client,
+            &owner,
+            &staged,
+            &reviewed.run_id,
+            &format!("{step}-activate"),
+        )
+        .await
+        .unwrap_or_else(|err| panic!("{step}: activate: {err:?}"));
+        let rules = rules_on_slots().await;
+        assert_eq!(rules.len(), expect_rules, "{step}: {rules:?}");
+        assert!(rules.iter().all(|rule| rule.contains(expect_value)), "{step}: {rules:?}");
+    }
+    let foreign_keys: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM pg_constraint WHERE conrelid = to_regclass($1) AND contype = 'f'",
+    )
+    .bind(format!("\"{schema}\".slots"))
+    .fetch_one(&target)
+    .await
+    .expect("read the live foreign keys");
+    assert_eq!(foreign_keys, 1, "the new table's foreign key was created");
     restarted.stop().await;
     drop(runtime);
     }).catch_unwind().await;

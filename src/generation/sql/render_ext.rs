@@ -223,6 +223,22 @@ fn drop_check_clauses(table: &str, name: &str) -> String {
     clauses
 }
 
+/// Add a rule the table does not hold. `NOT VALID` keeps old rows from failing the
+/// adoption of an existing table, and new writes are enforced at once.
+pub(crate) fn render_missing_check(schema: &str, table: &str, check: &ManifestCheck) -> String {
+    format!(
+        "DO $$BEGIN\n  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = to_regclass({}) \
+         AND conname = {}) THEN\n    ALTER TABLE {}.{} ADD CONSTRAINT {} CHECK ({}) NOT VALID;\n  \
+         END IF;\nEND$$;\n",
+        ql(&format!("{}.{}", qi(schema), qi(table))),
+        ql(&check.name),
+        qi(schema),
+        qi(table),
+        qi(&check.name),
+        check.expression
+    )
+}
+
 pub(crate) fn render_drop_check(schema: &str, table: &str, name: &str) -> String {
     format!(
         "ALTER TABLE {}.{} {};",

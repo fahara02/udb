@@ -250,6 +250,7 @@ pub fn diff_manifests(
                     "previous_table_name did not match an old table; creating table",
                     "",
                 ));
+                push_new_table_foreign_keys(table, &mut ops);
             }
         } else {
             ops.push(op(
@@ -262,6 +263,7 @@ pub fn diff_manifests(
                 "table was added to desired proto AST",
                 "",
             ));
+            push_new_table_foreign_keys(table, &mut ops);
         }
     }
 
@@ -1412,6 +1414,23 @@ fn enum_create_safety(values: &[String]) -> (ChangeSafety, Option<String>) {
         }
     }
     (ChangeSafety::SafeAuto, None)
+}
+
+/// A table's bootstrap DDL leaves foreign keys out, so a table added to an existing
+/// catalog needs them as operations of their own.
+fn push_new_table_foreign_keys(table: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
+    for fk in &table.foreign_keys {
+        ops.push(op(
+            ChangeKind::AddForeignKey,
+            ChangeSafety::SafeAuto,
+            &table.schema,
+            &table.table,
+            "",
+            &fk_name(table, fk),
+            "foreign key of a table added to desired proto AST",
+            "",
+        ));
+    }
 }
 
 /// A changed rule is an `AddCheck`, which replaces any constraint of that name. A rule

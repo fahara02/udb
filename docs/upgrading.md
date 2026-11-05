@@ -114,8 +114,19 @@ UDB_MIGRATE_ENABLED=true
 # config: migration.require_approval_plan=/path/to/plan.json
 ```
 
-With `UDB_APPROVAL_SIGNING_KEY` set, `serve` refuses this file and requires a signed
-`ApprovedPlan`. The CLI has no command that produces one yet.
+With an approval signing key configured, `serve` refuses this file and requires a
+signed plan. Each approver signs, with their key in `UDB_APPROVAL_APPROVER_KEYS`, or
+`UDB_APPROVAL_SIGNING_KEY` for a single approver. Then seal the signatures:
+
+```bash
+udb plan sign --plan plan.json --approver dba --reason "reviewed" --out dba.sig.json
+udb plan seal --plan plan.json --signature dba.sig.json --out approved.json
+# config: migration.require_approval_plan=/path/to/approved.json
+```
+
+`udb verify --live` compares each table's `CHECK` rules with the protos. A rule the
+database lacks fails the run and prints the statement that applies it. A rule the
+protos never declared is reported and does not fail the run.
 
 If the plan and the computed change set disagree, startup fails **before**
 mutating anything, naming the mismatch. Regenerate the plan and review again —

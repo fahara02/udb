@@ -930,11 +930,20 @@ struct LiveBackend {
 
 impl UpBackend for LiveBackend {
     async fn schema_drift(&mut self, manifest: &CatalogManifest) -> Result<Vec<String>, String> {
-        self.runtime
+        let mut drift = self
+            .runtime
             .verify_postgres_manifest_drift(manifest)
             .await
-            .map(|drift| drift.into_iter().map(|finding| finding.message).collect())
-            .map_err(|err| err.message().to_string())
+            .map_err(|err| err.message().to_string())?;
+        drift.extend(
+            self.runtime
+                .verify_postgres_check_rules(manifest)
+                .await
+                .map_err(|err| err.message().to_string())?
+                .into_iter()
+                .filter(|finding| finding.kind == "check_mismatch"),
+        );
+        Ok(drift.into_iter().map(|finding| finding.message).collect())
     }
 
     async fn active_catalog(&mut self, project: &str) -> Result<Option<(String, String)>, String> {

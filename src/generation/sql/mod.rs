@@ -242,6 +242,23 @@ fn generate_delta_sql_with_authorization(
     // concurrent index) are pulled out of the grouped BEGIN/COMMIT artifact and
     // emitted as standalone single-statement non-transactional artifacts.
     let mut standalone: Vec<&ChangeOperation> = Vec::new();
+    // A foreign key touching a table this delta creates runs after every CREATE TABLE,
+    // whichever order the tables' artifacts fall in.
+    let mut new_table_foreign_keys: Vec<&ChangeOperation> = Vec::new();
+    let created: std::collections::BTreeSet<(&str, &str)> = changes
+        .iter()
+        .filter(|change| change.kind == ChangeKind::CreateTable)
+        .map(|change| (change.schema.as_str(), change.table.as_str()))
+        .collect();
+    let touches_new_table = |change: &ChangeOperation| {
+        created.contains(&(change.schema.as_str(), change.table.as_str()))
+            || manifest
+                .table(&change.schema, &change.table)
+                .and_then(|table| find_fk(table, &change.object_name))
+                .is_some_and(|fk| {
+                    created.contains(&(fk.ref_schema.as_str(), fk.ref_table.as_str()))
+                })
+    };
     for change in changes
         .iter()
         .filter(|change| scope.permits(&change.safety))
@@ -257,6 +274,10 @@ fn generate_delta_sql_with_authorization(
         }
         if op_requires_standalone(manifest, change) {
             standalone.push(change);
+            continue;
+        }
+        if change.kind == ChangeKind::AddForeignKey && touches_new_table(change) {
+            new_table_foreign_keys.push(change);
             continue;
         }
         let key = (change.schema.as_str(), change.table.as_str());
@@ -285,6 +306,17 @@ fn generate_delta_sql_with_authorization(
             })
         })
         .collect();
+
+    for op in new_table_foreign_keys {
+        let content = render_delta_table(manifest, &op.schema, &op.table, &[op], config);
+        artifacts.push(GeneratedArtifact {
+            rel_path: format!("{}/950_fk_{}_{}.sql", op.schema, op.table, op.object_name),
+            kind: "proto_delta".to_string(),
+            schema: op.schema.clone(),
+            table: op.table.clone(),
+            content,
+        });
+    }
 
     // Standalone non-transactional delta artifacts, sorted after the grouped
     // `900_auto_` artifacts via the `960_nontx_` prefix.
@@ -411,6 +443,12 @@ pub fn render_bootstrap_table(
         ));
     }
     sql.push('\n');
+
+    // Columns no longer carry their rule inline, so a table that already existed gets
+    // any rule it lacks here. A changed rule keeps its name and is the delta's to replace.
+    for check in table.checks.iter().filter(|check| !check.name.trim().is_empty()) {
+        sql.push_str(&render_missing_check(&table.schema, &table.table, check));
+    }
 
     sql.push_str(&render_partition_unique_constraint_repair(table));
 
@@ -763,6 +801,76 @@ pub(crate) mod tests {
             "ALTER TABLE \"s\".\"orders\" DROP CONSTRAINT IF EXISTS \"chk_orders_status\", \
              DROP CONSTRAINT IF EXISTS \"orders_status_check\";"
         );
+    }
+
+    #[test]
+    fn a_column_rule_has_one_name_on_a_new_table_and_an_existing_one() {
+        let column = ManifestColumn {
+            column_name: "status".to_string(),
+            sql_type: "TEXT".to_string(),
+            check_constraint: "status IN ('a')".to_string(),
+            ..ManifestColumn::default()
+        };
+        assert!(!render_column(&column).contains("CHECK"));
+        let table = ManifestTable {
+            schema: "s".to_string(),
+            table: "orders".to_string(),
+            columns: vec![column],
+            checks: vec![ManifestCheck {
+                name: "chk_orders_status".to_string(),
+                expression: "status IN ('a')".to_string(),
+            }],
+            ..ManifestTable::default()
+        };
+        let sql = render_bootstrap_table(&table, "sum", &SqlGenerationConfig::default());
+        assert!(sql.contains("CONSTRAINT \"chk_orders_status\" CHECK (status IN ('a'))"), "{sql}");
+        assert!(sql.contains("IF NOT EXISTS (SELECT 1 FROM pg_constraint"), "{sql}");
+        assert!(sql.contains("NOT VALID"), "{sql}");
+    }
+
+    #[test]
+    fn a_new_tables_foreign_keys_run_after_every_create_table() {
+        use crate::generation::manifest::ManifestForeignKey;
+        let table = |name: &str, fks: Vec<ManifestForeignKey>| ManifestTable {
+            schema: "s".to_string(),
+            table: name.to_string(),
+            columns: vec![ManifestColumn {
+                column_name: "id".to_string(),
+                sql_type: "TEXT".to_string(),
+                is_primary: true,
+                ..ManifestColumn::default()
+            }],
+            primary_key: vec!["id".to_string()],
+            foreign_keys: fks,
+            ..ManifestTable::default()
+        };
+        let fk = ManifestForeignKey {
+            name: "fk_a_z".to_string(),
+            columns: vec!["id".to_string()],
+            ref_schema: "s".to_string(),
+            ref_table: "z_parent".to_string(),
+            ref_columns: vec!["id".to_string()],
+            ..ManifestForeignKey::default()
+        };
+        let old = CatalogManifest {
+            checksum_sha256: "old".to_string(),
+            ..CatalogManifest::default()
+        };
+        let new = CatalogManifest {
+            checksum_sha256: "new".to_string(),
+            tables: vec![table("a_child", vec![fk]), table("z_parent", Vec::new())],
+            ..CatalogManifest::default()
+        };
+        let changes = crate::migration::diff::diff_manifests(Some(&old), &new);
+        assert!(changes.iter().any(|op| op.kind == ChangeKind::AddForeignKey));
+        let artifacts = generate_delta_sql(&new, &changes, &SqlGenerationConfig::default());
+        let position = |needle: &str| {
+            artifacts
+                .iter()
+                .position(|artifact| artifact.content.contains(needle))
+                .unwrap_or_else(|| panic!("no artifact contains {needle}"))
+        };
+        assert!(position("\"z_parent\" (") < position("\"fk_a_z\""));
     }
 
     #[test]

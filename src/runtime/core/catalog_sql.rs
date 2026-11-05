@@ -2012,6 +2012,154 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
         Ok(drift)
     }
 
+    /// Compare each table's CHECK rules with what the protos declare.
+    ///
+    /// PostgreSQL rewrites a rule when it stores it, so text cannot be compared. Each
+    /// rule is added to an empty TEMP copy of the live table, and PostgreSQL's own
+    /// rendering of the two is compared. Nothing outlives the rolled-back transaction.
+    pub async fn verify_postgres_check_rules(
+        &self,
+        manifest: &CatalogManifest,
+    ) -> Result<Vec<ManifestDrift>, tonic::Status> {
+        let status = |step: &str, err: sqlx::Error| {
+            catalog_sql_internal_status("verify_check_rules", format!("{step}: {err}"))
+        };
+        let pool = self.pg_pool()?;
+        let mut connection = pool.acquire().await.map_err(|err| status("acquire", err))?;
+        let mut tx = sqlx::Connection::begin(&mut *connection)
+            .await
+            .map_err(|err| status("begin", err))?;
+        sqlx::query("SET LOCAL statement_timeout = '60s'")
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| status("deadline", err))?;
+        let mut findings = Vec::new();
+        for (table_index, table) in manifest.tables.iter().enumerate() {
+            let relation = format!(
+                "{}.{}",
+                qi_runtime(&table.schema),
+                qi_runtime(&table.table)
+            );
+            let live_oid: Option<i64> =
+                sqlx::query_scalar("SELECT to_regclass($1)::OID::BIGINT")
+                    .bind(&relation)
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map_err(|err| status("find table", err))?;
+            // A missing table is already a `missing_table` finding.
+            let Some(live_oid) = live_oid else {
+                continue;
+            };
+            let live: std::collections::BTreeSet<String> = sqlx::query_scalar(
+                "SELECT pg_catalog.pg_get_expr(conbin, conrelid) FROM pg_catalog.pg_constraint \
+                 WHERE conrelid::BIGINT = $1 AND contype = 'c'",
+            )
+            .bind(live_oid)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|err| status("read live rules", err))?
+            .into_iter()
+            .collect();
+            if table.checks.is_empty() && live.is_empty() {
+                continue;
+            }
+            let temp = format!("udb_verify_check_{table_index}");
+            sqlx::query(&format!(
+                "CREATE TEMP TABLE {} (LIKE {relation}) ON COMMIT DROP",
+                qi_runtime(&temp)
+            ))
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| status("copy table shape", err))?;
+            let mut expected = std::collections::BTreeSet::new();
+            let finding = |kind: &str, message: String| ManifestDrift {
+                kind: kind.to_string(),
+                schema: table.schema.clone(),
+                table: table.table.clone(),
+                column: String::new(),
+                sql_type: String::new(),
+                default_value: String::new(),
+                not_null: false,
+                message,
+            };
+            for (check_index, check) in table.checks.iter().enumerate() {
+                let constraint = format!("c{check_index}");
+                let fix = crate::generation::sql::render_add_check(
+                    &table.schema,
+                    &table.table,
+                    check,
+                );
+                let mut savepoint = sqlx::Connection::begin(&mut *tx)
+                    .await
+                    .map_err(|err| status("savepoint", err))?;
+                let added = sqlx::query(&format!(
+                    "ALTER TABLE {} ADD CONSTRAINT {} CHECK ({})",
+                    qi_runtime(&temp),
+                    qi_runtime(&constraint),
+                    check.expression
+                ))
+                .execute(&mut *savepoint)
+                .await;
+                let rendered: Option<String> = match added {
+                    Ok(_) => Some(
+                        sqlx::query_scalar(
+                            "SELECT pg_catalog.pg_get_expr(conbin, conrelid) \
+                             FROM pg_catalog.pg_constraint \
+                             WHERE conrelid = to_regclass($1) AND conname = $2",
+                        )
+                        .bind(format!("pg_temp.{}", qi_runtime(&temp)))
+                        .bind(&constraint)
+                        .fetch_one(&mut *savepoint)
+                        .await
+                        .map_err(|err| status("read expected rule", err))?,
+                    ),
+                    Err(err) => {
+                        findings.push(finding(
+                            "check_mismatch",
+                            format!(
+                                "PostgreSQL table {relation} cannot hold CHECK rule {}: {err}. \
+                                 Fix the table or the proto; the rule is: {}",
+                                check.name, check.expression
+                            ),
+                        ));
+                        None
+                    }
+                };
+                savepoint
+                    .commit()
+                    .await
+                    .map_err(|err| status("savepoint release", err))?;
+                let Some(rendered) = rendered else {
+                    continue;
+                };
+                if !live.contains(&rendered) {
+                    findings.push(finding(
+                        "check_mismatch",
+                        format!(
+                            "PostgreSQL table {relation} does not enforce CHECK rule {} from the \
+                             protos: {}. To apply it: {fix}",
+                            check.name, check.expression
+                        ),
+                    ));
+                }
+                expected.insert(rendered);
+            }
+            for extra in live.difference(&expected) {
+                findings.push(finding(
+                    "check_undeclared",
+                    format!(
+                        "PostgreSQL table {relation} enforces a CHECK rule the protos do not \
+                         declare: {extra}"
+                    ),
+                ));
+            }
+        }
+        tx.rollback()
+            .await
+            .map_err(|err| status("rollback", err))?;
+        Ok(findings)
+    }
+
     pub async fn cdc_outbox_metrics(&self) -> Result<(f64, i64), tonic::Status> {
         let pool = self.pg_pool()?;
         let cdc_config = self.config.cdc.clone();

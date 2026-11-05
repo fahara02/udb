@@ -1,6 +1,30 @@
 use super::*;
 
 #[test]
+fn plan_sign_and_seal_are_commands_and_plain_plan_is_unchanged() {
+    let args = [
+        "plan", "sign", "--plan", "p.json", "--approver", "dba", "--reason", "ok", "--out", "s.json",
+    ]
+    .map(str::to_string);
+    assert!(matches!(
+        parse_args(&args).0,
+        Command::PlanSign { plan, approver, reason, out, .. }
+            if plan == "p.json" && approver == "dba" && reason == "ok" && out == "s.json"
+    ));
+    let args = [
+        "plan", "seal", "--plan", "p.json", "--signature", "a.json", "--signature", "b.json", "--out",
+        "o.json",
+    ]
+    .map(str::to_string);
+    assert!(matches!(
+        parse_args(&args).0,
+        Command::PlanSeal { signatures, .. } if signatures == ["a.json", "b.json"]
+    ));
+    let args = ["plan", "--prior", "m.json"].map(str::to_string);
+    assert!(matches!(parse_args(&args).0, Command::Plan));
+}
+
+#[test]
 fn verify_live_reaches_the_verify_command() {
     let args = ["verify", "--live", "--dsn", "postgres://x"].map(str::to_string);
     let (command, proto_root, _, _) = parse_args(&args);

@@ -242,6 +242,23 @@ const COMMANDS: &[CmdHelp] = &[
         details: "",
     },
     CmdHelp {
+        name: "plan sign",
+        group: "Schema & SQL",
+        summary: "Sign an exported plan as one approver.",
+        usage: "udb plan sign --plan <plan.json> --approver <id> --reason <text> [--role <role>] --out <signature.json>",
+        details: "The key comes from UDB_APPROVAL_APPROVER_KEYS, or UDB_APPROVAL_SIGNING_KEY for a \
+                  single approver, never from a flag. The output file must not exist yet.",
+    },
+    CmdHelp {
+        name: "plan seal",
+        group: "Schema & SQL",
+        summary: "Check the signatures and write the signed plan `serve` accepts.",
+        usage: "udb plan seal --plan <plan.json> --signature <signature.json> [--signature ...] --out <approved.json>",
+        details: "Applies the approval policy serve applies: UDB_APPROVAL_QUORUM_SIZE, \
+                  UDB_APPROVAL_ALLOWED_ROLES and the approver keys. The approval expires after \
+                  UDB_APPROVAL_EXPIRY_SECS. Point migration.require_approval_plan at the output.",
+    },
+    CmdHelp {
         name: "plan",
         group: "Schema & SQL",
         summary: "Build a migration plan (optionally vs a prior manifest) as JSON.",

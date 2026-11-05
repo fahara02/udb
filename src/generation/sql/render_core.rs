@@ -625,9 +625,8 @@ pub(crate) fn render_column(column: &ManifestColumn) -> String {
             parts.push("NOT NULL".to_string());
         }
     }
-    if !column.check_constraint.trim().is_empty() {
-        parts.push(format!("CHECK ({})", column.check_constraint));
-    }
+    // A column's CHECK is a named table constraint from the manifest. Writing it here too
+    // would leave a second copy under a name Postgres chooses, which no migration tracks.
     parts.join(" ")
 }
 

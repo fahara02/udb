@@ -182,6 +182,20 @@ pub(crate) enum Command {
     /// - If migrations is empty: writes baseline SQL (proto is source of truth).
     /// - If migrations is non-empty: double-checksum verification; stale files
     ///   trigger proto-priority refresh artifacts in `db_ops/bootstrap`.
+    /// `udb plan sign`: one approver signs an exported plan with their own key.
+    PlanSign {
+        plan: String,
+        approver: String,
+        role: String,
+        reason: String,
+        out: String,
+    },
+    /// `udb plan seal`: check the signatures and write the plan `serve` accepts.
+    PlanSeal {
+        plan: String,
+        signatures: Vec<String>,
+        out: String,
+    },
     SyncMigrations {
         /// When true, refresh db_ops/bootstrap even when all files verify clean.
         force_bootstrap: bool,
@@ -1341,6 +1355,8 @@ const VALUE_FLAGS: &[&str] = &[
     "--credential",
     "--proto",
     "--approve",
+    "--approver",
+    "--signature",
     "--against",
     "--batch",
     "--binding",
@@ -1460,6 +1476,36 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         Some("sql") => {
             offset = 1;
             Command::Sql
+        }
+        Some("plan") if args.get(1).map(String::as_str) == Some("sign") => {
+            offset = 2;
+            match (
+                flag_value("--plan"),
+                flag_value("--approver"),
+                flag_value("--reason"),
+                flag_value("--out"),
+            ) {
+                (Some(plan), Some(approver), Some(reason), Some(out)) => Command::PlanSign {
+                    plan,
+                    approver,
+                    role: flag_value("--role").unwrap_or_default(),
+                    reason,
+                    out,
+                },
+                _ => invalid_usage("plan sign: --plan, --approver, --reason and --out are required"),
+            }
+        }
+        Some("plan") if args.get(1).map(String::as_str) == Some("seal") => {
+            offset = 2;
+            let signatures = flag_values("--signature");
+            match (flag_value("--plan"), flag_value("--out")) {
+                (Some(plan), Some(out)) if !signatures.is_empty() => Command::PlanSeal {
+                    plan,
+                    signatures,
+                    out,
+                },
+                _ => invalid_usage("plan seal: --plan, --signature and --out are required"),
+            }
         }
         Some("plan") => {
             offset = 1;

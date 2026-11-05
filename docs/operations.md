@@ -650,7 +650,10 @@ When a startup migration (`UDB_MIGRATE_ENABLED=true` with an approval plan) has
 already applied the changes, only the catalog is behind. Use `udb catalog stage` and
 `udb catalog activate`, which run no DDL. A reviewed plan looks at the manifests, not
 the database, so it still refuses a kind of change it cannot prove, even when the
-table already holds that change.
+table already holds that change. It applies new tables with `CHECK` rules, foreign keys
+and enum columns, and `CHECK` changes. It refuses triggers, materialized views,
+partitioning, generated, identity and serial columns, collations, and a new value on an
+enum type. Use a startup migration for those.
 
 `udb up --project PROJECT --tenant TENANT` drives this whole sequence. When the
 ACTIVE catalog differs from the protos it runs `status` and `plan` (with an

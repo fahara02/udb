@@ -44,6 +44,7 @@ mod native_app;
 pub(crate) mod native_lint;
 mod ops_cli;
 mod output;
+mod plan_sign;
 mod proto_export;
 mod proto_fmt;
 mod scaffold;
@@ -949,6 +950,30 @@ pub fn run() {
         Command::SyncMigrations { .. } => {
             // SyncMigrations needs proto parsing — defer to below.
         }
+        Command::PlanSign {
+            ref plan,
+            ref approver,
+            ref role,
+            ref reason,
+            ref out,
+        } => {
+            if let Err(err) = plan_sign::run_sign(plan, approver, role, reason, out) {
+                eprintln!("plan sign: {err}");
+                process::exit(1);
+            }
+            process::exit(0);
+        }
+        Command::PlanSeal {
+            ref plan,
+            ref signatures,
+            ref out,
+        } => {
+            if let Err(err) = plan_sign::run_seal(plan, signatures, out) {
+                eprintln!("plan seal: {err}");
+                process::exit(1);
+            }
+            process::exit(0);
+        }
         Command::CompatMatrix => {
             output_json(&build_compat_matrix(), "compatibility matrix");
             process::exit(0);
@@ -1296,7 +1321,8 @@ pub fn run() {
                 }
                 eprintln!(
                     "wrote approval plan to {out_path} ({} auto, {} blocked op(s)) — \
-                     point migration.require_approval_plan at it; serve accepts it as-is                      unless UDB_APPROVAL_SIGNING_KEY is set, which requires a signed ApprovedPlan",
+                     point migration.require_approval_plan at it; with an approval signing key configured, \
+                     run `udb plan sign` and `udb plan seal` on it first",
                     exported.auto_count, exported.blocked_count
                 );
                 process::exit(0);
@@ -1531,13 +1557,32 @@ pub fn run() {
                 // Read-only: this is exactly the comparison startup performs, run
                 // BEFORE any apply, so the findings that would fail a boot are
                 // visible while the database is still untouched.
-                let drift = match rt.verify_postgres_manifest_drift(&manifest).await {
+                let mut drift = match rt.verify_postgres_manifest_drift(&manifest).await {
                     Ok(drift) => drift,
                     Err(err) => {
                         eprintln!("verify --live: could not read the live schema: {err}");
                         return 1i32;
                     }
                 };
+                let check_findings = match rt.verify_postgres_check_rules(&manifest).await {
+                    Ok(findings) => findings,
+                    Err(err) => {
+                        eprintln!("verify --live: could not compare CHECK rules: {err}");
+                        return 1i32;
+                    }
+                };
+                // A rule the database holds but the protos never declared is reported,
+                // and does not fail the run: it may be the operator's own.
+                let undeclared_checks: Vec<_> = check_findings
+                    .iter()
+                    .filter(|finding| finding.kind == "check_undeclared")
+                    .cloned()
+                    .collect();
+                drift.extend(
+                    check_findings
+                        .into_iter()
+                        .filter(|finding| finding.kind != "check_undeclared"),
+                );
                 // Delivery health: outbox backlog, durable-consumer lag against
                 // the journal, projection queue age.
                 let delivery = match rt
@@ -1551,6 +1596,11 @@ pub fn run() {
                     }
                 };
                 let delivery_failed = delivery.iter().filter(|check| !check.passed).count();
+                if !json {
+                    for finding in &undeclared_checks {
+                        eprintln!("verify --live: [{}] {}", finding.kind, finding.message);
+                    }
+                }
                 if json {
                     #[derive(Serialize)]
                     struct Finding<'a> {
@@ -1576,6 +1626,10 @@ pub fn run() {
                             "verified_tables": manifest.tables.len(),
                             "finding_count": findings.len(),
                             "findings": findings,
+                            "undeclared_checks": undeclared_checks
+                                .iter()
+                                .map(|finding| finding.message.as_str())
+                                .collect::<Vec<_>>(),
                             "delivery": delivery,
                             "delivery_failed": delivery_failed,
                         })
