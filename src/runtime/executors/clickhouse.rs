@@ -652,11 +652,11 @@ impl ClickHouseExecutor {
                 let name = c.get("name").and_then(|v| v.as_str()).unwrap_or("col");
                 let typ = c.get("type").and_then(|v| v.as_str()).unwrap_or("String");
                 validate_ch_identifier(name)?;
-                // Type may be composite (e.g. "Nullable(String)", "UInt64") — allow
-                // alphanumeric, underscores, parentheses, and spaces only.
+                // Type may be composite (e.g. "Nullable(String)", "Decimal(18, 4)") — allow
+                // alphanumeric, underscores, parentheses, commas and spaces only.
                 if !typ
                     .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || "_ ()".contains(c))
+                    .all(|c| c.is_ascii_alphanumeric() || "_ (),".contains(c))
                 {
                     return Err(format!(
                         "ClickHouse column type '{typ}' for '{name}' contains invalid characters"

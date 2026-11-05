@@ -11,6 +11,11 @@ use crate::generation::sql::validate_enum_value;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ChangeKind {
+    /// A declared change UDB has no way to apply. Startup refuses it until the operator
+    /// reconciles the database by hand and acknowledges that.
+    ManualChange,
+    SetForceRls,
+    UpdateExtension,
     HintWarning,
     ApplySqlArtifact,
     AddSchema,
@@ -250,7 +255,7 @@ pub fn diff_manifests(
                     "previous_table_name did not match an old table; creating table",
                     "",
                 ));
-                push_new_table_foreign_keys(table, &mut ops);
+                push_new_table_foreign_keys(table, new, &mut ops);
             }
         } else {
             ops.push(op(
@@ -263,7 +268,7 @@ pub fn diff_manifests(
                 "table was added to desired proto AST",
                 "",
             ));
-            push_new_table_foreign_keys(table, &mut ops);
+            push_new_table_foreign_keys(table, new, &mut ops);
         }
     }
 
@@ -295,6 +300,7 @@ pub fn diff_manifests(
     }
 
     diff_stores(old, new, &mut ops);
+    diff_store_table_columns(old, new, &mut ops);
     diff_extensions(old, new, &mut ops);
     // UDB-MIG-001: classify still-present `allow_drop` annotations only AFTER all
     // drop operations are known, so a hint that unblocked a drop this run is
@@ -689,6 +695,55 @@ fn diff_table_properties(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec
             "tablespace moves require explicit review",
         ));
     }
+
+    if old.primary_key != new.primary_key {
+        ops.push(manual_change(
+            new,
+            "",
+            "primary_key",
+            "desired proto AST changes the primary key",
+        ));
+    }
+
+    if old.force_rls != new.force_rls {
+        ops.push(op(
+            ChangeKind::SetForceRls,
+            if new.force_rls {
+                ChangeSafety::SafeAuto
+            } else {
+                ChangeSafety::RequiresReview
+            },
+            &new.schema,
+            &new.table,
+            "",
+            &new.table,
+            "desired proto AST changes FORCE ROW LEVEL SECURITY",
+            if new.force_rls {
+                ""
+            } else {
+                "removing FORCE ROW LEVEL SECURITY lets the table owner bypass policies"
+            },
+        ));
+    }
+}
+
+/// A declared change with no renderer. Refused at startup rather than recorded as applied.
+fn manual_change(
+    table: &ManifestTable,
+    column: &str,
+    object: &str,
+    reason: &str,
+) -> ChangeOperation {
+    op(
+        ChangeKind::ManualChange,
+        ChangeSafety::RequiresReview,
+        &table.schema,
+        &table.table,
+        column,
+        object,
+        reason,
+        "UDB cannot apply this change; reconcile the database by hand, then acknowledge it",
+    )
 }
 
 fn diff_partitioning(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
@@ -720,7 +775,8 @@ fn diff_partitioning(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<Cha
                 || old.partition_column != new.partition_column
                 || old.partition_interval != new.partition_interval
                 || old.partition_premake != new.partition_premake
-                || old.partition_default != new.partition_default =>
+                || old.partition_default != new.partition_default
+                || old.retention_days != new.retention_days =>
         {
             ops.push(op(
                 ChangeKind::AttachPartition,
@@ -811,6 +867,18 @@ fn diff_columns(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOp
         if !new_col.previous_column_name.trim().is_empty()
             && old_columns.contains_key(&new_col.previous_column_name)
         {
+            let previous = old_columns[&new_col.previous_column_name];
+            if previous.sql_type != new_col.sql_type
+                || previous.not_null != new_col.not_null
+                || previous.default_value != new_col.default_value
+            {
+                ops.push(manual_change(
+                    new,
+                    &new_col.column_name,
+                    "rename_and_change",
+                    "a column is renamed and changed at once; release the rename first",
+                ));
+            }
             ops.push(op(
                 ChangeKind::RenameColumn,
                 ChangeSafety::SafeAuto,
@@ -894,6 +962,33 @@ fn diff_column(
     new: &ManifestColumn,
     ops: &mut Vec<ChangeOperation>,
 ) {
+    if old.generated != new.generated
+        || old.generated_expr != new.generated_expr
+        || old.is_identity != new.is_identity
+        || old.auto_increment != new.auto_increment
+    {
+        ops.push(manual_change(
+            table,
+            &new.column_name,
+            "column_generation",
+            "desired proto AST changes how the database fills this column",
+        ));
+    }
+    if old.is_jsonb != new.is_jsonb
+        || old.json_path_ops != new.json_path_ops
+        || old.is_tsvector != new.is_tsvector
+        || old.tsvector_language != new.tsvector_language
+        || old.tsvector_source_columns != new.tsvector_source_columns
+        || old.trigram_index != new.trigram_index
+    {
+        ops.push(manual_change(
+            table,
+            &new.column_name,
+            "derived_index",
+            "desired proto AST changes an index UDB derives from this column, and an index \
+             of the same name is not rebuilt",
+        ));
+    }
     if old.sql_type != new.sql_type {
         let (safety, blocked) = type_change_safety(old, new);
         // A USING expression can rewrite the values however it likes, so only the
@@ -1417,9 +1512,33 @@ fn enum_create_safety(values: &[String]) -> (ChangeSafety, Option<String>) {
 }
 
 /// A table's bootstrap DDL leaves foreign keys out, so a table added to an existing
-/// catalog needs them as operations of their own.
-fn push_new_table_foreign_keys(table: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
+/// catalog needs them as operations of their own. One the manifest has already warned it
+/// cannot create, because the parent's partition key is not referenced, is left out.
+fn push_new_table_foreign_keys(
+    table: &ManifestTable,
+    manifest: &CatalogManifest,
+    ops: &mut Vec<ChangeOperation>,
+) {
+    for artifact in table
+        .sql_artifacts
+        .iter()
+        .filter(|artifact| sql_artifact_cannot_run(artifact))
+    {
+        ops.push(manual_change(
+            table,
+            "",
+            &artifact.name,
+            "this sql_artifact has no SQL UDB can execute on PostgreSQL",
+        ));
+    }
     for fk in &table.foreign_keys {
+        let unreachable_partition = manifest
+            .table(&fk.ref_schema, &fk.ref_table)
+            .filter(|parent| is_manifest_partitioned(parent))
+            .is_some_and(|parent| !fk.ref_columns.contains(&parent.partition_column));
+        if unreachable_partition {
+            continue;
+        }
         ops.push(op(
             ChangeKind::AddForeignKey,
             ChangeSafety::SafeAuto,
@@ -1433,14 +1552,14 @@ fn push_new_table_foreign_keys(table: &ManifestTable, ops: &mut Vec<ChangeOperat
     }
 }
 
-/// A changed rule is an `AddCheck`, which replaces any constraint of that name. A rule
-/// gone from the protos, under its name and its expression, is a `DropCheck`.
+/// A rule is its name and its expression. A changed or moved rule is an `AddCheck`, which
+/// replaces any constraint of that name. A name gone from the protos is a `DropCheck`.
 fn diff_checks(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
-    let old_checks = old.checks.iter().map(check_key).collect::<BTreeSet<_>>();
-    let new_checks = new.checks.iter().map(check_key).collect::<BTreeSet<_>>();
+    let identity = |check: &ManifestCheck| (check_name(check), check_key(check));
+    let old_checks = old.checks.iter().map(identity).collect::<BTreeSet<_>>();
     let new_names = new.checks.iter().map(check_name).collect::<BTreeSet<_>>();
     for check in &new.checks {
-        if !old_checks.contains(&check_key(check)) {
+        if !old_checks.contains(&identity(check)) {
             ops.push(op(
                 ChangeKind::AddCheck,
                 ChangeSafety::SafeAuto,
@@ -1454,7 +1573,7 @@ fn diff_checks(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOpe
         }
     }
     for check in &old.checks {
-        if !new_checks.contains(&check_key(check)) && !new_names.contains(&check_name(check)) {
+        if !new_names.contains(&check_name(check)) {
             ops.push(op(
                 ChangeKind::DropCheck,
                 ChangeSafety::SafeAuto,
@@ -1555,6 +1674,45 @@ fn diff_foreign_keys(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<Cha
     }
 }
 
+/// UDB creates a schema-bound store's table once and has no ALTER for it, so a column
+/// change on its owning message reaches PostgreSQL only.
+fn diff_store_table_columns(
+    old: &CatalogManifest,
+    new: &CatalogManifest,
+    ops: &mut Vec<ChangeOperation>,
+) {
+    let shape = |table: &ManifestTable| {
+        table
+            .columns
+            .iter()
+            .map(|column| (column.column_name.clone(), column.sql_type.clone()))
+            .collect::<BTreeSet<_>>()
+    };
+    for store in &new.stores {
+        let backend = store.backend.to_ascii_lowercase();
+        if !["clickhouse", "mysql", "sqlite", "mssql", "cassandra"]
+            .iter()
+            .any(|name| backend.contains(name))
+        {
+            continue;
+        }
+        let (Some(before), Some(after)) = (
+            old.table(&store.owner_schema, &store.owner_table),
+            new.table(&store.owner_schema, &store.owner_table),
+        ) else {
+            continue;
+        };
+        if shape(before) != shape(after) {
+            ops.push(manual_change(
+                after,
+                "",
+                &store.resource_name,
+                "columns changed on a table with a schema-bound store, which UDB cannot alter",
+            ));
+        }
+    }
+}
+
 fn diff_stores(old: &CatalogManifest, new: &CatalogManifest, ops: &mut Vec<ChangeOperation>) {
     let old_keys = old
         .stores
@@ -1626,6 +1784,21 @@ fn diff_extensions(old: &CatalogManifest, new: &CatalogManifest, ops: &mut Vec<C
     let old_extensions = extension_map(old);
     let new_extensions = extension_map(new);
     for (key, extension) in &new_extensions {
+        if let Some(previous) = old_extensions.get(key) {
+            if previous.version != extension.version {
+                ops.push(op(
+                    ChangeKind::UpdateExtension,
+                    ChangeSafety::RequiresReview,
+                    &extension.schema,
+                    "",
+                    "",
+                    &extension.name,
+                    "extension version changed in desired proto AST",
+                    "extension upgrades require explicit review",
+                ));
+            }
+            continue;
+        }
         if !old_extensions.contains_key(key) {
             ops.push(op(
                 ChangeKind::CreateExtension,
@@ -1939,7 +2112,9 @@ fn priority(kind: &ChangeKind) -> i32 {
         ChangeKind::ValidationError => 0,
         ChangeKind::HintWarning => 1,
         ChangeKind::ApplySqlArtifact => 87,
-        ChangeKind::CreateExtension | ChangeKind::DropExtension => 5,
+        ChangeKind::ManualChange => 2,
+        ChangeKind::DropExtension => 4,
+        ChangeKind::CreateExtension | ChangeKind::UpdateExtension => 5,
         ChangeKind::AddSchema => 10,
         ChangeKind::CreateEnum => 15,
         ChangeKind::AlterEnumAddValue => 16,
@@ -1972,6 +2147,7 @@ fn priority(kind: &ChangeKind) -> i32 {
         ChangeKind::DropIndex => 69,
         ChangeKind::CreateIndex => 70,
         ChangeKind::EnableRls | ChangeKind::DisableRls => 80,
+        ChangeKind::SetForceRls => 81,
         // A changed policy is represented as Drop+Create with the same name.
         // Drop must sort first or CREATE collides with the still-live old policy.
         ChangeKind::DropPolicy => 84,
@@ -2080,10 +2256,9 @@ fn extension_map(manifest: &CatalogManifest) -> BTreeMap<String, ManifestExtensi
 
 fn extension_key(extension: &ManifestExtension) -> String {
     format!(
-        "{}.{}@{}",
+        "{}.{}",
         extension.schema.to_ascii_lowercase(),
-        extension.name.to_ascii_lowercase(),
-        extension.version
+        extension.name.to_ascii_lowercase()
     )
 }
 
@@ -2120,13 +2295,7 @@ fn policy_key(policy: &ManifestPolicy) -> String {
 }
 
 fn normalize_policy_expr(value: &str) -> String {
-    value
-        .trim()
-        .to_ascii_lowercase()
-        .replace('"', "")
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join("")
+    crate::generation::manifest::normalize_expression(value)
 }
 
 fn materialized_view_key(view: &ManifestMaterializedView) -> String {
@@ -2189,7 +2358,27 @@ fn sql_artifact_content_key(artifact: &ManifestSqlArtifact) -> String {
 /// causes `generate_delta_sql` (via `render_delta_table`) to prepend the
 /// updated function DDL before re-creating the trigger — guaranteeing that
 /// the function and all triggers that depend on it are refreshed atomically.
+/// An artifact UDB cannot execute: no SQL of its own, or written for another backend.
+fn sql_artifact_cannot_run(artifact: &ManifestSqlArtifact) -> bool {
+    artifact.sql.trim().is_empty()
+        || !(artifact.backend.trim().is_empty() || artifact.backend == "postgres")
+}
+
 fn diff_sql_artifacts(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
+    for artifact in &old.sql_artifacts {
+        if !new
+            .sql_artifacts
+            .iter()
+            .any(|candidate| candidate.name == artifact.name)
+        {
+            ops.push(manual_change(
+                new,
+                "",
+                &artifact.name,
+                "a sql_artifact left the protos, and what it created is still in the database",
+            ));
+        }
+    }
     let old_keys: BTreeSet<String> = old
         .sql_artifacts
         .iter()
@@ -2210,6 +2399,15 @@ fn diff_sql_artifacts(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<Ch
         .iter()
         .filter(|artifact| !old_keys.contains(&sql_artifact_content_key(artifact)))
     {
+        if sql_artifact_cannot_run(artifact) {
+            ops.push(manual_change(
+                new,
+                "",
+                &artifact.name,
+                "this sql_artifact has no SQL UDB can execute on PostgreSQL",
+            ));
+            continue;
+        }
         ops.push(op(
             ChangeKind::ApplySqlArtifact,
             if artifact.requires_review {
@@ -2554,6 +2752,156 @@ mod tests {
         );
     }
 
+    fn kinds_between(old: ManifestTable, new: ManifestTable) -> Vec<ChangeKind> {
+        let mut ops = Vec::new();
+        diff_table(&old, &new, &mut ops);
+        ops.into_iter().map(|op| op.kind).collect()
+    }
+
+    fn sample_table() -> ManifestTable {
+        ManifestTable {
+            schema: "s".to_string(),
+            table: "t".to_string(),
+            primary_key: vec!["id".to_string()],
+            columns: vec![ManifestColumn {
+                column_name: "id".to_string(),
+                sql_type: "TEXT".to_string(),
+                is_primary: true,
+                ..ManifestColumn::default()
+            }],
+            ..ManifestTable::default()
+        }
+    }
+
+    #[test]
+    fn a_change_udb_cannot_apply_is_never_an_empty_diff() {
+        let mut changed = sample_table();
+        changed.primary_key.push("tenant_id".to_string());
+        assert!(kinds_between(sample_table(), changed).contains(&ChangeKind::ManualChange));
+
+        for change in [
+            (|column: &mut ManifestColumn| column.is_identity = true)
+                as fn(&mut ManifestColumn),
+            |column| column.auto_increment = true,
+            |column| column.generated_expr = "1".to_string(),
+            |column| column.json_path_ops = true,
+            |column| column.tsvector_language = "simple".to_string(),
+        ] {
+            let mut changed = sample_table();
+            change(&mut changed.columns[0]);
+            assert!(kinds_between(sample_table(), changed).contains(&ChangeKind::ManualChange));
+        }
+    }
+
+    #[test]
+    fn force_rls_changes_in_both_directions() {
+        let mut forced = sample_table();
+        forced.force_rls = true;
+        assert!(kinds_between(sample_table(), forced.clone()).contains(&ChangeKind::SetForceRls));
+        assert!(kinds_between(forced, sample_table()).contains(&ChangeKind::SetForceRls));
+    }
+
+    #[test]
+    fn a_rule_moved_to_another_name_is_added_there() {
+        let check = |name: &str, expression: &str| ManifestCheck {
+            name: name.to_string(),
+            expression: expression.to_string(),
+        };
+        let table = |checks: Vec<ManifestCheck>| ManifestTable {
+            schema: "s".to_string(),
+            table: "t".to_string(),
+            checks,
+            ..ManifestTable::default()
+        };
+        let mut ops = Vec::new();
+        diff_checks(
+            &table(vec![check("a", "x > 0")]),
+            &table(vec![check("a", "y > 0"), check("b", "x > 0")]),
+            &mut ops,
+        );
+        let names: Vec<_> = ops.iter().map(|op| op.object_name.as_str()).collect();
+        assert_eq!(names, ["a", "b"]);
+    }
+
+    #[test]
+    fn a_change_inside_a_string_literal_is_a_change() {
+        let check = |expression: &str| ManifestCheck {
+            name: "a".to_string(),
+            expression: expression.to_string(),
+        };
+        assert_ne!(
+            check_key(&check("status IN ('Active')")),
+            check_key(&check("status IN ('ACTIVE')"))
+        );
+        assert_eq!(
+            check_key(&check("STATUS   in ('Active')")),
+            check_key(&check("status IN ('Active')"))
+        );
+    }
+
+    #[test]
+    fn index_operator_class_and_params_are_part_of_the_index() {
+        use crate::generation::manifest::{ManifestStoreOption, index_key};
+        let mut index = crate::generation::manifest::ManifestIndex {
+            name: "i".to_string(),
+            ..Default::default()
+        };
+        let before = index_key(&index);
+        index.index_params = vec![ManifestStoreOption {
+            key: "m".to_string(),
+            value: "32".to_string(),
+        }];
+        assert_ne!(before, index_key(&index));
+        let before = index_key(&index);
+        index.operator_class = "vector_cosine_ops".to_string();
+        assert_ne!(before, index_key(&index));
+    }
+
+    #[test]
+    fn an_extension_version_change_is_an_update_not_a_drop() {
+        let manifest = |version: &str| CatalogManifest {
+            tables: vec![ManifestTable {
+                extensions: vec![ManifestExtension {
+                    name: "vector".to_string(),
+                    schema: "public".to_string(),
+                    version: version.to_string(),
+                }],
+                ..sample_table()
+            }],
+            ..CatalogManifest::default()
+        };
+        let mut ops = Vec::new();
+        diff_extensions(&manifest("0.7"), &manifest("0.8"), &mut ops);
+        let kinds: Vec<_> = ops.into_iter().map(|op| op.kind).collect();
+        assert_eq!(kinds, [ChangeKind::UpdateExtension]);
+    }
+
+    #[test]
+    fn a_store_tables_column_change_is_refused_not_lost() {
+        let store = crate::generation::manifest::ManifestStore {
+            backend: "clickhouse".to_string(),
+            resource_name: "events".to_string(),
+            owner_schema: "s".to_string(),
+            owner_table: "t".to_string(),
+            ..Default::default()
+        };
+        let manifest = |table: ManifestTable| CatalogManifest {
+            tables: vec![table],
+            stores: vec![store.clone()],
+            ..CatalogManifest::default()
+        };
+        let mut wider = sample_table();
+        wider.columns.push(ManifestColumn {
+            column_name: "extra".to_string(),
+            sql_type: "TEXT".to_string(),
+            ..ManifestColumn::default()
+        });
+        let mut ops = Vec::new();
+        diff_store_table_columns(&manifest(sample_table()), &manifest(wider), &mut ops);
+        assert_eq!(ops.len(), 1);
+        assert_eq!(ops[0].kind, ChangeKind::ManualChange);
+    }
+
     #[test]
     fn every_drop_runs_before_a_create_of_the_same_name() {
         for (drop, create) in [
@@ -2561,6 +2909,7 @@ mod tests {
             (ChangeKind::DropForeignKey, ChangeKind::AddForeignKey),
             (ChangeKind::DropPolicy, ChangeKind::CreatePolicy),
             (ChangeKind::DropCheck, ChangeKind::AddCheck),
+            (ChangeKind::DropExtension, ChangeKind::CreateExtension),
             (ChangeKind::DropTrigger, ChangeKind::CreateTrigger),
             (
                 ChangeKind::DropMaterializedView,

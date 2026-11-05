@@ -2012,6 +2012,22 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
         Ok(drift)
     }
 
+    /// Clear the ledger rows of delta artifacts once the manifest has advanced. The run
+    /// history stays in the migration run and operation ledgers.
+    pub(crate) async fn forget_applied_deltas(&self) -> Result<(), tonic::Status> {
+        let schema_migrations =
+            ledger_relation(&self.config.migration.ledger_schema, "schema_migrations");
+        sqlx::query(&format!(
+            "DELETE FROM {schema_migrations} WHERE migration_kind LIKE 'proto\\_delta%'"
+        ))
+        .execute(self.pg_pool()?)
+        .await
+        .map(|_| ())
+        .map_err(|err| {
+            catalog_sql_internal_status("forget_applied_deltas", err.to_string())
+        })
+    }
+
     /// Compare each table's CHECK rules with what the protos declare.
     ///
     /// PostgreSQL rewrites a rule when it stores it, so text cannot be compared. Each

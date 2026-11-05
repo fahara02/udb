@@ -152,6 +152,39 @@ fn mongo_database(store: &ManifestStore) -> String {
         })
 }
 
+/// The indexes the generated artifact declares, in the shape the executor reads.
+pub(super) fn ensure_spec(store: &ManifestStore) -> Json {
+    let collection = safe_mongo_name(&collection_name(store), "collection");
+    let tenant_field = safe_mongo_field(
+        store_opt_str_any(store, &["udb.mongo_tenant_field", "tenant_field"])
+            .unwrap_or("tenant_id"),
+        "tenant_id",
+    );
+    let mut indexes = vec![json!({
+        "key": { (tenant_field.clone()): 1 },
+        "name": format!("idx_{collection}_{tenant_field}"),
+    })];
+    if let Some(partition_key) =
+        store_opt_str_any(store, &["udb.mongo_partition_key", "partition_key"])
+            .map(|value| safe_mongo_field(value, ""))
+            .filter(|value| !value.is_empty())
+    {
+        indexes.push(json!({
+            "key": { (partition_key.clone()): 1 },
+            "name": format!("idx_{collection}_{partition_key}"),
+        }));
+    }
+    let ttl_seconds = store_opt_i64_any(store, &["udb.mongo_ttl_seconds", "ttl_seconds"], 0);
+    if ttl_seconds > 0 {
+        indexes.push(json!({
+            "key": { "created_at": 1 },
+            "name": format!("idx_{collection}_ttl"),
+            "expire_after_seconds": ttl_seconds,
+        }));
+    }
+    json!({ "indexes": indexes })
+}
+
 fn collection_name(store: &ManifestStore) -> String {
     if let Some(collection) = store_opt_str_any(store, &["udb.mongo_collection", "collection_name"])
     {

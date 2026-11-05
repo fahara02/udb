@@ -511,8 +511,8 @@ pub fn diff_clickhouse_targets(
             })
         },
         |store| ChangeOperation {
-            kind: ChangeKind::DropTable,
-            data_destructive: is_data_destructive(&ChangeKind::DropTable),
+            kind: ChangeKind::DropStore,
+            data_destructive: is_data_destructive(&ChangeKind::DropStore),
             safety: ChangeSafety::RequiresReview,
             priority: 200,
             schema: store.database_name.clone(),

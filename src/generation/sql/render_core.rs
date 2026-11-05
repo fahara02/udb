@@ -226,7 +226,15 @@ pub(crate) fn render_delta_operation(
     match op.kind {
         ChangeKind::ApplySqlArtifact => table
             .and_then(|table| find_sql_artifact(table, &op.object_name))
-            .and_then(|artifact| render_sql_artifact(artifact, &artifact.phase))
+            .and_then(|artifact| {
+                let phase = artifact.phase.trim();
+                let phase = if phase.is_empty() {
+                    "before_triggers"
+                } else {
+                    phase
+                };
+                render_sql_artifact(artifact, phase)
+            })
             .unwrap_or_else(|| missing_object_note(op, "sql_artifact", &op.object_name)),
         ChangeKind::CreateExtension => find_extension(manifest, &op.schema, &op.object_name)
             .map(render_create_extension)
@@ -234,6 +242,31 @@ pub(crate) fn render_delta_operation(
         ChangeKind::DropExtension => {
             format!("DROP EXTENSION IF EXISTS {};", qi(&op.object_name))
         }
+        ChangeKind::UpdateExtension => find_extension(manifest, &op.schema, &op.object_name)
+            .map(|extension| {
+                if extension.version.trim().is_empty() {
+                    format!("ALTER EXTENSION {} UPDATE;", qi(&extension.name))
+                } else {
+                    format!(
+                        "ALTER EXTENSION {} UPDATE TO {};",
+                        qi(&extension.name),
+                        ql(&extension.version)
+                    )
+                }
+            })
+            .unwrap_or_else(|| missing_object_note(op, "extension", &op.object_name)),
+        ChangeKind::SetForceRls => table
+            .map(|table| {
+                format!(
+                    "ALTER TABLE {}.{} {} ROW LEVEL SECURITY;",
+                    qi(&op.schema),
+                    qi(&op.table),
+                    if table.force_rls { "FORCE" } else { "NO FORCE" }
+                )
+            })
+            .unwrap_or_default(),
+        // Refused at startup before any delta is generated.
+        ChangeKind::ManualChange => String::new(),
         ChangeKind::CreateTable => table
             .map(|table| render_bootstrap_table(table, &manifest.checksum_sha256, &SqlGenerationConfig::default()))
             .unwrap_or_default(),
@@ -444,7 +477,12 @@ pub(crate) fn render_delta_operation(
         }
         ChangeKind::AddForeignKey => table
             .and_then(|table| find_fk(table, &op.object_name).map(|fk| (fk, is_partitioned(table))))
-            .map(|(fk, partitioned)| render_add_fk(&op.schema, &op.table, fk, partitioned))
+            .map(|(fk, partitioned)| {
+                // A declared foreign key that cannot be created fails the migration here.
+                // Bootstrap keeps its notice, because the manifest already warned about it.
+                render_add_fk(&op.schema, &op.table, fk, partitioned)
+                    .replace("RAISE NOTICE 'Skipping FK", "RAISE EXCEPTION 'Cannot add FK")
+            })
             .unwrap_or_default(),
         ChangeKind::DropForeignKey => format!(
             "ALTER TABLE {}.{} DROP CONSTRAINT IF EXISTS {};",

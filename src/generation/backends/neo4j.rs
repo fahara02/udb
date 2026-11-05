@@ -129,6 +129,16 @@ pub fn generate_neo4j_artifacts(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/// The property the generated artifact's uniqueness constraint covers.
+pub(super) fn ensure_spec(store: &ManifestStore) -> serde_json::Value {
+    serde_json::json!({
+        "constraint_property": safe_identifier(
+            store_opt_str_any(store, &["udb.neo4j_id_field", "id_field"]).unwrap_or("id"),
+            "id",
+        ),
+    })
+}
+
 fn neo4j_database(store: &ManifestStore) -> String {
     store_opt_str_any(store, &["udb.neo4j_database", "database_name"])
         .map(ToOwned::to_owned)

@@ -124,6 +124,13 @@ udb plan seal --plan plan.json --signature dba.sig.json --out approved.json
 # config: migration.require_approval_plan=/path/to/approved.json
 ```
 
+A migration stops, before it changes anything, on a declared change UDB has no way to
+apply: partition settings and retention, a primary key, how the database fills a column
+(identity, generated, serial), an index UDB derives from a column, a column renamed and
+changed at once, a removed or unrunnable `sql_artifact`, and a column change on a
+schema-bound store's table. Apply it by hand, then start once with
+`UDB_ACK_MANUAL_BACKEND_RECONCILIATION=true`, or revert the proto.
+
 `udb verify --live` compares each table's `CHECK` rules with the protos. A rule the
 database lacks fails the run and prints the statement that applies it. A rule the
 protos never declared is reported and does not fail the run.

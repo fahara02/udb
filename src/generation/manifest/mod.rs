@@ -1128,13 +1128,20 @@ fn checksum_hex<T: Serialize>(value: &T) -> Result<String, serde_json::Error> {
 
 pub fn index_key(index: &ManifestIndex) -> String {
     format!(
-        "{}|{}|{}|{}|{}|{}",
+        "{}|{}|{}|{}|{}|{}|{}|{}",
         index.name.to_ascii_lowercase(),
         index.columns.join(","),
         index.unique,
         index.method.to_ascii_uppercase(),
         normalize_expression(&index.where_clause),
-        index.include_columns.join(",")
+        index.include_columns.join(","),
+        index.operator_class,
+        index
+            .index_params
+            .iter()
+            .map(|param| format!("{}={}", param.key, param.value))
+            .collect::<Vec<_>>()
+            .join(",")
     )
 }
 
@@ -1246,14 +1253,22 @@ fn normalize_replica_hint(value: &str) -> String {
     }
 }
 
-fn normalize_expression(value: &str) -> String {
-    value
-        .trim()
-        .to_ascii_lowercase()
-        .replace('"', "")
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join("")
+/// Ignore case, whitespace and identifier quotes outside string literals. A literal is
+/// data: `'Active'` and `'ACTIVE'` are different rules.
+pub(crate) fn normalize_expression(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut in_literal = false;
+    for ch in value.trim().chars() {
+        if ch == '\'' {
+            in_literal = !in_literal;
+            out.push(ch);
+        } else if in_literal {
+            out.push(ch);
+        } else if ch != '"' && !ch.is_whitespace() {
+            out.push(ch.to_ascii_lowercase());
+        }
+    }
+    out
 }
 
 fn normalize_backend(value: &str) -> String {

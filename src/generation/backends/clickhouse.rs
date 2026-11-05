@@ -241,6 +241,30 @@ fn ch_table(store: &ManifestStore) -> String {
     }
 }
 
+/// What the executor needs to create the table the generated artifact declares.
+pub(super) fn ensure_spec(
+    store: &ManifestStore,
+    companion: Option<&ManifestTable>,
+) -> serde_json::Value {
+    let mut spec = serde_json::json!({
+        "engine": ch_engine(store),
+        "order_by": ch_order_by(store, companion).replace(['`', '"'], ""),
+    });
+    if let Some(table) = companion {
+        spec["columns"] = table
+            .columns
+            .iter()
+            .map(|column| {
+                serde_json::json!({
+                    "name": column.column_name,
+                    "type": pg_to_ch_type(&column.sql_type, column.not_null),
+                })
+            })
+            .collect();
+    }
+    spec
+}
+
 fn ch_engine(store: &ManifestStore) -> &str {
     let raw =
         store_opt_str_any(store, &["udb.ch_engine", "engine"]).unwrap_or("ReplacingMergeTree");

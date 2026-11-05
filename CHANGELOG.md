@@ -9,6 +9,27 @@ release line was tagged.
 
 ### Breaking for callers
 
+- **Startup refuses a declared schema change UDB cannot apply, instead of recording it.**
+  This covers partition settings and retention, a primary key, a column's identity,
+  generated or serial behavior, an index UDB derives from a column, a renamed column that
+  also changes, a removed or unrunnable `sql_artifact`, and a column change on a
+  ClickHouse, MySQL, SQLite, SQL Server or Cassandra store's table.
+  - detect: code: `udb drift --prior <manifest>` lists `ManualChange` and partition operations
+  - fix: apply the change by hand, then set `UDB_ACK_MANUAL_BACKEND_RECONCILIATION=true`
+    for that start, or revert the proto.
+- **A foreign key a migration cannot create fails it.** A delta used to log a notice and
+  report success.
+  - detect: sql: a foreign key to a partitioned table that leaves out the partition key
+  - fix: reference the partition key from the child table.
+- **New ClickHouse, MongoDB and Neo4j stores are created as declared.** ClickHouse used
+  `MergeTree` with `_id, _data`, MongoDB no indexes, and Neo4j the `id` property, whatever
+  the store declared. Existing resources are not altered.
+  - detect: code: a store with `udb.ch_engine`, `udb.mongo_ttl_seconds` or `udb.neo4j_id_field`
+  - fix: recreate the resource if it should have the declared shape.
+- **An explicit RLS policy now retires the default `tenant_isolation` policy.** Both were
+  permissive, so the default kept granting what the explicit policy restricted.
+  - detect: sql: `SELECT * FROM pg_policies WHERE policyname = 'tenant_isolation'`
+  - fix: check the explicit policies allow what callers need.
 - **`udb verify --live` and `udb up` now fail on a table missing a declared `CHECK`.** A rule
   an earlier release skipped shows up here.
   - detect: code: run `udb verify --live`, finding `check_mismatch`
@@ -53,6 +74,12 @@ release line was tagged.
 
 ### Fixed
 
+- **More schema changes reach the database or stop the migration:** an index's operator
+  class and parameters, a change inside a string literal in a rule or predicate, a rule
+  moved to another name, an extension version (now `ALTER EXTENSION`, where it could be
+  dropped), `force_rls` in both directions, and a change reverted and then re-applied,
+  which was skipped by its old ledger row.
+- **A ClickHouse store drop can no longer render as `DROP TABLE` on PostgreSQL.**
 - A value refused by its column type no longer reports `invalid identifier format`. The
   message names the type, and never the value.
 - **Generated TypeScript and Python row mappers match Go on empty JSON text.** For a

@@ -515,6 +515,21 @@ pub fn render_bootstrap_table(
         sql.push_str("\n\n");
     }
 
+    // Permissive policies OR together, so the synthesized default below would keep
+    // granting what a table's explicit policies now restrict.
+    if !table.rls_policies.is_empty()
+        && !table
+            .rls_policies
+            .iter()
+            .any(|policy| policy.name == "tenant_isolation")
+    {
+        sql.push_str(&format!(
+            "DROP POLICY IF EXISTS \"tenant_isolation\" ON {}.{};\n\n",
+            qi(&table.schema),
+            qi(&table.table)
+        ));
+    }
+
     // Item 137 (Stage 2): when a tenant table opts into RLS but declares no
     // explicit policy, synthesize a default tenant-isolation policy from its
     // tenant column so multi-tenant isolation is enforced by default. The
@@ -826,6 +841,60 @@ pub(crate) mod tests {
         assert!(sql.contains("CONSTRAINT \"chk_orders_status\" CHECK (status IN ('a'))"), "{sql}");
         assert!(sql.contains("IF NOT EXISTS (SELECT 1 FROM pg_constraint"), "{sql}");
         assert!(sql.contains("NOT VALID"), "{sql}");
+    }
+
+    #[test]
+    fn an_explicit_policy_retires_the_synthesized_default() {
+        let table = ManifestTable {
+            schema: "s".to_string(),
+            table: "t".to_string(),
+            enable_rls: true,
+            rls_policies: vec![ManifestPolicy {
+                name: "mine".to_string(),
+                command: "ALL".to_string(),
+                using_expression: "true".to_string(),
+                with_check: "true".to_string(),
+                permissive: true,
+            }],
+            ..ManifestTable::default()
+        };
+        let sql = render_bootstrap_table(&table, "sum", &SqlGenerationConfig::default());
+        assert!(sql.contains("DROP POLICY IF EXISTS \"tenant_isolation\""), "{sql}");
+    }
+
+    #[test]
+    fn a_foreign_key_a_delta_cannot_create_fails_the_delta() {
+        use crate::generation::manifest::ManifestForeignKey;
+        let table = ManifestTable {
+            schema: "s".to_string(),
+            table: "t".to_string(),
+            foreign_keys: vec![ManifestForeignKey {
+                name: "fk_t_p".to_string(),
+                columns: vec!["p".to_string()],
+                ref_schema: "s".to_string(),
+                ref_table: "p".to_string(),
+                ref_columns: vec!["id".to_string()],
+                ..ManifestForeignKey::default()
+            }],
+            ..ManifestTable::default()
+        };
+        let manifest = CatalogManifest {
+            tables: vec![table.clone()],
+            ..CatalogManifest::default()
+        };
+        let sql = render_delta_operation(
+            &manifest,
+            Some(&table),
+            &ChangeOperation {
+                kind: ChangeKind::AddForeignKey,
+                schema: "s".to_string(),
+                table: "t".to_string(),
+                object_name: derive_fk_name("t", &table.foreign_keys[0]),
+                ..ChangeOperation::default()
+            },
+        );
+        assert!(sql.contains("RAISE EXCEPTION 'Cannot add FK"), "{sql}");
+        assert!(!sql.contains("RAISE NOTICE 'Skipping FK"), "{sql}");
     }
 
     #[test]

@@ -116,6 +116,58 @@ fn generate_startup_delta(
     }
 }
 
+/// Declared changes with no renderer or executor. Recording the manifest as applied over
+/// one of these would leave the database different from what the ledger says.
+fn change_has_no_executor(kind: &ChangeKind) -> bool {
+    matches!(
+        kind,
+        ChangeKind::ManualChange
+            | ChangeKind::CreatePartition
+            | ChangeKind::AttachPartition
+            | ChangeKind::DetachPartition
+            | ChangeKind::DropPartition
+            | ChangeKind::UpdateCollection
+            | ChangeKind::DropCollection
+            | ChangeKind::UpdateValidator
+            | ChangeKind::UpdateConstraint
+            | ChangeKind::DropConstraint
+            | ChangeKind::ChangeTableEngine
+            | ChangeKind::UpdateLifecyclePolicy
+            | ChangeKind::DropBucket
+            | ChangeKind::UpdateStore
+            | ChangeKind::DropStore
+    )
+}
+
+#[cfg(test)]
+mod change_executor_tests {
+    use super::*;
+
+    #[test]
+    fn a_change_with_no_renderer_is_refused_at_startup() {
+        for kind in [
+            ChangeKind::ManualChange,
+            ChangeKind::CreatePartition,
+            ChangeKind::AttachPartition,
+            ChangeKind::DetachPartition,
+            ChangeKind::DropPartition,
+            ChangeKind::UpdateStore,
+            ChangeKind::DropStore,
+        ] {
+            assert!(change_has_no_executor(&kind), "{kind:?}");
+        }
+        for kind in [
+            ChangeKind::AddColumn,
+            ChangeKind::AddCheck,
+            ChangeKind::DropCheck,
+            ChangeKind::SetForceRls,
+            ChangeKind::UpdateExtension,
+        ] {
+            assert!(!change_has_no_executor(&kind), "{kind:?}");
+        }
+    }
+}
+
 /// Operator assertion that a backend change UDB cannot apply itself has been
 /// reconciled by hand, so startup may record the new manifest as current.
 pub(crate) const ACK_MANUAL_BACKEND_RECONCILIATION_ENV: &str =
@@ -1505,7 +1557,17 @@ async fn run_startup_lifecycle_core(
                                 format!("missing manifest store {}", action.resource_name),
                             )
                         })?;
-                    let spec_json = serde_json::to_string(store).unwrap_or_default();
+                    if store.backend.to_ascii_lowercase().contains("mongo")
+                        && !store.payload_schema_json.trim().is_empty()
+                    {
+                        report.warnings.push(format!(
+                            "MongoDB collection {} declares a payload schema; UDB creates the \
+                             collection and its indexes but does not install the validator",
+                            action.resource_name
+                        ));
+                    }
+                    let spec_json =
+                        crate::generation::backends::store_ensure_spec(store, manifest).to_string();
                     match runtime
                         .ensure_resource_backend(&action.backend, &action.resource_name, &spec_json)
                         .await
@@ -1552,7 +1614,11 @@ async fn run_startup_lifecycle_core(
                     // Redis keyspaces have no DDL to apply — schema is expressed
                     // via generated redis artifacts. Nothing to do here.
                 }
-                _ => {}
+                other => report.warnings.push(format!(
+                    "no provisioning path for {} resource '{}' of kind '{other}'; UDB did not \
+                     create it",
+                    action.backend, action.resource_name
+                )),
             }
         }
     }
@@ -1581,21 +1647,7 @@ async fn run_startup_lifecycle_core(
             // divergence. Fail closed instead of diverging silently.
             let unappliable: Vec<String> = changes
                 .iter()
-                .filter(|change| {
-                    matches!(
-                        change.kind,
-                        ChangeKind::UpdateCollection
-                            | ChangeKind::DropCollection
-                            | ChangeKind::UpdateValidator
-                            | ChangeKind::UpdateConstraint
-                            | ChangeKind::DropConstraint
-                            | ChangeKind::ChangeTableEngine
-                            | ChangeKind::UpdateLifecyclePolicy
-                            | ChangeKind::DropBucket
-                            | ChangeKind::UpdateStore
-                            | ChangeKind::DropStore
-                    )
-                })
+                .filter(|change| change_has_no_executor(&change.kind))
                 .map(|change| format!("{:?} {}.{}", change.kind, change.schema, change.table))
                 .collect();
             if !unappliable.is_empty() {
@@ -1622,7 +1674,7 @@ async fn run_startup_lifecycle_core(
                         &mut report,
                         "backend_delta_unappliable",
                         format!(
-                            "the manifest requires backend changes UDB cannot apply automatically \
+                            "the manifest requires changes UDB cannot apply automatically \
                              ({}). Applying the rest would record this manifest as current while \
                              the store keeps its previous geometry, and the next boot would \
                              fast-start over the divergence. Either revert the proto change, or \
@@ -1974,6 +2026,15 @@ async fn run_startup_lifecycle_core(
             .save_manifest_if_latest(manifest, expected_latest_checksum.as_deref())
             .await
             .map_err(|err| fail(runtime, &mut report, "save_manifest", err.to_string()))?;
+        // A delta's ledger row only protects recovery from a partial failure. Kept after
+        // the manifest advances, it would skip the same change when a revert is reverted.
+        if let Err(err) = runtime.forget_applied_deltas().await {
+            report.warnings.push(format!(
+                "could not clear applied delta records: {}; a later re-apply of the same \
+                 change could be skipped",
+                err.message()
+            ));
+        }
     }
     // ── End proto-diff auto-alter ─────────────────────────────────────────────
 
