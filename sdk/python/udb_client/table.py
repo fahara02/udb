@@ -28,7 +28,7 @@ from udb.entity.v1 import types_pb2
 from .client import decode_records, to_record_json, to_struct
 from .error_code import classify
 from .exceptions import UdbConflict, UdbNotFound, UdbRpcError
-from .record_codec import _INT64_TYPES, _text_column, enum_common_prefix
+from .record_codec import _INT64_TYPES, _is_json, _text_column, enum_common_prefix, is_repeated
 from .schema import column_options, primary_keys, project_column, tenant_column
 
 Row = TypeVar("Row", bound=Mapping[str, Any])
@@ -664,6 +664,18 @@ class AsyncRepo(_RepoBase[Row]):
         await self._table._guarded_delete(where, expected, idempotency_key)
 
 
+def _empty_json_text_is_unset(field: Any, column: Any) -> bool:
+    """A nullable JSON text column with no field presence: proto cannot tell "" from
+    unset, so a row leaves "" out. A patch names its columns and still sends it."""
+    return (
+        field.type == FieldDescriptor.TYPE_STRING
+        and _is_json(column)
+        and not is_repeated(field)
+        and not column.not_null
+        and not field.has_presence
+    )
+
+
 def table_spec_of(message: Any) -> TableSpec[dict[str, Any]]:
     """The :class:`TableSpec` of an entity message class, read from its annotations.
 
@@ -677,6 +689,7 @@ def table_spec_of(message: Any) -> TableSpec[dict[str, Any]]:
     enums: dict[str, str] = {}
     big_ints: list[str] = []
     no_insert: list[str] = []
+    empty_unset: list[str] = []
     excluded = [name for name in (tenant_column(descriptor), project_column(descriptor)) if name]
     for field_descriptor in descriptor.fields:
         column = column_options(field_descriptor)
@@ -686,6 +699,8 @@ def table_spec_of(message: Any) -> TableSpec[dict[str, Any]]:
         fields.append(name)
         if column.generated or column.exclude_from_insert:
             no_insert.append(name)
+        if _empty_json_text_is_unset(field_descriptor, column):
+            empty_unset.append(name)
         if column.generated or column.exclude_from_update or column.tenant_column:
             excluded.append(name)
         if field_descriptor.type == FieldDescriptor.TYPE_ENUM and _text_column(column):
@@ -701,6 +716,9 @@ def table_spec_of(message: Any) -> TableSpec[dict[str, Any]]:
         record = to_fields(row)
         for name in no_insert:
             record.pop(name, None)
+        for name in empty_unset:
+            if record.get(name) == "":
+                del record[name]
         return record
 
     def from_row(record: Mapping[str, Any]) -> dict[str, Any]:

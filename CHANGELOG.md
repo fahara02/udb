@@ -40,6 +40,10 @@ release line was tagged.
 
 - A value refused by its column type no longer reports `invalid identifier format`. The
   message names the type, and never the value.
+- **Generated TypeScript and Python row mappers match Go on empty JSON text.** For a
+  nullable JSON text column with no field presence, `XToUDBRecord` leaves out `""`, so
+  Insert and Upsert keep the column's value instead of being refused. A `patch` names its
+  columns on purpose: it still sends `""`, and the broker refuses it.
 
 ## [0.6.7] - 2026-11-05
 

@@ -2362,6 +2362,15 @@ fn render_ts_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
         {
             body.push_str(&format!("  delete r[{:?}];\n", column.field_name));
         }
+        for column in columns
+            .iter()
+            .filter(|column| empty_json_text_is_unset(column))
+        {
+            let field = &column.field_name;
+            body.push_str(&format!(
+                "  if (r[{field:?}] === \"\") delete r[{field:?}];\n"
+            ));
+        }
         body.push_str("  return r;\n}\n\n");
 
         body.push_str(&format!(
@@ -2447,6 +2456,7 @@ fn render_ts_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
          // Typed rows for your entities. Rows use protobuf JSON names (camelCase);\n\
          // the mappers below convert to and from the broker's proto field names.\n\
          // JSON and JSONB values are passed through unchanged, nested keys included.\n\
+         // A row leaves out \"\" for a nullable JSON text column; a patch sends it and is refused.\n\
          // Clear a column with `table.patch(key, {{ column: null }})`.\n\n\
          import {{ {} }} from \"@udb_plus/sdk\";\n",
         env!("CARGO_PKG_VERSION"),
@@ -2557,6 +2567,7 @@ fn render_py_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
          #\n\
          # Typed rows for your entities. Rows are dicts keyed by proto field name, and a\n\
          # NULL column is an absent key. JSON and JSONB values pass through unchanged.\n\
+         # A row leaves out \"\" for a nullable JSON text column; a patch sends it and is refused.\n\
          # Clear a column with `table.patch(key, {{\"column\": None}})`.\n\n\
          from __future__ import annotations\n\n\
          from typing import Any, Literal, Mapping, TypedDict\n\n\
@@ -2704,6 +2715,14 @@ fn render_py_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
         }
         out.push_str(&format!("\n\n{name}Where = _{name}Where\n\n\n"));
 
+        let empty_unset: String = columns
+            .iter()
+            .filter(|column| empty_json_text_is_unset(column))
+            .map(|column| {
+                let field = &column.field_name;
+                format!("    if record.get({field:?}) == \"\":\n        del record[{field:?}]\n")
+            })
+            .collect();
         out.push_str(&format!(
             "def {name}ToFields(row: Mapping[str, Any]) -> dict[str, Any]:\n    \
              return udb_record_fields(row, {name}Fields, _{name}Enums)\n\n\n\
@@ -2711,7 +2730,8 @@ fn render_py_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
              \"\"\"The record to write: absent keys are omitted, None writes SQL NULL.\"\"\"\n    \
              record = {name}ToFields(row)\n    \
              for column in _{name}NoInsert:\n        \
-             record.pop(column, None)\n    \
+             record.pop(column, None)\n\
+             {empty_unset}    \
              return record\n\n\n\
              def {name}FromUDBRow(row: Mapping[str, Any]) -> {name}:\n    \
              \"\"\"The typed row: a NULL or missing column is left out.\"\"\"\n    \
@@ -2814,6 +2834,18 @@ fn go_enum_text_column(column: &EntityColumnDescriptor) -> bool {
 /// THE SYMMETRY RULE: this function must never write a column that
 /// [`go_from_row_stmt`] cannot read back. Complex fields use the reflective
 /// codec; a message stored outside JSON fails the render pre-scan.
+/// A nullable JSON text column with no field presence: proto cannot tell "" from
+/// unset, so a row mapper leaves "" out and the column keeps its value, in Go,
+/// TypeScript and Python. A patch names its columns on purpose, so it still sends ""
+/// and the broker refuses it.
+fn empty_json_text_is_unset(column: &EntityColumnDescriptor) -> bool {
+    (column.is_json || column.is_jsonb)
+        && !column.is_array
+        && !column.not_null
+        && !column.has_presence
+        && matches!(go_scalar_kind(&column.proto_type), GoScalar::String)
+}
+
 /// A protobuf MESSAGE stored in a JSON/JSONB column.
 ///
 /// The JSON arms assume the getter yields TEXT. For a message field it yields
@@ -4630,6 +4662,54 @@ mod tests {
         }
         assert_eq!(canonical_lang("all"), "all");
         assert_eq!(canonical_lang("my-custom-lang"), "my-custom-lang");
+    }
+
+    #[test]
+    fn a_row_leaves_out_empty_json_text_only_where_proto_cannot_tell_it_from_unset() {
+        let json_text = |name: &str| {
+            let mut col = column(name, "string");
+            col.is_jsonb = true;
+            col.not_null = false;
+            col
+        };
+        let mut required = json_text("required_doc");
+        required.not_null = true;
+        let mut present = json_text("present_doc");
+        present.has_presence = true;
+        let mut plain = column("note", "string");
+        plain.not_null = false;
+        let entity = || {
+            ts_entity(
+                "Doc",
+                &["id"],
+                vec![
+                    column("id", "string"),
+                    json_text("doc"),
+                    required.clone(),
+                    present.clone(),
+                    plain.clone(),
+                ],
+            )
+        };
+
+        let ts = render_ts_entities_file(&[entity()]).expect("render TypeScript");
+        assert!(ts.contains("  if (r[\"doc\"] === \"\") delete r[\"doc\"];\n"));
+        let py = render_py_entities_file(&[entity()]).expect("render Python");
+        assert!(py.contains("    if record.get(\"doc\") == \"\":\n        del record[\"doc\"]\n"));
+        for name in ["required_doc", "present_doc", "note"] {
+            assert!(
+                !ts.contains(&format!("if (r[\"{name}\"] === \"\")")),
+                "{name}"
+            );
+            assert!(!py.contains(&format!("record.get(\"{name}\")")), "{name}");
+        }
+        // The omission belongs to the row mapper, never to the fields a patch sends.
+        let to_fields = ts
+            .split("export function DocToFields")
+            .nth(1)
+            .and_then(|tail| tail.split("export function DocToUDBRecord").next())
+            .expect("TypeScript fields mapper");
+        assert!(!to_fields.contains("delete r["));
     }
 
     #[test]
