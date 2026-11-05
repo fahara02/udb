@@ -738,6 +738,43 @@ pub(crate) mod tests {
         );
     }
 
+    #[test]
+    fn a_check_replaces_its_name_and_the_copy_postgres_named_itself() {
+        let sql = render_add_check(
+            "s",
+            "orders",
+            &ManifestCheck {
+                name: "chk_orders_status".to_string(),
+                expression: "status IN ('a','b')".to_string(),
+            },
+        );
+        assert_eq!(
+            sql,
+            "ALTER TABLE \"s\".\"orders\" DROP CONSTRAINT IF EXISTS \"chk_orders_status\", \
+             DROP CONSTRAINT IF EXISTS \"orders_status_check\", \
+             ADD CONSTRAINT \"chk_orders_status\" CHECK (status IN ('a','b'));"
+        );
+        assert!(
+            !sql.contains("EXCEPTION"),
+            "a changed rule must not be skipped"
+        );
+        assert_eq!(
+            render_drop_check("s", "orders", "chk_orders_status"),
+            "ALTER TABLE \"s\".\"orders\" DROP CONSTRAINT IF EXISTS \"chk_orders_status\", \
+             DROP CONSTRAINT IF EXISTS \"orders_status_check\";"
+        );
+    }
+
+    #[test]
+    fn the_inline_check_name_fits_postgres_the_way_postgres_cuts_it() {
+        let long_table = "t".repeat(60);
+        let sql = render_drop_check("s", &long_table, &format!("chk_{long_table}_status"));
+        // 63 bytes: the longer name is cut, the column keeps its six.
+        let expected = format!("{}_status_check", "t".repeat(50));
+        assert_eq!(expected.len(), 63);
+        assert!(sql.contains(&format!("\"{expected}\"")), "{sql}");
+    }
+
     // Regression: a DropUnique must drop the index UDB actually created
     // (`uidx_<schema>_<table>_<column>`), not the bare column. The old code emitted
     // `DROP INDEX IF EXISTS "<schema>"."<column>"`, which matched nothing under

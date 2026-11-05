@@ -184,19 +184,67 @@ pub(crate) fn render_add_fk(
     )
 }
 
+/// The name Postgres gives an inline column `CHECK`, as its `makeObjectName` builds it:
+/// `<table>_<column>_check`, cutting the longer of the two names to fit 63 bytes.
+fn postgres_inline_check_name(table: &str, column: &str) -> String {
+    const LABEL: &str = "check";
+    let available = 63 - (LABEL.len() + 2);
+    let (mut table_len, mut column_len) = (table.len(), column.len());
+    while table_len + column_len > available {
+        if table_len > column_len {
+            table_len -= 1;
+        } else {
+            column_len -= 1;
+        }
+    }
+    let clip = |name: &str, mut len: usize| {
+        while !name.is_char_boundary(len) {
+            len -= 1;
+        }
+        name[..len].to_string()
+    };
+    format!(
+        "{}_{}_{LABEL}",
+        clip(table, table_len),
+        clip(column, column_len)
+    )
+}
+
+/// `DROP CONSTRAINT` clauses for a generated check: its own name, and the copy Postgres
+/// named itself when the column was created with the same rule inline.
+fn drop_check_clauses(table: &str, name: &str) -> String {
+    let mut clauses = format!("DROP CONSTRAINT IF EXISTS {}", qi(name));
+    if let Some(column) = name.strip_prefix(&format!("chk_{table}_")) {
+        clauses.push_str(&format!(
+            ", DROP CONSTRAINT IF EXISTS {}",
+            qi(&postgres_inline_check_name(table, column))
+        ));
+    }
+    clauses
+}
+
+pub(crate) fn render_drop_check(schema: &str, table: &str, name: &str) -> String {
+    format!(
+        "ALTER TABLE {}.{} {};",
+        qi(schema),
+        qi(table),
+        drop_check_clauses(table, name)
+    )
+}
+
 pub(crate) fn render_add_check(schema: &str, table: &str, check: &ManifestCheck) -> String {
     let name = if check.name.trim().is_empty() {
         format!("chk_{}_auto", table)
     } else {
         check.name.clone()
     };
-    // Wrap in anonymous DO block so the operation is idempotent:
-    // if the constraint already exists (duplicate_object) we silently skip,
-    // matching the same pattern used by render_add_fk.
+    // One statement, so a rule the existing rows break fails with the old rule still in
+    // place. Replacing by name means a changed rule can never be skipped as a duplicate.
     format!(
-        "DO $$BEGIN\n  ALTER TABLE {}.{} ADD CONSTRAINT {} CHECK ({});\nEXCEPTION WHEN duplicate_object THEN NULL;\nEND$$;",
+        "ALTER TABLE {}.{} {}, ADD CONSTRAINT {} CHECK ({});",
         qi(schema),
         qi(table),
+        drop_check_clauses(table, &name),
         qi(&name),
         check.expression
     )

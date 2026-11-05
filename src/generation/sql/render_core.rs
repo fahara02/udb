@@ -389,6 +389,7 @@ pub(crate) fn render_delta_operation(
             .and_then(|table| find_check(table, &op.object_name))
             .map(|check| render_add_check(&op.schema, &op.table, check))
             .unwrap_or_else(|| missing_object_note(op, "check constraint", &op.object_name)),
+        ChangeKind::DropCheck => render_drop_check(&op.schema, &op.table, &op.object_name),
         ChangeKind::AddUnique => {
             let columns = table
                 .map(|table| {

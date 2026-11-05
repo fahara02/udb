@@ -9,6 +9,11 @@ release line was tagged.
 
 ### Breaking for callers
 
+- **A migration now applies `CHECK` changes it used to skip.** A rule changed or removed
+  in the protos since the table was created takes effect, and a new rule that existing
+  rows break fails the migration with the old rule still in place.
+  - detect: code: `udb drift --prior <manifest>` lists `AddCheck` and `DropCheck`
+  - fix: correct the rows, or adjust the rule, before migrating.
 - **A string written to a JSON or JSONB column now means JSON text on every verb.**
   Upsert and Insert already parsed it; Update stored it as a JSON string, so the same
   value could produce different data. Update now parses it too, and all three refuse
@@ -44,9 +49,19 @@ release line was tagged.
   nullable JSON text column with no field presence, `XToUDBRecord` leaves out `""`, so
   Insert and Upsert keep the column's value instead of being refused. A `patch` names its
   columns on purpose: it still sends `""`, and the broker refuses it.
+- **A changed `CHECK` takes effect.** It kept its name, so the migration skipped it as a
+  duplicate and reported success, and the old rule stayed. It now replaces the rule in
+  one statement, including the copy Postgres named itself, so rows that break the new
+  rule fail the migration with the old rule still in place.
+- **A `CHECK` removed from the protos is dropped.** Before, the database kept enforcing it.
+- **A changed trigger or materialized view survives its migration.** The drop ran after
+  the create of the same name and removed the new object.
+- **Reviewed transitions can apply `CHECK` changes,** and a rule held under two names
+  counts once when the table is verified.
 - **`udb verify --live` runs.** It failed with `cannot read --live`, because the flag was
   read as the proto folder. `--all`, `--allow-transfer`, `--consumer`, `--decode`,
-  `--embedded` and `--platform-admin` had the same fault.
+  `--embedded` and `--platform-admin` had the same fault, and 21 flags that take a value
+  handed that value to the proto folder.
 - **`udb plan --emit-approval-plan` no longer says `serve` accepts the file as-is when
   `UDB_APPROVAL_SIGNING_KEY` is set.** That mode requires a signed `ApprovedPlan`.
 

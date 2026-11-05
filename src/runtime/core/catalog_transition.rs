@@ -283,6 +283,8 @@ fn allowed_changes(
                 | ChangeKind::AddForeignKey
                 | ChangeKind::CreateIndex
                 | ChangeKind::DropIndex
+                | ChangeKind::AddCheck
+                | ChangeKind::DropCheck
                 | ChangeKind::AlterTableSecurity
         ) {
             return Err(refusal(
@@ -290,7 +292,8 @@ fn allowed_changes(
                 format!(
                     "native reviewed proof is unavailable for {:?} on {}.{}; reviewed transitions \
                      apply only AddSchema, CreateTable, AddColumn, column type widening, \
-                     DropNotNull, AddForeignKey, CreateIndex, DropIndex and retention_class changes",
+                     DropNotNull, AddForeignKey, CreateIndex, DropIndex, AddCheck, DropCheck and \
+                     retention_class changes",
                     change.kind, change.schema, change.table
                 ),
             ));
@@ -1415,8 +1418,12 @@ impl DataBrokerRuntime {
                 .filter(|row| row.0 == live_oid && row.2)
                 .map(|row| row.1.as_str())
                 .collect();
+            // A rule counts once: a table built with an inline CHECK holds it under two
+            // names until a migration replaces it.
             expected_checks.sort();
+            expected_checks.dedup();
             live_checks.sort();
+            live_checks.dedup();
             if expected_checks != live_checks
                 || checks.iter().any(|row| row.0 == live_oid && !row.2)
             {

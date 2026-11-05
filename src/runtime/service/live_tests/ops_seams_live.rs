@@ -312,6 +312,111 @@ async fn saga_status_of(
 /// Revert-proof: split the relations again and step 1's list is empty; drop
 /// the owner/age filter and step 3 flips the peer's live saga.
 #[cfg(feature = "postgres")]
+/// What the database accepts after each migration, not what the plan says it did.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn a_changed_check_changes_what_the_database_accepts_live() {
+    use crate::generation::manifest::ManifestCheck;
+    let Some(dsn) = ops_pg_dsn() else {
+        eprintln!("live DSN unset - skipping CHECK migration");
+        return;
+    };
+    let pool = ops_pool(&dsn).await;
+    let schema = format!("chk_{}", uuid::Uuid::new_v4().simple());
+    sqlx::raw_sql(&format!(
+        "CREATE SCHEMA \"{schema}\"; \
+         CREATE TABLE \"{schema}\".widgets (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, \
+         status TEXT CHECK (status IN ('a')), \
+         CONSTRAINT chk_widgets_status CHECK (status IN ('a')))"
+    ))
+    .execute(&pool)
+    .await
+    .expect("a table holding the rule under both names");
+
+    let with_rule = |expression: Option<&str>| {
+        let mut manifest = widget_manifest(&schema);
+        manifest.tables[0].checks = expression
+            .map(|expression| ManifestCheck {
+                name: "chk_widgets_status".to_string(),
+                expression: expression.to_string(),
+            })
+            .into_iter()
+            .collect();
+        manifest
+    };
+    let migrate = async |from: CatalogManifest, to: CatalogManifest| -> Result<(), sqlx::Error> {
+        let changes = crate::migration::diff::diff_manifests(Some(&from), &to);
+        for artifact in crate::generation::sql::generate_delta_sql(
+            &to,
+            &changes,
+            &crate::generation::sql::SqlGenerationConfig::default(),
+        ) {
+            sqlx::raw_sql(&artifact.content).execute(&pool).await?;
+        }
+        Ok(())
+    };
+    let insert = async |id: &str, status: &str| {
+        sqlx::query(&format!(
+            "INSERT INTO \"{schema}\".widgets (id, tenant_id, status) VALUES ($1, 't', $2)"
+        ))
+        .bind(id)
+        .bind(status)
+        .execute(&pool)
+        .await
+    };
+    let names = async || {
+        sqlx::query_scalar::<_, String>(
+            "SELECT conname::TEXT FROM pg_constraint \
+             WHERE conrelid = to_regclass($1) AND contype = 'c' ORDER BY 1",
+        )
+        .bind(format!("\"{schema}\".widgets"))
+        .fetch_all(&pool)
+        .await
+        .expect("read constraints")
+    };
+
+    assert!(insert("before", "b").await.is_err(), "the old rule holds");
+    migrate(
+        with_rule(Some("status IN ('a')")),
+        with_rule(Some("status IN ('a','b')")),
+    )
+    .await
+    .expect("the wider rule applies");
+    insert("widened", "b")
+        .await
+        .expect("the new rule accepts b");
+    assert!(insert("still-refused", "c").await.is_err());
+    assert_eq!(
+        names().await,
+        vec!["chk_widgets_status".to_string()],
+        "both copies of the old rule are gone"
+    );
+
+    let refused = migrate(
+        with_rule(Some("status IN ('a','b')")),
+        with_rule(Some("status IN ('a')")),
+    )
+    .await;
+    assert!(
+        refused.is_err(),
+        "a row breaks the narrower rule, so the migration fails"
+    );
+    insert("kept", "b")
+        .await
+        .expect("the failed migration left the old rule in place");
+
+    migrate(with_rule(Some("status IN ('a','b')")), with_rule(None))
+        .await
+        .expect("the removed rule is dropped");
+    insert("free", "c").await.expect("no rule remains");
+    assert!(names().await.is_empty());
+
+    sqlx::raw_sql(&format!("DROP SCHEMA \"{schema}\" CASCADE"))
+        .execute(&pool)
+        .await
+        .expect("clean up");
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_begin_tx_saga_is_swept_by_owner_and_recovered_live() {

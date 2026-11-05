@@ -25,6 +25,23 @@ fn no_boolean_flag_is_read_as_the_proto_root() {
     }
 }
 
+/// A value flag missing from `VALUE_FLAGS` hands its value to the proto root, so a
+/// password or reason can reach an error message as a folder name.
+#[test]
+fn no_flag_value_is_read_as_the_proto_root() {
+    let flags: std::collections::BTreeSet<&str> = include_str!("args.rs")
+        .split("flag_value(\"")
+        .skip(1)
+        .filter_map(|tail| tail.split('"').next())
+        .collect();
+    assert!(flags.contains("--password"));
+    for flag in flags {
+        let args = ["verify", flag, "the-value"].map(str::to_string);
+        let (_, proto_root, _, _) = parse_args(&args);
+        assert_ne!(proto_root, "the-value", "{flag}");
+    }
+}
+
 #[test]
 fn parse_args_recognizes_dev_embedded() {
     let args = vec![

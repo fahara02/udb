@@ -31,6 +31,7 @@ pub enum ChangeKind {
     SetTableUnlogged,
     SetTablespace,
     AddCheck,
+    DropCheck,
     AddUnique,
     DropUnique,
     CreateIndex,
@@ -1413,8 +1414,12 @@ fn enum_create_safety(values: &[String]) -> (ChangeSafety, Option<String>) {
     (ChangeSafety::SafeAuto, None)
 }
 
+/// A changed rule is an `AddCheck`, which replaces any constraint of that name. A rule
+/// gone from the protos, under its name and its expression, is a `DropCheck`.
 fn diff_checks(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
     let old_checks = old.checks.iter().map(check_key).collect::<BTreeSet<_>>();
+    let new_checks = new.checks.iter().map(check_key).collect::<BTreeSet<_>>();
+    let new_names = new.checks.iter().map(check_name).collect::<BTreeSet<_>>();
     for check in &new.checks {
         if !old_checks.contains(&check_key(check)) {
             ops.push(op(
@@ -1425,6 +1430,20 @@ fn diff_checks(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOpe
                 "",
                 &check_name(check),
                 "check constraint was added to desired proto AST",
+                "",
+            ));
+        }
+    }
+    for check in &old.checks {
+        if !new_checks.contains(&check_key(check)) && !new_names.contains(&check_name(check)) {
+            ops.push(op(
+                ChangeKind::DropCheck,
+                ChangeSafety::SafeAuto,
+                &old.schema,
+                &old.table,
+                "",
+                &check_name(check),
+                "check constraint no longer exists in desired proto AST",
                 "",
             ));
         }
@@ -1918,6 +1937,7 @@ fn priority(kind: &ChangeKind) -> i32 {
         ChangeKind::SetDefault | ChangeKind::DropDefault => 40,
         ChangeKind::DropNotNull => 45,
         ChangeKind::SetNotNull => 50,
+        ChangeKind::DropCheck => 54,
         ChangeKind::AddCheck => 55,
         ChangeKind::AddUnique | ChangeKind::DropUnique => 60,
         ChangeKind::DropForeignKey => 63,
@@ -1937,8 +1957,11 @@ fn priority(kind: &ChangeKind) -> i32 {
         // Drop must sort first or CREATE collides with the still-live old policy.
         ChangeKind::DropPolicy => 84,
         ChangeKind::CreatePolicy => 85,
-        ChangeKind::CreateMaterializedView | ChangeKind::DropMaterializedView => 88,
-        ChangeKind::CreateTrigger | ChangeKind::DropTrigger => 89,
+        // A drop runs before a create of the same name, or it undoes the create.
+        ChangeKind::DropMaterializedView => 86,
+        ChangeKind::CreateMaterializedView => 88,
+        ChangeKind::DropTrigger => 88,
+        ChangeKind::CreateTrigger => 89,
         ChangeKind::CreateCollection | ChangeKind::CreateBucket => 90,
         ChangeKind::CreateStore => 90,
         ChangeKind::UpdateCollection
@@ -2509,6 +2532,74 @@ mod tests {
         assert!(
             priority(&ChangeKind::DropIndex) < priority(&ChangeKind::CreateIndex),
             "index drop/create must not share a priority"
+        );
+    }
+
+    #[test]
+    fn every_drop_runs_before_a_create_of_the_same_name() {
+        for (drop, create) in [
+            (ChangeKind::DropIndex, ChangeKind::CreateIndex),
+            (ChangeKind::DropForeignKey, ChangeKind::AddForeignKey),
+            (ChangeKind::DropPolicy, ChangeKind::CreatePolicy),
+            (ChangeKind::DropCheck, ChangeKind::AddCheck),
+            (ChangeKind::DropTrigger, ChangeKind::CreateTrigger),
+            (
+                ChangeKind::DropMaterializedView,
+                ChangeKind::CreateMaterializedView,
+            ),
+        ] {
+            assert!(priority(&drop) < priority(&create), "{drop:?} {create:?}");
+        }
+    }
+
+    #[test]
+    fn a_changed_check_is_added_and_a_removed_one_is_dropped() {
+        let check = |name: &str, expression: &str| ManifestCheck {
+            name: name.to_string(),
+            expression: expression.to_string(),
+        };
+        let table = |checks: Vec<ManifestCheck>| ManifestTable {
+            schema: "s".to_string(),
+            table: "t".to_string(),
+            checks,
+            ..ManifestTable::default()
+        };
+        let kinds = |old: ManifestTable, new: ManifestTable| {
+            let mut ops = Vec::new();
+            diff_checks(&old, &new, &mut ops);
+            ops.into_iter()
+                .map(|op| (op.kind, op.object_name))
+                .collect::<Vec<_>>()
+        };
+
+        assert_eq!(
+            kinds(
+                table(vec![check("chk_t_a", "a IN ('x')")]),
+                table(vec![check("chk_t_a", "a IN ('x','y')")]),
+            ),
+            vec![(ChangeKind::AddCheck, "chk_t_a".to_string())],
+            "a changed rule keeps its name and replaces the old one"
+        );
+        assert_eq!(
+            kinds(table(vec![check("chk_t_a", "a > 0")]), table(Vec::new())),
+            vec![(ChangeKind::DropCheck, "chk_t_a".to_string())],
+        );
+        assert_eq!(
+            kinds(
+                table(vec![check("chk_t_a", "a > 0")]),
+                table(vec![check("chk_t_b", "b > 0")]),
+            ),
+            vec![
+                (ChangeKind::AddCheck, "chk_t_b".to_string()),
+                (ChangeKind::DropCheck, "chk_t_a".to_string()),
+            ],
+        );
+        assert!(
+            kinds(
+                table(vec![check("chk_t_a", "a > 0")]),
+                table(vec![check("chk_t_a", "a > 0")]),
+            )
+            .is_empty()
         );
     }
 

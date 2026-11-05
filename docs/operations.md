@@ -646,6 +646,12 @@ immutable candidate **before staging**. Ordinary `catalog stage` and `activate`
 retain their compatibility checks. Blocked or data-destructive changes cannot use
 this workflow.
 
+When a startup migration (`UDB_MIGRATE_ENABLED=true` with an approval plan) has
+already applied the changes, only the catalog is behind. Use `udb catalog stage` and
+`udb catalog activate`, which run no DDL. A reviewed plan looks at the manifests, not
+the database, so it still refuses a kind of change it cannot prove, even when the
+table already holds that change.
+
 `udb up --project PROJECT --tenant TENANT` drives this whole sequence. When the
 ACTIVE catalog differs from the protos it runs `status` and `plan` (with an
 idempotency key derived from the ACTIVE catalog and the target, so re-running

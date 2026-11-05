@@ -505,7 +505,9 @@ async fn transition_step<B: UpBackend>(
             "catalog",
             format!(
                 "{differs}; the reviewed transition waits because it runs through the broker and \
-                 no operator bearer or broker target is set"
+                 no operator bearer or broker target is set. If a startup migration already \
+                 applied these changes, record them with `udb catalog stage` and `udb catalog \
+                 activate` instead"
             ),
             ctx.up_command(ctx.yes_flag()),
             Some(NEEDS_BROKER),
