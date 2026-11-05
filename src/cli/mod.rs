@@ -1296,7 +1296,7 @@ pub fn run() {
                 }
                 eprintln!(
                     "wrote approval plan to {out_path} ({} auto, {} blocked op(s)) — \
-                     point migration.require_approval_plan at it; serve accepts it as-is",
+                     point migration.require_approval_plan at it; serve accepts it as-is                      unless UDB_APPROVAL_SIGNING_KEY is set, which requires a signed ApprovedPlan",
                     exported.auto_count, exported.blocked_count
                 );
                 process::exit(0);

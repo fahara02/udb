@@ -2007,6 +2007,13 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                         | "--json-plan"
                         | "--dry-run"
                         | "--persist"
+                        | "--live"
+                        | "--all"
+                        | "--allow-transfer"
+                        | "--consumer"
+                        | "--decode"
+                        | "--embedded"
+                        | "--platform-admin"
                 )
             {
                 None

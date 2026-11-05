@@ -1,6 +1,31 @@
 use super::*;
 
 #[test]
+fn verify_live_reaches_the_verify_command() {
+    let args = ["verify", "--live", "--dsn", "postgres://x"].map(str::to_string);
+    let (command, proto_root, _, _) = parse_args(&args);
+    assert!(matches!(command, Command::Verify { live: true, .. }));
+    assert_ne!(proto_root, "--live");
+}
+
+/// A boolean flag missing from the positional filter is read as the proto folder, and
+/// the command dies with `cannot read --flag`.
+#[test]
+fn no_boolean_flag_is_read_as_the_proto_root() {
+    let flags: std::collections::BTreeSet<&str> = include_str!("args.rs")
+        .split("has_flag(\"")
+        .skip(1)
+        .filter_map(|tail| tail.split('"').next())
+        .collect();
+    assert!(flags.contains("--live"));
+    for flag in flags {
+        let args = ["verify", flag].map(str::to_string);
+        let (_, proto_root, _, _) = parse_args(&args);
+        assert_ne!(proto_root, flag);
+    }
+}
+
+#[test]
 fn parse_args_recognizes_dev_embedded() {
     let args = vec![
         "dev".to_string(),

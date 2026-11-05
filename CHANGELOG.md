@@ -44,6 +44,11 @@ release line was tagged.
   nullable JSON text column with no field presence, `XToUDBRecord` leaves out `""`, so
   Insert and Upsert keep the column's value instead of being refused. A `patch` names its
   columns on purpose: it still sends `""`, and the broker refuses it.
+- **`udb verify --live` runs.** It failed with `cannot read --live`, because the flag was
+  read as the proto folder. `--all`, `--allow-transfer`, `--consumer`, `--decode`,
+  `--embedded` and `--platform-admin` had the same fault.
+- **`udb plan --emit-approval-plan` no longer says `serve` accepts the file as-is when
+  `UDB_APPROVAL_SIGNING_KEY` is set.** That mode requires a signed `ApprovedPlan`.
 
 ## [0.6.7] - 2026-11-05
 

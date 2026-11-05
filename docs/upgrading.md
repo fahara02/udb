@@ -114,6 +114,9 @@ UDB_MIGRATE_ENABLED=true
 # config: migration.require_approval_plan=/path/to/plan.json
 ```
 
+With `UDB_APPROVAL_SIGNING_KEY` set, `serve` refuses this file and requires a signed
+`ApprovedPlan`. The CLI has no command that produces one yet.
+
 If the plan and the computed change set disagree, startup fails **before**
 mutating anything, naming the mismatch. Regenerate the plan and review again —
 that disagreement is the gate working.
