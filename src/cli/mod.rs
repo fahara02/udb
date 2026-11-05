@@ -1974,6 +1974,8 @@ pub fn run() {
         | Command::Native { .. }
         | Command::AppInit { .. }
         | Command::CompatMatrix
+        | Command::PlanSign { .. }
+        | Command::PlanSeal { .. }
         | Command::MessagingBenchFixture { .. }
         | Command::Env { .. }
         | Command::EnvFill { .. } => {
