@@ -434,6 +434,56 @@ fn served_manifest(
     }
 }
 
+/// A partial upsert keeps the row's other columns, and so must its projection.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn a_partial_upsert_projects_the_whole_stored_row_live() {
+    let _guard = crate::runtime::service::live_tests::support::live_native_service_db_lock()
+        .lock()
+        .await;
+    let pool = ledger_pool().await;
+    let schema = format!("udb_proj_{}", Uuid::new_v4().simple());
+    let resource = format!("partial_{}", Uuid::new_v4().simple());
+    const MSG: &str = "acme.proj.v1.Partial";
+    create_source_table(&pool, &schema, "partials", ", status TEXT, note TEXT").await;
+    let manifest = served_manifest(
+        &schema,
+        "partials",
+        "Partial",
+        vec![text_col("status", false), text_col("note", false)],
+        vec![projection(
+            "Partial",
+            "cache",
+            "redis",
+            &resource,
+            vec![opt("key_pattern", "partial:{id}")],
+        )],
+        Vec::new(),
+    );
+    let svc = served_service(manifest).await;
+    let tenant = Uuid::new_v4().to_string();
+    let id = format!("partial-{}", Uuid::new_v4().simple());
+    served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant, "status": "a", "note": "kept"}),
+    )
+    .await;
+    served_upsert(&svc, &tenant, MSG, json!({"id": id, "tenant_id": tenant, "status": "b"})).await;
+    let rel = SystemCatalogConfig::current().projection_tasks_relation();
+    let (status, note): (Option<String>, Option<String>) = sqlx::query_as(&format!(
+        "SELECT source_payload ->> 'status', source_payload ->> 'note' FROM {rel}          WHERE resource_name = $1 AND source_payload ->> 'id' = $2          ORDER BY row_revision DESC LIMIT 1"
+    ))
+    .bind(&resource)
+    .bind(&id)
+    .fetch_one(&pool)
+    .await
+    .expect("the newest projection task");
+    assert_eq!(status.as_deref(), Some("b"));
+    assert_eq!(note.as_deref(), Some("kept"), "the projection lost a column");
+}
+
 async fn create_source_table(pool: &PgPool, schema: &str, table: &str, extra_ddl: &str) {
     sqlx::query(&format!("CREATE SCHEMA \"{schema}\""))
         .execute(pool)

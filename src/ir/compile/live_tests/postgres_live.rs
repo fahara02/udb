@@ -365,21 +365,11 @@ async fn postgres_bridged_integer_string_predicates_preserve_exact_values_live()
         sort: vec![],
         limit: 10,
     };
-    let null_read = build_select_logical_read(&manifest, &null_request)
-        .expect("NULL filter lowers to the existing logical comparison");
-    let compile_context = CompileContext::new(&manifest)
-        .with_tenant("tenant-a")
-        .with_project("project-a");
+    let null_refusal = build_select_logical_read(&manifest, &null_request)
+        .expect_err("NULL equality is refused before it reaches the compiler");
     assert!(
-        matches!(
-            compile_for_backend(
-                &BackendKind::Postgres,
-                CompileOperation::Read(&null_read),
-                &compile_context
-            ),
-            Some(Err(crate::ir::compile::CompileError::Malformed { .. }))
-        ),
-        "NULL equality must remain refused by the compiler"
+        format!("{null_refusal:?}").contains("comparison with NULL"),
+        "{null_refusal:?}"
     );
     // Integer isolation columns use the same value-aware hook for both the
     // caller's predicates and the mandatory injected context predicates.

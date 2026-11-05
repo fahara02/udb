@@ -1795,6 +1795,57 @@ impl DataBrokerRuntime {
         if affected_rows > 0 {
             let projection_plans =
                 crate::runtime::projection::ProjectionPlan::from_manifest(manifest);
+            // A partial upsert keeps the row's other columns, so a projection built from
+            // the record alone would lose them. Project the row as stored.
+            let projects_this_message = projection_plans.iter().any(|plan| {
+                crate::runtime::projection::message_type_matches(
+                    &plan.message_type,
+                    &request.message_type,
+                )
+            });
+            let record_is_partial = table.columns.iter().any(|column| {
+                !column.generated
+                    && encrypted_record.get(column.column_name.as_str()).is_none()
+            });
+            let mut stored_row = None;
+            if projects_this_message && record_is_partial && !table.primary_key.is_empty() {
+                let key = record_values(&encrypted_record, &table.primary_key)?;
+                if !key.iter().any(JsonValue::is_null) {
+                    let predicates = table
+                        .primary_key
+                        .iter()
+                        .enumerate()
+                        .map(|(index, column)| {
+                            format!(
+                                "{} = ${}",
+                                crate::runtime::executor_utils::qi_runtime(column),
+                                index + 1
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" AND ");
+                    let sql = format!(
+                        "SELECT * FROM {}.{} WHERE {predicates}",
+                        crate::runtime::executor_utils::qi_runtime(&table.schema),
+                        crate::runtime::executor_utils::qi_runtime(&table.table),
+                    );
+                    let mut read = sqlx::query(&sql);
+                    for (column, value) in table.primary_key.iter().zip(&key) {
+                        let declared = table
+                            .columns
+                            .iter()
+                            .find(|candidate| candidate.column_name == *column);
+                        read = bind_one(read, declared, value)?;
+                    }
+                    let rows = read.fetch_all(&mut *tx).await.map_err(|err| {
+                        crate::runtime::executor_utils::sqlx_error_to_status(
+                            "upsert_projection_row",
+                            &err,
+                        )
+                    })?;
+                    stored_row = stored_row_values(&rows)?.into_iter().next();
+                }
+            }
             projection_task_ids =
                 crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                     &mut tx,
@@ -1806,7 +1857,7 @@ impl DataBrokerRuntime {
                     // projection never receives an encrypted column in
                     // plaintext, and live writes agree with replay (which
                     // reads the stored row back).
-                    &encrypted_record,
+                    stored_row.as_ref().unwrap_or(&encrypted_record),
                     &projection_plans,
                 )
                 .await

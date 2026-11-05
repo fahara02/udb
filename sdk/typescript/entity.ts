@@ -248,8 +248,9 @@ export class EntityHandle<T = any> {
     if (Array.isArray(resp?.records) && !Array.isArray(resp?.records_json)) {
       return resp.records.map((r: unknown, index: number) => decodeRow<T>(r, index));
     }
-    // A capped read must not pass for the whole answer.
-    if (resp?.has_more) {
+    // A capped read must not pass for the whole answer. A caller who set a limit asked
+    // for a capped read.
+    if (resp?.has_more && effectiveOpts?.limit == null) {
       throw new Error(
         `udb: more ${this.messageType} rows match than one page; walk them with selectPage`,
       );

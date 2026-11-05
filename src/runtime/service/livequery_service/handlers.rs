@@ -238,6 +238,15 @@ pub(crate) async fn subscribe(
             .map(super::predicate::logical_filter_to_json)
             .transpose()?
             .unwrap_or(serde_json::Value::Null);
+        // The stream's own authorization admitted this read; the data plane asks for it
+        // in its own terms.
+        let mut read_context = context.clone();
+        if read_context.purpose.trim().is_empty() {
+            read_context.purpose = "live_query".to_string();
+        }
+        if !read_context.scopes.iter().any(|scope| scope == "udb:read") {
+            read_context.scopes.push("udb:read".to_string());
+        }
         let (records, _warning) = runtime
             .select(
                 source_manifest,
@@ -248,7 +257,7 @@ pub(crate) async fn subscribe(
                     include_total: true,
                     ..Default::default()
                 },
-                context.clone(),
+                read_context,
             )
             .await?;
         matched_rows = Some(records.exact_total);
