@@ -4705,11 +4705,17 @@ mod tests {
         }
         // The omission belongs to the row mapper, never to the fields a patch sends.
         let to_fields = ts
-            .split("export function DocToFields")
+            .split("function DocToFields(")
             .nth(1)
             .and_then(|tail| tail.split("export function DocToUDBRecord").next())
             .expect("TypeScript fields mapper");
         assert!(!to_fields.contains("delete r["));
+        let py_to_fields = py
+            .split("def DocToFields(")
+            .nth(1)
+            .and_then(|tail| tail.split("def DocToUDBRecord").next())
+            .expect("Python fields mapper");
+        assert!(!py_to_fields.contains("del record["));
     }
 
     #[test]
