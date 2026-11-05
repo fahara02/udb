@@ -34,8 +34,8 @@ def test_an_embedded_broker_meets_the_table_contract(tmp_path: Path) -> None:
     policy = tmp_path / "policies.yaml"
     policy.write_text(POLICY, encoding="utf-8")
     with udbtest.start_pair(str(REPO / "proto"), str(policy)) as broker:
-        tenant_of = lambda client: client.config.tenant_id  # noqa: E731
-        by_tenant = {tenant_of(broker.client): broker.client, tenant_of(broker.peer): broker.peer}
+        tenants = [broker.client.canonical_tenant_id, broker.peer.canonical_tenant_id]
+        by_tenant = dict(zip(tenants, (broker.client, broker.peer)))
         connect = lambda tenant: by_tenant.get(tenant, broker.client)  # noqa: E731
-        conformance.run_table(connect, list(by_tenant))
-        conformance.run_table_cases(connect, CASES_FILE, [tenant_of(broker.client)])
+        conformance.run_table(connect, tenants)
+        conformance.run_table_cases(connect, CASES_FILE, tenants)

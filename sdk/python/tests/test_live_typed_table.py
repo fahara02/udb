@@ -201,15 +201,19 @@ def test_live_generated_typed_table_has_the_go_table_surface():
             repo.delete_guarded(key, {"total_steps": 1})
         repo.delete_guarded(key, {"total_steps": 30})
 
-        # A deleted or absent row is not found, on each verb that addresses one.
+        # A deleted row reads as absent, and an absent row is not found on each verb
+        # that addresses one.
         with pytest.raises(UdbNotFound):
             table.get(key)
+        absent = {"workflow_id": str(uuid.uuid4())}
         with pytest.raises(UdbNotFound):
-            table.patch(key, {"last_error": "x"})
+            table.get(absent)
         with pytest.raises(UdbNotFound):
-            table.delete(key)
+            table.patch(absent, {"last_error": "x"})
         with pytest.raises(UdbNotFound):
-            table.increment(key, {"current_step": 1})
+            table.delete(absent)
+        with pytest.raises(UdbNotFound):
+            table.increment(absent, {"current_step": 1})
 
         # An unknown column is refused, never dropped.
         with pytest.raises(ValueError, match="not_a_column"):

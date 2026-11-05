@@ -46,6 +46,7 @@ jobs:
       RELEASE_TAG: ${{ inputs.release_tag || 'latest' }}
       RELEASE_ASSET: ${{ inputs.release_asset || 'udb-linux-amd64-full' }}
       UDB_LIVE_SDK_TESTS: "1"
+      UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_PER_MINUTE: "6000"
       UDB_LIVE_CDC_TESTS: "1"
       UDB_LIVE_CDC_EXPIRY_TESTS: "1"
       UDB_LIVE_CDC_RESTART_TESTS: "1"

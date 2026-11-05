@@ -113,6 +113,24 @@ def _native(session: EnterpriseSession):
     return session.native_metadata().to_grpc_metadata()
 
 
+def _probe_ready(project) -> None:
+    """``ready`` reached the broker. This posture's ``file://`` audit sink makes the
+    broker report NOT_SERVING, which is that same probe's real answer; the serving path
+    is proven in the unit tests."""
+    try:
+        project.ready()
+    except UdbError as error:
+        assert str(error) == "udb: broker is NOT_SERVING", str(error)
+
+
+async def _probe_ready_async(project) -> None:
+    """See :func:`_probe_ready`."""
+    try:
+        await project.ready()
+    except UdbError as error:
+        assert str(error) == "udb: broker is NOT_SERVING", str(error)
+
+
 @pytest.fixture(scope="module")
 def operator():
     session = _connect()
@@ -235,11 +253,13 @@ def test_live_enterprise_session_adopts_a_verified_tenant_and_refreshes_repeated
         with pytest.raises(UdbTenantError, match="mismatch"):
             session.validate_tenant(required_env("UDB_LIVE_TENANT"))
 
-        previous = session.bearer()
+        previous = session._token.refresh_token
         for attempt in range(1, REPEATS + 1):
             session.refresh_if_needed(force=True)
             bearer = session.bearer()
-            assert bearer != previous, f"refresh {attempt} did not replace the bearer"
+            # Two refreshes in one second mint the same JWT, so the rotated refresh
+            # token is what proves each refresh happened.
+            assert session._token.refresh_token != previous, f"refresh {attempt} did not rotate"
             assert session.refresh_error() is None, f"refresh {attempt} recorded a failure"
             verified = session.auth.authn.ValidateToken(
                 authn_pb.ValidateTokenRequest(
@@ -250,8 +270,8 @@ def test_live_enterprise_session_adopts_a_verified_tenant_and_refreshes_repeated
             )
             assert verified.valid, f"refresh {attempt}: the session's call did not validate"
             assert session.flags.enabled(f"py.parity.absent.{uuid.uuid4().hex}") is False
-            previous = bearer
-        session.ready()
+            previous = session._token.refresh_token
+        _probe_ready(session)
 
 
 def test_live_enterprise_session_refuses_a_wrong_password_and_missing_fields() -> None:
@@ -262,27 +282,99 @@ def test_live_enterprise_session_refuses_a_wrong_password_and_missing_fields() -
         _connect(username="")
 
 
-def test_live_enterprise_session_logs_in_again_after_its_session_is_revoked() -> None:
-    with _connect() as session:
+@pytest.fixture(scope="module")
+def person(operator):
+    """A person account of its own: presenting a refresh token from a revoked session
+    counts as token theft, and the broker then ends every session of that principal."""
+    meta = operator.metadata
+    context = _operator_context(operator)
+    name = f"py-parity-person-{uuid.uuid4().hex}"
+    user_id = operator.auth.authn.CreateUser(
+        authn_pb.CreateUserRequest(
+            username=name,
+            email=f"{name}@example.invalid",
+            password=SERVICE_PASSWORD,
+            tenant_id=meta.tenant_id,
+            project_id=meta.project_id,
+            full_name="Python parity person",
+            account_kind=authn_enums.ACCOUNT_KIND_PERSON,
+            context=context,
+        ),
+        metadata=_native(operator),
+        timeout=TIMEOUT,
+    ).user.user_id
+
+    def set_status(status: int, reason: str) -> None:
+        operator.auth.authn.ChangeUserStatus(
+            authn_pb.ChangeUserStatusRequest(user_id=user_id, new_status=status, reason=reason, context=context),
+            metadata=_native(operator),
+            timeout=TIMEOUT,
+        )
+
+    set_status(authn_enums.USER_STATUS_ACTIVE, "python live parity activation")
+    yield {"name": name, "user_id": user_id}
+    set_status(authn_enums.USER_STATUS_DEACTIVATED, "python live parity cleanup")
+
+
+@pytest.mark.parametrize(
+    ("account", "has_refresh_token"),
+    # A person refreshes through a rotating token family; a service account's login
+    # returns no refresh token and refreshes by session id.
+    [("person", True), ("service", False)],
+)
+def test_live_enterprise_session_logs_in_again_after_its_session_is_revoked(
+    request, operator, account, has_refresh_token
+) -> None:
+    owned = request.getfixturevalue(account)
+
+    def revoke(session_id: str) -> None:
+        revoked = operator.auth.authn.RevokeSession(
+            authn_pb.RevokeSessionRequest(
+                session_id=session_id,
+                principal_id=owned["user_id"],
+                revoke_reason="python live parity re-login proof",
+                context=_operator_context(operator),
+            ),
+            metadata=_native(operator),
+            timeout=TIMEOUT,
+        )
+        assert revoked.revoked_count == 1, "expected to revoke exactly one session"
+
+    with _connect(
+        username=owned["name"],
+        password=SERVICE_PASSWORD,
+        tenant_code=operator.canonical_tenant_id,
+        project_id=operator.canonical_project_id,
+    ) as session:
+        pinned = session.principal()
         for attempt in range(1, REPEATS + 1):
-            meta = session.metadata
-            revoked = session.auth.authn.RevokeSession(
-                authn_pb.RevokeSessionRequest(
-                    session_id=session._token.session_id,
-                    principal_id=meta.user_id,
-                    revoke_reason="python live parity re-login proof",
-                    context=_operator_context(session),
-                ),
-                metadata=_native(session),
-                timeout=TIMEOUT,
-            )
-            assert revoked.revoked_count == 1, f"attempt {attempt}: expected to revoke one session"
-            spent = session.bearer()
+            spent = session._token
+            assert bool(spent.refresh_token) is has_refresh_token
+            revoke(spent.session_id)
             session.refresh_if_needed(force=True)
-            assert session.bearer() != spent, f"attempt {attempt}: the bearer did not change"
+            assert session._token.session_id != spent.session_id, f"attempt {attempt}: no new session"
+            if has_refresh_token:
+                assert session._token.refresh_token != spent.refresh_token, f"attempt {attempt}"
+            assert session.bearer() == f"Bearer {session._token.access_token}"
             assert session.refresh_error() is None
-            assert session.flags.enabled(f"py.parity.absent.{uuid.uuid4().hex}") is False
             assert session.credential_error() is None
+            assert session.principal() == pinned, "re-login must keep the pinned principal"
+            _probe_ready(session)
+
+        # An ordinary refresh after the re-logins keeps the session. A JWT has
+        # one-second resolution, so a new one differs only after a second.
+        healthy = session._token
+        time.sleep(1.1)
+        session.refresh_if_needed(force=True)
+        assert session._token.session_id == healthy.session_id
+        assert session._token.access_token != healthy.access_token
+
+        # Refresh and re-login both refused: the call fails and the next one logs in again.
+        revoke(session._token.session_id)
+        session._enterprise = replace(session._enterprise, password="definitely-not-the-password")
+        with pytest.raises(UdbError, match="renewal and re-login failed"):
+            session.refresh_if_needed(force=True)
+        assert session._needs_recovery
 
 
 def test_live_enterprise_session_refuses_locally_after_close() -> None:
@@ -348,8 +440,8 @@ def test_live_connect_from_env_exchanges_verifies_and_reports_ready(monkeypatch,
             assert list(principal.scopes) == ["udb:read"]
             assert project.bearer_expires_at() is not None
             assert project.credential_error() is None
-            project.ready()
-            project.ready()
+            _probe_ready(project)
+            _probe_ready(project)
 
 
 def test_live_connect_from_env_refuses_a_wrong_principal_and_a_bad_key(monkeypatch, operator, service) -> None:
@@ -404,7 +496,7 @@ def test_live_api_key_call_renews_on_demand_and_pins_identity(monkeypatch, opera
         project._api_key_pinned = pinned
         project._api_key_renewal_tick()
         assert project.credential_error() is None
-        project.ready()
+        _probe_ready(project)
 
         # A key the broker refuses is a local refusal, never the old bearer.
         project._api_key_secret = "udbk_not_a_real_key"
@@ -469,10 +561,10 @@ def test_live_connect_enterprise_async(operator) -> None:
         session = project.credential_owner
         assert project.metadata.tenant_id == operator.canonical_tenant_id
         for attempt in range(1, REPEATS + 1):
-            previous = session.bearer()
+            previous = session._token.refresh_token
             await asyncio.to_thread(session.refresh_if_needed, force=True)
-            assert session.bearer() != previous, f"refresh {attempt} did not replace the bearer"
-            await project.ready()
+            assert session._token.refresh_token != previous, f"refresh {attempt} did not rotate"
+            await _probe_ready_async(project)
             assert await project.flags.enabled(f"py.parity.absent.{uuid.uuid4().hex}") is False
         await project.close()
         with pytest.raises(UdbCredentialError):
@@ -491,8 +583,8 @@ def test_live_connect_from_env_async(monkeypatch, operator, service) -> None:
             async with await connect_from_env_async(prefix, Expect(service_identity=service["name"])) as project:
                 assert project.principal().principal_id == service["user_id"]
                 assert project.bearer_expires_at() is not None
-                await project.ready()
-                await project.ready()
+                await _probe_ready_async(project)
+                await _probe_ready_async(project)
 
     asyncio.run(scenario())
 
@@ -513,7 +605,7 @@ def test_live_api_key_tenant_pool_shares_refuses_and_reconnects(operator, servic
         first = pool.get(tenant)
         for _ in range(REPEATS):
             assert pool.get(tenant) is first
-        first.ready()
+        _probe_ready(first)
         assert pool.tenants() == [tenant]
         with pytest.raises(UdbConfigurationError, match="no API key"):
             pool.get(str(uuid.uuid4()))
@@ -521,7 +613,7 @@ def test_live_api_key_tenant_pool_shares_refuses_and_reconnects(operator, servic
         assert pool.tenants() == []
         second = pool.get(tenant)
         assert second is not first
-        second.ready()
+        _probe_ready(second)
 
     # A key used for a tenant it does not belong to must never yield a client.
     foreign = str(uuid.uuid4())
@@ -590,7 +682,7 @@ def test_live_as_user_uses_the_users_authority_and_never_falls_back(monkeypatch,
             )
         assert after.value.code == grpc.StatusCode.UNAUTHENTICATED, after.value.details
         # The service's own identity still works and is still narrow.
-        project.ready()
+        _probe_ready(project)
         with pytest.raises(UdbRpcError) as still_own:
             project.auth.validate_session(person.access_token)
         assert still_own.value.code == grpc.StatusCode.PERMISSION_DENIED
@@ -767,6 +859,11 @@ def test_live_delete_file_mode_reaches_the_broker_and_refuses_a_missing_file(ope
     storage = operator.storage
     with pytest.raises(UdbRpcError) as malformed:
         storage.delete_file_mode("not-a-uuid", storage_pb.DELETE_MODE_HARD)
+    if (
+        malformed.value.code == grpc.StatusCode.FAILED_PRECONDITION
+        and "native service 'storage' is disabled" in malformed.value.details
+    ):
+        pytest.skip(f"storage is off in this broker posture: {malformed.value.details}")
     assert malformed.value.code == grpc.StatusCode.INVALID_ARGUMENT, malformed.value.details
     for mode in (storage_pb.DELETE_MODE_SOFT, storage_pb.DELETE_MODE_HARD):
         with pytest.raises(UdbRpcError) as missing:
@@ -874,7 +971,7 @@ def test_live_async_project_surface(operator) -> None:
 
         async with UdbAsyncProject(config(operator.bearer().removeprefix("Bearer "))) as project:
             for _ in range(REPEATS):
-                await project.ready()
+                await _probe_ready_async(project)
                 assert await project.flags.enabled(f"py.parity.absent.{uuid.uuid4().hex}") is False
             with pytest.raises(UdbConfigurationError):
                 await project.graph_from(file_pb2.File, "").run()

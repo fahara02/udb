@@ -73,6 +73,40 @@ function decodeRecordSet<T>(resp: any): T[] {
   return records.map((raw, index) => decodeRow<T>(raw, index));
 }
 
+/**
+ * Parse a broker record without losing 64-bit integers. `JSON.parse` rounds an
+ * integer past `Number.MAX_SAFE_INTEGER`, so a column value like that (directly on
+ * the record, or in an array column) becomes its decimal string. Numbers inside a
+ * JSON document column keep `JSON.parse` behaviour, so the document's shape is kept.
+ */
+export function parseRecordJson(text: string): any {
+  let out = "";
+  let copied = 0;
+  let objects = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === '"') {
+      for (i += 1; i < text.length && text[i] !== '"'; i += 1) {
+        if (text[i] === "\\") i += 1;
+      }
+    } else if (ch === "{") {
+      objects += 1;
+    } else if (ch === "}") {
+      objects -= 1;
+    } else if (ch === "-" || (ch >= "0" && ch <= "9")) {
+      let end = i + 1;
+      while (end < text.length && /[0-9.eE+-]/.test(text[end])) end += 1;
+      const token = text.slice(i, end);
+      if (objects <= 1 && /^-?\d+$/.test(token) && !Number.isSafeInteger(Number(token))) {
+        out += `${text.slice(copied, i)}"${token}"`;
+        copied = end;
+      }
+      i = end - 1;
+    }
+  }
+  return JSON.parse(copied === 0 ? text : out + text.slice(copied));
+}
+
 /** Decode `record_json` (single) or `records_json` (repeated) bytes/strings back
  *  to JS objects. The keepCase loader surfaces `bytes` as Buffer; strings pass
  *  through JSON.parse. */
@@ -85,7 +119,7 @@ function decodeRecord<T>(raw: unknown): T | null {
   else return raw as T; // already an object
   if (!text) return null;
   try {
-    return JSON.parse(text) as T;
+    return parseRecordJson(text) as T;
   } catch {
     return null;
   }
@@ -267,7 +301,6 @@ export class EntityHandle<T = any> {
       context: this.context,
       message_type: this.messageType,
       record_json: jsonBytes(record),
-      conflict_fields: this.opts.key,
     };
     if (opts?.idempotencyKey) request.idempotency_key = opts.idempotencyKey;
     return this.mutate(rpc, request, opts?.call);

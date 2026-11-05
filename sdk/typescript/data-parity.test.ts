@@ -7,7 +7,7 @@ import { EventEmitter } from "node:events";
 import * as grpc from "@grpc/grpc-js";
 
 import { READ_FENCE_WAIT_MS, READ_YOUR_WRITES_WINDOW_MS, SessionFence, afterWrite } from "./consistency";
-import { EntityHandle, TypedTable, UdbConflictError, UdbNotFoundError } from "./entity";
+import { EntityHandle, TypedTable, UdbConflictError, UdbNotFoundError, parseRecordJson } from "./entity";
 import { UdbError } from "./generatedClient";
 import { UdbProject } from "./project";
 import {
@@ -34,6 +34,23 @@ function failure(code: number, detail?: any): UdbError {
 }
 
 // ── Error helpers ───────────────────────────────────────────────────────────
+
+test("a record keeps 64-bit integers exact, on the row and in array columns only", () => {
+  const row = parseRecordJson(
+    '{"a":9007199254740993,"b":12,"c":[9007199254740993,1],"d":-9007199254740993,' +
+      '"s":"9007199254740993 \\" {","f":1.5,"e":1e30,"doc":{"n":9007199254740993,"keep":1}}',
+  );
+  assert.equal(row.a, "9007199254740993");
+  assert.equal(row.b, 12, "a safe integer stays a number");
+  assert.deepEqual(row.c, ["9007199254740993", 1]);
+  assert.equal(row.d, "-9007199254740993");
+  assert.equal(row.s, '9007199254740993 " {', "text in a string is untouched");
+  assert.equal(row.f, 1.5);
+  assert.equal(row.e, 1e30, "a float is not an integer token");
+  assert.equal(typeof row.doc.n, "number", "a JSON document keeps its shape");
+  assert.equal(row.doc.keep, 1);
+  assert.throws(() => parseRecordJson("{bad"), "malformed JSON still fails");
+});
 
 test("isCasConflict needs FAILED_PRECONDITION and a CAS reason, never the message", () => {
   for (const reason of ["UDB_CAS_CONFLICT", "UDB_CAS_ROW_MISSING", "UDB_REVISION_CONFLICT"]) {

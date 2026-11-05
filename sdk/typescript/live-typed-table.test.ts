@@ -10,7 +10,6 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { randomUUID } from "node:crypto";
 
-import { UdbConflictError, UdbNotFoundError } from "./entity";
 import { UdbProject } from "./project";
 
 function requiredEnv(name: string): string {
@@ -18,6 +17,11 @@ function requiredEnv(name: string): string {
   if (!value) throw new Error(`${name} is required when UDB_LIVE_SDK_TESTS=1`);
   return value;
 }
+
+// The generated module uses the built package, a separate copy of the SDK from this
+// test's, so errors are recognised by name and not by class identity.
+const isConflict = (err: Error) => err.name === "UdbConflictError";
+const isNotFound = (err: Error) => err.name === "UdbNotFoundError";
 
 test("live generated typed table has the Go table surface", {
   skip: process.env.UDB_LIVE_SDK_TESTS === "1" ? false : "requires live UDB broker",
@@ -136,7 +140,7 @@ test("live generated typed table has the Go table surface", {
     assert.equal((await table.get(key)).totalSteps, 8);
     await assert.rejects(
       () => table.updateIf({ workflowId, totalSteps: 9 }, { currentStep: 1 }),
-      UdbConflictError,
+      isConflict,
     );
     assert.equal((await table.get(key)).totalSteps, 8, "a lost race writes nothing");
 
@@ -200,17 +204,20 @@ test("live generated typed table has the Go table surface", {
     assert.equal(await repo.findFirst({ workflowType: "absent" }), null);
     await assert.rejects(() => repo.updateGuarded(key, { totalSteps: 1 }, {}), /expected precondition is empty/);
     await repo.updateGuarded(key, { totalSteps: 30 }, { totalSteps: 19 });
-    await assert.rejects(() => repo.updateGuarded(key, { totalSteps: 40 }, { totalSteps: 19 }), UdbConflictError);
+    await assert.rejects(() => repo.updateGuarded(key, { totalSteps: 40 }, { totalSteps: 19 }), isConflict);
     assert.equal((await table.get(key)).totalSteps, 30);
     await assert.rejects(() => repo.deleteGuarded(key, {}), /expected precondition is empty/);
-    await assert.rejects(() => repo.deleteGuarded(key, { totalSteps: 1 }), UdbConflictError);
+    await assert.rejects(() => repo.deleteGuarded(key, { totalSteps: 1 }), isConflict);
     await repo.deleteGuarded(key, { totalSteps: 30 });
 
-    // A deleted or absent row is not found, on each verb that addresses one.
-    await assert.rejects(() => table.get(key), UdbNotFoundError);
-    await assert.rejects(() => table.patch(key, { lastError: "x" }), UdbNotFoundError);
-    await assert.rejects(() => table.delete(key), UdbNotFoundError);
-    await assert.rejects(() => table.increment(key, { currentStep: 1 }), UdbNotFoundError);
+    // A deleted row reads as absent, and an absent row is not found on each verb
+    // that addresses one.
+    await assert.rejects(() => table.get(key), isNotFound);
+    const absent = { workflowId: randomUUID() };
+    await assert.rejects(() => table.get(absent), isNotFound);
+    await assert.rejects(() => table.patch(absent, { lastError: "x" }), isNotFound);
+    await assert.rejects(() => table.delete(absent), isNotFound);
+    await assert.rejects(() => table.increment(absent, { currentStep: 1 }), isNotFound);
 
     // An unknown property is refused, never dropped.
     await assert.rejects(() => table.patch({ workflowId: siblings[0] }, { notAColumn: 1 }), /notAColumn/);

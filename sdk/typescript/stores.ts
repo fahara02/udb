@@ -8,7 +8,7 @@
 import { randomUUID } from "node:crypto";
 import * as grpc from "@grpc/grpc-js";
 import { SessionFence, receiptFromProto } from "./consistency";
-import { UdbConflictError, UdbNotFoundError } from "./entity";
+import { UdbConflictError, UdbNotFoundError, parseRecordJson } from "./entity";
 import { CallOptions, UdbError } from "./generatedClient";
 import { MessageSchema, ProtoSchemas, protoSchemas } from "./protoSchema";
 import {
@@ -306,7 +306,7 @@ function decodeRows<T>(response: any): T[] {
   for (const item of items) {
     const text = Buffer.isBuffer(item) || item instanceof Uint8Array ? Buffer.from(item).toString("utf8") : typeof item === "string" ? item : "";
     if (!text) continue;
-    const parsed = JSON.parse(text);
+    const parsed = parseRecordJson(text);
     if (Array.isArray(parsed)) rows.push(...(parsed as T[]));
     else rows.push(parsed as T);
   }

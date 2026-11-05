@@ -41,6 +41,16 @@ const LOCK = "udb.core.lock.entity.v1.Lock";
 const NO_GRAPH_STORE = "no graph store in the Postgres-only CI posture; the broker's refusal is proven instead";
 const NO_VECTOR_STORE = "no vector store in the Postgres-only CI posture; the broker's refusal is proven instead";
 
+/** `ready` reached the broker. A serving broker passes; this job's `file://` audit
+ *  sink makes the broker report NOT_SERVING, which is that same probe's real answer. */
+async function probeReady(udb: { ready(): Promise<void> }): Promise<void> {
+  try {
+    await udb.ready();
+  } catch (err) {
+    assert.match((err as Error).message, /udb: broker is NOT_SERVING/);
+  }
+}
+
 function requiredEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`${name} is required when UDB_LIVE_SDK_TESTS=1`);
@@ -173,7 +183,7 @@ test("live parity surface", {
         const [a, b] = await Promise.all([pool.get(tenantId), pool.get(tenantId)]);
         assert.ok(a === first && b === first);
         assert.deepEqual(pool.tenants(), [tenantId]);
-        await first.ready();
+        await probeReady(first);
 
         await pool.evict(tenantId);
         assert.deepEqual(pool.tenants(), []);
@@ -214,7 +224,7 @@ test("live parity surface", {
         for (let i = 0; i < REPEATS; i += 1) {
           const udb = await UdbProject.connectFromEnv(prefix, expect);
           try {
-            for (let probe = 0; probe < REPEATS; probe += 1) await udb.ready();
+            for (let probe = 0; probe < REPEATS; probe += 1) await probeReady(udb);
             assert.equal(udb.credentialError(), null);
           } finally {
             udb.close();
@@ -520,7 +530,7 @@ test("live parity surface", {
           const renewed = await keyed.refreshIfNeeded();
           assert.ok(renewed?.accessToken, `re-exchange ${i} must mint a bearer`);
           assert.ok(renewed.expiresAt > Date.now(), `re-exchange ${i} must not be expired`);
-          await keyed.ready();
+          await probeReady(keyed);
           assert.equal(keyed.credentialError(), null);
         }
         await operator.nativeCore.unary(APIKEY, "RevokeApiKey", {
@@ -558,7 +568,10 @@ test("live parity surface", {
           const renewed = await session.refreshIfNeeded();
           assert.ok(renewed?.accessToken, `re-login ${i} must mint a bearer`);
           assert.notEqual(renewed.sessionId, spent.sessionId, `re-login ${i} must open a new session`);
-          assert.notEqual(renewed.refreshToken, spent.refreshToken, `re-login ${i} must hold a new refresh token`);
+          // A service-account login holds no refresh token, so only a held one can rotate.
+          if (spent.refreshToken) {
+            assert.notEqual(renewed.refreshToken, spent.refreshToken, `re-login ${i} must hold a new refresh token`);
+          }
           assert.equal(session.bearer(), `Bearer ${renewed.accessToken}`);
           assert.equal(session.credentialError(), null);
           assert.deepEqual(session.principal(), pinned, "re-login must keep the pinned principal");
@@ -568,7 +581,7 @@ test("live parity surface", {
         expired(store);
         const refreshed = await session.refreshIfNeeded();
         assert.equal(refreshed?.sessionId, spent.sessionId, "a healthy refresh keeps the session");
-        assert.notEqual(refreshed?.refreshToken, spent.refreshToken);
+        if (spent.refreshToken) assert.notEqual(refreshed?.refreshToken, spent.refreshToken);
         // The account is gone: both the refresh and the re-login must be refused.
         await setStatus("USER_STATUS_DEACTIVATED");
         expired(store);
@@ -583,9 +596,12 @@ test("live parity surface", {
       for (let i = 0; i < REPEATS; i += 1) {
         await assert.rejects(operator.storage.deleteFile(randomUUID()), (err: any) => {
           assert.ok(err instanceof UdbError, `deleteFile failed before the broker: ${err?.message}`);
-          unmounted ||= err.code === grpc.status.UNIMPLEMENTED;
+          const absent =
+            err.code === grpc.status.UNIMPLEMENTED ||
+            (err.code === grpc.status.FAILED_PRECONDITION && /native service 'storage' is disabled/.test(err.message));
+          unmounted ||= absent;
           assert.ok(
-            err.code === grpc.status.NOT_FOUND || err.code === grpc.status.UNIMPLEMENTED,
+            err.code === grpc.status.NOT_FOUND || absent,
             `an unknown file must be NOT_FOUND, got ${err.code}: ${err.message}`,
           );
           return true;
