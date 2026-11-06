@@ -47,6 +47,26 @@ export function integerColumn(field: FieldSchema | undefined): boolean {
   return ["SMALLINT", "INTEGER", "INT", "INT2", "INT4", "INT8", "BIGINT", "SERIAL", "BIGSERIAL"].includes(sql);
 }
 
+function jsonColumn(field: FieldSchema): boolean {
+  const column = field.column;
+  return Boolean(column?.is_json || column?.is_jsonb || (column?.sql_type ?? "").trim().toUpperCase().startsWith("JSON"));
+}
+
+/** A string written to a JSON column is JSON text, as on the broker, and the column holds the
+ *  document it encodes. */
+function jsonColumnDocument(name: string, text: string): unknown {
+  let document: unknown;
+  try {
+    document = parseExactJson(text);
+  } catch {
+    throw refuse(codes.INVALID_ARGUMENT, "", `value for JSON column ${name} is not valid JSON: send a JSON document, or null to clear it`);
+  }
+  if (document === null) {
+    throw refuse(codes.INVALID_ARGUMENT, "", `the text null is not accepted for JSON column ${name}: send a real null to clear it`);
+  }
+  return document;
+}
+
 function defaultValue(expression: string): unknown {
   const [rawBase, cast = ""] = expression.split("::");
   const base = rawBase.trim();
@@ -193,6 +213,10 @@ export class EntityRules {
       }
       if (value === null || value === undefined) {
         out[name] = null;
+        continue;
+      }
+      if (typeof value === "string" && jsonColumn(field)) {
+        out[name] = jsonColumnDocument(name, value);
         continue;
       }
       const message: Row = {};

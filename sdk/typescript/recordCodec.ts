@@ -1014,6 +1014,17 @@ export function rowFromRecord<T = Record<string, unknown>>(
   return row as T;
 }
 
+/** The row a store holds for a record on the wire: a string in a JSON column is JSON text, and
+ *  the column holds the document it encodes. */
+export function storedRow(messageType: string, record: UdbRecord, schemas: ProtoSchemas = protoSchemas()): UdbRecord {
+  const row: UdbRecord = { ...record };
+  for (const field of schemas.message(messageType).fields) {
+    const value = row[field.name];
+    if (typeof value === "string" && !field.repeated && isJsonColumn(field)) row[field.name] = parseExactJson(value);
+  }
+  return row;
+}
+
 function decodeColumns<T>(messageType: string, record: UdbRecord, schemas: ProtoSchemas, jsonIsText: boolean): T {
   const schema = schemas.message(messageType);
   const out: Record<string, unknown> = {};

@@ -44,6 +44,10 @@ from udb_client.tx import EVENT_ENVELOPE_VERSION
 from udb_client import udbtest
 from udb_client.udbtest import Fault, Identity, Policy
 from udb_client.udbtest.fake import Fake
+from udb.core.workflow.entity.v1 import workflow_instance_pb2
+from udb_client import UdbRpcError, decode_record, encode_record
+
+WORKFLOW_TYPE = "udb.core.workflow.entity.v1.WorkflowInstance"
 
 FILE = "udb.core.storage.entity.v1.File"
 SPEC = table_spec_of(file_pb2.File)
@@ -55,6 +59,29 @@ FAST_CONSUMER = dict(backoff=0.01, ack_timeout=2.0)
 def row(name: str = "a.pdf", file_id: str | None = None) -> dict[str, Any]:
     file_id = file_id or str(uuid.uuid4())
     return {"file_id": file_id, "filename": name, "object_key": f"k/{file_id}"}
+
+
+def test_the_fake_holds_a_json_column_as_the_broker_does() -> None:
+    with udbtest.new(workflow_instance_pb2.WorkflowInstance) as served:
+        tenant = str(uuid.uuid4())
+        client = served.client(tenant)
+        entity = client.entity(WORKFLOW_TYPE, key=["workflow_id"])
+        for payload in ('"My"', '"5"', '""', "5", "[1]", '{"a":1}'):
+            message = workflow_instance_pb2.WorkflowInstance(
+                workflow_id=str(uuid.uuid4()),
+                tenant_id=tenant,
+                workflow_type="json",
+                payload=payload,
+            )
+            for _ in range(3):
+                entity.upsert(encode_record(message))
+                rows = entity.select(where={"workflow_id": message.workflow_id})
+                back = decode_record(rows[0], workflow_instance_pb2.WorkflowInstance())
+                assert back.payload == payload
+                message.payload = back.payload
+        for text in ("My", "null"):
+            with pytest.raises(UdbRpcError):
+                entity.upsert({"workflow_id": str(uuid.uuid4()), "workflow_type": "json", "payload": text})
 
 
 @pytest.fixture

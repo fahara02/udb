@@ -17,6 +17,7 @@ import {
   decodeEventPayload,
   messageFromRow,
   rowFromRecord,
+  storedRow,
   encodeEvent,
   encodeRecord,
   formatTimestamp,
@@ -1399,6 +1400,12 @@ export class InMemoryDataPlane implements StorePlane {
     return Object.entries(filter ?? {}).every(([field, value]) => row[field] === value);
   }
 
+  /** A JSON column holds its document, as on the broker. An undeclared type has no columns. */
+  private stored(messageType: string, record: Record<string, unknown>): Record<string, unknown> {
+    if (!protoSchemas().find(messageType)) return record;
+    return storedRow(messageType, record);
+  }
+
   private refuse(code: number, reason: string, message: string): never {
     const err: any = new Error(message);
     err.code = code;
@@ -1420,7 +1427,7 @@ export class InMemoryDataPlane implements StorePlane {
       }
       case "Insert":
       case "Upsert": {
-        const row = JSON.parse(Buffer.from(request.record_json).toString("utf8"));
+        const row = this.stored(request.message_type, JSON.parse(Buffer.from(request.record_json).toString("utf8")));
         const key = this.keys[request.message_type] ?? request.conflict_fields ?? [];
         const index = table.findIndex((existing) => key.every((field: string) => existing[field] === row[field]));
         if (index >= 0 && method === "Insert") this.refuse(6, "UDB_UNIQUE_VIOLATION", "duplicate key");
@@ -1437,7 +1444,8 @@ export class InMemoryDataPlane implements StorePlane {
         if (request.expected && hits.some((row) => !this.matches(row, request.expected))) {
           this.refuse(9, "UDB_CAS_CONFLICT", "precondition failed");
         }
-        for (const row of hits) Object.assign(row, request.changes ?? {});
+        const changes = this.stored(request.message_type, request.changes ?? {});
+        for (const row of hits) Object.assign(row, changes);
         return { affected_rows: hits.length };
       }
       case "Delete": {

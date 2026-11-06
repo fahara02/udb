@@ -41,6 +41,7 @@ from udb.entity.v1 import error_pb2, types_pb2
 from udb.events.v1 import udb_events_pb2
 
 from ..client import to_struct
+from ..record_codec import _is_json, _loads
 from ..project import UdbAsyncProject, UdbConfig, UdbProject
 from ..record_codec import _INT64_TYPES, decode_field, encode_field
 from ..schema import (
@@ -444,6 +445,20 @@ class _Unique:
     where: str = ""
 
 
+def _json_column_document(name: str, text: str) -> Any:
+    """A string written to a JSON column is JSON text, as on the broker, and the column holds
+    the document it encodes."""
+    try:
+        document = _loads(text)
+    except ValueError as error:
+        raise _invalid(
+            f"value for JSON column {name} is not valid JSON: send a JSON document, or null to clear it"
+        ) from error
+    if document is None:
+        raise _invalid(f"the text null is not accepted for JSON column {name}: send a real null to clear it")
+    return document
+
+
 class _Entity:
     def __init__(self, message: Any):
         self.message_class = message if isinstance(message, type) else type(message)
@@ -556,6 +571,9 @@ class _Entity:
                 raise _invalid(f"integer column requires an exact number or decimal string: {name}")
             if value is None:
                 out[name] = None
+                continue
+            if isinstance(value, str) and _is_json(self.options[name]):
+                out[name] = _json_column_document(name, value)
                 continue
             # Reuse the SDK codec for coercion, enums, timestamps, nested JSON and
             # exact integer bounds. No second lossy JSON-to-protobuf implementation.

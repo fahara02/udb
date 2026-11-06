@@ -154,6 +154,14 @@ func (e *entity) normalize(record map[string]any) (map[string]any, error) {
 			out[name] = nil
 			continue
 		}
+		if text, isText := value.(string); isText && jsonColumn(e.options[name]) {
+			document, err := jsonColumnDocument(name, text)
+			if err != nil {
+				return nil, err
+			}
+			out[name] = document
+			continue
+		}
 		// Reuse the SDK codec for coercion, enums, timestamps, nested JSON and
 		// exact integer bounds. No second lossy JSON-to-protobuf implementation.
 		message := dynamicpb.NewMessage(e.descriptor)
@@ -176,6 +184,26 @@ func (e *entity) normalize(record map[string]any) (map[string]any, error) {
 		}
 	}
 	return out, nil
+}
+
+func jsonColumn(column *commonv1.ColumnOptions) bool {
+	return column.GetIsJson() || column.GetIsJsonb() ||
+		strings.HasPrefix(strings.ToUpper(strings.TrimSpace(column.GetSqlType())), "JSON")
+}
+
+// jsonColumnDocument reads a string written to a JSON column as the broker does: it is JSON text,
+// and the column holds the document it encodes.
+func jsonColumnDocument(name, text string) (any, error) {
+	decoder := json.NewDecoder(strings.NewReader(text))
+	decoder.UseNumber()
+	var document any
+	if err := decoder.Decode(&document); err != nil || decoder.More() {
+		return nil, refuse(codes.InvalidArgument, "", "value for JSON column "+name+" is not valid JSON: send a JSON document, or null to clear it")
+	}
+	if document == nil {
+		return nil, refuse(codes.InvalidArgument, "", "the text null is not accepted for JSON column "+name+": send a real null to clear it")
+	}
+	return document, nil
 }
 
 func integerColumn(column *commonv1.ColumnOptions) bool {

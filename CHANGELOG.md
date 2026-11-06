@@ -7,6 +7,18 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.10] - 2026-11-07
+
+### Breaking for callers
+
+- None.
+
+### Fixed
+
+- **The SDK test fakes hold a JSON column as the broker does.** A string written to one is JSON
+  text, and text that is not JSON or the text `null` is refused. A JSON string read back from a
+  Go, TypeScript or Python fake with an extra layer of quotes after 0.6.9, and bad text was stored.
+
 ## [0.6.9] - 2026-11-06
 
 ### Breaking for callers

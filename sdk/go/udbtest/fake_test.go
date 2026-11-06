@@ -2,13 +2,20 @@ package udbtest_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	apikeyeventsv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/events/v1"
 	storagev1 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1"
+	workflowentityv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1"
+	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"github.com/fahara02/udb/sdk/go/udbclient"
 	"github.com/fahara02/udb/sdk/go/udbtest"
 	"github.com/fahara02/udb/sdk/go/udbtest/conformance"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // The fake meets the same typed-store contract the live broker does.
@@ -17,6 +24,60 @@ func TestFakeMeetsTheTableContract(t *testing.T) {
 	conformance.RunTable(t, func(t testing.TB, tenant string) *udbclient.Udb {
 		return fake.Client(t, tenant)
 	})
+}
+
+// A string written to a JSON column is JSON text, as on the broker, so every kind of value reads
+// back as what was written.
+func TestFakeHoldsAJSONColumnAsTheBrokerDoes(t *testing.T) {
+	const message = "udb.core.workflow.entity.v1.WorkflowInstance"
+	fake := udbtest.New(t, &workflowentityv1.WorkflowInstance{})
+	tenant := "0190f1b2-0000-4000-8000-0000000000aa"
+	client := fake.Client(t, tenant)
+	ctx := context.Background()
+	for i, payload := range []string{`"My"`, `"5"`, `""`, `5`, `[1]`, `{"a":1}`} {
+		id := fmt.Sprintf("0190f1b2-0000-4000-8000-%012d", i+1)
+		row := &workflowentityv1.WorkflowInstance{WorkflowId: id, TenantId: tenant, WorkflowType: "json", Payload: payload}
+		for attempt := 0; attempt < 3; attempt++ {
+			rec, err := udbclient.EncodeRecord(row, udbclient.WriteInsert)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, err := json.Marshal(rec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := client.Data.Upsert(ctx, &entityv1.UpsertRequest{MessageType: message, RecordJson: body}); err != nil {
+				t.Fatalf("upsert %s: %v", payload, err)
+			}
+			filter, err := structpb.NewStruct(map[string]any{"workflow_id": id})
+			if err != nil {
+				t.Fatal(err)
+			}
+			found, err := client.Data.Select(ctx, &entityv1.SelectRequest{MessageType: message, Filter: filter, Limit: 1})
+			if err != nil || len(found.GetRecordsJson()) != 1 {
+				t.Fatalf("read %s: %v", payload, err)
+			}
+			var stored udbclient.Record
+			if err := json.Unmarshal(found.GetRecordsJson()[0], &stored); err != nil {
+				t.Fatal(err)
+			}
+			var back workflowentityv1.WorkflowInstance
+			if err := udbclient.DecodeRecord(stored, &back); err != nil {
+				t.Fatal(err)
+			}
+			if back.GetPayload() != payload {
+				t.Fatalf("%s read back as %q", payload, back.GetPayload())
+			}
+			row.Payload = back.GetPayload()
+		}
+	}
+	for _, text := range []string{`My`, `null`} {
+		body, _ := json.Marshal(map[string]any{"workflow_id": "0190f1b2-0000-4000-8000-000000000099", "workflow_type": "json", "payload": text})
+		_, err := client.Data.Upsert(ctx, &entityv1.UpsertRequest{MessageType: message, RecordJson: body})
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("the text %s must be refused: code=%s %v", text, status.Code(err), err)
+		}
+	}
 }
 
 // The fake passes the cross-SDK cases the TypeScript runner shares.

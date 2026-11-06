@@ -24,6 +24,26 @@ test("the fake meets the table contract", async (t) => {
   await runTable(t, (tenant) => fake.client(tenant));
 });
 
+test("the fake holds a JSON column as the broker does, for every kind of value", async (t) => {
+  const workflow = "udb.core.workflow.entity.v1.WorkflowInstance";
+  const fake = await createFake(t, [workflow]);
+  const table = (await fake.client(TENANT)).tableOf<any>(workflow);
+  let n = 0;
+  for (const payload of ['"My"', '"5"', '""', "5", "[1]", '{"a":1}']) {
+    n += 1;
+    const id = `0190f1b2-0000-4000-8000-${String(n).padStart(12, "0")}`;
+    const row: any = { workflow_id: id, workflow_type: "json", status: "WORKFLOW_STATUS_PENDING", payload };
+    for (let i = 0; i < 3; i += 1) {
+      await table.upsert(row);
+      const stored = await table.get({ workflow_id: id });
+      const text = typeof stored.payload === "string" ? stored.payload : JSON.stringify(stored.payload);
+      assert.equal(text, payload);
+      row.payload = text;
+    }
+  }
+  await assert.rejects(table.upsert({ workflow_id: "0190f1b2-0000-4000-8000-000000000099", workflow_type: "json", payload: "My" }), /not JSON/);
+});
+
 test("the fake meets the shared cross-SDK cases", async (t) => {
   const fake = await createFake(t, [FILE]);
   await runTableCases(t, (tenant) => fake.client(tenant));
