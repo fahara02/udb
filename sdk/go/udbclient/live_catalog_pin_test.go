@@ -38,11 +38,11 @@ func TestLiveNoDefaultCatalogPinAndASentPinIsHonoured(t *testing.T) {
 	}
 	read := &entityv1.SelectRequest{MessageType: "udb.core.workflow.entity.v1.WorkflowInstance", Limit: 1}
 	for i := 0; i < 3; i++ {
-		if _, err := sess.Data.Select(sess.DataContext(ctx), read); err != nil {
+		if _, err := sess.Data.Select(ctx, read); err != nil {
 			t.Fatalf("an unpinned read: %v", err)
 		}
 	}
-	pinned := WithMetadata(sess.DataContext(ctx), Metadata{ClientCatalogVersion: "999.0.0"})
+	pinned := WithMetadata(ctx, Metadata{ClientCatalogVersion: "999.0.0"})
 	for i := 0; i < 3; i++ {
 		_, err := sess.Data.Select(pinned, read)
 		if status.Code(err) != codes.FailedPrecondition {
