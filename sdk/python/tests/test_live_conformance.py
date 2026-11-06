@@ -3931,7 +3931,7 @@ def perf_seed(
 
     # A token valid for decades, so the measured lease reaches no provider.
     try:
-        vault.PutSecret(vault_pb.PutSecretRequest(tenant_id=tenant, secret_path=fix.m["vault_oauth_secret_path"], secret_value='{"token_url":"https://oauth.example.com/token","client_id":"perf","access_token":"perf-token","expires_at_unix":4102444800}', expected_version=0, metadata_json="{}"))
+        vault.PutSecret(vault_pb.PutSecretRequest(tenant_id=tenant, secret_path=fix.m["vault_oauth_secret_path"], secret_value='{"token_url":"https://oauth.example.com/token","client_id":"perf","access_token":"perf-token","expires_at_unix":4102444800}', expected_version=0, metadata_json="{}"), metadata=md, timeout=8.0)
     except grpc.RpcError:
         pass
 
