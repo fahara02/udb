@@ -84,6 +84,7 @@ func TestLiveAJSONStringColumnReadsAndWritesAsJSONText(t *testing.T) {
 			WorkflowId:   id,
 			TenantId:     sess.CanonicalTenantID,
 			WorkflowType: "go.live.json-string",
+			Status:       workflowentityv1.WorkflowStatus_WORKFLOW_STATUS_PENDING,
 			TotalSteps:   1,
 			Payload:      payload,
 		}

@@ -23,7 +23,7 @@ import pytest
 
 from udb.core.storage.entity.v1 import file_pb2
 from udb.core.storage.events.v1 import storage_events_pb2
-from udb.core.workflow.entity.v1 import workflow_instance_pb2
+from udb.core.workflow.entity.v1 import enums_pb2, workflow_instance_pb2
 from udb_client import (
     AsyncRepo,
     AsyncTable,
@@ -182,12 +182,13 @@ def test_live_a_json_string_column_reads_and_writes_as_json_text(project: UdbPro
             workflow_id=str(uuid.uuid4()),
             tenant_id=project.metadata.tenant_id,
             workflow_type="py.live.json-string",
+            status=enums_pb2.WORKFLOW_STATUS_PENDING,
             total_steps=1,
             payload=payload,
         )
         for _ in range(REPEATS):
             entity.upsert(encode_record(message))
-            rows = entity.select({"workflow_id": message.workflow_id})
+            rows = entity.select(where={"workflow_id": message.workflow_id})
             decoded = decode_record(rows[0], workflow_instance_pb2.WorkflowInstance())
             assert decoded.payload == payload, "what was read is what was written"
             message.payload = decoded.payload
