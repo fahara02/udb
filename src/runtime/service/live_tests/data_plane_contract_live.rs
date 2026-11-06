@@ -302,19 +302,38 @@ live!(a_non_boolean_is_refused_and_never_stored_as_false_live, {
     fx.finish().await;
 });
 
-live!(a_null_array_element_is_refused_on_every_verb_live, {
+live!(a_null_array_element_is_stored_as_null_on_every_verb_live, {
     let fx = fixture!(
-        ", tags TEXT[], flags BOOLEAN[]",
-        vec![typed("tags", "TEXT[]"), typed("flags", "BOOLEAN[]")]
+        ", tags TEXT[], flags BOOLEAN[], ns BIGINT[], rs DOUBLE PRECISION[], us UUID[], ts TIMESTAMPTZ[]",
+        vec![
+            typed("tags", "TEXT[]"),
+            typed("flags", "BOOLEAN[]"),
+            typed("ns", "BIGINT[]"),
+            typed("rs", "DOUBLE PRECISION[]"),
+            typed("us", "UUID[]"),
+            typed("ts", "TIMESTAMPTZ[]"),
+        ]
     );
-    fx.upsert("a", json!({"tags": ["x"]})).await.expect("seed");
-    refused(fx.upsert("a", json!({"tags": ["a", null]})).await, "Upsert");
-    refused(fx.update("a", json!({"tags": ["a", null]})).await, "Update");
-    refused(
-        fx.update("a", json!({"flags": [null]})).await,
-        "Update flags",
-    );
-    assert_eq!(fx.stored("tags", "a").await.as_deref(), Some("{x}"));
+    let row = json!({
+        "tags": ["a", null],
+        "flags": [true, null],
+        "ns": [1, null],
+        "rs": [1.5, null],
+        "us": ["00000000-0000-0000-0000-000000000001", null],
+        "ts": ["2026-01-02T03:04:05Z", null],
+    });
+    let expect = |stored: Option<String>, column: &str| {
+        let stored = stored.unwrap_or_default();
+        assert!(stored.ends_with(",NULL}"), "{column} holds {stored}");
+    };
+    fx.upsert("up", row.clone()).await.expect("Upsert");
+    fx.upsert("set", json!({})).await.expect("seed");
+    fx.update("set", row).await.expect("Update");
+    for id in ["up", "set"] {
+        for column in ["tags", "flags", "ns", "rs", "us", "ts"] {
+            expect(fx.stored(column, id).await, column);
+        }
+    }
     fx.finish().await;
 });
 

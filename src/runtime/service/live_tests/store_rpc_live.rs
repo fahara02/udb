@@ -1216,7 +1216,12 @@ async fn a_neo4j_constraint_is_reported_and_dropped_on_its_declared_property_liv
     .expect("the constraint is created");
     assert_eq!(constraints(label.clone()).await, 1);
     svc.generic_dispatch(store_ctx(
-        generic_dispatch("neo4j", "drop_resource", &label, "{}"),
+        generic_dispatch(
+            "neo4j",
+            "drop_resource",
+            &label,
+            r#"{"udb_allow_rls_bypass":true}"#,
+        ),
         &tenant,
     ))
     .await

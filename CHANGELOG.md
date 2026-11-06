@@ -54,7 +54,6 @@ release line was tagged.
     matched false rows);
   - `""` for a date, time, timestamp, UUID, network, geography or numeric column (it became
     NULL, or `= NULL` in a filter). Send null to clear;
-  - a null element in an array column (Update wrote `""` or `false`);
   - the redaction placeholder `***MASKED***` for a PII, masked or encrypted column.
   - detect: code: writes that send `""`, a stringified boolean or a large number as a double
   - fix: send the real value, or null.
@@ -185,6 +184,9 @@ release line was tagged.
 
 ### Fixed
 
+- **A null element in an array column is stored as NULL on every verb.** Update wrote `""` or
+  `false`, and only NUMERIC arrays kept it on Upsert. A null in an `$in` list is refused, since
+  it can match nothing: use `$is_null`.
 - **Enum values keep their declared order in new types.** They were sorted, which changed how
   PostgreSQL sorts them. A value failing SQL safety validation now stops the migration, instead of
   leaving the type without it.

@@ -2490,14 +2490,12 @@ fn canonical_column_value(
         element.sql_type = column.sql_type.trim().trim_end_matches("[]").to_string();
         let mut out = Vec::with_capacity(items.len());
         for item in items {
-            if item.is_null() {
-                return Err(value_refused(
-                    name,
-                    "array elements must not be null",
-                    format!("array column '{name}' cannot store a null element"),
-                ));
-            }
-            out.push(canonical_column_value(&element, name, item, json_text)?);
+            // A PostgreSQL array holds NULL elements, and the binders store them as NULL.
+            out.push(if item.is_null() {
+                JsonValue::Null
+            } else {
+                canonical_column_value(&element, name, item, json_text)?
+            });
         }
         return Ok(JsonValue::Array(out));
     }

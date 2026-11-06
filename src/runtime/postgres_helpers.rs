@@ -835,9 +835,24 @@ pub(crate) fn bind_one<'q>(
         });
     }
     if let JsonValue::Array(items) = value {
+        // An array column holds NULL elements. An `$in` list over a scalar column binds here
+        // too, where a NULL could match nothing, so it stays refused.
+        let column_is_array = sql_type.trim_end().ends_with("[]");
+        if !column_is_array && items.iter().any(JsonValue::is_null) {
+            return Err(postgres_invalid_field(
+                field,
+                "a list of values cannot hold null; use $is_null",
+                "a null in a list of values matches nothing",
+            ));
+        }
         if is_timestamptz {
-            let mut arr: Vec<chrono::DateTime<chrono::Utc>> = Vec::with_capacity(items.len());
+            let mut arr: Vec<Option<chrono::DateTime<chrono::Utc>>> =
+                Vec::with_capacity(items.len());
             for item in items {
+                if item.is_null() {
+                    arr.push(None);
+                    continue;
+                }
                 let raw = item.as_str().ok_or_else(|| {
                     postgres_invalid_field(
                         field,
@@ -852,13 +867,17 @@ pub(crate) fn bind_one<'q>(
                         format!("invalid timestamptz array value: {err}"),
                     )
                 })?;
-                arr.push(parsed.with_timezone(&chrono::Utc));
+                arr.push(Some(parsed.with_timezone(&chrono::Utc)));
             }
             return Ok(query.bind(arr));
         }
         if element_type == "UUID" {
-            let mut arr: Vec<Uuid> = Vec::with_capacity(items.len());
+            let mut arr: Vec<Option<Uuid>> = Vec::with_capacity(items.len());
             for item in items {
+                if item.is_null() {
+                    arr.push(None);
+                    continue;
+                }
                 let parsed = item
                     .as_str()
                     .ok_or_else(|| {
@@ -876,14 +895,18 @@ pub(crate) fn bind_one<'q>(
                             format!("invalid UUID in $in: {err}"),
                         )
                     })?;
-                arr.push(parsed);
+                arr.push(Some(parsed));
             }
             return Ok(query.bind(arr));
         }
         if postgres_is_integer_type(&sql_type) {
-            let mut arr: Vec<i64> = Vec::with_capacity(items.len());
+            let mut arr: Vec<Option<i64>> = Vec::with_capacity(items.len());
             for item in items {
-                arr.push(postgres_json_i64(field, item)?);
+                arr.push(if item.is_null() {
+                    None
+                } else {
+                    Some(postgres_json_i64(field, item)?)
+                });
             }
             return Ok(query.bind(arr));
         }
@@ -905,31 +928,38 @@ pub(crate) fn bind_one<'q>(
             return Ok(query.bind(arr));
         }
         if sql_type.contains("REAL") || sql_type.contains("DOUBLE") || sql_type.contains("FLOAT") {
-            let mut arr: Vec<f64> = Vec::with_capacity(items.len());
+            let mut arr: Vec<Option<f64>> = Vec::with_capacity(items.len());
             for item in items {
-                arr.push(postgres_json_f64(field, item)?);
+                arr.push(if item.is_null() {
+                    None
+                } else {
+                    Some(postgres_json_f64(field, item)?)
+                });
             }
             return Ok(query.bind(arr));
         }
         if sql_type.contains("BOOL") {
-            let mut arr: Vec<bool> = Vec::with_capacity(items.len());
+            let mut arr: Vec<Option<bool>> = Vec::with_capacity(items.len());
             for item in items {
-                arr.push(item.as_bool().ok_or_else(|| {
+                if item.is_null() {
+                    arr.push(None);
+                    continue;
+                }
+                arr.push(Some(item.as_bool().ok_or_else(|| {
                     postgres_invalid_field(
                         field,
                         "a boolean array takes only true or false",
                         format!("expected a boolean element, got {item}"),
                     )
-                })?);
+                })?));
             }
             return Ok(query.bind(arr));
         }
         // text / varchar / enum / timestamp and friends: a text[] compares
         // correctly for text-typed columns (`text = ANY(text[])`).
-        let arr: Vec<String> = items
+        let arr: Vec<Option<String>> = items
             .iter()
-            .map(json_scalar_to_string)
-            .map(|s| strip_nul(&s))
+            .map(|item| (!item.is_null()).then(|| strip_nul(&json_scalar_to_string(item))))
             .collect();
         return Ok(query.bind(arr));
     }

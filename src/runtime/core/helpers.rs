@@ -641,13 +641,18 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                 let values = json_array_values(value, "array_string")?
                     .iter()
                     .map(|item| {
-                        item.as_str().map(strip_nul).ok_or_else(|| {
-                            core_helper_invalid_field(
-                                "params",
-                                "array_string params must contain only strings",
-                                "array_string params must contain only strings",
-                            )
-                        })
+                        if item.is_null() {
+                            return Ok(None);
+                        }
+                        item.as_str()
+                            .map(|text| Some(strip_nul(text)))
+                            .ok_or_else(|| {
+                                core_helper_invalid_field(
+                                    "params",
+                                    "array_string params must contain only strings",
+                                    "array_string params must contain only strings",
+                                )
+                            })
                     })
                     .collect::<Result<Vec<_>, _>>()?;
                 query.bind(values)
@@ -656,7 +661,10 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                 let values = json_array_values(value, "array_int")?
                     .iter()
                     .map(|item| {
-                        item.as_i64().ok_or_else(|| {
+                        if item.is_null() {
+                            return Ok(None);
+                        }
+                        item.as_i64().map(Some).ok_or_else(|| {
                             core_helper_invalid_field(
                                 "params",
                                 "array_int params must contain only integers",
@@ -671,7 +679,10 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                 let values = json_array_values(value, "array_float")?
                     .iter()
                     .map(|item| {
-                        item.as_f64().ok_or_else(|| {
+                        if item.is_null() {
+                            return Ok(None);
+                        }
+                        item.as_f64().map(Some).ok_or_else(|| {
                             core_helper_invalid_field(
                                 "params",
                                 "array_float params must contain only numbers",
@@ -686,7 +697,10 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                 let values = json_array_values(value, "array_bool")?
                     .iter()
                     .map(|item| {
-                        item.as_bool().ok_or_else(|| {
+                        if item.is_null() {
+                            return Ok(None);
+                        }
+                        item.as_bool().map(Some).ok_or_else(|| {
                             core_helper_invalid_field(
                                 "params",
                                 "array_bool params must contain only booleans",
