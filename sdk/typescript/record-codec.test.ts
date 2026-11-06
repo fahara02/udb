@@ -86,6 +86,19 @@ test("a JSON column holds its text as a raw document, and refuses text that is n
   assert.throws(() => encodeRecord(workflow, { payload: "not json" }), /not JSON/);
 });
 
+test("a JSON column's text is what a string field reads and writes, for every kind of value", () => {
+  const workflow = "udb.core.workflow.entity.v1.WorkflowInstance";
+  // The broker reads a string as JSON text, so a JSON string goes as its text.
+  assert.equal(encodeRecord(workflow, { payload: '"My"' }).payload, '"My"');
+  assert.ok(encodeRecord(workflow, { payload: "5" }).payload instanceof RawJson);
+  for (const [stored, text] of [["My", '"My"'], ["5", '"5"'], ["", '""'], ['a"b', '"a\\"b"'], [5, "5"], [[1], "[1]"], [{ a: 1 }, '{"a":1}']] as const) {
+    assert.equal(decodeRecord<any>(workflow, { payload: stored }).payload, text);
+  }
+  // A store that reads JSON as text returns a document unchanged.
+  assert.equal(decodeRecord<any>(workflow, { payload: '{"a":1}' }).payload, '{"a":1}');
+  assert.equal(decodeRecord<any>(workflow, { payload: "[1]" }).payload, "[1]");
+});
+
 test("an unknown field and a wrong value type are refused", () => {
   assert.throws(() => encodeRecord(FILE, { nope: 1 }), /no field "nope"/);
   assert.throws(() => encodeRecord(FILE, { filename: 5 }), /expected a string/);

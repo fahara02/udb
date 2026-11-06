@@ -65,7 +65,36 @@ func (c *Client) Context(ctx context.Context) context.Context {
 	if len(m.Scopes) > 0 {
 		pairs = append(pairs, "x-scopes", joinScopes(m.Scopes))
 	}
-	return metadata.AppendToOutgoingContext(ctx, pairs...)
+	return outgoingOnce(ctx, MetadataFromContext(ctx), pairs)
+}
+
+// outgoingOnce sets each header once, so a context already built by Context or DataContext does
+// not send a second copy, where the first would win and hide a value set with WithMetadata. A
+// value the caller attached itself stays, unless this request set that header with WithMetadata.
+func outgoingOnce(ctx context.Context, request Metadata, pairs []string) context.Context {
+	existing, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return metadata.AppendToOutgoingContext(ctx, pairs...)
+	}
+	scoped := map[string]bool{
+		"x-purpose":                    request.Purpose != "",
+		"x-correlation-id":             request.CorrelationID != "",
+		"x-udb-client-catalog-version": request.ClientCatalogVersion != "",
+	}
+	md := existing.Copy()
+	for i := 0; i+1 < len(pairs); i += 2 {
+		key, value := pairs[i], pairs[i+1]
+		if !scoped[key] {
+			for _, prior := range existing.Get(key) {
+				if prior != "" {
+					value = prior
+					break
+				}
+			}
+		}
+		md.Set(key, value)
+	}
+	return metadata.NewOutgoingContext(ctx, md)
 }
 
 // MergeRequestScopedAudit resolves the three REQUEST-SCOPED audit values

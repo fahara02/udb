@@ -37,6 +37,8 @@ mod pipeline_live;
 mod projection_drift_live;
 #[cfg(feature = "redis")]
 mod rate_limit_live;
+#[cfg(feature = "redis")]
+mod redis_shared_live;
 mod scheduler_live;
 #[cfg(feature = "http-client")]
 mod search_tenant_iso_live;

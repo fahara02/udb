@@ -855,9 +855,7 @@ impl BackendCompensator for RedisCompensator {
             return Ok(());
         }
         use redis::AsyncCommands;
-        let mut conn = self
-            .client
-            .get_multiplexed_async_connection()
+        let mut conn = crate::runtime::redis_shared::connection(&self.client)
             .await
             .map_err(|e| format!("redis compensation connect failed: {e}"))?;
         let _: redis::RedisResult<i64> = conn.del(&keys).await;

@@ -2302,9 +2302,8 @@ impl RedisSessionStore {
         format!("{}:principal:{}", self.key_prefix, principal_id)
     }
 
-    async fn connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
-        self.client
-            .get_multiplexed_async_connection()
+    async fn connection(&self) -> Result<redis::aio::ConnectionManager, String> {
+        crate::runtime::redis_shared::connection(&self.client)
             .await
             .map_err(|err| format!("redis session connection failed: {err}"))
     }

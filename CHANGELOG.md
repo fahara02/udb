@@ -11,7 +11,15 @@ release line was tagged.
 
 ### Breaking for callers
 
-- None.
+- **A string field on a JSON column reads and writes the column's JSON text in Go, TypeScript
+  and Python, for every kind of value.** A JSON string now reads as `"My"` with its quotes, where
+  it read as bare `My`, and a read-modify-write of it works. Writing `"My"` stores the JSON
+  string, where the broker refused it, so the extra encoding that got through is no longer
+  needed: it would now store a string containing the quotes. A Python `table_spec_of` row and
+  Go generated entities follow the same rule. Numbers, arrays and objects are unchanged.
+  - detect: code: string fields on `is_json`, `is_jsonb` or `JSON` columns that hold a JSON string,
+    and any code that adds or removes a layer of encoding around them
+  - fix: remove that code. To get the plain text, parse the field as JSON.
 
 ### Added
 
@@ -25,6 +33,19 @@ release line was tagged.
 
 ### Fixed
 
+- **The broker shares one Redis connection per endpoint.** `CacheService`, the token denylist,
+  the session store, the data cache and saga compensation opened a new connection per operation.
+  Under load each closed one held a local port for about a minute, and every Redis call then
+  failed with `Unavailable` for a minute or two while Redis was idle. No setting is needed. A
+  connection Redis drops is reopened, and the call in flight may see a retryable refusal.
+- **A denylist lookup that fails logs why.** The warning carried no error text.
+- **A failed Upsert's error line names the cause,** as its SQLSTATE and constraint. Only the SQL
+  was logged. The database's own message is left out, because it can quote row values.
+- **A guarded write on a JSON string column matches.** An `expected` value holding the column's
+  JSON text never matched a stored JSON string.
+- **Go sends each metadata header once.** `DataContext` followed by `Data.Select` sent every
+  header twice, and the first copy won, so a catalog pin, purpose or correlation id set with
+  `WithMetadata` on that context was dropped.
 - **Live proof that SDKs send no default catalog pin.** Every SDK reads with no pin, and has a
   pin the active catalog cannot serve refused with `FAILED_PRECONDITION`, against a real broker.
 - **Live proof of a lossless column widening.** A longer `VARCHAR`, `VARCHAR` to `TEXT`, a larger

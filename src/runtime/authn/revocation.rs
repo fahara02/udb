@@ -192,9 +192,8 @@ impl JtiDenylist {
         }
     }
 
-    async fn connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
-        self.client
-            .get_multiplexed_async_connection()
+    async fn connection(&self) -> Result<redis::aio::ConnectionManager, String> {
+        crate::runtime::redis_shared::connection(&self.client)
             .await
             .map_err(|err| format!("jti denylist connection failed: {err}"))
     }
@@ -224,14 +223,20 @@ impl JtiDenylist {
     pub async fn check(&self, jti_hash: &str) -> DenylistDecision {
         let mut conn = match self.connection().await {
             Ok(conn) => conn,
-            Err(_) => return DenylistDecision::Error,
+            Err(err) => {
+                tracing::warn!(error = %err, "denylist lookup could not reach Redis");
+                return DenylistDecision::Error;
+            }
         };
         let key = revoked_jti_key(jti_hash);
         let exists: Result<bool, _> = conn.exists(&key).await;
         match exists {
             Ok(true) => DenylistDecision::Revoked,
             Ok(false) => DenylistDecision::NotFound,
-            Err(_) => DenylistDecision::Error,
+            Err(err) => {
+                tracing::warn!(error = %err, "denylist lookup failed in Redis");
+                DenylistDecision::Error
+            }
         }
     }
 

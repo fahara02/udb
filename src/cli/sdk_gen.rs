@@ -3088,15 +3088,15 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
         }
         if column.has_presence {
             return format!(
-                "\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = json.RawMessage(m.{getter}())\n\t}}\n"
+                "\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = udbJSONColumn(m.{getter}())\n\t}}\n"
             );
         }
         if !column.not_null {
             return format!(
-                "\tif v := m.{getter}(); v != \"\" {{\n\t\tr[\"{key}\"] = json.RawMessage(v)\n\t}}\n"
+                "\tif v := m.{getter}(); v != \"\" {{\n\t\tr[\"{key}\"] = udbJSONColumn(v)\n\t}}\n"
             );
         }
-        return format!("\tr[\"{key}\"] = json.RawMessage(m.{getter}())\n");
+        return format!("\tr[\"{key}\"] = udbJSONColumn(m.{getter}())\n");
     }
     if matches!(go_scalar_kind(&column.proto_type), GoScalar::Unknown) {
         // Message-typed (or unresolved-enum) column: no scalar round-trip.
@@ -3368,7 +3368,11 @@ fn go_coercion_helpers(needs_time: bool, needs_json_message: bool) -> String {
     // #10: a JSON/JSONB column comes back as a structured value (map/slice/number)
     // OR as JSON text; canonicalize either into JSON text for the string field.
     out.push_str(
-        "func udbAsJSONText(v any) (string, error) {\n\tswitch s := v.(type) {\n\tcase nil:\n\t\treturn \"\", nil\n\tcase string:\n\t\tif s == \"\" {\n\t\t\treturn \"\", nil\n\t\t}\n\t\tif !json.Valid([]byte(s)) {\n\t\t\treturn \"\", fmt.Errorf(\"expected JSON text, got %q\", s)\n\t\t}\n\t\treturn s, nil\n\t}\n\tb, err := json.Marshal(v)\n\tif err != nil {\n\t\treturn \"\", fmt.Errorf(\"encode JSON value: %w\", err)\n\t}\n\treturn string(b), nil\n}\n\n",
+        "func udbAsJSONText(v any) (string, error) {\n\tswitch s := v.(type) {\n\tcase nil:\n\t\treturn \"\", nil\n\tcase string:\n\t\tif c := udbFirstJSONByte(s); (c == 0x7b || c == 0x5b) && json.Valid([]byte(s)) {\n\t\t\treturn s, nil\n\t\t}\n\t}\n\tb, err := json.Marshal(v)\n\tif err != nil {\n\t\treturn \"\", fmt.Errorf(\"encode JSON value: %w\", err)\n\t}\n\treturn string(b), nil\n}\n\n",
+    );
+    // The broker reads a string as JSON text, so a JSON string goes as its text.
+    out.push_str(
+        "func udbFirstJSONByte(s string) byte {\n\tfor i := 0; i < len(s); i++ {\n\t\tswitch s[i] {\n\t\tcase ' ', '\\t', '\\n', '\\r':\n\t\t\tcontinue\n\t\t}\n\t\treturn s[i]\n\t}\n\treturn 0\n}\n\nfunc udbJSONColumn(s string) any {\n\tif udbFirstJSONByte(s) == '\"' {\n\t\treturn s\n\t}\n\treturn json.RawMessage(s)\n}\n\n",
     );
     // A protobuf message stored in a JSON/JSONB column is written by
     // `udbclient.EncodeField`. The decode side allocates the field's own message
@@ -5633,8 +5637,8 @@ message Stored {
         col.is_jsonb = true;
         let write = go_to_record_stmt(&col);
         assert!(
-            write.contains("r[\"metadata\"] = json.RawMessage(m.GetMetadata())"),
-            "jsonb write must embed a RawMessage, got: {write}"
+            write.contains("r[\"metadata\"] = udbJSONColumn(m.GetMetadata())"),
+            "jsonb write must embed the document, got: {write}"
         );
         assert!(
             !write.contains("r[\"metadata\"] = m.GetMetadata()\n"),
@@ -5654,7 +5658,7 @@ message Stored {
         let write = go_to_record_stmt(&nullable);
         assert!(
             write.contains("if v := m.GetMetadata(); v != \"\" {")
-                && write.contains("r[\"metadata\"] = json.RawMessage(v)"),
+                && write.contains("r[\"metadata\"] = udbJSONColumn(v)"),
             "nullable json write must omit empty, got: {write}"
         );
     }
@@ -5800,7 +5804,7 @@ message Stored {
         text.is_jsonb = true;
         assert!(!is_message_json_column(&text));
         assert!(
-            go_to_record_stmt(&text).contains("json.RawMessage(m.GetMetadata())"),
+            go_to_record_stmt(&text).contains("udbJSONColumn(m.GetMetadata())"),
             "a string JSON column must keep the text form"
         );
 

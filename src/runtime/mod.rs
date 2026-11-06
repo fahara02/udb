@@ -40,6 +40,8 @@ mod project_isolation_tests;
 pub mod projection;
 #[cfg(test)]
 mod projection_acceptance_tests;
+#[cfg(feature = "redis")]
+pub(crate) mod redis_shared;
 pub mod replica;
 #[cfg(test)]
 mod rls_context_tests;

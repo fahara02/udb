@@ -650,7 +650,8 @@ function encodeColumn(schema: MessageSchema, field: FieldSchema, isSet: boolean,
     if (!isValidJson(text)) {
       throw new Error(`udb: encode ${schema.fullName}.${name}: JSON column holds text that is not JSON`);
     }
-    record[name] = new RawJson(text);
+    // The broker reads a string as JSON text, so a JSON string goes as its text.
+    record[name] = text.trimStart().startsWith('"') ? text : new RawJson(text);
   }
 }
 
@@ -804,6 +805,14 @@ function jsonText(value: unknown): string {
   return value instanceof RawJson ? compactJson(value.text) : recordToJson(value);
 }
 
+/** The JSON text of a JSON column read as a string. The broker returns the value, so a JSON
+ *  string arrives without its quotes. A store that reads JSON as text returns a document unchanged. */
+function jsonColumnText(value: string): string {
+  const text = value.trim();
+  if ((text.startsWith("{") || text.startsWith("[")) && isValidJson(text)) return value;
+  return JSON.stringify(value);
+}
+
 /** Rewrite one column value into the proto JSON form of its field. */
 function normalise(field: FieldSchema, column: unknown): unknown {
   const raw = column instanceof RawJson && field.kind !== "string" ? column.toJSON() : column;
@@ -821,6 +830,7 @@ function normalise(field: FieldSchema, column: unknown): unknown {
   }
   if (typeof raw !== "string") return field.kind === "string" ? jsonText(raw) : raw;
   if (field.kind === "string") {
+    if (isJsonColumn(field)) return jsonColumnText(raw);
     const sql = (field.column?.sql_type ?? "").toUpperCase();
     if (sql.startsWith("CHAR(") || sql.startsWith("CHARACTER(")) return raw.replace(/ +$/, "");
     if (sql === "DATE" && raw.length > 10) return raw.slice(0, 10);

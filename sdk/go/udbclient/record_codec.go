@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fahara02/udb/sdk/go/internal/protoschema"
 	udbcommonv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
+	"github.com/fahara02/udb/sdk/go/internal/protoschema"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -144,9 +144,26 @@ func encodeColumn(pr protoreflect.Message, fd protoreflect.FieldDescriptor, c *u
 		if !json.Valid([]byte(s)) {
 			return fmt.Errorf("udb: encode %s.%s: JSON column holds text that is not JSON", MessageType(pr.Interface()), name)
 		}
-		rec[name] = json.RawMessage(s)
+		if strings.HasPrefix(strings.TrimSpace(s), `"`) {
+			// The broker reads a string as JSON text, so a JSON string goes as its text.
+			rec[name] = s
+		} else {
+			rec[name] = json.RawMessage(s)
+		}
 	}
 	return nil
+}
+
+// jsonColumnText is the JSON text of a JSON column read as a string. The broker returns the
+// value, so a JSON string arrives without its quotes. A store that reads JSON as text returns
+// a document unchanged.
+func jsonColumnText(s string, token json.RawMessage) json.RawMessage {
+	t := strings.TrimSpace(s)
+	if (strings.HasPrefix(t, "{") || strings.HasPrefix(t, "[")) && json.Valid([]byte(t)) {
+		return token
+	}
+	quoted, _ := json.Marshal(string(token))
+	return quoted
 }
 
 // EncodeField encodes one field of m exactly as EncodeRecord encodes its
@@ -437,6 +454,9 @@ func normalise(fd protoreflect.FieldDescriptor, v json.RawMessage) (json.RawMess
 	case fd.Kind() == protoreflect.StringKind && !isString:
 		return json.Marshal(string(v))
 	case fd.Kind() == protoreflect.StringKind:
+		if isJSON(columnOptions(fd)) {
+			return jsonColumnText(s, v), nil
+		}
 		t := strings.ToUpper(columnOptions(fd).GetSqlType())
 		switch {
 		case strings.HasPrefix(t, "CHAR(") || strings.HasPrefix(t, "CHARACTER("):

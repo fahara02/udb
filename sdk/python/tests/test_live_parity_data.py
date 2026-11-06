@@ -175,6 +175,27 @@ def test_live_no_default_catalog_pin_and_a_sent_pin_is_honoured(project: UdbProj
         pinned.close()
 
 
+def test_live_a_json_string_column_reads_and_writes_as_json_text(project: UdbProject) -> None:
+    entity = project.entity(WORKFLOW, key=["workflow_id"])
+    for payload in ('"My"', '"5"', '""', "5", "[1]", '{"a":1}'):
+        message = workflow_instance_pb2.WorkflowInstance(
+            workflow_id=str(uuid.uuid4()),
+            tenant_id=project.metadata.tenant_id,
+            workflow_type="py.live.json-string",
+            total_steps=1,
+            payload=payload,
+        )
+        for _ in range(REPEATS):
+            entity.upsert(encode_record(message))
+            rows = entity.select({"workflow_id": message.workflow_id})
+            decoded = decode_record(rows[0], workflow_instance_pb2.WorkflowInstance())
+            assert decoded.payload == payload, "what was read is what was written"
+            message.payload = decoded.payload
+    # Negative: text that is not JSON never reaches the column.
+    with pytest.raises(ValueError, match="not JSON"):
+        encode_record(workflow_instance_pb2.WorkflowInstance(payload="My"))
+
+
 def test_live_read_retries_a_dead_endpoint_then_gives_up(project: UdbProject) -> None:
     attempts = 0
     with UdbClient(

@@ -22,9 +22,8 @@ fn map_err(context: &str, err: redis::RedisError) -> Status {
     crate::runtime::executor_utils::backend_transport_status("redis", context, err)
 }
 
-async fn connect(client: &redis::Client) -> Result<redis::aio::MultiplexedConnection, Status> {
-    client
-        .get_multiplexed_async_connection()
+async fn connect(client: &redis::Client) -> Result<redis::aio::ConnectionManager, Status> {
+    crate::runtime::redis_shared::connection(client)
         .await
         .map_err(|err| {
             crate::runtime::executor_utils::backend_transport_status("redis", "connection", err)
@@ -39,7 +38,7 @@ struct NamespaceMeta {
 }
 
 async fn load_meta(
-    conn: &mut redis::aio::MultiplexedConnection,
+    conn: &mut redis::aio::ConnectionManager,
     tenant: &str,
     namespace: &str,
 ) -> Result<NamespaceMeta, Status> {
@@ -65,7 +64,7 @@ async fn load_meta(
 }
 
 async fn read_counter(
-    conn: &mut redis::aio::MultiplexedConnection,
+    conn: &mut redis::aio::ConnectionManager,
     tenant: &str,
     namespace: &str,
 ) -> Result<i64, Status> {
@@ -495,7 +494,7 @@ pub(crate) async fn reconcile_bytes_counters_once(client: &redis::Client) -> Res
 /// over-counts. A key expiring between SCAN and STRLEN reads as length 0,
 /// which is exactly its live usage.
 async fn reconcile_namespace_bytes(
-    conn: &mut redis::aio::MultiplexedConnection,
+    conn: &mut redis::aio::ConnectionManager,
     tenant: &str,
     namespace: &str,
 ) -> Result<Option<i64>, Status> {

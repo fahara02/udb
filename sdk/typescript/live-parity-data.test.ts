@@ -296,6 +296,23 @@ test("live read-your-writes: reads after a write carry its fence and see it", li
   assert.equal(seen.at(-1)?.read_fence_json, undefined, "no write, no fence");
 });
 
+test("live: a JSON string column reads and writes as JSON text, repeatedly", live, async (t) => {
+  const u = await connect(t, "ts.live.parity.json-string");
+  const table = u.tableOf(WORKFLOW);
+  for (const payload of ['"My"', '"5"', '""', "5", "[1]", '{"a":1}']) {
+    const id = randomUUID();
+    const message = { workflow_id: id, workflow_type: "ts.live.json-string", status: "WORKFLOW_STATUS_PENDING", current_step: 0, total_steps: 1, payload };
+    for (let i = 0; i < REPEATS; i += 1) {
+      await table.upsert(message);
+      const decoded = decodeRecord<any>(WORKFLOW, await table.get({ workflow_id: id }));
+      assert.equal(decoded.payload, payload, "what was read is what was written");
+      message.payload = decoded.payload;
+    }
+  }
+  // Negative: text that is not JSON never reaches the column.
+  assert.throws(() => encodeRecord(WORKFLOW, { workflow_id: randomUUID(), payload: "My" }), /not JSON/);
+});
+
 test("live record codec: encoded rows store, read back and decode to the same message", live, async (t) => {
   const u = await connect(t, "ts.live.parity.codec");
   const table = u.tableOf(WORKFLOW);

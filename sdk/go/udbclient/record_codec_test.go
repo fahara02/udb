@@ -1,6 +1,7 @@
 package udbclient
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -8,6 +9,8 @@ import (
 
 	commonv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	storagev1 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1"
+	workflowentityv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/workflow/entity/v1"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -77,6 +80,71 @@ func TestUpdateCodecExcludesAliasedScopeColumns(t *testing.T) {
 // The column annotations drive every encode rule: an empty NOT NULL UUID is
 // dropped (its default applies), an empty nullable column is NULL, an enum in a
 // VARCHAR column is its short token, a timestamp is RFC 3339.
+func TestAJSONColumnReadsAndWritesAsJSONText(t *testing.T) {
+	rec, err := EncodeRecord(&workflowentityv1.WorkflowInstance{Payload: `"My"`}, WriteInsert)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The broker reads a string as JSON text, so a JSON string goes as its text.
+	if rec["payload"] != `"My"` {
+		t.Fatalf("a JSON string is sent as %#v", rec["payload"])
+	}
+	rec, err = EncodeRecord(&workflowentityv1.WorkflowInstance{Payload: `5`}, WriteInsert)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if raw, ok := rec["payload"].(json.RawMessage); !ok || string(raw) != `5` {
+		t.Fatalf("a number is sent as %#v", rec["payload"])
+	}
+	if _, err := EncodeRecord(&workflowentityv1.WorkflowInstance{Payload: `My`}, WriteInsert); err == nil {
+		t.Fatal("text that is not JSON must be refused")
+	}
+	for _, tc := range []struct {
+		stored any
+		text   string
+	}{
+		{"My", `"My"`},
+		{"5", `"5"`},
+		{"", `""`},
+		{`a"b`, `"a\"b"`},
+		{5, `5`},
+		{[]any{1}, `[1]`},
+		{map[string]any{"a": 1}, `{"a":1}`},
+		// A store that reads JSON as text returns a document unchanged.
+		{`{"a":1}`, `{"a":1}`},
+		{`[1]`, `[1]`},
+	} {
+		var out workflowentityv1.WorkflowInstance
+		if err := DecodeRecord(Record{"payload": tc.stored}, &out); err != nil {
+			t.Fatalf("decode %v: %v", tc.stored, err)
+		}
+		if out.GetPayload() != tc.text {
+			t.Fatalf("%v reads as %q, want %q", tc.stored, out.GetPayload(), tc.text)
+		}
+	}
+}
+
+func TestContextSendsEachHeaderOnceAndAPinSurvivesARepeatedContext(t *testing.T) {
+	client := &Client{Meta: Metadata{TenantID: "t", Purpose: "p", CorrelationID: "c"}}
+	built := client.Context(context.Background())
+	pinned := client.Context(WithMetadata(built, Metadata{ClientCatalogVersion: "9.0.0"}))
+	md, _ := metadata.FromOutgoingContext(pinned)
+	for _, key := range []string{"x-tenant-id", "x-purpose", "x-correlation-id", "x-udb-client-catalog-version"} {
+		if got := md.Get(key); len(got) != 1 {
+			t.Fatalf("%s sent as %q", key, got)
+		}
+	}
+	if got := md.Get("x-udb-client-catalog-version")[0]; got != "9.0.0" {
+		t.Fatalf("the pin is %q", got)
+	}
+	// A value the caller attached itself stays.
+	own := metadata.AppendToOutgoingContext(context.Background(), "x-correlation-id", "mine")
+	md, _ = metadata.FromOutgoingContext(client.Context(own))
+	if got := md.Get("x-correlation-id"); len(got) != 1 || got[0] != "mine" {
+		t.Fatalf("the caller's own value became %q", got)
+	}
+}
+
 func TestEncodeRecordFollowsColumnAnnotations(t *testing.T) {
 	file := &storagev1.File{
 		TenantId:  codecTenant,

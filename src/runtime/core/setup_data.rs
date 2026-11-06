@@ -174,10 +174,10 @@ fn typed_values_match(have: &JsonValue, want: &JsonValue, sql_type: Option<&str>
             // A Struct cannot carry a nested JSON document losslessly, so a caller
             // may assert a JSON column with its JSON text.
             if let JsonValue::String(text) = want
-                && !have.is_string()
                 && let Ok(parsed) = serde_json::from_str::<JsonValue>(text)
+                && (json_values_match(have, &parsed) || have == &parsed)
             {
-                return json_values_match(have, &parsed) || have == &parsed;
+                return true;
             }
         }
         _ => {}
@@ -1742,6 +1742,7 @@ impl DataBrokerRuntime {
                     sql = %plan.sql,
                     message_type = %request.message_type,
                     tenant_id = %context.tenant_id,
+                    cause = %crate::runtime::executor_utils::sqlx_error_log_summary(&err),
                     "PostgreSQL upsert statement failed"
                 );
                 crate::runtime::executor_utils::sqlx_error_to_status(
@@ -1769,6 +1770,7 @@ impl DataBrokerRuntime {
                     sql = %plan.sql,
                     message_type = %request.message_type,
                     tenant_id = %context.tenant_id,
+                    cause = %crate::runtime::executor_utils::sqlx_error_log_summary(&err),
                     "PostgreSQL upsert statement failed"
                 );
                 crate::runtime::executor_utils::sqlx_error_to_status(

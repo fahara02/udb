@@ -61,7 +61,12 @@ func (c Column[T]) value(v T) (any, error) {
 		return nil, fmt.Errorf("udb: predicate %s: %w", c.field, err)
 	}
 	m := c.message.New().Interface()
-	if err := DecodeField(m, c.field, decoded); err != nil {
+	fd := c.message.Descriptor().Fields().ByName(protoreflect.Name(c.field))
+	if text, isText := decoded.(string); isText && fd != nil && !fd.IsList() &&
+		fd.Kind() == protoreflect.StringKind && isJSON(columnOptions(fd)) {
+		// A predicate on a JSON column takes the column's JSON text, as the field holds it.
+		m.ProtoReflect().Set(fd, protoreflect.ValueOfString(text))
+	} else if err := DecodeField(m, c.field, decoded); err != nil {
 		return nil, err
 	}
 	encoded, ok, err := EncodeField(m, c.field)
@@ -71,7 +76,6 @@ func (c Column[T]) value(v T) (any, error) {
 	if !ok || encoded == nil {
 		return nil, fmt.Errorf("udb: predicate %s: value is NULL or omitted; use IsNull", c.field)
 	}
-	fd := c.message.Descriptor().Fields().ByName(protoreflect.Name(c.field))
 	if is64Bit(fd.Kind()) {
 		return exactPredicateInts(encoded), nil
 	}

@@ -19,6 +19,7 @@ from udb.core.apikey.events.v1 import apikey_events_pb2
 from udb.core.common.v1 import db_pb2
 from udb.core.authn.entity.v1 import device_pb2
 from udb.core.storage.entity.v1 import file_pb2
+from udb.core.workflow.entity.v1 import workflow_instance_pb2
 from udb_client import (
     WRITE_INSERT,
     WRITE_UPDATE,
@@ -44,6 +45,28 @@ def _timestamp(text: str) -> Timestamp:
     stamp = Timestamp()
     stamp.FromJsonString(text)
     return stamp
+
+
+def test_a_json_column_reads_and_writes_as_json_text_for_every_kind_of_value() -> None:
+    Workflow = workflow_instance_pb2.WorkflowInstance
+    # The broker reads a string as JSON text, so a JSON string goes as its text.
+    assert encode_record(Workflow(payload='"My"'))["payload"] == '"My"'
+    assert encode_record(Workflow(payload="5"))["payload"] == 5
+    for stored, text in (
+        ("My", '"My"'),
+        ("5", '"5"'),
+        ("", '""'),
+        ('a"b', '"a\\"b"'),
+        (5, "5"),
+        ([1], "[1]"),
+        ({"a": 1}, '{"a":1}'),
+        # A store that reads JSON as text returns a document unchanged.
+        ('{"a":1}', '{"a":1}'),
+        ("[1]", "[1]"),
+    ):
+        assert decode_record({"payload": stored}, Workflow()).payload == text
+    with pytest.raises(ValueError, match="not JSON"):
+        encode_record(Workflow(payload="My"))
 
 
 def test_encode_record_follows_column_annotations() -> None:

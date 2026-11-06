@@ -1994,7 +1994,9 @@ impl DataBrokerRuntime {
         context: &RequestContext,
     ) -> Option<Vec<Vec<u8>>> {
         let client = self.redis.as_ref()?;
-        let mut conn = client.get_multiplexed_async_connection().await.ok()?;
+        let mut conn = crate::runtime::redis_shared::connection(client)
+            .await
+            .ok()?;
         let data = match conn.get::<_, Option<Vec<u8>>>(key).await {
             Ok(Some(data)) => data,
             Ok(None) => {
@@ -2068,8 +2070,7 @@ impl DataBrokerRuntime {
         let client = self
             .redis_for_instance(target.instance.as_deref())
             .map_err(|status| status.message().to_string())?;
-        let mut conn = client
-            .get_multiplexed_async_connection()
+        let mut conn = crate::runtime::redis_shared::connection(client)
             .await
             .map_err(|e| e.to_string())?;
         let data = serde_json::to_vec(records).map_err(|e| e.to_string())?;
@@ -2132,8 +2133,7 @@ impl DataBrokerRuntime {
         let wrapped =
             crate::runtime::consistency_fence::StampedCacheValue::new(stamp, records.to_vec());
         let data = serde_json::to_vec(&wrapped).map_err(|e| e.to_string())?;
-        let mut conn = client
-            .get_multiplexed_async_connection()
+        let mut conn = crate::runtime::redis_shared::connection(client)
             .await
             .map_err(|e| e.to_string())?;
         conn.set_ex::<_, _, ()>(key, data, ttl)
@@ -2215,8 +2215,7 @@ impl DataBrokerRuntime {
         let Some(client) = &self.redis else {
             return Ok(());
         };
-        let mut conn = client
-            .get_multiplexed_async_connection()
+        let mut conn = crate::runtime::redis_shared::connection(client)
             .await
             .map_err(|e| e.to_string())?;
         for key in keys {
@@ -2241,8 +2240,7 @@ impl DataBrokerRuntime {
         let Some(client) = &self.redis else {
             return Ok(());
         };
-        let mut conn = client
-            .get_multiplexed_async_connection()
+        let mut conn = crate::runtime::redis_shared::connection(client)
             .await
             .map_err(|e| e.to_string())?;
         let mut cursor = 0_u64;
@@ -2293,8 +2291,7 @@ impl DataBrokerRuntime {
         let client = self
             .redis_for_instance(target.instance.as_deref())
             .map_err(|status| status.message().to_string())?;
-        let mut conn = client
-            .get_multiplexed_async_connection()
+        let mut conn = crate::runtime::redis_shared::connection(client)
             .await
             .map_err(|e| e.to_string())?;
         let deleted = redis::cmd("DEL")

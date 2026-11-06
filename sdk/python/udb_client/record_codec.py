@@ -239,13 +239,32 @@ def _encode_column(message: Message, field: FieldDescriptor, column: Any, value:
         return _ABSENT
     if _is_json(column) and (value != "" or field.has_presence):
         try:
-            return _loads(value)
+            document = _loads(value)
         except ValueError as error:
             raise ValueError(
                 f"udb: encode {message_type(message)}.{field.name}: "
                 "JSON column holds text that is not JSON"
             ) from error
+        # The broker reads a string as JSON text, so a JSON string goes as its text.
+        return value if isinstance(document, str) else document
     return value
+
+
+def json_column_text(value: str) -> str:
+    """The JSON text of a JSON column read as a string.
+
+    The broker returns the value, so a JSON string arrives without its quotes. A store
+    that reads JSON as text returns a document unchanged.
+    """
+    text = value.strip()
+    if text.startswith(("{", "[")):
+        try:
+            _loads(text)
+        except ValueError:
+            pass
+        else:
+            return value
+    return json.dumps(value, ensure_ascii=False)
 
 
 def _is_sensitive(field: FieldDescriptor, column: Any) -> bool:
@@ -458,7 +477,10 @@ def _normalise(field: FieldDescriptor, value: Any) -> Any:
     if field.type == FieldDescriptor.TYPE_STRING:
         if not isinstance(value, str):
             return _go_json(value)
-        sql_type = _sql_type(column_options(field)).upper()
+        column = column_options(field)
+        if _is_json(column):
+            return json_column_text(value)
+        sql_type = _sql_type(column).upper()
         if sql_type.startswith(("CHAR(", "CHARACTER(")):
             return value.rstrip(" ")
         if sql_type == "DATE" and len(value) > 10:

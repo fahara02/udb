@@ -32,7 +32,7 @@
 //!     tenant-less event never triggers a cross-tenant sweep.
 //!
 //! Redis acquisition reuses the canonical-store client primitive
-//! (`DataBrokerRuntime::redis_clone` → `get_multiplexed_async_connection`), the
+//! (`DataBrokerRuntime::redis_clone` → `redis_shared::connection`), the
 //! same one `canonical_store::redis.rs` and `core/tx_object.rs` use — no second
 //! connection layer is introduced here.
 
@@ -58,7 +58,7 @@ mod events;
 mod handlers;
 mod keys;
 #[cfg(feature = "redis")]
-mod redis_engine;
+pub(super) mod redis_engine;
 #[cfg(test)]
 mod tests;
 mod worker;

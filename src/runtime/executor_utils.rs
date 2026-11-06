@@ -751,6 +751,22 @@ mod invalid_input_message_tests {
 ///                                      -> `InvalidArgument` (names the refused type, never the value)
 ///   - `23503` foreign_key_violation    -> `FailedPrecondition`
 ///   - everything else                  -> `Internal` ("{context}") — raw DB text suppressed
+/// Why a statement failed, for the broker's own log. A database message or a conversion error can
+/// quote row values, so this names the SQLSTATE and constraint rather than repeating them.
+pub(crate) fn sqlx_error_log_summary(err: &sqlx::Error) -> String {
+    match err {
+        sqlx::Error::Database(db) => format!(
+            "sqlstate={} constraint={}",
+            db.code().as_deref().unwrap_or("-"),
+            db.constraint().unwrap_or("-")
+        ),
+        sqlx::Error::Encode(_) | sqlx::Error::Decode(_) | sqlx::Error::ColumnDecode { .. } => {
+            "a value could not be converted".to_string()
+        }
+        other => other.to_string(),
+    }
+}
+
 pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::Status {
     if let Some(db) = err.as_database_error() {
         if let Some(code) = db.code() {
@@ -3684,6 +3700,16 @@ mod error_detail_tests {
         assert_eq!(detail.retry_after_ms, 500);
         assert_eq!(detail.kind, ErrorKind::Retryable as i32);
         assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn a_statement_failure_summary_never_repeats_a_converted_value() {
+        let decode = sqlx::Error::Decode("secret-value is not a number".into());
+        assert!(!super::sqlx_error_log_summary(&decode).contains("secret-value"));
+        assert_eq!(
+            super::sqlx_error_log_summary(&sqlx::Error::PoolTimedOut),
+            sqlx::Error::PoolTimedOut.to_string()
+        );
     }
 
     #[test]
