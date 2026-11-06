@@ -23,12 +23,12 @@ public interface LeaseOAuthTokenResponseOrBuilder extends
       getSecretPathBytes();
 
   /**
-   * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+   * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
    * @return The accessToken.
    */
   java.lang.String getAccessToken();
   /**
-   * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+   * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
    * @return The bytes for accessToken.
    */
   com.google.protobuf.ByteString

@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "472cb5d705847d470ad6d87e3b80a55d74a8dcb7ee64e4b3afb906035bcdcd07",
+  "descriptor_sha256": "a1d61759bdc00eec4eb02b80d106dce89cbf34bcabe3d3f066482f5ad03c97c8",
   "contract_version": "8.0.0",
   "udb_version": "0.6.8",
   "protocol_version": "1.0.0",
@@ -148145,7 +148145,20 @@
           "name": "access_token",
           "number": 2,
           "type": "9",
-          "column_security": null,
+          "column_security": {
+            "secret_classification": 4,
+            "output_view": 3,
+            "redaction_strategy": 3,
+            "tokenization_strategy": "",
+            "hashing_strategy": "",
+            "hashing_algorithm": "",
+            "encryption_key_class": "vault-data",
+            "searchable_encrypted": false,
+            "uniqueness_scope": "tenant",
+            "owner_field": false,
+            "tenant_field": false,
+            "project_field": false
+          },
           "scalar_security": {
             "pii": false,
             "encrypted_security": false,

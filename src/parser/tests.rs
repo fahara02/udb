@@ -632,3 +632,31 @@ fn every_shipped_proto_uses_only_keys_its_options_have() {
     }
     assert!(refused.is_empty(), "{}", refused.join("\n"));
 }
+
+#[test]
+fn protection_on_a_project_column_option_takes_effect() {
+    let schemas = parse_str(
+        r#"package myapp.v1;
+message Invoice {
+  option (myapp.v1.table) = { table_name: "invoices" schema_name: "billing" is_table: true };
+  string email = 1 [(myapp.v1.column) = { column_name: "email" pii_kind: PII_KIND_EMAIL encrypt: true }];
+  string name = 2 [(myapp.v1.column) = { column_name: "name" mask_in_logs: true }];
+  string note = 3 [(myapp.v1.column) = { column_name: "note" pii_kind: PII_KIND_UNSPECIFIED }];
+  string own = 4 [(myapp.v1.column) = { column_name: "own" my_own_field: 1 }];
+}
+"#,
+    );
+    let column = |name: &str| {
+        schemas[0]
+            .columns
+            .iter()
+            .find(|column| column.column_name == name)
+            .expect("the column")
+    };
+    assert!(column("email").security.is_pii);
+    assert_eq!(column("email").security.data_class, "PII_KIND_EMAIL");
+    assert!(column("email").encrypted);
+    assert!(column("name").security.mask_in_logs);
+    assert!(!column("note").security.is_pii, "the enum's zero value");
+    assert!(!column("own").security.is_pii);
+}

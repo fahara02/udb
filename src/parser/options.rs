@@ -288,6 +288,8 @@ const COLUMN_SECURITY_KEYS: &[&str] = &[
     "consent_required",
     "retention_days",
 ];
+/// Protection a project-owned column option can declare on the column block itself.
+const COLUMN_PROTECTION_KEYS: &[&str] = &["pii_kind", "is_pii", "mask_in_logs"];
 /// Spellings of `pg_table` keys the parser has always read besides the proto field names.
 const TABLE_KEY_ALIASES: &[&str] = &[
     "extension",
@@ -1059,6 +1061,10 @@ pub(super) fn apply_column_value(column: &mut ProtoColumn, key: &str, value: &st
         "backfill_sql" => column.backfill_sql = value.to_string(),
         "using_expression" => column.using_expression = value.to_string(),
         "allow_drop" => column.allow_drop = parse_bool(value),
+        // Protection declared on the column block protects the column.
+        "pii_kind" => apply_pii_kind(&mut column.security, value),
+        "is_pii" => column.security.is_pii = parse_bool(value),
+        "mask_in_logs" => column.security.mask_in_logs = parse_bool(value),
         "generated" => column.generated = parse_bool(value),
         "generated_expr" => column.generated_expr = value.to_string(),
         "identity" | "is_identity" => column.is_identity = parse_bool(value),
@@ -1166,16 +1172,22 @@ pub(super) fn apply_schema_security_values(
     });
 }
 
+/// A PII kind marks the column, except the enum's zero value, which says none was chosen.
+fn apply_pii_kind(security: &mut ProtoColumnSecurity, value: &str) {
+    let kind = normalize_enum(value);
+    if !kind.is_empty() && !kind.ends_with("UNSPECIFIED") && !kind.ends_with("NONE") {
+        security.is_pii = true;
+        security.data_class = kind;
+    }
+}
+
 pub(super) fn apply_column_security_values(
     security: &mut ProtoColumnSecurity,
     values: &HashMap<String, Vec<OptionValue>>,
 ) {
     apply_scalar_options!(security, values, value => {
         "is_pii" => security.is_pii = parse_bool(&value),
-        "pii_kind" => {
-            security.is_pii = !value.trim().is_empty();
-            security.data_class = normalize_enum(&value);
-        },
+        "pii_kind" => apply_pii_kind(security, &value),
         "is_encrypted" => security.is_encrypted = parse_bool(&value),
         "is_blind_index" => security.is_blind_index = parse_bool(&value),
         "mask_in_logs" => security.mask_in_logs = parse_bool(&value),
@@ -1208,7 +1220,7 @@ pub(super) fn apply_column_security_block(
 fn accepted_option_key_sets(kind: OptionKind) -> Option<&'static [&'static [&'static str]]> {
     Some(match kind {
         OptionKind::Table => &[TABLE_KEYS, TABLE_KEY_ALIASES],
-        OptionKind::Column => &[COLUMN_KEYS],
+        OptionKind::Column => &[COLUMN_KEYS, COLUMN_PROTECTION_KEYS],
         OptionKind::VectorStore => &[VECTOR_KEYS],
         OptionKind::GraphStore => &[GRAPH_KEYS],
         OptionKind::DocumentStore => &[DOCUMENT_KEYS],

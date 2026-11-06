@@ -90,7 +90,7 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object accessToken_ = "";
   /**
-   * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+   * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
    * @return The accessToken.
    */
   @java.lang.Override
@@ -107,7 +107,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+   * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
    * @return The bytes for accessToken.
    */
   @java.lang.Override
@@ -767,7 +767,7 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object accessToken_ = "";
     /**
-     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
      * @return The accessToken.
      */
     public java.lang.String getAccessToken() {
@@ -783,7 +783,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
      * @return The bytes for accessToken.
      */
     public com.google.protobuf.ByteString
@@ -800,7 +800,7 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
-     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
      * @param value The accessToken to set.
      * @return This builder for chaining.
      */
@@ -813,7 +813,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearAccessToken() {
@@ -823,7 +823,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+     * <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = { ... }</code>
      * @param value The bytes for accessToken to set.
      * @return This builder for chaining.
      */

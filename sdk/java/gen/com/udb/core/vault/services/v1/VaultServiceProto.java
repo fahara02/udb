@@ -305,468 +305,469 @@ public final class VaultServiceProto {
       "uthTokenRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tena" +
       "ntId\022\037\n\013secret_path\030\002 \001(\tR\nsecretPath\022*\n" +
       "\021min_valid_seconds\030\003 \001(\005R\017minValidSecond" +
-      "s:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\001@\001J\005vaultP\001\"\263\002\n\027Leas" +
+      "s:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\001@\001J\005vaultP\001\"\321\002\n\027Leas" +
       "eOAuthTokenResponse\022\037\n\013secret_path\030\001 \001(\t" +
-      "R\nsecretPath\022+\n\014access_token\030\002 \001(\tB\010\350\265\030\001" +
-      "\360\265\030\001R\013accessToken\022&\n\017expires_at_unix\030\003 \001" +
-      "(\003R\rexpiresAtUnix\022\030\n\007version\030\004 \001(\005R\007vers" +
-      "ion\022\034\n\trefreshed\030\005 \001(\010R\trefreshed\022\030\n\007mes" +
-      "sage\030\006 \001(\tR\007message\0222\n\005error\030\007 \001(\0132\034.udb" +
-      ".core.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032" +
-      "\003udb(\260\352\0010\001@\001J\005vaultP\001\"\300\001\n\022ListSecretsReq" +
-      "uest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013pat" +
-      "h_prefix\030\002 \001(\tR\npathPrefix\022\022\n\004page\030\003 \001(\005" +
-      "R\004page\022\033\n\tpage_size\030\004 \001(\005R\010pageSize\022\035\n\np" +
-      "age_token\030\005 \001(\tR\tpageToken:\034\232\262\031\030\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\005vaultP\001\"\213\001\n\rSecretSummary\022\037\n\013se" +
-      "cret_path\030\001 \001(\tR\nsecretPath\022%\n\016latest_ve" +
-      "rsion\030\002 \001(\005R\rlatestVersion\022\024\n\005state\030\003 \001(" +
-      "\tR\005state:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\365" +
-      "\001\n\023ListSecretsResponse\022C\n\007secrets\030\001 \003(\0132" +
-      ").udb.core.vault.services.v1.SecretSumma" +
-      "ryR\007secrets\022\037\n\013total_count\030\002 \001(\005R\ntotalC" +
-      "ount\0222\n\005error\030\003 \001(\0132\034.udb.core.common.v1" +
-      ".ApiErrorR\005error\022&\n\017next_page_token\030\004 \001(" +
-      "\tR\rnextPageToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005v" +
-      "aultP\001\"q\n\023DeleteSecretRequest\022\033\n\ttenant_" +
+      "R\nsecretPath\022I\n\014access_token\030\002 \001(\tB&\350\265\030\001" +
+      "\360\265\030\001\212\267\030\032\010\004\020\003\030\003:\nvault-dataJ\006tenantR\013acce" +
+      "ssToken\022&\n\017expires_at_unix\030\003 \001(\003R\rexpire" +
+      "sAtUnix\022\030\n\007version\030\004 \001(\005R\007version\022\034\n\tref" +
+      "reshed\030\005 \001(\010R\trefreshed\022\030\n\007message\030\006 \001(\t" +
+      "R\007message\0222\n\005error\030\007 \001(\0132\034.udb.core.comm" +
+      "on.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\001" +
+      "@\001J\005vaultP\001\"\300\001\n\022ListSecretsRequest\022\033\n\tte" +
+      "nant_id\030\001 \001(\tR\010tenantId\022\037\n\013path_prefix\030\002" +
+      " \001(\tR\npathPrefix\022\022\n\004page\030\003 \001(\005R\004page\022\033\n\t" +
+      "page_size\030\004 \001(\005R\010pageSize\022\035\n\npage_token\030" +
+      "\005 \001(\tR\tpageToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005v" +
+      "aultP\001\"\213\001\n\rSecretSummary\022\037\n\013secret_path\030" +
+      "\001 \001(\tR\nsecretPath\022%\n\016latest_version\030\002 \001(" +
+      "\005R\rlatestVersion\022\024\n\005state\030\003 \001(\tR\005state:\034" +
+      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\365\001\n\023ListSec" +
+      "retsResponse\022C\n\007secrets\030\001 \003(\0132).udb.core" +
+      ".vault.services.v1.SecretSummaryR\007secret" +
+      "s\022\037\n\013total_count\030\002 \001(\005R\ntotalCount\0222\n\005er" +
+      "ror\030\003 \001(\0132\034.udb.core.common.v1.ApiErrorR" +
+      "\005error\022&\n\017next_page_token\030\004 \001(\tR\rnextPag" +
+      "eToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"q\n\023" +
+      "DeleteSecretRequest\022\033\n\ttenant_id\030\001 \001(\tR\010" +
+      "tenantId\022\037\n\013secret_path\030\002 \001(\tR\nsecretPat" +
+      "h:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\202\001\n\024Dele" +
+      "teSecretResponse\022\030\n\007message\030\001 \001(\tR\007messa" +
+      "ge\0222\n\005error\030\002 \001(\0132\034.udb.core.common.v1.A" +
+      "piErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vau" +
+      "ltP\001\"s\n\025UndeleteSecretRequest\022\033\n\ttenant_" +
       "id\030\001 \001(\tR\010tenantId\022\037\n\013secret_path\030\002 \001(\tR" +
       "\nsecretPath:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP" +
-      "\001\"\202\001\n\024DeleteSecretResponse\022\030\n\007message\030\001 " +
-      "\001(\tR\007message\0222\n\005error\030\002 \001(\0132\034.udb.core.c" +
-      "ommon.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005vaultP\001\"s\n\025UndeleteSecretRequest\022" +
-      "\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013secret_p" +
-      "ath\030\002 \001(\tR\nsecretPath:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003" +
-      "@\001J\005vaultP\001\"\277\001\n\026UndeleteSecretResponse\022\037" +
-      "\n\013secret_path\030\001 \001(\tR\nsecretPath\022\030\n\007versi" +
-      "on\030\002 \001(\005R\007version\022\030\n\007message\030\003 \001(\tR\007mess" +
-      "age\0222\n\005error\030\004 \001(\0132\034.udb.core.common.v1." +
-      "ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005va" +
-      "ultP\001\"\241\001\n\024DestroySecretRequest\022\033\n\ttenant" +
-      "_id\030\001 \001(\tR\010tenantId\022\037\n\013secret_path\030\002 \001(\t" +
-      "R\nsecretPath\022-\n\022confirmation_token\030\003 \001(\t" +
-      "R\021confirmationToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005vaultP\001\"\262\001\n\025DestroySecretResponse\022-\n\022d" +
-      "estroyed_versions\030\001 \001(\rR\021destroyedVersio" +
-      "ns\022\030\n\007message\030\002 \001(\tR\007message\0222\n\005error\030\003 " +
-      "\001(\0132\034.udb.core.common.v1.ApiErrorR\005error" +
-      ":\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\215\001\n\027Creat" +
-      "eTransitKeyRequest\022\033\n\ttenant_id\030\001 \001(\tR\010t" +
-      "enantId\022\031\n\010key_name\030\002 \001(\tR\007keyName\022\034\n\tal" +
-      "gorithm\030\003 \001(\tR\talgorithm:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005vaultP\001\"\273\001\n\030CreateTransitKeyRespo" +
-      "nse\022\031\n\010key_name\030\001 \001(\tR\007keyName\022\030\n\007versio" +
-      "n\030\002 \001(\005R\007version\022\030\n\007message\030\003 \001(\tR\007messa" +
-      "ge\0222\n\005error\030\004 \001(\0132\034.udb.core.common.v1.A" +
-      "piErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vau" +
-      "ltP\001\"o\n\027RotateTransitKeyRequest\022\033\n\ttenan" +
-      "t_id\030\001 \001(\tR\010tenantId\022\031\n\010key_name\030\002 \001(\tR\007" +
-      "keyName:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\273\001" +
-      "\n\030RotateTransitKeyResponse\022\031\n\010key_name\030\001" +
-      " \001(\tR\007keyName\022\030\n\007version\030\002 \001(\005R\007version\022" +
-      "\030\n\007message\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\013" +
-      "2\034.udb.core.common.v1.ApiErrorR\005error:\034\232" +
-      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\257\001\n\016EncryptR" +
-      "equest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010k" +
-      "ey_name\030\002 \001(\tR\007keyName\022G\n\tplaintext\030\003 \001(" +
-      "\tB)\350\265\030\001\360\265\030\001\212\267\030\035\010\004\020\006\030\003:\rvault-transitJ\006te" +
-      "nantR\tplaintext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005va" +
-      "ultP\001\"\276\001\n\017EncryptResponse\022\036\n\nciphertext\030" +
-      "\001 \001(\tR\nciphertext\022\037\n\013key_version\030\002 \001(\005R\n" +
-      "keyVersion\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005" +
-      "error\030\004 \001(\0132\034.udb.core.common.v1.ApiErro" +
-      "rR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\206" +
-      "\001\n\016DecryptRequest\022\033\n\ttenant_id\030\001 \001(\tR\010te" +
-      "nantId\022\031\n\010key_name\030\002 \001(\tR\007keyName\022\036\n\ncip" +
-      "hertext\030\003 \001(\tR\nciphertext:\034\232\262\031\030\010\001\032\003udb(\260" +
-      "\352\0010\003@\001J\005vaultP\001\"\347\001\n\017DecryptResponse\022G\n\tp" +
-      "laintext\030\001 \001(\tB)\350\265\030\001\360\265\030\001\212\267\030\035\010\004\020\003\030\003:\rvaul" +
-      "t-transitJ\006tenantR\tplaintext\022\037\n\013key_vers" +
-      "ion\030\002 \001(\005R\nkeyVersion\022\030\n\007message\030\003 \001(\tR\007" +
-      "message\0222\n\005error\030\004 \001(\0132\034.udb.core.common" +
-      ".v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005vaultP\001\"n\n\026GenerateDataKeyRequest\022\033\n\tt" +
-      "enant_id\030\001 \001(\tR\010tenantId\022\031\n\010key_name\030\002 \001" +
-      "(\tR\007keyName:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP" +
-      "\001\"\217\002\n\027GenerateDataKeyResponse\022G\n\tplainte" +
-      "xt\030\001 \001(\tB)\350\265\030\001\360\265\030\001\212\267\030\035\010\004\020\003\030\003:\rvault-tran" +
-      "sitJ\006tenantR\tplaintext\022\036\n\nciphertext\030\002 \001" +
-      "(\tR\nciphertext\022\037\n\013key_version\030\003 \001(\005R\nkey" +
-      "Version\022\030\n\007message\030\004 \001(\tR\007message\0222\n\005err" +
-      "or\030\005 \001(\0132\034.udb.core.common.v1.ApiErrorR\005" +
-      "error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\205\001\n\r" +
-      "RewrapRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenant" +
-      "Id\022\031\n\010key_name\030\002 \001(\tR\007keyName\022\036\n\nciphert" +
-      "ext\030\003 \001(\tR\nciphertext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003" +
-      "@\001J\005vaultP\001\"\275\001\n\016RewrapResponse\022\036\n\ncipher" +
-      "text\030\001 \001(\tR\nciphertext\022\037\n\013key_version\030\002 " +
-      "\001(\005R\nkeyVersion\022\030\n\007message\030\003 \001(\tR\007messag" +
-      "e\0222\n\005error\030\004 \001(\0132\034.udb.core.common.v1.Ap" +
-      "iErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaul" +
-      "tP\001\"r\n\032GetTransitPublicKeyRequest\022\033\n\tten" +
-      "ant_id\030\001 \001(\tR\010tenantId\022\031\n\010key_name\030\002 \001(\t" +
-      "R\007keyName:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"" +
-      "a\n\020TransitPublicKey\022\030\n\007version\030\001 \001(\005R\007ve" +
-      "rsion\022\035\n\npublic_key\030\002 \001(\tR\tpublicKey\022\024\n\005" +
-      "state\030\003 \001(\tR\005state\"\221\002\n\033GetTransitPublicK" +
-      "eyResponse\022\031\n\010key_name\030\001 \001(\tR\007keyName\022\034\n" +
-      "\talgorithm\030\002 \001(\tR\talgorithm\022M\n\013public_ke" +
-      "ys\030\003 \003(\0132,.udb.core.vault.services.v1.Tr" +
-      "ansitPublicKeyR\npublicKeys\022\030\n\007message\030\004 " +
-      "\001(\tR\007message\0222\n\005error\030\005 \001(\0132\034.udb.core.c" +
-      "ommon.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005vaultP\001\"\266\001\n\023BatchEncryptRequest\022\033" +
-      "\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010key_name\030" +
-      "\002 \001(\tR\007keyName\022I\n\nplaintexts\030\003 \003(\tB)\350\265\030\001" +
-      "\360\265\030\001\212\267\030\035\010\004\020\006\030\003:\rvault-transitJ\006tenantR\np" +
-      "laintexts:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"" +
-      "\305\001\n\024BatchEncryptResponse\022 \n\013ciphertexts\030" +
-      "\001 \003(\tR\013ciphertexts\022\037\n\013key_version\030\002 \001(\005R" +
+      "\001\"\277\001\n\026UndeleteSecretResponse\022\037\n\013secret_p" +
+      "ath\030\001 \001(\tR\nsecretPath\022\030\n\007version\030\002 \001(\005R\007" +
+      "version\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005err" +
+      "or\030\004 \001(\0132\034.udb.core.common.v1.ApiErrorR\005" +
+      "error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\241\001\n\024" +
+      "DestroySecretRequest\022\033\n\ttenant_id\030\001 \001(\tR" +
+      "\010tenantId\022\037\n\013secret_path\030\002 \001(\tR\nsecretPa" +
+      "th\022-\n\022confirmation_token\030\003 \001(\tR\021confirma" +
+      "tionToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"" +
+      "\262\001\n\025DestroySecretResponse\022-\n\022destroyed_v" +
+      "ersions\030\001 \001(\rR\021destroyedVersions\022\030\n\007mess" +
+      "age\030\002 \001(\tR\007message\0222\n\005error\030\003 \001(\0132\034.udb." +
+      "core.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\005vaultP\001\"\215\001\n\027CreateTransitKe" +
+      "yRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n" +
+      "\010key_name\030\002 \001(\tR\007keyName\022\034\n\talgorithm\030\003 " +
+      "\001(\tR\talgorithm:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vau" +
+      "ltP\001\"\273\001\n\030CreateTransitKeyResponse\022\031\n\010key" +
+      "_name\030\001 \001(\tR\007keyName\022\030\n\007version\030\002 \001(\005R\007v" +
+      "ersion\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005erro" +
+      "r\030\004 \001(\0132\034.udb.core.common.v1.ApiErrorR\005e" +
+      "rror:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"o\n\027Ro" +
+      "tateTransitKeyRequest\022\033\n\ttenant_id\030\001 \001(\t" +
+      "R\010tenantId\022\031\n\010key_name\030\002 \001(\tR\007keyName:\034\232" +
+      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\273\001\n\030RotateTr" +
+      "ansitKeyResponse\022\031\n\010key_name\030\001 \001(\tR\007keyN" +
+      "ame\022\030\n\007version\030\002 \001(\005R\007version\022\030\n\007message" +
+      "\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb.cor" +
+      "e.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\005vaultP\001\"\257\001\n\016EncryptRequest\022\033\n\t" +
+      "tenant_id\030\001 \001(\tR\010tenantId\022\031\n\010key_name\030\002 " +
+      "\001(\tR\007keyName\022G\n\tplaintext\030\003 \001(\tB)\350\265\030\001\360\265\030" +
+      "\001\212\267\030\035\010\004\020\006\030\003:\rvault-transitJ\006tenantR\tplai" +
+      "ntext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\276\001\n\017" +
+      "EncryptResponse\022\036\n\nciphertext\030\001 \001(\tR\ncip" +
+      "hertext\022\037\n\013key_version\030\002 \001(\005R\nkeyVersion" +
+      "\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(" +
+      "\0132\034.udb.core.common.v1.ApiErrorR\005error:\034" +
+      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\206\001\n\016Decrypt" +
+      "Request\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010" +
+      "key_name\030\002 \001(\tR\007keyName\022\036\n\nciphertext\030\003 " +
+      "\001(\tR\nciphertext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005va" +
+      "ultP\001\"\347\001\n\017DecryptResponse\022G\n\tplaintext\030\001" +
+      " \001(\tB)\350\265\030\001\360\265\030\001\212\267\030\035\010\004\020\003\030\003:\rvault-transitJ" +
+      "\006tenantR\tplaintext\022\037\n\013key_version\030\002 \001(\005R" +
       "\nkeyVersion\022\030\n\007message\030\003 \001(\tR\007message\0222\n" +
       "\005error\030\004 \001(\0132\034.udb.core.common.v1.ApiErr" +
       "orR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"" +
-      "\215\001\n\023BatchDecryptRequest\022\033\n\ttenant_id\030\001 \001" +
-      "(\tR\010tenantId\022\031\n\010key_name\030\002 \001(\tR\007keyName\022" +
-      " \n\013ciphertexts\030\003 \003(\tR\013ciphertexts:\034\232\262\031\030\010" +
-      "\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\315\001\n\024BatchDecrypt" +
-      "Response\022I\n\nplaintexts\030\001 \003(\tB)\350\265\030\001\360\265\030\001\212\267" +
-      "\030\035\010\004\020\003\030\003:\rvault-transitJ\006tenantR\nplainte" +
-      "xts\022\030\n\007message\030\002 \001(\tR\007message\0222\n\005error\030\003" +
-      " \001(\0132\034.udb.core.common.v1.ApiErrorR\005erro" +
-      "r:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"y\n\013SignR" +
-      "equest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010k" +
-      "ey_name\030\002 \001(\tR\007keyName\022\024\n\005input\030\003 \001(\tR\005i" +
-      "nput:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\271\001\n\014S" +
-      "ignResponse\022\034\n\tsignature\030\001 \001(\tR\tsignatur" +
-      "e\022\037\n\013key_version\030\002 \001(\005R\nkeyVersion\022\030\n\007me" +
-      "ssage\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.ud" +
-      "b.core.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\231\001\n\rVerifyRequest" +
-      "\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010key_nam" +
-      "e\030\002 \001(\tR\007keyName\022\024\n\005input\030\003 \001(\tR\005input\022\034" +
-      "\n\tsignature\030\004 \001(\tR\tsignature:\034\232\262\031\030\010\001\032\003ud" +
-      "b(\260\352\0010\003@\001J\005vaultP\001\"\222\001\n\016VerifyResponse\022\024\n" +
-      "\005valid\030\001 \001(\010R\005valid\022\030\n\007message\030\002 \001(\tR\007me" +
-      "ssage\0222\n\005error\030\003 \001(\0132\034.udb.core.common.v" +
-      "1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
-      "vaultP\001\"y\n\013HmacRequest\022\033\n\ttenant_id\030\001 \001(" +
-      "\tR\010tenantId\022\031\n\010key_name\030\002 \001(\tR\007keyName\022\024" +
-      "\n\005input\030\003 \001(\tR\005input:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@" +
-      "\001J\005vaultP\001\"\257\001\n\014HmacResponse\022\022\n\004hmac\030\001 \001(" +
-      "\tR\004hmac\022\037\n\013key_version\030\002 \001(\005R\nkeyVersion" +
-      "\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(" +
-      "\0132\034.udb.core.common.v1.ApiErrorR\005error:\034" +
-      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"N\n\021SealStat" +
-      "usRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId:\034" +
-      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\277\001\n\022SealSta" +
-      "tusResponse\022\026\n\006sealed\030\001 \001(\010R\006sealed\022%\n\016k" +
-      "ek_configured\030\002 \001(\010R\rkekConfigured\022\030\n\007me" +
-      "ssage\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.ud" +
-      "b.core.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\345\001\n\"GenerateDatab" +
-      "aseCredentialsRequest\022\033\n\ttenant_id\030\001 \001(\t" +
-      "R\010tenantId\022\033\n\trole_name\030\002 \001(\tR\010roleName\022" +
-      "\037\n\013ttl_seconds\030\003 \001(\005R\nttlSeconds\022\035\n\nproj" +
-      "ect_id\030\004 \001(\tR\tprojectId\022\'\n\017idempotency_k" +
-      "ey\030\005 \001(\tR\016idempotencyKey:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005vaultP\001\"\350\002\n#GenerateDatabaseCrede" +
-      "ntialsResponse\022\032\n\010username\030\001 \001(\tR\010userna" +
-      "me\022@\n\010password\030\002 \001(\tB$\350\265\030\001\360\265\030\001\212\267\030\030\010\003\020\003\030\003" +
-      ":\010vault-dbJ\006tenantR\010password\022\031\n\010lease_id" +
-      "\030\003 \001(\tR\007leaseId\022*\n\021lease_ttl_seconds\030\004 \001" +
-      "(\005R\017leaseTtlSeconds\022\030\n\007message\030\005 \001(\tR\007me" +
-      "ssage\0222\n\005error\030\006 \001(\0132\034.udb.core.common.v" +
-      "1.ApiErrorR\005error\022\032\n\010replayed\030\007 \001(\010R\010rep" +
-      "layed\022\024\n\005state\030\010 \001(\tR\005state:\034\232\262\031\030\010\001\032\003udb" +
-      "(\260\352\0010\003@\001J\005vaultP\001\"\257\001\n RevokeDatabaseCred" +
-      "entialsRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenan" +
-      "tId\022\035\n\nproject_id\030\002 \001(\tR\tprojectId\022\031\n\010le" +
-      "ase_id\030\003 \001(\tR\007leaseId\022\026\n\006reason\030\004 \001(\tR\006r" +
-      "eason:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\377\001\n!" +
-      "RevokeDatabaseCredentialsResponse\022\031\n\010lea" +
-      "se_id\030\001 \001(\tR\007leaseId\022\024\n\005state\030\002 \001(\tR\005sta" +
-      "te\022\032\n\010replayed\030\003 \001(\010R\010replayed\022!\n\014operat" +
-      "ion_id\030\004 \001(\tR\013operationId\022\030\n\007message\030\005 \001" +
-      "(\tR\007message\0222\n\005error\030\006 \001(\0132\034.udb.core.co" +
-      "mmon.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\005vaultP\001\"\314\001\n)EmergencyRevokeDatabas" +
-      "eCredentialsRequest\022\033\n\ttenant_id\030\001 \001(\tR\010" +
-      "tenantId\022\035\n\nproject_id\030\002 \001(\tR\tprojectId\022" +
-      "\026\n\006reason\030\003 \001(\tR\006reason\022-\n\022confirmation_" +
-      "token\030\004 \001(\tR\021confirmationToken:\034\232\262\031\030\010\001\032\003" +
-      "udb(\260\352\0010\001@\001J\005vaultP\001\"\213\002\n*EmergencyRevoke" +
-      "DatabaseCredentialsResponse\022!\n\014operation" +
-      "_id\030\001 \001(\tR\013operationId\022#\n\rmatched_count\030" +
-      "\002 \001(\003R\014matchedCount\022#\n\rrevoked_count\030\003 \001" +
-      "(\003R\014revokedCount\022\030\n\007message\030\005 \001(\tR\007messa" +
-      "ge\0222\n\005error\030\006 \001(\0132\034.udb.core.common.v1.A" +
-      "piErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\001@\001J\005vau" +
-      "ltP\001J\004\010\004\020\0052\332P\n\014VaultService\022\240\003\n\tPutSecre" +
-      "t\022,.udb.core.vault.services.v1.PutSecret" +
-      "Request\032-.udb.core.vault.services.v1.Put" +
-      "SecretResponse\"\265\002\312\363\0303\010\002\032\024udb:vault:put-s" +
-      "ecret \001J\003\001\002\004j\017vault.PutSecret\220\001\001\322\363\030\006\010\001\020\001" +
-      " \001\332\363\030/\010\001\022\nput_secret\032\003udb(\260\352\0010\003@\001J\005vault" +
-      "P\001Z\tputSecret\352\363\030V\n\017vault.PutSecret\022\027udb." +
-      "vault.secret.put.v1\032\013secret_path\"\006strict" +
+      "n\n\026GenerateDataKeyRequest\022\033\n\ttenant_id\030\001" +
+      " \001(\tR\010tenantId\022\031\n\010key_name\030\002 \001(\tR\007keyNam" +
+      "e:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\217\002\n\027Gene" +
+      "rateDataKeyResponse\022G\n\tplaintext\030\001 \001(\tB)" +
+      "\350\265\030\001\360\265\030\001\212\267\030\035\010\004\020\003\030\003:\rvault-transitJ\006tenan" +
+      "tR\tplaintext\022\036\n\nciphertext\030\002 \001(\tR\ncipher" +
+      "text\022\037\n\013key_version\030\003 \001(\005R\nkeyVersion\022\030\n" +
+      "\007message\030\004 \001(\tR\007message\0222\n\005error\030\005 \001(\0132\034" +
+      ".udb.core.common.v1.ApiErrorR\005error:\034\232\262\031" +
+      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\205\001\n\rRewrapRequ" +
+      "est\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010key_" +
+      "name\030\002 \001(\tR\007keyName\022\036\n\nciphertext\030\003 \001(\tR" +
+      "\nciphertext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP" +
+      "\001\"\275\001\n\016RewrapResponse\022\036\n\nciphertext\030\001 \001(\t" +
+      "R\nciphertext\022\037\n\013key_version\030\002 \001(\005R\nkeyVe" +
+      "rsion\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005error" +
+      "\030\004 \001(\0132\034.udb.core.common.v1.ApiErrorR\005er" +
+      "ror:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"r\n\032Get" +
+      "TransitPublicKeyRequest\022\033\n\ttenant_id\030\001 \001" +
+      "(\tR\010tenantId\022\031\n\010key_name\030\002 \001(\tR\007keyName:" +
+      "\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"a\n\020Transit" +
+      "PublicKey\022\030\n\007version\030\001 \001(\005R\007version\022\035\n\np" +
+      "ublic_key\030\002 \001(\tR\tpublicKey\022\024\n\005state\030\003 \001(" +
+      "\tR\005state\"\221\002\n\033GetTransitPublicKeyResponse" +
+      "\022\031\n\010key_name\030\001 \001(\tR\007keyName\022\034\n\talgorithm" +
+      "\030\002 \001(\tR\talgorithm\022M\n\013public_keys\030\003 \003(\0132," +
+      ".udb.core.vault.services.v1.TransitPubli" +
+      "cKeyR\npublicKeys\022\030\n\007message\030\004 \001(\tR\007messa" +
+      "ge\0222\n\005error\030\005 \001(\0132\034.udb.core.common.v1.A" +
+      "piErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vau" +
+      "ltP\001\"\266\001\n\023BatchEncryptRequest\022\033\n\ttenant_i" +
+      "d\030\001 \001(\tR\010tenantId\022\031\n\010key_name\030\002 \001(\tR\007key" +
+      "Name\022I\n\nplaintexts\030\003 \003(\tB)\350\265\030\001\360\265\030\001\212\267\030\035\010\004" +
+      "\020\006\030\003:\rvault-transitJ\006tenantR\nplaintexts:" +
+      "\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\305\001\n\024BatchE" +
+      "ncryptResponse\022 \n\013ciphertexts\030\001 \003(\tR\013cip" +
+      "hertexts\022\037\n\013key_version\030\002 \001(\005R\nkeyVersio" +
+      "n\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005error\030\004 \001" +
+      "(\0132\034.udb.core.common.v1.ApiErrorR\005error:" +
+      "\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\215\001\n\023BatchD" +
+      "ecryptRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenant" +
+      "Id\022\031\n\010key_name\030\002 \001(\tR\007keyName\022 \n\013ciphert" +
+      "exts\030\003 \003(\tR\013ciphertexts:\034\232\262\031\030\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\005vaultP\001\"\315\001\n\024BatchDecryptResponse\022I" +
+      "\n\nplaintexts\030\001 \003(\tB)\350\265\030\001\360\265\030\001\212\267\030\035\010\004\020\003\030\003:\r" +
+      "vault-transitJ\006tenantR\nplaintexts\022\030\n\007mes" +
+      "sage\030\002 \001(\tR\007message\0222\n\005error\030\003 \001(\0132\034.udb" +
+      ".core.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\005vaultP\001\"y\n\013SignRequest\022\033\n\t" +
+      "tenant_id\030\001 \001(\tR\010tenantId\022\031\n\010key_name\030\002 " +
+      "\001(\tR\007keyName\022\024\n\005input\030\003 \001(\tR\005input:\034\232\262\031\030" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\271\001\n\014SignRespons" +
+      "e\022\034\n\tsignature\030\001 \001(\tR\tsignature\022\037\n\013key_v" +
+      "ersion\030\002 \001(\005R\nkeyVersion\022\030\n\007message\030\003 \001(" +
+      "\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb.core.com" +
+      "mon.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
+      "\003@\001J\005vaultP\001\"\231\001\n\rVerifyRequest\022\033\n\ttenant" +
+      "_id\030\001 \001(\tR\010tenantId\022\031\n\010key_name\030\002 \001(\tR\007k" +
+      "eyName\022\024\n\005input\030\003 \001(\tR\005input\022\034\n\tsignatur" +
+      "e\030\004 \001(\tR\tsignature:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\005vaultP\001\"\222\001\n\016VerifyResponse\022\024\n\005valid\030\001 \001" +
+      "(\010R\005valid\022\030\n\007message\030\002 \001(\tR\007message\0222\n\005e" +
+      "rror\030\003 \001(\0132\034.udb.core.common.v1.ApiError" +
+      "R\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"y\n" +
+      "\013HmacRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantI" +
+      "d\022\031\n\010key_name\030\002 \001(\tR\007keyName\022\024\n\005input\030\003 " +
+      "\001(\tR\005input:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001" +
+      "\"\257\001\n\014HmacResponse\022\022\n\004hmac\030\001 \001(\tR\004hmac\022\037\n" +
+      "\013key_version\030\002 \001(\005R\nkeyVersion\022\030\n\007messag" +
+      "e\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb.co" +
+      "re.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\005vaultP\001\"N\n\021SealStatusRequest\022" +
+      "\033\n\ttenant_id\030\001 \001(\tR\010tenantId:\034\232\262\031\030\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\005vaultP\001\"\277\001\n\022SealStatusRespons" +
+      "e\022\026\n\006sealed\030\001 \001(\010R\006sealed\022%\n\016kek_configu" +
+      "red\030\002 \001(\010R\rkekConfigured\022\030\n\007message\030\003 \001(" +
+      "\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb.core.com" +
+      "mon.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
+      "\003@\001J\005vaultP\001\"\345\001\n\"GenerateDatabaseCredent" +
+      "ialsRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId" +
+      "\022\033\n\trole_name\030\002 \001(\tR\010roleName\022\037\n\013ttl_sec" +
+      "onds\030\003 \001(\005R\nttlSeconds\022\035\n\nproject_id\030\004 \001" +
+      "(\tR\tprojectId\022\'\n\017idempotency_key\030\005 \001(\tR\016" +
+      "idempotencyKey:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vau" +
+      "ltP\001\"\350\002\n#GenerateDatabaseCredentialsResp" +
+      "onse\022\032\n\010username\030\001 \001(\tR\010username\022@\n\010pass" +
+      "word\030\002 \001(\tB$\350\265\030\001\360\265\030\001\212\267\030\030\010\003\020\003\030\003:\010vault-db" +
+      "J\006tenantR\010password\022\031\n\010lease_id\030\003 \001(\tR\007le" +
+      "aseId\022*\n\021lease_ttl_seconds\030\004 \001(\005R\017leaseT" +
+      "tlSeconds\022\030\n\007message\030\005 \001(\tR\007message\0222\n\005e" +
+      "rror\030\006 \001(\0132\034.udb.core.common.v1.ApiError" +
+      "R\005error\022\032\n\010replayed\030\007 \001(\010R\010replayed\022\024\n\005s" +
+      "tate\030\010 \001(\tR\005state:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
+      "vaultP\001\"\257\001\n RevokeDatabaseCredentialsReq" +
+      "uest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\035\n\npro" +
+      "ject_id\030\002 \001(\tR\tprojectId\022\031\n\010lease_id\030\003 \001" +
+      "(\tR\007leaseId\022\026\n\006reason\030\004 \001(\tR\006reason:\034\232\262\031" +
+      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaultP\001\"\377\001\n!RevokeData" +
+      "baseCredentialsResponse\022\031\n\010lease_id\030\001 \001(" +
+      "\tR\007leaseId\022\024\n\005state\030\002 \001(\tR\005state\022\032\n\010repl" +
+      "ayed\030\003 \001(\010R\010replayed\022!\n\014operation_id\030\004 \001" +
+      "(\tR\013operationId\022\030\n\007message\030\005 \001(\tR\007messag" +
+      "e\0222\n\005error\030\006 \001(\0132\034.udb.core.common.v1.Ap" +
+      "iErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005vaul" +
+      "tP\001\"\314\001\n)EmergencyRevokeDatabaseCredentia" +
+      "lsRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\035" +
+      "\n\nproject_id\030\002 \001(\tR\tprojectId\022\026\n\006reason\030" +
+      "\003 \001(\tR\006reason\022-\n\022confirmation_token\030\004 \001(" +
+      "\tR\021confirmationToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\001@" +
+      "\001J\005vaultP\001\"\213\002\n*EmergencyRevokeDatabaseCr" +
+      "edentialsResponse\022!\n\014operation_id\030\001 \001(\tR" +
+      "\013operationId\022#\n\rmatched_count\030\002 \001(\003R\014mat" +
+      "chedCount\022#\n\rrevoked_count\030\003 \001(\003R\014revoke" +
+      "dCount\022\030\n\007message\030\005 \001(\tR\007message\0222\n\005erro" +
+      "r\030\006 \001(\0132\034.udb.core.common.v1.ApiErrorR\005e" +
+      "rror:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\001@\001J\005vaultP\001J\004\010\004\020\005" +
+      "2\332P\n\014VaultService\022\240\003\n\tPutSecret\022,.udb.co" +
+      "re.vault.services.v1.PutSecretRequest\032-." +
+      "udb.core.vault.services.v1.PutSecretResp" +
+      "onse\"\265\002\312\363\0303\010\002\032\024udb:vault:put-secret \001J\003\001" +
+      "\002\004j\017vault.PutSecret\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\n" +
+      "put_secret\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\tputSec" +
+      "ret\352\363\030V\n\017vault.PutSecret\022\027udb.vault.secr" +
+      "et.put.v1\032\013secret_path\"\006strict*\rat_least" +
+      "_once2\006stable\362\363\030?\n\005vault\032\010postgres2\033UDB_" +
+      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
+      "\370\363\030\002\202\323\344\223\002\032\"\025/v1/vault/secrets:put:\001*\022\257\003\n" +
+      "\tGetSecret\022,.udb.core.vault.services.v1." +
+      "GetSecretRequest\032-.udb.core.vault.servic" +
+      "es.v1.GetSecretResponse\"\304\002\312\363\0303\010\002\032\024udb:va" +
+      "ult:get-secret \001J\003\001\002\004j\017vault.GetSecret\220\001" +
+      "\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\nget_secret\032\003udb(\260\352\0010\003" +
+      "@\001J\005vaultP\001Z\tgetSecret\352\363\030[\n\017vault.GetSec" +
+      "ret\022\034udb.vault.secret.accessed.v1\032\013secre" +
+      "t_path\"\006strict*\rat_least_once2\006stable\362\363\030" +
+      "?\n\005vault\032\010postgres2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002$\022\"/v1/" +
+      "vault/secrets/{secret_path=**}\022\357\003\n\017Lease" +
+      "OAuthToken\0222.udb.core.vault.services.v1." +
+      "LeaseOAuthTokenRequest\0323.udb.core.vault." +
+      "services.v1.LeaseOAuthTokenResponse\"\362\002\312\363" +
+      "\030@\010\002\032\033udb:vault:lease-oauth-token \001J\003\001\002\004" +
+      "j\025vault.LeaseOAuthToken\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<" +
+      "\010\001\022\021lease_oauth_token\032\003udb(\260\352\0010\001@\001J\005vaul" +
+      "tP\001Z\017leaseOauthToken\352\363\030a\n\025vault.LeaseOAu" +
+      "thToken\022\034udb.vault.secret.accessed.v1\032\013s" +
+      "ecret_path\"\006strict*\rat_least_once2\006stabl" +
+      "e\362\363\030?\n\005vault\032\010postgres2\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0022\"-" +
+      "/v1/vault/oauth-tokens/{secret_path=**}:" +
+      "lease:\001*\022\254\003\n\013ListSecrets\022..udb.core.vaul" +
+      "t.services.v1.ListSecretsRequest\032/.udb.c" +
+      "ore.vault.services.v1.ListSecretsRespons" +
+      "e\"\273\002\312\363\0307\010\002\032\026udb:vault:list-secrets \001J\003\001\002" +
+      "\004j\021vault.ListSecrets\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022" +
+      "\014list_secrets\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\013lis" +
+      "tSecrets\352\363\030[\n\021vault.ListSecrets\022\032udb.vau" +
+      "lt.secret.listed.v1\032\ttenant_id\"\010standard" +
       "*\rat_least_once2\006stable\362\363\030?\n\005vault\032\010post" +
       "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
-      "RPC_TARGET\370\363\030\002\202\323\344\223\002\032\"\025/v1/vault/secrets:" +
-      "put:\001*\022\257\003\n\tGetSecret\022,.udb.core.vault.se" +
-      "rvices.v1.GetSecretRequest\032-.udb.core.va" +
-      "ult.services.v1.GetSecretResponse\"\304\002\312\363\0303" +
-      "\010\002\032\024udb:vault:get-secret \001J\003\001\002\004j\017vault.G" +
-      "etSecret\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\nget_secret\032" +
-      "\003udb(\260\352\0010\003@\001J\005vaultP\001Z\tgetSecret\352\363\030[\n\017va" +
-      "ult.GetSecret\022\034udb.vault.secret.accessed" +
-      ".v1\032\013secret_path\"\006strict*\rat_least_once2" +
-      "\006stable\362\363\030?\n\005vault\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323" +
-      "\344\223\002$\022\"/v1/vault/secrets/{secret_path=**}" +
-      "\022\357\003\n\017LeaseOAuthToken\0222.udb.core.vault.se" +
-      "rvices.v1.LeaseOAuthTokenRequest\0323.udb.c" +
-      "ore.vault.services.v1.LeaseOAuthTokenRes" +
-      "ponse\"\362\002\312\363\030@\010\002\032\033udb:vault:lease-oauth-to" +
-      "ken \001J\003\001\002\004j\025vault.LeaseOAuthToken\220\001\001\322\363\030\006" +
-      "\010\001\020\001 \001\332\363\030<\010\001\022\021lease_oauth_token\032\003udb(\260\352\001" +
-      "0\001@\001J\005vaultP\001Z\017leaseOauthToken\352\363\030a\n\025vaul" +
-      "t.LeaseOAuthToken\022\034udb.vault.secret.acce" +
-      "ssed.v1\032\013secret_path\"\006strict*\rat_least_o" +
-      "nce2\006stable\362\363\030?\n\005vault\032\010postgres2\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
-      "\030\002\202\323\344\223\0022\"-/v1/vault/oauth-tokens/{secret" +
-      "_path=**}:lease:\001*\022\254\003\n\013ListSecrets\022..udb" +
-      ".core.vault.services.v1.ListSecretsReque" +
-      "st\032/.udb.core.vault.services.v1.ListSecr" +
-      "etsResponse\"\273\002\312\363\0307\010\002\032\026udb:vault:list-sec" +
-      "rets \001J\003\001\002\004j\021vault.ListSecrets\220\001\001\322\363\030\006\010\001\020" +
-      "\001 \001\332\363\0303\010\001\022\014list_secrets\032\003udb(\260\352\0010\003@\001J\005va" +
-      "ultP\001Z\013listSecrets\352\363\030[\n\021vault.ListSecret" +
-      "s\022\032udb.vault.secret.listed.v1\032\ttenant_id" +
-      "\"\010standard*\rat_least_once2\006stable\362\363\030?\n\005v" +
-      "ault\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\023\022\021/v1/vaul" +
-      "t/secrets\022\301\003\n\014DeleteSecret\022/.udb.core.va" +
-      "ult.services.v1.DeleteSecretRequest\0320.ud" +
-      "b.core.vault.services.v1.DeleteSecretRes" +
-      "ponse\"\315\002\312\363\0309\010\002\032\027udb:vault:delete-secret " +
-      "\001J\003\001\002\004j\022vault.DeleteSecret\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
-      "\363\0305\010\001\022\rdelete_secret\032\003udb(\260\352\0010\003@\001J\005vault" +
-      "P\001Z\014deleteSecret\352\363\030_\n\022vault.DeleteSecret" +
-      "\022\033udb.vault.secret.deleted.v1\032\013secret_pa" +
-      "th\"\010standard*\rat_least_once2\006stable\362\363\030?\n" +
-      "\005vault\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035\"\030/v1/va" +
-      "ult/secrets:delete:\001*\022\324\003\n\016UndeleteSecret" +
-      "\0221.udb.core.vault.services.v1.UndeleteSe" +
-      "cretRequest\0322.udb.core.vault.services.v1" +
-      ".UndeleteSecretResponse\"\332\002\312\363\030=\010\002\032\031udb:va" +
-      "ult:undelete-secret \001J\003\001\002\004j\024vault.Undele" +
-      "teSecret\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0309\010\001\022\017undelete_se" +
-      "cret\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\016undeleteSecr" +
-      "et\352\363\030b\n\024vault.UndeleteSecret\022\034udb.vault." +
-      "secret.restored.v1\032\013secret_path\"\010standar" +
-      "d*\rat_least_once2\006stable\362\363\030?\n\005vault\032\010pos" +
-      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
-      "GRPC_TARGET\370\363\030\002\202\323\344\223\002\037\"\032/v1/vault/secrets" +
-      ":undelete:\001*\022\313\003\n\rDestroySecret\0220.udb.cor" +
-      "e.vault.services.v1.DestroySecretRequest" +
-      "\0321.udb.core.vault.services.v1.DestroySec" +
-      "retResponse\"\324\002\312\363\030:\010\002\032\030udb:vault:destroy-" +
-      "secret \001J\002\001\002j\023vault.DestroySecret\220\001\001\322\363\030\006" +
-      "\010\001\020\001 \001\332\363\0307\010\001\022\016destroy_secret\032\003udb(\260\352\0010\003@" +
-      "\001J\005vaultP\001Z\rdestroySecret\352\363\030b\n\023vault.Des" +
-      "troySecret\022\035udb.vault.secret.destroyed.v" +
-      "1\032\013secret_path\"\010standard*\rat_least_once2" +
-      "\006stable\362\363\030?\n\005vault\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323" +
-      "\344\223\002\036\"\031/v1/vault/secrets:destroy:\001*\022\342\003\n\020C" +
-      "reateTransitKey\0223.udb.core.vault.service" +
-      "s.v1.CreateTransitKeyRequest\0324.udb.core." +
-      "vault.services.v1.CreateTransitKeyRespon" +
-      "se\"\342\002\312\363\030A\010\002\032\034udb:vault:create-transit-ke" +
-      "y \001J\002\001\002j\026vault.CreateTransitKey\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030>\010\001\022\022create_transit_key\032\003udb(\260\352\0010" +
-      "\003@\001J\005vaultP\001Z\020createTransitKey\352\363\030e\n\026vaul" +
-      "t.CreateTransitKey\022 udb.vault.transit_ke" +
-      "y.created.v1\032\010key_name\"\010standard*\rat_lea" +
-      "st_once2\006stable\362\363\030?\n\005vault\032\010postgres2\033UD" +
-      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
-      "ET\370\363\030\002\202\323\344\223\002\033\"\026/v1/vault/transit/keys:\001*\022" +
-      "\351\003\n\020RotateTransitKey\0223.udb.core.vault.se" +
-      "rvices.v1.RotateTransitKeyRequest\0324.udb." +
-      "core.vault.services.v1.RotateTransitKeyR" +
-      "esponse\"\351\002\312\363\030A\010\002\032\034udb:vault:rotate-trans" +
-      "it-key \001J\002\001\002j\026vault.RotateTransitKey\220\001\001\322" +
-      "\363\030\006\010\001\020\001 \001\332\363\030>\010\001\022\022rotate_transit_key\032\003udb" +
-      "(\260\352\0010\003@\001J\005vaultP\001Z\020rotateTransitKey\352\363\030e\n" +
-      "\026vault.RotateTransitKey\022 udb.vault.trans" +
-      "it_key.rotated.v1\032\010key_name\"\010standard*\ra" +
-      "t_least_once2\006stable\362\363\030?\n\005vault\032\010postgre" +
-      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
-      "_TARGET\370\363\030\002\202\323\344\223\002\"\"\035/v1/vault/transit/key" +
-      "s:rotate:\001*\022\277\002\n\007Encrypt\022*.udb.core.vault" +
-      ".services.v1.EncryptRequest\032+.udb.core.v" +
-      "ault.services.v1.EncryptResponse\"\332\001\312\363\030.\010" +
-      "\002\032\021udb:vault:encrypt \001J\003\001\002\004j\rvault.Encry" +
-      "pt\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\007encrypt\032\003udb(\260\352\0010" +
-      "\003@\001J\005vaultP\001Z\014vaultEncrypt\362\363\030?\n\005vault\032\010p" +
-      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
-      "B_GRPC_TARGET\370\363\030\002\202\323\344\223\002\036\"\031/v1/vault/trans" +
-      "it:encrypt:\001*\022\233\003\n\007Decrypt\022*.udb.core.vau" +
-      "lt.services.v1.DecryptRequest\032+.udb.core" +
-      ".vault.services.v1.DecryptResponse\"\266\002\312\363\030" +
-      ".\010\002\032\021udb:vault:decrypt \001J\003\001\002\004j\rvault.Dec" +
-      "rypt\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030/\010\001\022\007decrypt\032\003udb(\260\352" +
-      "\0010\003@\001J\005vaultP\001Z\014vaultDecrypt\352\363\030X\n\rvault." +
-      "Decrypt\022\036udb.vault.transit.decrypted.v1\032" +
-      "\010key_name\"\006strict*\rat_least_once2\006stable" +
-      "\362\363\030?\n\005vault\032\010postgres2\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\036\"\031/" +
-      "v1/vault/transit:decrypt:\001*\022\247\002\n\004Sign\022\'.u" +
-      "db.core.vault.services.v1.SignRequest\032(." +
-      "udb.core.vault.services.v1.SignResponse\"" +
-      "\313\001\312\363\030(\010\002\032\016udb:vault:sign \001J\003\001\002\004j\nvault.S" +
-      "ign\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030)\010\001\022\004sign\032\003udb(\260\352\0010\003@" +
-      "\001J\005vaultP\001Z\tvaultSign\362\363\030?\n\005vault\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\370\363\030\002\202\323\344\223\002\033\"\026/v1/vault/transit:si" +
-      "gn:\001*\022\267\002\n\006Verify\022).udb.core.vault.servic" +
-      "es.v1.VerifyRequest\032*.udb.core.vault.ser" +
-      "vices.v1.VerifyResponse\"\325\001\312\363\030,\010\002\032\020udb:va" +
-      "ult:verify \001J\003\001\002\004j\014vault.Verify\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030-\010\001\022\006verify\032\003udb(\260\352\0010\003@\001J\005vaultP\001" +
-      "Z\013vaultVerify\362\363\030?\n\005vault\032\010postgres2\033UDB_" +
-      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
-      "\370\363\030\001\202\323\344\223\002\035\"\030/v1/vault/transit:verify:\001*\022" +
-      "\247\002\n\004Hmac\022\'.udb.core.vault.services.v1.Hm" +
-      "acRequest\032(.udb.core.vault.services.v1.H" +
-      "macResponse\"\313\001\312\363\030(\010\002\032\016udb:vault:hmac \001J\003" +
-      "\001\002\004j\nvault.Hmac\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030)\010\001\022\004hmac" +
-      "\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\tvaultHmac\362\363\030?\n\005v" +
-      "ault\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\033\"\026/v1/vaul" +
-      "t/transit:hmac:\001*\022\317\002\n\nSealStatus\022-.udb.c" +
-      "ore.vault.services.v1.SealStatusRequest\032" +
-      "..udb.core.vault.services.v1.SealStatusR" +
-      "esponse\"\341\001\312\363\0305\010\002\032\025udb:vault:seal-status " +
-      "\001J\003\001\002\004j\020vault.SealStatus\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030" +
-      "6\010\001\022\013seal_status\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\017" +
-      "vaultSealStatus\362\363\030?\n\005vault\032\010postgres2\033UD" +
-      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
-      "ET\370\363\030\001\202\323\344\223\002\027\022\025/v1/vault/seal-status\022\242\005\n\033" +
-      "GenerateDatabaseCredentials\022>.udb.core.v" +
-      "ault.services.v1.GenerateDatabaseCredent" +
-      "ialsRequest\032?.udb.core.vault.services.v1" +
-      ".GenerateDatabaseCredentialsResponse\"\201\004\312" +
-      "\363\030b\010\002\032!udb:vault:generate-db-credentials" +
-      " \001J\003\001\002\004j!vault.GenerateDatabaseCredentia" +
-      "ls\202\001\nproject_id\210\001\001\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030T\010\001\022\035g" +
-      "enerate_database_credentials\032\003udb(\260\352\0010\003@" +
-      "\001J\005vaultP\001Z\033generateDatabaseCredentials\352" +
-      "\363\030o\n!vault.GenerateDatabaseCredentials\022!" +
-      "udb.vault.db_credential.issued.v1\032\010lease" +
-      "_id\"\006strict*\rat_least_once2\006stable\362\363\030?\n\005" +
-      "vault\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED2\017UDB_GRPC_TARGET\370\363\030\002\222\364\0301\n\026VaultDbCr" +
-      "edentialLease\032\006ACTIVE\"\007REVOKED\"\006FAILED\232\364" +
-      "\030\035\n\017idempotency_key\032\010replayed \001\202\323\344\223\002#\"\036/" +
-      "v1/vault/database/credentials:\001*\022\275\005\n\031Rev" +
-      "okeDatabaseCredentials\022<.udb.core.vault." +
-      "services.v1.RevokeDatabaseCredentialsReq" +
-      "uest\032=.udb.core.vault.services.v1.Revoke",
-      "DatabaseCredentialsResponse\"\242\004\312\363\030^\010\002\032\037ud" +
-      "b:vault:revoke-db-credentials \001J\003\001\002\004j\037va" +
-      "ult.RevokeDatabaseCredentials\202\001\nproject_" +
-      "id\210\001\001\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030P\010\001\022\033revoke_databas" +
-      "e_credentials\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\031rev" +
-      "okeDatabaseCredentials\352\363\030n\n\037vault.Revoke" +
-      "DatabaseCredentials\022\"udb.vault.db_creden" +
-      "tial.revoked.v1\032\010lease_id\"\006strict*\rat_le" +
-      "ast_once2\006stable\362\363\030?\n\005vault\032\010postgres2\033U" +
+      "RPC_TARGET\370\363\030\001\202\323\344\223\002\023\022\021/v1/vault/secrets\022" +
+      "\301\003\n\014DeleteSecret\022/.udb.core.vault.servic" +
+      "es.v1.DeleteSecretRequest\0320.udb.core.vau" +
+      "lt.services.v1.DeleteSecretResponse\"\315\002\312\363" +
+      "\0309\010\002\032\027udb:vault:delete-secret \001J\003\001\002\004j\022va" +
+      "ult.DeleteSecret\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0305\010\001\022\rdel" +
+      "ete_secret\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\014delete" +
+      "Secret\352\363\030_\n\022vault.DeleteSecret\022\033udb.vaul" +
+      "t.secret.deleted.v1\032\013secret_path\"\010standa" +
+      "rd*\rat_least_once2\006stable\362\363\030?\n\005vault\032\010po" +
+      "stgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
+      "_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035\"\030/v1/vault/secret" +
+      "s:delete:\001*\022\324\003\n\016UndeleteSecret\0221.udb.cor" +
+      "e.vault.services.v1.UndeleteSecretReques" +
+      "t\0322.udb.core.vault.services.v1.UndeleteS" +
+      "ecretResponse\"\332\002\312\363\030=\010\002\032\031udb:vault:undele" +
+      "te-secret \001J\003\001\002\004j\024vault.UndeleteSecret\220\001" +
+      "\001\322\363\030\006\010\001\020\001 \001\332\363\0309\010\001\022\017undelete_secret\032\003udb(" +
+      "\260\352\0010\003@\001J\005vaultP\001Z\016undeleteSecret\352\363\030b\n\024va" +
+      "ult.UndeleteSecret\022\034udb.vault.secret.res" +
+      "tored.v1\032\013secret_path\"\010standard*\rat_leas" +
+      "t_once2\006stable\362\363\030?\n\005vault\032\010postgres2\033UDB" +
+      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
+      "T\370\363\030\002\202\323\344\223\002\037\"\032/v1/vault/secrets:undelete:" +
+      "\001*\022\313\003\n\rDestroySecret\0220.udb.core.vault.se" +
+      "rvices.v1.DestroySecretRequest\0321.udb.cor" +
+      "e.vault.services.v1.DestroySecretRespons" +
+      "e\"\324\002\312\363\030:\010\002\032\030udb:vault:destroy-secret \001J\002" +
+      "\001\002j\023vault.DestroySecret\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0307" +
+      "\010\001\022\016destroy_secret\032\003udb(\260\352\0010\003@\001J\005vaultP\001" +
+      "Z\rdestroySecret\352\363\030b\n\023vault.DestroySecret" +
+      "\022\035udb.vault.secret.destroyed.v1\032\013secret_" +
+      "path\"\010standard*\rat_least_once2\006stable\362\363\030" +
+      "?\n\005vault\032\010postgres2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002\036\"\031/v1/" +
+      "vault/secrets:destroy:\001*\022\342\003\n\020CreateTrans" +
+      "itKey\0223.udb.core.vault.services.v1.Creat" +
+      "eTransitKeyRequest\0324.udb.core.vault.serv" +
+      "ices.v1.CreateTransitKeyResponse\"\342\002\312\363\030A\010" +
+      "\002\032\034udb:vault:create-transit-key \001J\002\001\002j\026v" +
+      "ault.CreateTransitKey\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030>\010\001" +
+      "\022\022create_transit_key\032\003udb(\260\352\0010\003@\001J\005vault" +
+      "P\001Z\020createTransitKey\352\363\030e\n\026vault.CreateTr" +
+      "ansitKey\022 udb.vault.transit_key.created." +
+      "v1\032\010key_name\"\010standard*\rat_least_once2\006s" +
+      "table\362\363\030?\n\005vault\032\010postgres2\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223" +
+      "\002\033\"\026/v1/vault/transit/keys:\001*\022\351\003\n\020Rotate" +
+      "TransitKey\0223.udb.core.vault.services.v1." +
+      "RotateTransitKeyRequest\0324.udb.core.vault" +
+      ".services.v1.RotateTransitKeyResponse\"\351\002" +
+      "\312\363\030A\010\002\032\034udb:vault:rotate-transit-key \001J\002" +
+      "\001\002j\026vault.RotateTransitKey\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
+      "\363\030>\010\001\022\022rotate_transit_key\032\003udb(\260\352\0010\003@\001J\005" +
+      "vaultP\001Z\020rotateTransitKey\352\363\030e\n\026vault.Rot" +
+      "ateTransitKey\022 udb.vault.transit_key.rot" +
+      "ated.v1\032\010key_name\"\010standard*\rat_least_on" +
+      "ce2\006stable\362\363\030?\n\005vault\032\010postgres2\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
+      "\002\202\323\344\223\002\"\"\035/v1/vault/transit/keys:rotate:\001" +
+      "*\022\277\002\n\007Encrypt\022*.udb.core.vault.services." +
+      "v1.EncryptRequest\032+.udb.core.vault.servi" +
+      "ces.v1.EncryptResponse\"\332\001\312\363\030.\010\002\032\021udb:vau" +
+      "lt:encrypt \001J\003\001\002\004j\rvault.Encrypt\220\001\001\322\363\030\006\010" +
+      "\001\020\001 \001\332\363\030/\010\001\022\007encrypt\032\003udb(\260\352\0010\003@\001J\005vault" +
+      "P\001Z\014vaultEncrypt\362\363\030?\n\005vault\032\010postgres2\033U" +
       "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\370\363\030\003\222\364\030P\n\026VaultDbCredentialLease\022\010STA" +
-      "RTING\022\006ACTIVE\022\010REVOKING\022\006FAILED\032\007REVOKED" +
-      "\"\007REVOKED0\001\232\364\030\026\n\010lease_id\032\010replayed \001\202\323\344" +
-      "\223\0025\"0/v1/vault/database/credentials/{lea" +
-      "se_id}:revoke:\001*\022\223\005\n\"EmergencyRevokeData" +
-      "baseCredentials\022E.udb.core.vault.service" +
-      "s.v1.EmergencyRevokeDatabaseCredentialsR" +
-      "equest\032F.udb.core.vault.services.v1.Emer" +
-      "gencyRevokeDatabaseCredentialsResponse\"\335" +
-      "\003\312\363\030m\010\002\032)udb:vault:emergency-revoke-db-c" +
-      "redentials \001J\002\001\002j(vault.EmergencyRevokeD" +
-      "atabaseCredentials\202\001\nproject_id\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030c\010\001\022%emergency_revoke_database_cr" +
-      "edentials\032\003udb(\260\352\0010\001@\001J\005vaultP\001Z\"emergen" +
-      "cyRevokeDatabaseCredentials\352\363\030w\n(vault.E" +
-      "mergencyRevokeDatabaseCredentials\022\"udb.v" +
-      "ault.db_credential.revoked.v1\032\010lease_id\"" +
+      "GET\370\363\030\002\202\323\344\223\002\036\"\031/v1/vault/transit:encrypt" +
+      ":\001*\022\233\003\n\007Decrypt\022*.udb.core.vault.service" +
+      "s.v1.DecryptRequest\032+.udb.core.vault.ser" +
+      "vices.v1.DecryptResponse\"\266\002\312\363\030.\010\002\032\021udb:v" +
+      "ault:decrypt \001J\003\001\002\004j\rvault.Decrypt\220\001\001\322\363\030" +
+      "\006\010\001\020\001 \001\332\363\030/\010\001\022\007decrypt\032\003udb(\260\352\0010\003@\001J\005vau" +
+      "ltP\001Z\014vaultDecrypt\352\363\030X\n\rvault.Decrypt\022\036u" +
+      "db.vault.transit.decrypted.v1\032\010key_name\"" +
       "\006strict*\rat_least_once2\006stable\362\363\030?\n\005vaul" +
       "t\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
-      "2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\0023\"./v1/vault/d" +
-      "atabase/credentials:emergencyRevoke:\001*\022\203" +
-      "\003\n\017GenerateDataKey\0222.udb.core.vault.serv" +
-      "ices.v1.GenerateDataKeyRequest\0323.udb.cor" +
-      "e.vault.services.v1.GenerateDataKeyRespo" +
-      "nse\"\206\002\312\363\030@\010\002\032\033udb:vault:generate-data-ke" +
-      "y \001J\003\001\002\004j\025vault.GenerateDataKey\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030A\010\001\022\021generate_data_key\032\003udb(\260\352\0010\003" +
-      "@\001J\005vaultP\001Z\024vaultGenerateDataKey\362\363\030?\n\005v" +
-      "ault\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002&\"!/v1/vaul" +
-      "t/transit:generateDataKey:\001*\022\267\002\n\006Rewrap\022" +
-      ").udb.core.vault.services.v1.RewrapReque" +
-      "st\032*.udb.core.vault.services.v1.RewrapRe" +
-      "sponse\"\325\001\312\363\030,\010\002\032\020udb:vault:rewrap \001J\003\001\002\004" +
-      "j\014vault.Rewrap\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030-\010\001\022\006rewra" +
-      "p\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\013vaultRewrap\362\363\030?" +
-      "\n\005vault\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
-      "NABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035\"\030/v1/v" +
-      "ault/transit:rewrap:\001*\022\223\003\n\023GetTransitPub" +
-      "licKey\0226.udb.core.vault.services.v1.GetT" +
-      "ransitPublicKeyRequest\0327.udb.core.vault." +
-      "services.v1.GetTransitPublicKeyResponse\"" +
-      "\212\002\312\363\030A\010\002\032\030udb:vault:get-public-key \001J\003\001\002" +
-      "\004j\031vault.GetTransitPublicKey\220\001\001\322\363\030\006\010\001\020\001 " +
-      "\001\332\363\030J\010\001\022\026get_transit_public_key\032\003udb(\260\352\001" +
-      "0\003@\001J\005vaultP\001Z\030vaultGetTransitPublicKey\362" +
-      "\363\030?\n\005vault\032\010postgres2\033UDB_NATIVE_SERVICE" +
-      "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002 \"\033/v" +
-      "1/vault/transit:publicKey:\001*\022\343\002\n\014BatchEn" +
-      "crypt\022/.udb.core.vault.services.v1.Batch" +
-      "EncryptRequest\0320.udb.core.vault.services" +
-      ".v1.BatchEncryptResponse\"\357\001\312\363\0303\010\002\032\021udb:v" +
-      "ault:encrypt \001J\003\001\002\004j\022vault.BatchEncrypt\220" +
-      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\rbatch_encrypt\032\003udb(\260" +
-      "\352\0010\003@\001J\005vaultP\001Z\021vaultBatchEncrypt\362\363\030?\n\005" +
-      "vault\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/vau" +
-      "lt/transit:batchEncrypt:\001*\022\343\002\n\014BatchDecr" +
-      "ypt\022/.udb.core.vault.services.v1.BatchDe" +
-      "cryptRequest\0320.udb.core.vault.services.v" +
-      "1.BatchDecryptResponse\"\357\001\312\363\0303\010\002\032\021udb:vau" +
-      "lt:decrypt \001J\003\001\002\004j\022vault.BatchDecrypt\220\001\001" +
-      "\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\rbatch_decrypt\032\003udb(\260\352\001" +
-      "0\003@\001J\005vaultP\001Z\021vaultBatchDecrypt\362\363\030?\n\005va" +
-      "ult\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/vault" +
-      "/transit:batchDecrypt:\001*\032\274\002\312\360\031O\n\005vault\022\005" +
-      "vault\032\005vault\"\005Vault*\005vault0\0018\001h\001z\005vault\202" +
-      "\001\005vault\212\001\005vault\222\001\014native.vault\322\360\031\030\010\001\032\003ud" +
-      "b(\260\352\0010\003@\001J\005vaultP\001\332\360\031\205\001\n\005vault\022\020udb/nati" +
-      "ve/vault\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
-      "DB_GRPC_TARGET\"\027udb.native.vault.config:" +
-      "\005vaultJ\013UDB_API_KEYZ\017udb native lint\342\360\031?" +
-      "\n\005vault\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
-      "NABLED2\017UDB_GRPC_TARGETB\212\002\n\036com.udb.core" +
-      ".vault.services.v1B\021VaultServiceProtoP\001Z" +
-      "Hgithub.com/fahara02/udb/sdk/go/gen/udb/" +
-      "core/vault/services/v1;servicesv1\242\002\004UCVS" +
-      "\252\002\032Udb.Core.Vault.Services.V1\312\002\032Udb\\Core" +
-      "\\Vault\\Services\\V1\342\002&Udb\\GPBMetadata\\Cor" +
-      "e\\Vault\\Services\\V1\352\002\036Udb::Core::Vault::" +
-      "Services::V1b\006proto3"
+      "2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\036\"\031/v1/vault/t" +
+      "ransit:decrypt:\001*\022\247\002\n\004Sign\022\'.udb.core.va" +
+      "ult.services.v1.SignRequest\032(.udb.core.v" +
+      "ault.services.v1.SignResponse\"\313\001\312\363\030(\010\002\032\016" +
+      "udb:vault:sign \001J\003\001\002\004j\nvault.Sign\220\001\001\322\363\030\006" +
+      "\010\001\020\001 \001\332\363\030)\010\001\022\004sign\032\003udb(\260\352\0010\003@\001J\005vaultP\001" +
+      "Z\tvaultSign\362\363\030?\n\005vault\032\010postgres2\033UDB_NA" +
+      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
+      "\030\002\202\323\344\223\002\033\"\026/v1/vault/transit:sign:\001*\022\267\002\n\006" +
+      "Verify\022).udb.core.vault.services.v1.Veri" +
+      "fyRequest\032*.udb.core.vault.services.v1.V" +
+      "erifyResponse\"\325\001\312\363\030,\010\002\032\020udb:vault:verify" +
+      " \001J\003\001\002\004j\014vault.Verify\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030-\010\001" +
+      "\022\006verify\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\013vaultVer" +
+      "ify\362\363\030?\n\005vault\032\010postgres2\033UDB_NATIVE_SER" +
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035" +
+      "\"\030/v1/vault/transit:verify:\001*\022\247\002\n\004Hmac\022\'" +
+      ".udb.core.vault.services.v1.HmacRequest\032" +
+      "(.udb.core.vault.services.v1.HmacRespons" +
+      "e\"\313\001\312\363\030(\010\002\032\016udb:vault:hmac \001J\003\001\002\004j\nvault" +
+      ".Hmac\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030)\010\001\022\004hmac\032\003udb(\260\352\0010" +
+      "\003@\001J\005vaultP\001Z\tvaultHmac\362\363\030?\n\005vault\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGET\370\363\030\002\202\323\344\223\002\033\"\026/v1/vault/transit:" +
+      "hmac:\001*\022\317\002\n\nSealStatus\022-.udb.core.vault." +
+      "services.v1.SealStatusRequest\032..udb.core" +
+      ".vault.services.v1.SealStatusResponse\"\341\001" +
+      "\312\363\0305\010\002\032\025udb:vault:seal-status \001J\003\001\002\004j\020va" +
+      "ult.SealStatus\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\013seal_" +
+      "status\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\017vaultSealS" +
+      "tatus\362\363\030?\n\005vault\032\010postgres2\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223" +
+      "\002\027\022\025/v1/vault/seal-status\022\242\005\n\033GenerateDa" +
+      "tabaseCredentials\022>.udb.core.vault.servi" +
+      "ces.v1.GenerateDatabaseCredentialsReques" +
+      "t\032?.udb.core.vault.services.v1.GenerateD" +
+      "atabaseCredentialsResponse\"\201\004\312\363\030b\010\002\032!udb" +
+      ":vault:generate-db-credentials \001J\003\001\002\004j!v" +
+      "ault.GenerateDatabaseCredentials\202\001\nproje" +
+      "ct_id\210\001\001\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030T\010\001\022\035generate_da" +
+      "tabase_credentials\032\003udb(\260\352\0010\003@\001J\005vaultP\001" +
+      "Z\033generateDatabaseCredentials\352\363\030o\n!vault" +
+      ".GenerateDatabaseCredentials\022!udb.vault." +
+      "db_credential.issued.v1\032\010lease_id\"\006stric" +
+      "t*\rat_least_once2\006stable\362\363\030?\n\005vault\032\010pos" +
+      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\002\222\364\0301\n\026VaultDbCredentialLe" +
+      "ase\032\006ACTIVE\"\007REVOKED\"\006FAILED\232\364\030\035\n\017idempo" +
+      "tency_key\032\010replayed \001\202\323\344\223\002#\"\036/v1/vault/d" +
+      "atabase/credentials:\001*\022\275\005\n\031RevokeDatabas" +
+      "eCredentials\022<.udb.core.vault.services.v" +
+      "1.RevokeDatabaseCredentialsRequest\032=.udb",
+      ".core.vault.services.v1.RevokeDatabaseCr" +
+      "edentialsResponse\"\242\004\312\363\030^\010\002\032\037udb:vault:re" +
+      "voke-db-credentials \001J\003\001\002\004j\037vault.Revoke" +
+      "DatabaseCredentials\202\001\nproject_id\210\001\001\220\001\001\322\363" +
+      "\030\006\010\001\020\001 \001\332\363\030P\010\001\022\033revoke_database_credenti" +
+      "als\032\003udb(\260\352\0010\003@\001J\005vaultP\001Z\031revokeDatabas" +
+      "eCredentials\352\363\030n\n\037vault.RevokeDatabaseCr" +
+      "edentials\022\"udb.vault.db_credential.revok" +
+      "ed.v1\032\010lease_id\"\006strict*\rat_least_once2\006" +
+      "stable\362\363\030?\n\005vault\032\010postgres2\033UDB_NATIVE_" +
+      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\222\364\030" +
+      "P\n\026VaultDbCredentialLease\022\010STARTING\022\006ACT" +
+      "IVE\022\010REVOKING\022\006FAILED\032\007REVOKED\"\007REVOKED0" +
+      "\001\232\364\030\026\n\010lease_id\032\010replayed \001\202\323\344\223\0025\"0/v1/v" +
+      "ault/database/credentials/{lease_id}:rev" +
+      "oke:\001*\022\223\005\n\"EmergencyRevokeDatabaseCreden" +
+      "tials\022E.udb.core.vault.services.v1.Emerg" +
+      "encyRevokeDatabaseCredentialsRequest\032F.u" +
+      "db.core.vault.services.v1.EmergencyRevok" +
+      "eDatabaseCredentialsResponse\"\335\003\312\363\030m\010\002\032)u" +
+      "db:vault:emergency-revoke-db-credentials" +
+      " \001J\002\001\002j(vault.EmergencyRevokeDatabaseCre" +
+      "dentials\202\001\nproject_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030c\010\001" +
+      "\022%emergency_revoke_database_credentials\032" +
+      "\003udb(\260\352\0010\001@\001J\005vaultP\001Z\"emergencyRevokeDa" +
+      "tabaseCredentials\352\363\030w\n(vault.EmergencyRe" +
+      "vokeDatabaseCredentials\022\"udb.vault.db_cr" +
+      "edential.revoked.v1\032\010lease_id\"\006strict*\ra" +
+      "t_least_once2\006stable\362\363\030?\n\005vault\032\010postgre" +
+      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
+      "_TARGET\370\363\030\003\202\323\344\223\0023\"./v1/vault/database/cr" +
+      "edentials:emergencyRevoke:\001*\022\203\003\n\017Generat" +
+      "eDataKey\0222.udb.core.vault.services.v1.Ge" +
+      "nerateDataKeyRequest\0323.udb.core.vault.se" +
+      "rvices.v1.GenerateDataKeyResponse\"\206\002\312\363\030@" +
+      "\010\002\032\033udb:vault:generate-data-key \001J\003\001\002\004j\025" +
+      "vault.GenerateDataKey\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030A\010\001" +
+      "\022\021generate_data_key\032\003udb(\260\352\0010\003@\001J\005vaultP" +
+      "\001Z\024vaultGenerateDataKey\362\363\030?\n\005vault\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGET\370\363\030\002\202\323\344\223\002&\"!/v1/vault/transit:" +
+      "generateDataKey:\001*\022\267\002\n\006Rewrap\022).udb.core" +
+      ".vault.services.v1.RewrapRequest\032*.udb.c" +
+      "ore.vault.services.v1.RewrapResponse\"\325\001\312" +
+      "\363\030,\010\002\032\020udb:vault:rewrap \001J\003\001\002\004j\014vault.Re" +
+      "wrap\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030-\010\001\022\006rewrap\032\003udb(\260\352\001" +
+      "0\003@\001J\005vaultP\001Z\013vaultRewrap\362\363\030?\n\005vault\032\010p" +
+      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
+      "B_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035\"\030/v1/vault/trans" +
+      "it:rewrap:\001*\022\223\003\n\023GetTransitPublicKey\0226.u" +
+      "db.core.vault.services.v1.GetTransitPubl" +
+      "icKeyRequest\0327.udb.core.vault.services.v" +
+      "1.GetTransitPublicKeyResponse\"\212\002\312\363\030A\010\002\032\030" +
+      "udb:vault:get-public-key \001J\003\001\002\004j\031vault.G" +
+      "etTransitPublicKey\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030J\010\001\022\026g" +
+      "et_transit_public_key\032\003udb(\260\352\0010\003@\001J\005vaul" +
+      "tP\001Z\030vaultGetTransitPublicKey\362\363\030?\n\005vault" +
+      "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
+      "\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002 \"\033/v1/vault/tr" +
+      "ansit:publicKey:\001*\022\343\002\n\014BatchEncrypt\022/.ud" +
+      "b.core.vault.services.v1.BatchEncryptReq" +
+      "uest\0320.udb.core.vault.services.v1.BatchE" +
+      "ncryptResponse\"\357\001\312\363\0303\010\002\032\021udb:vault:encry" +
+      "pt \001J\003\001\002\004j\022vault.BatchEncrypt\220\001\001\322\363\030\006\010\001\020\001" +
+      " \001\332\363\030:\010\001\022\rbatch_encrypt\032\003udb(\260\352\0010\003@\001J\005va" +
+      "ultP\001Z\021vaultBatchEncrypt\362\363\030?\n\005vault\032\010pos" +
+      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/vault/transit" +
+      ":batchEncrypt:\001*\022\343\002\n\014BatchDecrypt\022/.udb." +
+      "core.vault.services.v1.BatchDecryptReque" +
+      "st\0320.udb.core.vault.services.v1.BatchDec" +
+      "ryptResponse\"\357\001\312\363\0303\010\002\032\021udb:vault:decrypt" +
+      " \001J\003\001\002\004j\022vault.BatchDecrypt\220\001\001\322\363\030\006\010\001\020\001 \001" +
+      "\332\363\030:\010\001\022\rbatch_decrypt\032\003udb(\260\352\0010\003@\001J\005vaul" +
+      "tP\001Z\021vaultBatchDecrypt\362\363\030?\n\005vault\032\010postg" +
+      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
+      "PC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/vault/transit:b" +
+      "atchDecrypt:\001*\032\274\002\312\360\031O\n\005vault\022\005vault\032\005vau" +
+      "lt\"\005Vault*\005vault0\0018\001h\001z\005vault\202\001\005vault\212\001\005" +
+      "vault\222\001\014native.vault\322\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\005vaultP\001\332\360\031\205\001\n\005vault\022\020udb/native/vault\032\033" +
+      "UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TA" +
+      "RGET\"\027udb.native.vault.config:\005vaultJ\013UD" +
+      "B_API_KEYZ\017udb native lint\342\360\031?\n\005vault\032\010p" +
+      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
+      "B_GRPC_TARGETB\212\002\n\036com.udb.core.vault.ser" +
+      "vices.v1B\021VaultServiceProtoP\001ZHgithub.co" +
+      "m/fahara02/udb/sdk/go/gen/udb/core/vault" +
+      "/services/v1;servicesv1\242\002\004UCVS\252\002\032Udb.Cor" +
+      "e.Vault.Services.V1\312\002\032Udb\\Core\\Vault\\Ser" +
+      "vices\\V1\342\002&Udb\\GPBMetadata\\Core\\Vault\\Se" +
+      "rvices\\V1\352\002\036Udb::Core::Vault::Services::" +
+      "V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

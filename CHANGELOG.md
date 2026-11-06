@@ -20,9 +20,11 @@ release line was tagged.
   non-unique index and report success, including duplicate data.
   - detect: run: startup logs on a Neo4j store holding duplicate ids
   - fix: remove the duplicates.
-- **A proto option with a key it does not have is refused when the proto is parsed.** A typo
-  such as `not_nul: true` was ignored, and the column was built without it. Free-form
-  `data_store` options and options of other namespaces are not checked.
+- **A UDB proto option with a key it does not have is refused when the proto is parsed.** A
+  typo such as `not_nul: true` was ignored, and the column was built without it. Free-form
+  `data_store` options and options a project declares itself are not checked.
+- **`pii_kind`, `is_pii` and `mask_in_logs` on a column block now protect the column,** as a
+  project's own column option can declare them. They were ignored, so the column read in clear.
   - detect: run: `udb check` on your protos
   - fix: correct the key; the message lists the keys the option accepts.
 - **`(column_security)` now takes effect, so columns declared with it change behaviour.** Every

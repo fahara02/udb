@@ -19,7 +19,7 @@ class LeaseOAuthTokenResponse extends \Google\Protobuf\Internal\Message
      */
     protected $secret_path = '';
     /**
-     * Generated from protobuf field <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+     * Generated from protobuf field <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = {</code>
      */
     protected $access_token = '';
     /**
@@ -95,7 +95,7 @@ class LeaseOAuthTokenResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+     * Generated from protobuf field <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = {</code>
      * @return string
      */
     public function getAccessToken()
@@ -104,7 +104,7 @@ class LeaseOAuthTokenResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true];</code>
+     * Generated from protobuf field <code>string access_token = 2 [json_name = "accessToken", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.db_column_security) = {</code>
      * @param string $var
      * @return $this
      */

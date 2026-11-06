@@ -751,8 +751,9 @@ impl<'a> ProtoParser<'a> {
         }
     }
 
-    /// Refuse a key a UDB option does not have. Options of other namespaces that happen to
-    /// end in `.table` or `.column` are not ours to judge.
+    /// Refuse a key a UDB option does not have. A project's own option can carry fields of
+    /// its own, and one of another namespace that happens to end in `.table` or `.column` is
+    /// not ours to judge.
     fn refuse_unknown_option_keys<'k>(
         &mut self,
         span: &Token,
@@ -760,8 +761,7 @@ impl<'a> ProtoParser<'a> {
         kind: OptionKind,
         keys: impl Iterator<Item = &'k String>,
     ) {
-        let namespaced = option_name.contains('.') && self.config.proto_namespace.trim().is_empty();
-        if namespaced && !is_udb_option_name(option_name) {
+        if option_name.contains('.') && !is_udb_option_name(option_name) {
             return;
         }
         let mut unknown: Vec<&str> = keys
