@@ -212,6 +212,14 @@ class UdbAuthClient {
             });
         });
     }
+    /** A view of this client that sends no bearer or API key header, for the public
+     *  calls that renew a credential: they carry theirs in the request, and an expired
+     *  or revoked bearer must not ride along. */
+    withoutCredentials() {
+        const view = Object.create(this);
+        view.meta = { ...this.meta, bearerToken: undefined, apiKey: undefined };
+        return view;
+    }
     setCredentials(credentials) {
         if ("bearerToken" in credentials) {
             this.meta.bearerToken = credentials.bearerToken;

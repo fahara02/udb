@@ -15,7 +15,8 @@ import {
   RawJson,
   WriteMode,
   decodeEventPayload,
-  decodeRecord,
+  messageFromRow,
+  rowFromRecord,
   encodeEvent,
   encodeRecord,
   formatTimestamp,
@@ -338,7 +339,7 @@ function writeRecord(schema: MessageSchema | undefined, schemas: ProtoSchemas, m
   for (const key of Object.keys(row)) {
     if (!schema.field(key)) throw new Error(`udb: ${messageType} has no field "${key}"`);
   }
-  return encodeRecord(messageType, decodeRecord(messageType, row, schemas), WriteMode.Insert, schemas);
+  return encodeRecord(messageType, messageFromRow(messageType, row, schemas), WriteMode.Insert, schemas);
 }
 
 /** Shapes one write of a {@link Table}. */
@@ -441,7 +442,9 @@ export class Table<T extends Record<string, unknown> = Record<string, unknown>> 
       throw classify(err);
     });
     return {
-      rows: decodeRows<T>(response),
+      rows: this.schema
+        ? decodeRows<Record<string, unknown>>(response).map((row) => rowFromRecord<T>(this.messageType, row, this.schemas))
+        : decodeRows<T>(response),
       hasMore: Boolean(response?.has_more),
       next: String(response?.next_page_token ?? ""),
       total: opts.includeTotal ? Number(response?.exact_total ?? 0) : undefined,
@@ -548,7 +551,7 @@ export class Table<T extends Record<string, unknown> = Record<string, unknown>> 
   private updateColumns(row: T): Record<string, unknown> {
     const schema = this.schema;
     if (schema) {
-      return encodeRecord(this.messageType, decodeRecord(this.messageType, row, this.schemas), WriteMode.Update, this.schemas);
+      return encodeRecord(this.messageType, messageFromRow(this.messageType, row, this.schemas), WriteMode.Update, this.schemas);
     }
     const out: Record<string, unknown> = { ...row };
     for (const field of this.key) delete out[field];
@@ -683,7 +686,7 @@ export class TxScope {
     let changes: Record<string, unknown> = {};
     try {
       const schema = this.schemas.message(messageType);
-      const message = decodeRecord(messageType, next, this.schemas);
+      const message = messageFromRow(messageType, next, this.schemas);
       const record = encodeRecord(messageType, message, WriteMode.Insert, this.schemas);
       if (Object.keys(expected).length === 0) throw new Error(EMPTY_GUARD);
       if (schema.primaryKeys.length === 0) throw new Error(`udb: ${messageType} declares no primary key`);

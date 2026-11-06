@@ -304,9 +304,11 @@ test("live: a JSON string column reads and writes as JSON text, repeatedly", liv
     const message = { workflow_id: id, workflow_type: "ts.live.json-string", status: "WORKFLOW_STATUS_PENDING", current_step: 0, total_steps: 1, payload };
     for (let i = 0; i < REPEATS; i += 1) {
       await table.upsert(message);
-      const decoded = decodeRecord<any>(WORKFLOW, await table.get({ workflow_id: id }));
-      assert.equal(decoded.payload, payload, "what was read is what was written");
-      message.payload = decoded.payload;
+      const stored = await table.get({ workflow_id: id });
+      const text = typeof stored.payload === "string" ? stored.payload : JSON.stringify(stored.payload);
+      assert.equal(text, payload, "what was read is what was written");
+      assert.equal(decodeRecord<any>(WORKFLOW, { payload: JSON.parse(payload) }).payload, payload);
+      message.payload = text;
     }
   }
   // Negative: text that is not JSON never reaches the column.

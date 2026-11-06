@@ -814,7 +814,7 @@ function jsonColumnText(value: string): string {
 }
 
 /** Rewrite one column value into the proto JSON form of its field. */
-function normalise(field: FieldSchema, column: unknown): unknown {
+function normalise(field: FieldSchema, column: unknown, jsonIsText = false): unknown {
   const raw = column instanceof RawJson && field.kind !== "string" ? column.toJSON() : column;
   if (field.map || field.kind === "message") return raw;
   if (field.repeated) {
@@ -830,7 +830,7 @@ function normalise(field: FieldSchema, column: unknown): unknown {
   }
   if (typeof raw !== "string") return field.kind === "string" ? jsonText(raw) : raw;
   if (field.kind === "string") {
-    if (isJsonColumn(field)) return jsonColumnText(raw);
+    if (isJsonColumn(field)) return jsonIsText ? raw : jsonColumnText(raw);
     const sql = (field.column?.sql_type ?? "").toUpperCase();
     if (sql.startsWith("CHAR(") || sql.startsWith("CHARACTER(")) return raw.replace(/ +$/, "");
     if (sql === "DATE" && raw.length > 10) return raw.slice(0, 10);
@@ -984,6 +984,37 @@ export function decodeRecord<T = Record<string, unknown>>(
   record: UdbRecord,
   schemas: ProtoSchemas = protoSchemas(),
 ): T {
+  return decodeColumns<T>(messageType, record, schemas, false);
+}
+
+/** A message from a row a caller wrote. A string in a JSON column is already its JSON text, so
+ *  text that is not JSON is refused when the message is encoded. */
+export function messageFromRow<T = Record<string, unknown>>(
+  messageType: string,
+  row: UdbRecord,
+  schemas: ProtoSchemas = protoSchemas(),
+): T {
+  return decodeColumns<T>(messageType, row, schemas, true);
+}
+
+/** The row a table returns: a JSON string column holds its JSON text, as a string field does, so
+ *  a row read and written back is unchanged. Other columns keep their stored value. */
+export function rowFromRecord<T = Record<string, unknown>>(
+  messageType: string,
+  record: UdbRecord,
+  schemas: ProtoSchemas = protoSchemas(),
+): T {
+  const row: Record<string, unknown> = { ...record };
+  for (const field of schemas.message(messageType).fields) {
+    const value = row[field.name];
+    if (typeof value === "string" && field.kind === "string" && !field.repeated && isJsonColumn(field)) {
+      row[field.name] = jsonColumnText(value);
+    }
+  }
+  return row as T;
+}
+
+function decodeColumns<T>(messageType: string, record: UdbRecord, schemas: ProtoSchemas, jsonIsText: boolean): T {
   const schema = schemas.message(messageType);
   const out: Record<string, unknown> = {};
   const groups = new Map<string, string>();
@@ -995,7 +1026,7 @@ export function decodeRecord<T = Record<string, unknown>>(
     if (value === "***MASKED***" && (field.masked || field.pii || field.encrypted || field.kind !== "string")) continue;
     let normal: unknown;
     try {
-      normal = normalise(field, value);
+      normal = normalise(field, value, jsonIsText);
     } catch (err) {
       throw new Error(`udb: decode ${messageType}.${field.name}: ${(err as Error).message}`);
     }

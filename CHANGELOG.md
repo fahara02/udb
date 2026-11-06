@@ -15,8 +15,8 @@ release line was tagged.
   and Python, for every kind of value.** A JSON string now reads as `"My"` with its quotes, where
   it read as bare `My`, and a read-modify-write of it works. Writing `"My"` stores the JSON
   string, where the broker refused it, so the extra encoding that got through is no longer
-  needed: it would now store a string containing the quotes. A Python `table_spec_of` row and
-  Go generated entities follow the same rule. Numbers, arrays and objects are unchanged.
+  needed: it would now store a string containing the quotes. A TypeScript `tableOf` row, a Python
+  `table_spec_of` row and Go generated entities follow the same rule. Numbers, arrays and objects are unchanged.
   - detect: code: string fields on `is_json`, `is_jsonb` or `JSON` columns that hold a JSON string,
     and any code that adds or removes a layer of encoding around them
   - fix: remove that code. To get the plain text, parse the field as JSON.

@@ -14,6 +14,8 @@ import {
   decodeEventPayload,
   decodeField,
   decodeRecord,
+  messageFromRow,
+  rowFromRecord,
   encodeEvent,
   encodeField,
   encodeRecord,
@@ -97,6 +99,17 @@ test("a JSON column's text is what a string field reads and writes, for every ki
   // A store that reads JSON as text returns a document unchanged.
   assert.equal(decodeRecord<any>(workflow, { payload: '{"a":1}' }).payload, '{"a":1}');
   assert.equal(decodeRecord<any>(workflow, { payload: "[1]" }).payload, "[1]");
+});
+
+test("a table row holds a JSON string column as its text, and writes it back unchanged", () => {
+  const workflow = "udb.core.workflow.entity.v1.WorkflowInstance";
+  const row = rowFromRecord<any>(workflow, { payload: "My", workflow_type: "My" });
+  assert.equal(row.payload, '"My"');
+  assert.equal(row.workflow_type, "My", "a text column is left alone");
+  assert.deepEqual(rowFromRecord<any>(workflow, { payload: { a: 1 } }).payload, { a: 1 });
+  assert.equal(encodeRecord(workflow, messageFromRow(workflow, { payload: row.payload })).payload, '"My"');
+  // Text a caller wrote is not re-read as a stored value: it must be JSON.
+  assert.throws(() => encodeRecord(workflow, messageFromRow(workflow, { payload: "not json" })), /not JSON/);
 });
 
 test("an unknown field and a wrong value type are refused", () => {

@@ -10,11 +10,12 @@
 // The serde field names are pinned by lane 07's machine-derived golden fixture
 // (`docs/generated/consistency-golden.json`); these interfaces match it exactly.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.consistencyMetadata = exports.ConsistencyMode = void 0;
+exports.consistencyMetadata = exports.ConsistencyMode = exports.SessionFence = exports.READ_FENCE_WAIT_MS = exports.READ_YOUR_WRITES_WINDOW_MS = void 0;
 exports.readFenceFromReceipt = readFenceFromReceipt;
 exports.parseWriteReceipt = parseWriteReceipt;
 exports.receiptFromResponse = receiptFromResponse;
 exports.wasDuplicate = wasDuplicate;
+exports.receiptFromProto = receiptFromProto;
 exports.consistencyToken = consistencyToken;
 exports.withConsistency = withConsistency;
 exports.consistencyContext = consistencyContext;
@@ -91,6 +92,56 @@ function wasDuplicate(resp) {
     const flag = resp.was_duplicate ?? resp.wasDuplicate;
     return flag === true;
 }
+// ── Automatic read-your-writes ──────────────────────────────────────────────
+/** How long after a write its fence rides on reads. */
+exports.READ_YOUR_WRITES_WINDOW_MS = 30_000;
+/** How long a fenced read may wait for its write to land. */
+exports.READ_FENCE_WAIT_MS = 2_000;
+function isEmptyReceipt(r) {
+    return (!r.source_lsn &&
+        !r.outbox_seq &&
+        !(r.projection_task_ids && r.projection_task_ids.length) &&
+        !r.manifest_checksum &&
+        !r.written_at_unix_ms);
+}
+/** Read a typed `udb.entity.v1.WriteReceipt` (for example `TxStatus.write_receipt`). */
+function receiptFromProto(raw) {
+    if (!raw || typeof raw !== "object")
+        return null;
+    return {
+        source_lsn: String(raw.source_lsn ?? ""),
+        outbox_seq: Number(raw.outbox_seq ?? 0),
+        projection_task_ids: Array.isArray(raw.projection_task_ids) ? raw.projection_task_ids : [],
+        manifest_checksum: String(raw.manifest_checksum ?? ""),
+        written_at_unix_ms: Number(raw.written_at_unix_ms ?? 0),
+    };
+}
+/** Keeps the latest write's receipt, so the reads right after it carry a fence and
+ *  see the write even when a replica or a projection serves them. A client holds
+ *  one and every store on that client shares it. */
+class SessionFence {
+    receipt = null;
+    at = 0;
+    /** Keep a mutation response's receipt. A response without one changes nothing. */
+    rememberWrite(response) {
+        this.rememberReceipt(receiptFromResponse(response));
+    }
+    /** Keep a receipt. An empty receipt changes nothing. */
+    rememberReceipt(receipt) {
+        if (!receipt || isEmptyReceipt(receipt))
+            return;
+        this.receipt = receipt;
+        this.at = Date.now();
+    }
+    /** The request-context fields of the latest write's fence; empty when there was
+     *  no write in the window. */
+    readContext() {
+        if (!this.receipt || Date.now() - this.at > exports.READ_YOUR_WRITES_WINDOW_MS)
+            return {};
+        return readFenceContext(readFenceFromReceipt(this.receipt, exports.READ_FENCE_WAIT_MS));
+    }
+}
+exports.SessionFence = SessionFence;
 /** Friendly, discoverable consistency-mode constants (token-valued, so
  *  `ConsistencyMode.Strong === "strong"`). Pass any of these — or a friendly
  *  alias like `"read-your-writes"` / `"bounded"` — to {@link withConsistency} /
