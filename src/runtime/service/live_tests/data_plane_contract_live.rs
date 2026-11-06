@@ -796,6 +796,30 @@ live!(a_json_key_filter_finds_the_row_live, {
     fx.finish().await;
 });
 
+live!(an_array_column_filters_by_containment_live, {
+    let fx = fixture!(", tags TEXT[]", vec![typed("tags", "TEXT[]")]);
+    fx.upsert("a", json!({"tags": ["x", "y"]}))
+        .await
+        .expect("a");
+    fx.upsert("b", json!({"tags": ["z"]})).await.expect("b");
+    let rows = select(&fx, json!({"tags": {"$contains": ["x"]}}))
+        .await
+        .expect("$contains on an array");
+    assert_eq!(rows.records_json.len(), 1);
+    fx.finish().await;
+});
+
+live!(a_json_column_filters_by_containment_live, {
+    let fx = fixture!(", doc JSONB", vec![typed("doc", "JSONB")]);
+    fx.upsert("a", json!({"doc": {"k": 1}})).await.expect("a");
+    fx.upsert("b", json!({"doc": {"k": 2}})).await.expect("b");
+    let rows = select(&fx, json!({"doc": {"$contains": {"k": 1}}}))
+        .await
+        .expect("$contains on JSONB");
+    assert_eq!(rows.records_json.len(), 1);
+    fx.finish().await;
+});
+
 live!(typed_columns_compare_with_a_text_value_live, {
     let fx = fixture!(
         ", t TIME, iv INTERVAL, ip INET",
@@ -1202,3 +1226,265 @@ impl RowCount for crate::proto::RecordSet {
         self.records_json.len()
     }
 }
+
+// ── Replays, totals and routing ────────────────────────────────────────────
+
+live!(a_replayed_bulk_cas_returns_its_per_item_results_live, {
+    let fx = fixture!(", note TEXT", vec![typed("note", "TEXT")]);
+    fx.upsert("a", json!({"note": "old"})).await.expect("seed");
+    let key = format!("bulk-{}", Uuid::new_v4());
+    let request = || crate::proto::BulkCasRequest {
+        message_type: MSG.to_string(),
+        idempotency_key: key.clone(),
+        items: vec![
+            crate::proto::BulkCasItem {
+                filter: json_to_struct(&json!({"id": "a", "tenant_id": fx.tenant})),
+                changes: json_to_struct(&json!({"note": "new"})),
+                expected: json_to_struct(&json!({"note": "old"})),
+                ..Default::default()
+            },
+            crate::proto::BulkCasItem {
+                filter: json_to_struct(&json!({"id": "missing", "tenant_id": fx.tenant})),
+                changes: json_to_struct(&json!({"note": "new"})),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    let first = fx
+        .svc
+        .bulk_cas(with_ctx(request(), &fx.tenant))
+        .await
+        .expect("the batch")
+        .into_inner();
+    let replay = fx
+        .svc
+        .bulk_cas(with_ctx(request(), &fx.tenant))
+        .await
+        .expect("the replay")
+        .into_inner();
+    assert_eq!(first.results.len(), 2);
+    assert_eq!(replay.results, first.results, "the replay lost its results");
+    assert_eq!(replay.changed, first.changed);
+    fx.finish().await;
+});
+
+live!(select_v2_reports_the_total_and_the_next_page_live, {
+    use futures::StreamExt;
+    let fx = fixture!(", note TEXT", vec![typed("note", "TEXT")]);
+    for id in ["a", "b", "c"] {
+        fx.upsert(id, json!({"note": "x"})).await.expect("seed");
+    }
+    let mut batches = fx
+        .svc
+        .select_v2(with_ctx(
+            crate::proto::SelectRequest {
+                message_type: MSG.to_string(),
+                limit: 2,
+                include_total: true,
+                ..Default::default()
+            },
+            &fx.tenant,
+        ))
+        .await
+        .expect("SelectV2")
+        .into_inner();
+    let batch = batches.next().await.expect("a batch").expect("no error");
+    assert_eq!(batch.row_count, 2);
+    assert_eq!(batch.total_count, 3, "the total counts every match");
+    assert!(!batch.next_page_token.is_empty(), "there is a next page");
+    fx.finish().await;
+});
+
+live!(
+    routing_policy_primary_reads_the_primary_while_eventual_reads_a_replica_live,
+    {
+        let fx = fixture!(", note TEXT", vec![typed("note", "TEXT")]);
+        fx.upsert("a", json!({"note": "on primary"}))
+            .await
+            .expect("seed");
+        // A second database stands in for a replica: the same table, holding another value.
+        let dsn = dp_live_pg_dsn().expect("dsn");
+        let database = format!("udb_ct_replica_{}", Uuid::new_v4().simple());
+        sqlx::raw_sql(&format!("CREATE DATABASE \"{database}\""))
+            .execute(&fx.pool)
+            .await
+            .expect("a database for the replica");
+        let (base, _) = dsn.rsplit_once('/').expect("a DSN with a database");
+        let replica_dsn = format!("{base}/{database}");
+        let replica = dp_pool(&replica_dsn).await;
+        sqlx::raw_sql(&format!(
+            "CREATE SCHEMA \"{schema}\"; \
+         CREATE TABLE \"{schema}\".rows (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, note TEXT); \
+         INSERT INTO \"{schema}\".rows VALUES ('a', '{tenant}', 'on replica')",
+            schema = fx.schema,
+            tenant = fx.tenant,
+        ))
+        .execute(&replica)
+        .await
+        .expect("the replica's copy");
+        let svc = super::data_plane_live::dp_service_with(&dsn, fx.manifest.clone(), |cfg| {
+            cfg.pg_replica_dsns = vec![replica_dsn.clone()];
+            cfg.pg_replica_fail_open = true;
+        })
+        .await;
+        let read = |routing: &'static str| {
+            let svc = &svc;
+            let tenant = fx.tenant.clone();
+            async move {
+                let set = svc
+                    .select(with_ctx(
+                        crate::proto::SelectRequest {
+                            context: Some(crate::proto::RequestContext {
+                                tenant_id: tenant.clone(),
+                                consistency: "eventual".to_string(),
+                                eventual_consistency_allowed: true,
+                                routing_policy: routing.to_string(),
+                                ..Default::default()
+                            }),
+                            message_type: MSG.to_string(),
+                            filter: json_to_struct(&json!({"id": "a"})),
+                            ..Default::default()
+                        },
+                        &tenant,
+                    ))
+                    .await
+                    .expect("a read")
+                    .into_inner();
+                let row: serde_json::Value =
+                    serde_json::from_slice(&set.records_json[0]).expect("a JSON row");
+                row["note"].as_str().unwrap_or_default().to_string()
+            }
+        };
+        assert_eq!(read("").await, "on replica");
+        assert_eq!(read("primary").await, "on primary");
+        drop(svc);
+        replica.close().await;
+        let _ = sqlx::raw_sql(&format!("DROP DATABASE \"{database}\" WITH (FORCE)"))
+            .execute(&fx.pool)
+            .await;
+        fx.finish().await;
+    }
+);
+
+// ── Audited cross-tenant reads ─────────────────────────────────────────────
+
+fn cross_tenant_request(target: &str, reason: &str) -> Request<crate::proto::SelectRequest> {
+    let mut request = Request::new(crate::proto::SelectRequest {
+        message_type: MSG.to_string(),
+        limit: 10,
+        ..Default::default()
+    });
+    let metadata = request.metadata_mut();
+    metadata.insert("x-tenant-id", Uuid::new_v4().to_string().parse().unwrap());
+    metadata.insert("x-purpose", "admin".parse().unwrap());
+    metadata.insert(
+        "x-scopes",
+        "udb:admin,udb:read,udb:cross_tenant:read".parse().unwrap(),
+    );
+    metadata.insert(
+        crate::runtime::service::cross_tenant_read::TARGET_HEADER,
+        target.parse().unwrap(),
+    );
+    metadata.insert(
+        crate::runtime::service::cross_tenant_read::REASON_HEADER,
+        reason.parse().unwrap(),
+    );
+    request
+}
+
+live!(
+    a_platform_operator_reads_one_other_tenant_and_the_read_is_on_record_live,
+    {
+        use crate::runtime::service::method_security::{
+            scope_claim_context_for_test, test_claim_context,
+        };
+        let fx = fixture!(", note TEXT", vec![typed("note", "TEXT")]);
+        fx.upsert("mine", json!({"note": "theirs"}))
+            .await
+            .expect("seed");
+        let other = Uuid::new_v4().to_string();
+        served_upsert(
+            &fx.svc,
+            &other,
+            MSG,
+            json!({"id": "elsewhere", "tenant_id": other, "note": "not this tenant"}),
+            "",
+        )
+        .await
+        .expect("another tenant's row");
+        let reason = format!("ticket {}", Uuid::new_v4());
+        let operator = test_claim_context(
+            "ops",
+            "",
+            "",
+            &["udb:platform_admin", "udb:admin", "udb:cross_tenant:read"],
+            &[],
+        );
+        let set = scope_claim_context_for_test(
+            operator,
+            fx.svc.select(cross_tenant_request(&fx.tenant, &reason)),
+        )
+        .await
+        .expect("an operator's read")
+        .into_inner();
+        assert_eq!(set.records_json.len(), 1, "only the named tenant's rows");
+        let row: serde_json::Value = serde_json::from_slice(&set.records_json[0]).unwrap();
+        assert_eq!(row["id"], "mine");
+        let recorded: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM udb_system.auth_audit_log \
+         WHERE event_type = 'udb.data.cross_tenant_read' AND outcome = 'allowed' \
+         AND envelope ->> 'reason' = $1 AND envelope ->> 'target_tenant' = $2",
+        )
+        .bind(&reason)
+        .bind(&fx.tenant)
+        .fetch_one(&fx.pool)
+        .await
+        .expect("the audit log");
+        assert_eq!(recorded, 1, "the read is on record");
+
+        // Authority alone, without the scope.
+        let plain_admin = test_claim_context("ops", "", "", &["udb:platform_admin"], &[]);
+        let refused = scope_claim_context_for_test(
+            plain_admin,
+            fx.svc.select(cross_tenant_request(&fx.tenant, &reason)),
+        )
+        .await
+        .expect_err("the scope is required");
+        assert_eq!(refused.code(), Code::PermissionDenied);
+        // The scope alone, on a tenant-bound credential.
+        let tenant_user = test_claim_context("user", &other, "", &["udb:cross_tenant:read"], &[]);
+        let refused = scope_claim_context_for_test(
+            tenant_user,
+            fx.svc.select(cross_tenant_request(&fx.tenant, &reason)),
+        )
+        .await
+        .expect_err("platform authority is required");
+        assert_eq!(refused.code(), Code::PermissionDenied);
+        // Metadata cannot stand in for a verified credential.
+        let refused = fx
+            .svc
+            .select(cross_tenant_request(&fx.tenant, &reason))
+            .await
+            .expect_err("a verified credential is required");
+        assert_eq!(refused.code(), Code::PermissionDenied);
+        let denied: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM udb_system.auth_audit_log \
+         WHERE event_type = 'udb.data.cross_tenant_read' AND outcome = 'denied' \
+         AND envelope ->> 'reason' = $1",
+        )
+        .bind(&reason)
+        .fetch_one(&fx.pool)
+        .await
+        .expect("the audit log");
+        assert_eq!(denied, 3, "every refused attempt is on record");
+        let _ = sqlx::query(&format!(
+            "DELETE FROM \"{}\".rows WHERE tenant_id = $1",
+            fx.schema
+        ))
+        .bind(&other)
+        .execute(&fx.pool)
+        .await;
+        fx.finish().await;
+    }
+);

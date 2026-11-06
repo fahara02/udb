@@ -41,13 +41,26 @@ func Bool(fd protoreflect.FieldDescriptor, extension protoreflect.ExtensionType)
 	return value
 }
 
-// Masked follows the runtime's merged column-security annotations. A secret
-// classification alone does not mask; output-view and redaction rules do.
+// Masked follows the runtime's merged column-security annotations: output-view and
+// redaction rules mask, and so does a secret or personal classification unless the
+// output view says public.
 func Masked(fd protoreflect.FieldDescriptor) bool {
 	legacy := LegacyColumnSecurity(fd)
 	security := ColumnSecurity(fd)
 	view := security.GetOutputView()
 	redaction := security.GetRedactionStrategy()
+	switch security.GetSecretClassification() {
+	case commonv1.SecretClassification_SECRET_CLASSIFICATION_CREDENTIAL,
+		commonv1.SecretClassification_SECRET_CLASSIFICATION_TOKEN,
+		commonv1.SecretClassification_SECRET_CLASSIFICATION_KEY,
+		commonv1.SecretClassification_SECRET_CLASSIFICATION_PRIVATE_KEY,
+		commonv1.SecretClassification_SECRET_CLASSIFICATION_BIOMETRIC,
+		commonv1.SecretClassification_SECRET_CLASSIFICATION_IDENTITY,
+		commonv1.SecretClassification_SECRET_CLASSIFICATION_PII:
+		if view != commonv1.OutputView_OUTPUT_VIEW_PUBLIC {
+			return true
+		}
+	}
 	return legacy.GetIsPii() || legacy.GetMaskInLogs() ||
 		Bool(fd, commonv1.E_Pii) || Bool(fd, commonv1.E_LogMasked) ||
 		Bool(fd, commonv1.E_LogRedacted) || Bool(fd, commonv1.E_Sensitive) ||

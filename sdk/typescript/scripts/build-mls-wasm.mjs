@@ -55,3 +55,8 @@ const wasm = path.join(targetDir, "wasm32-unknown-unknown", "release", "udb_mls_
 fs.rmSync(out, { recursive: true, force: true });
 execFileSync("wasm-bindgen", ["--target", "nodejs", "--out-dir", out, wasm], { stdio: "inherit" });
 console.log(`build-mls-wasm: wrote ${path.relative(repo, out)}`);
+// The browser build: an ES module with an initializer, which `mlsWeb.ts` takes from its caller.
+const webOut = path.join(pkg, "mls-wasm-web");
+fs.rmSync(webOut, { recursive: true, force: true });
+execFileSync("wasm-bindgen", ["--target", "web", "--out-dir", webOut, wasm], { stdio: "inherit" });
+console.log(`build-mls-wasm: wrote ${path.relative(repo, webOut)}`);

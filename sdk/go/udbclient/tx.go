@@ -70,6 +70,12 @@ func (u *Udb) runTx(ctx context.Context, replayKey string, fn func(tx *TxScope) 
 	if len(tx.muts) == 0 {
 		return nil
 	}
+	// A transaction ends, unlike a subscription, so the call deadline bounds it.
+	if u.Generated != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = u.Generated.withDeadline(ctx)
+		defer cancel()
+	}
 	stream, err := u.Data.Broker.BeginTx(ctx)
 	if err != nil {
 		return classify(err)

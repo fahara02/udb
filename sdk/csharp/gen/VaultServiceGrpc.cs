@@ -67,6 +67,10 @@ namespace Udb.Core.Vault.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.GetSecretResponse> __Marshaller_udb_core_vault_services_v1_GetSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.GetSecretResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest> __Marshaller_udb_core_vault_services_v1_LeaseOAuthTokenRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse> __Marshaller_udb_core_vault_services_v1_LeaseOAuthTokenResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.ListSecretsRequest> __Marshaller_udb_core_vault_services_v1_ListSecretsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.ListSecretsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Vault.Services.V1.ListSecretsResponse> __Marshaller_udb_core_vault_services_v1_ListSecretsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Vault.Services.V1.ListSecretsResponse.Parser));
@@ -162,6 +166,14 @@ namespace Udb.Core.Vault.Services.V1 {
         "GetSecret",
         __Marshaller_udb_core_vault_services_v1_GetSecretRequest,
         __Marshaller_udb_core_vault_services_v1_GetSecretResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest, global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse> __Method_LeaseOAuthToken = new grpc::Method<global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest, global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "LeaseOAuthToken",
+        __Marshaller_udb_core_vault_services_v1_LeaseOAuthTokenRequest,
+        __Marshaller_udb_core_vault_services_v1_LeaseOAuthTokenResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Core.Vault.Services.V1.ListSecretsRequest, global::Udb.Core.Vault.Services.V1.ListSecretsResponse> __Method_ListSecrets = new grpc::Method<global::Udb.Core.Vault.Services.V1.ListSecretsRequest, global::Udb.Core.Vault.Services.V1.ListSecretsResponse>(
@@ -355,6 +367,22 @@ namespace Udb.Core.Vault.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.GetSecretResponse> GetSecret(global::Udb.Core.Vault.Services.V1.GetSecretRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// A usable access token for the OAuth credential stored as a secret. The secret's value is
+      /// JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+      /// credentials grant), with optional scope. The broker refreshes the token when it has fewer
+      /// than min_valid_seconds left, stores the result as a new secret version, including a rotated
+      /// refresh token, and lets only one caller refresh at a time across replicas.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse> LeaseOAuthToken(global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -772,6 +800,70 @@ namespace Udb.Core.Vault.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.GetSecretResponse> GetSecretAsync(global::Udb.Core.Vault.Services.V1.GetSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_GetSecret, null, options, request);
+      }
+      /// <summary>
+      /// A usable access token for the OAuth credential stored as a secret. The secret's value is
+      /// JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+      /// credentials grant), with optional scope. The broker refreshes the token when it has fewer
+      /// than min_valid_seconds left, stores the result as a new secret version, including a rotated
+      /// refresh token, and lets only one caller refresh at a time across replicas.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse LeaseOAuthToken(global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return LeaseOAuthToken(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// A usable access token for the OAuth credential stored as a secret. The secret's value is
+      /// JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+      /// credentials grant), with optional scope. The broker refreshes the token when it has fewer
+      /// than min_valid_seconds left, stores the result as a new secret version, including a rotated
+      /// refresh token, and lets only one caller refresh at a time across replicas.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse LeaseOAuthToken(global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_LeaseOAuthToken, null, options, request);
+      }
+      /// <summary>
+      /// A usable access token for the OAuth credential stored as a secret. The secret's value is
+      /// JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+      /// credentials grant), with optional scope. The broker refreshes the token when it has fewer
+      /// than min_valid_seconds left, stores the result as a new secret version, including a rotated
+      /// refresh token, and lets only one caller refresh at a time across replicas.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse> LeaseOAuthTokenAsync(global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return LeaseOAuthTokenAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// A usable access token for the OAuth credential stored as a secret. The secret's value is
+      /// JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+      /// credentials grant), with optional scope. The broker refreshes the token when it has fewer
+      /// than min_valid_seconds left, stores the result as a new secret version, including a rotated
+      /// refresh token, and lets only one caller refresh at a time across replicas.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse> LeaseOAuthTokenAsync(global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_LeaseOAuthToken, null, options, request);
       }
       /// <summary>
       /// List secret paths under an optional prefix. Returns metadata only — NEVER
@@ -1913,6 +2005,7 @@ namespace Udb.Core.Vault.Services.V1 {
       return grpc::ServerServiceDefinition.CreateBuilder()
           .AddMethod(__Method_PutSecret, serviceImpl.PutSecret)
           .AddMethod(__Method_GetSecret, serviceImpl.GetSecret)
+          .AddMethod(__Method_LeaseOAuthToken, serviceImpl.LeaseOAuthToken)
           .AddMethod(__Method_ListSecrets, serviceImpl.ListSecrets)
           .AddMethod(__Method_DeleteSecret, serviceImpl.DeleteSecret)
           .AddMethod(__Method_UndeleteSecret, serviceImpl.UndeleteSecret)
@@ -1944,6 +2037,7 @@ namespace Udb.Core.Vault.Services.V1 {
     {
       serviceBinder.AddMethod(__Method_PutSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.PutSecretRequest, global::Udb.Core.Vault.Services.V1.PutSecretResponse>(serviceImpl.PutSecret));
       serviceBinder.AddMethod(__Method_GetSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.GetSecretRequest, global::Udb.Core.Vault.Services.V1.GetSecretResponse>(serviceImpl.GetSecret));
+      serviceBinder.AddMethod(__Method_LeaseOAuthToken, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenRequest, global::Udb.Core.Vault.Services.V1.LeaseOAuthTokenResponse>(serviceImpl.LeaseOAuthToken));
       serviceBinder.AddMethod(__Method_ListSecrets, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.ListSecretsRequest, global::Udb.Core.Vault.Services.V1.ListSecretsResponse>(serviceImpl.ListSecrets));
       serviceBinder.AddMethod(__Method_DeleteSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.DeleteSecretRequest, global::Udb.Core.Vault.Services.V1.DeleteSecretResponse>(serviceImpl.DeleteSecret));
       serviceBinder.AddMethod(__Method_UndeleteSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Vault.Services.V1.UndeleteSecretRequest, global::Udb.Core.Vault.Services.V1.UndeleteSecretResponse>(serviceImpl.UndeleteSecret));

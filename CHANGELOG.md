@@ -7,8 +7,41 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.8] - 2026-11-06
+
 ### Breaking for callers
 
+- **A column changing how the database fills it no longer stops startup; it asks for review.**
+  `UDB_ACK_MANUAL_BACKEND_RECONCILIATION` no longer applies to these changes. A column becoming
+  generated has its stored values replaced by the expression.
+  - detect: run: `udb plan --prior <manifest>` after proto changes to generation, primary keys or partitioning
+  - fix: approve the plan, or revert the proto change.
+- **Neo4j reports a constraint it could not create.** Any error used to downgrade to a
+  non-unique index and report success, including duplicate data.
+  - detect: run: startup logs on a Neo4j store holding duplicate ids
+  - fix: remove the duplicates.
+- **A proto option with a key it does not have is refused when the proto is parsed.** A typo
+  such as `not_nul: true` was ignored, and the column was built without it. Free-form
+  `data_store` options and options of other namespaces are not checked.
+  - detect: run: `udb check` on your protos
+  - fix: correct the key; the message lists the keys the option accepts.
+- **`(column_security)` now takes effect, so columns declared with it change behaviour.** Every
+  field of it was ignored: `is_pii` did not mask, and `is_encrypted` stored clear text.
+  `secret_classification` of `PII`, `IDENTITY`, `BIOMETRIC`, `CREDENTIAL`, `TOKEN`, `KEY` or
+  `PRIVATE_KEY` now masks a column on its own, unless `output_view` is `OUTPUT_VIEW_PUBLIC`.
+  - detect: code: `column_security` and `secret_classification` in your protos
+  - fix: read those columns with `udb:pii:read`. Rows already in a column newly marked
+    `is_encrypted` stay in clear until rewritten through the broker, and a lookup by value does
+    not find them until then.
+- **A range `Delete` emits one change event and one projection task per removed row,** each
+  carrying the row's primary key and scope. It used to emit one, carrying the filter, so the
+  projected copies stayed behind.
+  - detect: code: consumers counting events per `Delete`, or reading filter fields from one
+  - fix: expect one event per row, and read the key columns.
+- **`Tx` in Go and TypeScript is bounded by the client's call deadline** when the context or
+  call sets none. It could wait forever.
+  - detect: code: long transactions on a client with `Deadline` set
+  - fix: pass a longer deadline for that transaction.
 - **A written or filtered value is stored exactly or refused, on every verb.** `Upsert`,
   `Insert`, `Update`, `BeginTx` and every filter now share one rule, and these return
   `INVALID_ARGUMENT` instead of being changed:
@@ -20,7 +53,7 @@ release line was tagged.
   - `""` for a date, time, timestamp, UUID, network, geography or numeric column (it became
     NULL, or `= NULL` in a filter). Send null to clear;
   - a null element in an array column (Update wrote `""` or `false`);
-  - the redaction placeholder `***MASKED***` for any column.
+  - the redaction placeholder `***MASKED***` for a PII, masked or encrypted column.
   - detect: code: writes that send `""`, a stringified boolean or a large number as a double
   - fix: send the real value, or null.
 - **`Update` refuses a column marked `exclude_from_update` or generated.** It used to write
@@ -120,6 +153,23 @@ release line was tagged.
 
 ### Added
 
+- **Audited cross-tenant reads.** A credential with platform authority and the
+  `udb:cross_tenant:read` scope can `Select` one named tenant with `x-udb-cross-tenant-target`
+  and `x-udb-cross-tenant-reason`, through `WithCrossTenantRead` in Go, `crossTenantRead` in
+  TypeScript and `Metadata.cross_tenant_read` in Python. The record commits to
+  `udb_system.auth_audit_log` before any row is read, and refused attempts are recorded too.
+- **`VaultService.LeaseOAuthToken`.** Store an OAuth credential as a secret, and the broker
+  returns a usable access token, refreshes it when it is about to expire, and keeps a rotated
+  refresh token. One caller refreshes at a time across replicas. The token URL must be public
+  https.
+- **MLS in the browser.** The npm package ships `mls-wasm-web/` and `@udb_plus/sdk/mls-web`: load
+  the module, and keep a device's keys in IndexedDB, sealed under a key script cannot read out.
+  The application carries the ciphertext.
+- **Schema changes UDB used to refuse are applied, after review.** A primary key change, a
+  column becoming generated or identity, a derived index, and a table entering, leaving or
+  changing partitioning. A rebuild copies the rows and keeps the previous table as
+  `<table>__pre_repartition`, and a table other tables reference is refused.
+- **A MongoDB collection's declared validator is installed.** It was dropped with a warning.
 - **LiveQuery serves application tables** from the project's active catalog. It served native
   entities only, so `liveQuery` in the SDKs failed for every application table.
 - **Retry-safe writes in every SDK.** `WithWriteKey` on Go `Table`, `idempotencyKey` on
@@ -133,6 +183,24 @@ release line was tagged.
 
 ### Fixed
 
+- **Enum values keep their declared order in new types.** They were sorted, which changed how
+  PostgreSQL sorts them. A value failing SQL safety validation now stops the migration, instead of
+  leaving the type without it.
+- **Without pg_partman a partitioned table gets its coming periods and a warning.** It got one
+  period, and writes failed when that ran out.
+- **Dropping a Neo4j store removes constraints on a custom property.**
+- **SDKs read a masked column as unset.** A masked `INT` or `DATE` failed the whole row, and a
+  masked string was kept as data. A full-row write leaves an unset masked column alone, as it
+  does a PII one. Text in a column nothing masks stays a value, even `***MASKED***`.
+- **A `data_store`'s `options` map is kept.** Its entries were dropped.
+- **`db_column_security` `tenant_field` and `project_field` name the scope columns.** They were
+  ignored.
+- **A broker reply with rows but no `records_json` is an error in Go and TypeScript,** as in
+  Python. It read as an empty result. TypeScript also refuses a row that is not an object.
+- **Generated Go mappers read `NaN`, `Infinity` and numbers sent as text.**
+- **`updateWithRetry` with `attempts` of 0 or less uses the default in TypeScript `Entity`,** as
+  in Go and Python. It gave up without trying.
+- **LiveQuery reports a cut snapshot of a native entity** through `row_count`.
 - **Every column type reads and writes.** `TIME`, `TIMETZ`, `INTERVAL`, `MONEY`, `BIT`,
   `XML` and `TSVECTOR` read as hex of their wire form and now read as PostgreSQL's text.
   Writes of `TIME`, `TIMETZ`, `INTERVAL`, custom enums and `BYTEA` work on every verb, as do

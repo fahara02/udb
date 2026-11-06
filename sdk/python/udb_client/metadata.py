@@ -173,6 +173,9 @@ class Metadata:
     trace_id: str = ""
     bearer_token: str = ""
     api_key: str = ""
+    #: Set by :meth:`cross_tenant_read`.
+    cross_tenant_target: str = ""
+    cross_tenant_reason: str = ""
 
     @classmethod
     def from_env(
@@ -217,6 +220,12 @@ class Metadata:
             api_key=env("API_KEY"),
         )
 
+    def cross_tenant_read(self, tenant: str, reason: str) -> "Metadata":
+        """This metadata making a Select read ``tenant``'s rows instead of the caller's. The
+        credential needs platform authority and the ``udb:cross_tenant:read`` scope, and the
+        broker records ``reason`` in the durable audit log before it reads."""
+        return replace(self, cross_tenant_target=tenant, cross_tenant_reason=reason)
+
     def to_grpc_metadata(self) -> tuple[tuple[str, str], ...]:
         # §13: native RPCs require a request context (x-request-id /
         # x-correlation-id / traceparent) and fail closed without one. Always
@@ -243,6 +252,8 @@ class Metadata:
         if self.api_key:
             headers.append(("x-api-key", self.api_key))
         optional = {
+            "x-udb-cross-tenant-target": self.cross_tenant_target,
+            "x-udb-cross-tenant-reason": self.cross_tenant_reason,
             "x-udb-consistency": self.consistency,
             "x-udb-target-backend": self.target_backend,
             "x-udb-target-instance": self.target_instance,

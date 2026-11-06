@@ -60,6 +60,7 @@ mod asset_service;
 // `events::ComplianceEnvelope` + `build_native_compliance_envelope` instead of
 // defining a parallel evidence envelope. Only widens visibility within the crate.
 pub(crate) mod auth_service;
+pub(crate) mod cross_tenant_read;
 // Phase 9.10: native BackupService — tenant-level logical backup and restore.
 // The leader wires `build_backup_service` + `add_service(backup_service::
 // BackupServiceServer::new(...))` in `serve()`, mirroring `tenant_service`/

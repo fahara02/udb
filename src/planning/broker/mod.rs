@@ -2744,7 +2744,8 @@ fn compile_column_predicate(
             // GAP 6: JSONB containment / array overlap — bind value as JSONB/array cast
             if matches!(sql_op, "@>" | "<@") {
                 parameter_columns.push(column.to_string());
-                parts.push(format!("{} {} ${}::jsonb", qi(column), sql_op, next_param));
+                // The value binds as this column's own type, JSON or array.
+                parts.push(format!("{} {} ${}", qi(column), sql_op, next_param));
                 next_param += 1;
                 continue;
             }

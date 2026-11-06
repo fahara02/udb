@@ -716,7 +716,8 @@ jobs:
       UDB_SAGA_RECOVERY_ENABLED: "false"
       UDB_STARTUP_FORCE_SYNC: "true"
       UDB_STARTUP_DRY_RUN: "true"
-      UDB_AUDIT_SINK_URL: file:///tmp/udb-audit.jsonl
+      UDB_AUDIT_SINK: postgres
+      UDB_AUDIT_PG_TABLE: public.udb_audit_log
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -1366,7 +1367,8 @@ jobs:
       UDB_SESSION_ENABLED: "true"
       UDB_SESSION_HASH_SECRET: ci-messaging-session-hash-secret
       UDB_PASSWORD_HASH_SECRET: ci-messaging-password-hash-secret
-      UDB_AUDIT_SINK_URL: file:///tmp/udb-messaging-audit.jsonl
+      UDB_AUDIT_SINK: postgres
+      UDB_AUDIT_PG_TABLE: public.udb_audit_log
     steps:
       - uses: actions/checkout@v4
       - name: Download broker binary
@@ -1429,6 +1431,12 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build:mls-wasm
           UDB_RUST_MESSAGING_PEER="${GITHUB_WORKSPACE}/sdk/rust/target/debug/examples/messaging_peer" npm run test:mls
+      - name: MLS web build in a real browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd sdk/typescript && npm run --silent build)
+          node scripts/mls_web_browser_smoke.mjs "$(command -v google-chrome)"
       - name: Upload messaging live diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -1496,7 +1504,8 @@ jobs:
       UDB_SESSION_ENABLED: "true"
       UDB_SESSION_HASH_SECRET: ci-refresh-rotation-session-hash-secret
       UDB_PASSWORD_HASH_SECRET: ci-refresh-rotation-password-hash-secret
-      UDB_AUDIT_SINK_URL: file:///tmp/udb-refresh-rotation-audit.jsonl
+      UDB_AUDIT_SINK: postgres
+      UDB_AUDIT_PG_TABLE: public.udb_audit_log
       # Every SDK suite in this job logs in from one address.
       UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_PER_MINUTE: "6000"
     steps:
@@ -1610,6 +1619,24 @@ jobs:
       - name: Rust SDK refresh rotation
         working-directory: sdk/rust
         run: cargo test --test live_refresh_rotation -- --nocapture
+      - name: PHP SDK data contract
+        working-directory: sdk/php
+        run: vendor/bin/pest tests/Live/DataContractTest.php
+      - name: C# SDK data contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet test sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj \
+            --filter 'FullyQualifiedName~LiveDataContractTests' \
+            --logger 'trx;LogFileName=data-contract.trx' \
+            --results-directory /tmp/csharp-data-contract
+          grep -q 'total="1" executed="1" passed="1"' /tmp/csharp-data-contract/data-contract.trx
+      - name: Java SDK data contract
+        working-directory: sdk/java
+        run: mvn -B -ntp -Dtest=LiveDataContractTest test
+      - name: Rust SDK data contract
+        working-directory: sdk/rust
+        run: cargo test --test live_data_contract -- --nocapture
       - name: Upload refresh-rotation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -1689,7 +1716,8 @@ jobs:
       UDB_SESSION_ENABLED: "true"
       UDB_SESSION_HASH_SECRET: ci-service-accounts-session-hash-secret
       UDB_PASSWORD_HASH_SECRET: ci-service-accounts-password-hash-secret
-      UDB_AUDIT_SINK_URL: file:///tmp/udb-service-accounts-audit.jsonl
+      UDB_AUDIT_SINK: postgres
+      UDB_AUDIT_PG_TABLE: public.udb_audit_log
       UDB_OTP_DEV_ECHO: "1"
       UDB_OTP_COOLDOWN_SECONDS: "0"
       # A phone-only CreateUser needs a real SMS route. This webhook is the

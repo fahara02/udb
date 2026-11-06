@@ -190,6 +190,9 @@ func (t *Table[T]) selectRecords(ctx context.Context, where Filter, opts SelectO
 		Total:    res.GetExactTotal(),
 		Redacted: res.GetRedactedFields(),
 	}
+	if len(res.GetRecordsJson()) == 0 && len(res.GetRows()) > 0 {
+		return TablePage[T]{}, nil, fmt.Errorf("udb: decode %s: the broker sent %d row(s) without records_json", t.messageType, len(res.GetRows()))
+	}
 	records := make([]Record, 0, len(res.GetRecordsJson()))
 	for _, raw := range res.GetRecordsJson() {
 		row, err := t.decode(raw)

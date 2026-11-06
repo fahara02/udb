@@ -1035,6 +1035,9 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	}
 	fix.set("vault_secret_path", "app/config-"+suffix)
 	fix.set("vault_put_secret_path", "app/put-"+suffix)
+	fix.set("vault_oauth_secret_path", "app/oauth-"+suffix)
+	// A token valid for decades, so the measured lease reaches no provider.
+	_, _ = vault.PutSecret(nctx, &vaultpb.PutSecretRequest{TenantId: tenant, SecretPath: fix.m["vault_oauth_secret_path"], SecretValue: "{\"token_url\":\"https://oauth.example.com/token\",\"client_id\":\"perf\",\"access_token\":\"perf-token\",\"expires_at_unix\":4102444800}", ExpectedVersion: 0, MetadataJson: "{}"})
 	fix.set("vault_delete_secret_path", "app/delete-"+suffix)
 	fix.set("vault_destroy_secret_path", "app/destroy-"+suffix)
 	_, _ = vault.PutSecret(nctx, &vaultpb.PutSecretRequest{TenantId: tenant, SecretPath: fix.m["vault_secret_path"], SecretValue: "perf-secret", ExpectedVersion: 0, MetadataJson: "{}"})

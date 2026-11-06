@@ -7,13 +7,13 @@ use crate::ast::{
 
 use super::naming::{infer_sql_type, to_plural, to_snake_case};
 use super::options::{
-    OptionKind, OptionValue, apply_column_security_scalar_option, apply_column_security_values,
-    apply_column_value, apply_column_values, apply_db_column_security_values,
+    OptionKind, OptionValue, accepted_option_keys, apply_column_security_block,
+    apply_column_security_scalar_option, apply_column_value, apply_column_values,
     apply_schema_security_values, apply_table_security_values, apply_table_values,
     cache_from_values, column_store_from_values, document_store_from_values,
     foreign_key_from_reference, generic_store_from_values, graph_from_values,
-    is_numeric_annotation_key, model_registry_from_values, option_kind, storage_from_values,
-    timeseries_from_values, vector_from_values,
+    is_numeric_annotation_key, model_registry_from_values, option_accepts_key, option_kind,
+    storage_from_values, timeseries_from_values, vector_from_values,
 };
 use super::paths::{resolve_migration_dir, resolve_schema_from_path};
 use super::structure::{matches_nested_block, matches_top_level_block};
@@ -67,6 +67,19 @@ impl<'a> ProtoParser<'a> {
 
     pub(super) fn parse_report(&mut self) -> Result<ParseReport, ParseError> {
         let schemas = self.parse_schemas()?;
+        // In every mode: the declaration asked for something the schema will not have.
+        if let Some(diagnostic) = self
+            .diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.code == UNKNOWN_OPTION_KEY)
+        {
+            return Err(ParseError::Syntax {
+                file: diagnostic.file.clone(),
+                line: diagnostic.line,
+                column: diagnostic.column,
+                message: format!("[{}]: {}", diagnostic.code, diagnostic.message),
+            });
+        }
         if self.config.annotation_mode == AnnotationParserMode::Strict
             && let Some(diagnostic) = self
                 .diagnostics
@@ -387,6 +400,7 @@ impl<'a> ProtoParser<'a> {
             return;
         }
         let values = self.parse_option_block(&option_name);
+        self.refuse_unknown_option_keys(&span, &option_name, kind, values.keys());
         match kind {
             OptionKind::Table => {
                 schema.is_table = true;
@@ -666,16 +680,16 @@ impl<'a> ProtoParser<'a> {
             }
             if self.cur().kind == TokenKind::LBrace {
                 let values = self.parse_option_block(&option_name);
+                if let Some(kind) = option_kind {
+                    self.refuse_unknown_option_keys(&span, &option_name, kind, values.keys());
+                }
                 match option_kind {
                     Some(OptionKind::Column) => apply_column_values(column, &values),
                     Some(OptionKind::Storage) => {
                         column.storage = Some(storage_from_values(&values));
                     }
-                    Some(OptionKind::Security) => {
-                        apply_column_security_values(&mut column.security, &values);
-                    }
-                    Some(OptionKind::ColumnSecurity) => {
-                        apply_db_column_security_values(&mut column.security, &values);
+                    Some(OptionKind::Security | OptionKind::ColumnSecurity) => {
+                        apply_column_security_block(column, &values);
                     }
                     _ => {}
                 }
@@ -683,6 +697,14 @@ impl<'a> ProtoParser<'a> {
                 let value_token = self.cur().clone();
                 let value = self.read_option_value();
                 if !sub_field.is_empty() {
+                    if let Some(kind) = option_kind {
+                        self.refuse_unknown_option_keys(
+                            &span,
+                            &option_name,
+                            kind,
+                            std::iter::once(&sub_field),
+                        );
+                    }
                     self.validate_numeric_annotation_value(&sub_field, &value, &value_token);
                 } else if matches!(option_kind, Some(OptionKind::FieldSecurityScalar)) {
                     let key = annotation_leaf_name(&option_name);
@@ -724,6 +746,36 @@ impl<'a> ProtoParser<'a> {
                 &format!(
                     "field `{}` options are missing a closing `]`",
                     column.field_name
+                ),
+            );
+        }
+    }
+
+    /// Refuse a key a UDB option does not have. Options of other namespaces that happen to
+    /// end in `.table` or `.column` are not ours to judge.
+    fn refuse_unknown_option_keys<'k>(
+        &mut self,
+        span: &Token,
+        option_name: &str,
+        kind: OptionKind,
+        keys: impl Iterator<Item = &'k String>,
+    ) {
+        let namespaced = option_name.contains('.') && self.config.proto_namespace.trim().is_empty();
+        if namespaced && !is_udb_option_name(option_name) {
+            return;
+        }
+        let mut unknown: Vec<&str> = keys
+            .map(String::as_str)
+            .filter(|key| !option_accepts_key(kind, key))
+            .collect();
+        unknown.sort_unstable();
+        for key in unknown {
+            self.diagnostic_at(
+                span,
+                UNKNOWN_OPTION_KEY,
+                &format!(
+                    "`{option_name}` has no key `{key}`, so it would be ignored; it accepts: {}",
+                    accepted_option_keys(kind).join(", ")
                 ),
             );
         }
@@ -1168,6 +1220,9 @@ fn annotation_leaf_name(option_name: &str) -> String {
         .unwrap_or(normalized.as_str())
         .to_string()
 }
+
+/// A key a UDB option does not have. Refused in every parser mode.
+const UNKNOWN_OPTION_KEY: &str = "unknown_udb_option_key";
 
 fn is_strict_parse_failure_diagnostic(diagnostic: &ParserDiagnostic) -> bool {
     diagnostic.code == "malformed_numeric_annotation_value"

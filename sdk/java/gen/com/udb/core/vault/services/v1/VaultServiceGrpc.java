@@ -87,6 +87,37 @@ public final class VaultServiceGrpc {
     return getGetSecretMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.LeaseOAuthTokenRequest,
+      com.udb.core.vault.services.v1.LeaseOAuthTokenResponse> getLeaseOAuthTokenMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "LeaseOAuthToken",
+      requestType = com.udb.core.vault.services.v1.LeaseOAuthTokenRequest.class,
+      responseType = com.udb.core.vault.services.v1.LeaseOAuthTokenResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.LeaseOAuthTokenRequest,
+      com.udb.core.vault.services.v1.LeaseOAuthTokenResponse> getLeaseOAuthTokenMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.LeaseOAuthTokenRequest, com.udb.core.vault.services.v1.LeaseOAuthTokenResponse> getLeaseOAuthTokenMethod;
+    if ((getLeaseOAuthTokenMethod = VaultServiceGrpc.getLeaseOAuthTokenMethod) == null) {
+      synchronized (VaultServiceGrpc.class) {
+        if ((getLeaseOAuthTokenMethod = VaultServiceGrpc.getLeaseOAuthTokenMethod) == null) {
+          VaultServiceGrpc.getLeaseOAuthTokenMethod = getLeaseOAuthTokenMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.vault.services.v1.LeaseOAuthTokenRequest, com.udb.core.vault.services.v1.LeaseOAuthTokenResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "LeaseOAuthToken"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.LeaseOAuthTokenRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.LeaseOAuthTokenResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new VaultServiceMethodDescriptorSupplier("LeaseOAuthToken"))
+              .build();
+        }
+      }
+    }
+    return getLeaseOAuthTokenMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.ListSecretsRequest,
       com.udb.core.vault.services.v1.ListSecretsResponse> getListSecretsMethod;
 
@@ -807,6 +838,20 @@ public final class VaultServiceGrpc {
 
     /**
      * <pre>
+     * A usable access token for the OAuth credential stored as a secret. The secret's value is
+     * JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+     * credentials grant), with optional scope. The broker refreshes the token when it has fewer
+     * than min_valid_seconds left, stores the result as a new secret version, including a rotated
+     * refresh token, and lets only one caller refresh at a time across replicas.
+     * </pre>
+     */
+    default void leaseOAuthToken(com.udb.core.vault.services.v1.LeaseOAuthTokenRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.LeaseOAuthTokenResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getLeaseOAuthTokenMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * List secret paths under an optional prefix. Returns metadata only — NEVER
      * any secret value.
      * </pre>
@@ -1126,6 +1171,21 @@ public final class VaultServiceGrpc {
 
     /**
      * <pre>
+     * A usable access token for the OAuth credential stored as a secret. The secret's value is
+     * JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+     * credentials grant), with optional scope. The broker refreshes the token when it has fewer
+     * than min_valid_seconds left, stores the result as a new secret version, including a rotated
+     * refresh token, and lets only one caller refresh at a time across replicas.
+     * </pre>
+     */
+    public void leaseOAuthToken(com.udb.core.vault.services.v1.LeaseOAuthTokenRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.LeaseOAuthTokenResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getLeaseOAuthTokenMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * List secret paths under an optional prefix. Returns metadata only — NEVER
      * any secret value.
      * </pre>
@@ -1439,6 +1499,20 @@ public final class VaultServiceGrpc {
 
     /**
      * <pre>
+     * A usable access token for the OAuth credential stored as a secret. The secret's value is
+     * JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+     * credentials grant), with optional scope. The broker refreshes the token when it has fewer
+     * than min_valid_seconds left, stores the result as a new secret version, including a rotated
+     * refresh token, and lets only one caller refresh at a time across replicas.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.LeaseOAuthTokenResponse leaseOAuthToken(com.udb.core.vault.services.v1.LeaseOAuthTokenRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getLeaseOAuthTokenMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * List secret paths under an optional prefix. Returns metadata only — NEVER
      * any secret value.
      * </pre>
@@ -1728,6 +1802,20 @@ public final class VaultServiceGrpc {
     public com.udb.core.vault.services.v1.GetSecretResponse getSecret(com.udb.core.vault.services.v1.GetSecretRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetSecretMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * A usable access token for the OAuth credential stored as a secret. The secret's value is
+     * JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+     * credentials grant), with optional scope. The broker refreshes the token when it has fewer
+     * than min_valid_seconds left, stores the result as a new secret version, including a rotated
+     * refresh token, and lets only one caller refresh at a time across replicas.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.LeaseOAuthTokenResponse leaseOAuthToken(com.udb.core.vault.services.v1.LeaseOAuthTokenRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getLeaseOAuthTokenMethod(), getCallOptions(), request);
     }
 
     /**
@@ -2027,6 +2115,21 @@ public final class VaultServiceGrpc {
 
     /**
      * <pre>
+     * A usable access token for the OAuth credential stored as a secret. The secret's value is
+     * JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+     * credentials grant), with optional scope. The broker refreshes the token when it has fewer
+     * than min_valid_seconds left, stores the result as a new secret version, including a rotated
+     * refresh token, and lets only one caller refresh at a time across replicas.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.LeaseOAuthTokenResponse> leaseOAuthToken(
+        com.udb.core.vault.services.v1.LeaseOAuthTokenRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getLeaseOAuthTokenMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * List secret paths under an optional prefix. Returns metadata only — NEVER
      * any secret value.
      * </pre>
@@ -2289,26 +2392,27 @@ public final class VaultServiceGrpc {
 
   private static final int METHODID_PUT_SECRET = 0;
   private static final int METHODID_GET_SECRET = 1;
-  private static final int METHODID_LIST_SECRETS = 2;
-  private static final int METHODID_DELETE_SECRET = 3;
-  private static final int METHODID_UNDELETE_SECRET = 4;
-  private static final int METHODID_DESTROY_SECRET = 5;
-  private static final int METHODID_CREATE_TRANSIT_KEY = 6;
-  private static final int METHODID_ROTATE_TRANSIT_KEY = 7;
-  private static final int METHODID_ENCRYPT = 8;
-  private static final int METHODID_DECRYPT = 9;
-  private static final int METHODID_SIGN = 10;
-  private static final int METHODID_VERIFY = 11;
-  private static final int METHODID_HMAC = 12;
-  private static final int METHODID_SEAL_STATUS = 13;
-  private static final int METHODID_GENERATE_DATABASE_CREDENTIALS = 14;
-  private static final int METHODID_REVOKE_DATABASE_CREDENTIALS = 15;
-  private static final int METHODID_EMERGENCY_REVOKE_DATABASE_CREDENTIALS = 16;
-  private static final int METHODID_GENERATE_DATA_KEY = 17;
-  private static final int METHODID_REWRAP = 18;
-  private static final int METHODID_GET_TRANSIT_PUBLIC_KEY = 19;
-  private static final int METHODID_BATCH_ENCRYPT = 20;
-  private static final int METHODID_BATCH_DECRYPT = 21;
+  private static final int METHODID_LEASE_OAUTH_TOKEN = 2;
+  private static final int METHODID_LIST_SECRETS = 3;
+  private static final int METHODID_DELETE_SECRET = 4;
+  private static final int METHODID_UNDELETE_SECRET = 5;
+  private static final int METHODID_DESTROY_SECRET = 6;
+  private static final int METHODID_CREATE_TRANSIT_KEY = 7;
+  private static final int METHODID_ROTATE_TRANSIT_KEY = 8;
+  private static final int METHODID_ENCRYPT = 9;
+  private static final int METHODID_DECRYPT = 10;
+  private static final int METHODID_SIGN = 11;
+  private static final int METHODID_VERIFY = 12;
+  private static final int METHODID_HMAC = 13;
+  private static final int METHODID_SEAL_STATUS = 14;
+  private static final int METHODID_GENERATE_DATABASE_CREDENTIALS = 15;
+  private static final int METHODID_REVOKE_DATABASE_CREDENTIALS = 16;
+  private static final int METHODID_EMERGENCY_REVOKE_DATABASE_CREDENTIALS = 17;
+  private static final int METHODID_GENERATE_DATA_KEY = 18;
+  private static final int METHODID_REWRAP = 19;
+  private static final int METHODID_GET_TRANSIT_PUBLIC_KEY = 20;
+  private static final int METHODID_BATCH_ENCRYPT = 21;
+  private static final int METHODID_BATCH_DECRYPT = 22;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -2334,6 +2438,10 @@ public final class VaultServiceGrpc {
         case METHODID_GET_SECRET:
           serviceImpl.getSecret((com.udb.core.vault.services.v1.GetSecretRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GetSecretResponse>) responseObserver);
+          break;
+        case METHODID_LEASE_OAUTH_TOKEN:
+          serviceImpl.leaseOAuthToken((com.udb.core.vault.services.v1.LeaseOAuthTokenRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.LeaseOAuthTokenResponse>) responseObserver);
           break;
         case METHODID_LIST_SECRETS:
           serviceImpl.listSecrets((com.udb.core.vault.services.v1.ListSecretsRequest) request,
@@ -2447,6 +2555,13 @@ public final class VaultServiceGrpc {
               com.udb.core.vault.services.v1.GetSecretRequest,
               com.udb.core.vault.services.v1.GetSecretResponse>(
                 service, METHODID_GET_SECRET)))
+        .<com.udb.core.vault.services.v1.LeaseOAuthTokenRequest, com.udb.core.vault.services.v1.LeaseOAuthTokenResponse>addMethod(
+          getLeaseOAuthTokenMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.LeaseOAuthTokenRequest, com.udb.core.vault.services.v1.LeaseOAuthTokenResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.vault.services.v1.LeaseOAuthTokenRequest,
+              com.udb.core.vault.services.v1.LeaseOAuthTokenResponse>(
+                service, METHODID_LEASE_OAUTH_TOKEN)))
         .<com.udb.core.vault.services.v1.ListSecretsRequest, com.udb.core.vault.services.v1.ListSecretsResponse>addMethod(
           getListSecretsMethod(),
           io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.ListSecretsRequest, com.udb.core.vault.services.v1.ListSecretsResponse>asyncUnaryCall(
@@ -2637,6 +2752,7 @@ public final class VaultServiceGrpc {
               .setSchemaDescriptor(new VaultServiceFileDescriptorSupplier())
               .addMethod(getPutSecretMethod())
               .addMethod(getGetSecretMethod())
+              .addMethod(getLeaseOAuthTokenMethod())
               .addMethod(getListSecretsMethod())
               .addMethod(getDeleteSecretMethod())
               .addMethod(getUndeleteSecretMethod())

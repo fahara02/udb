@@ -661,7 +661,8 @@ export class TypedTable<Row extends object, Key extends object> {
     attempts = 5,
     opts: TypedWriteOptions = {},
   ): Promise<Row> {
-    for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const limit = attempts > 0 ? attempts : 5;
+    for (let attempt = 0; attempt < limit; attempt += 1) {
       const current = await this.get(key, { call: opts.call });
       const before = this.withoutKey(this.spec.toFields(current));
       const next = await change(structuredClone(current));
@@ -682,7 +683,7 @@ export class TypedTable<Row extends object, Key extends object> {
         if (!(err instanceof UdbConflictError)) throw err;
       }
     }
-    throw new UdbConflictError(`udb: conflict: gave up after ${attempts} attempts`);
+    throw new UdbConflictError(`udb: conflict: gave up after ${limit} attempts`);
   }
 
   /** Add `deltas` to numeric columns of the row with `key`, atomically on the

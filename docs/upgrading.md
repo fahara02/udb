@@ -271,6 +271,20 @@ staying silent.
 
 ---
 
+**Upgrading to 0.6.8 — security options now take effect.** `(column_security)` was
+ignored, so a column declared with `is_pii` was returned in clear, and one declared
+with `is_encrypted` was stored in clear. Both now apply, and a
+`secret_classification` of personal data or a secret masks its column unless
+`output_view` is public. Before upgrading:
+
+- run `udb check` on your protos: a key an option does not have is now refused when
+  the proto is parsed;
+- find `column_security` and `secret_classification` in your protos, and give readers
+  of those columns `udb:pii:read`;
+- a column newly marked `is_encrypted` still holds clear text in its existing rows. They
+  read as before, but stay in clear until rewritten, and a lookup by value does not find them
+  until then: rewrite them through the broker.
+
 ## Related
 
 - [operations.md](operations.md) — production readiness, runbooks, SLOs

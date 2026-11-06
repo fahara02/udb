@@ -30,7 +30,7 @@ export interface StorePlane {
   serverStream?(service: string, method: string, request: any, call?: CallOptions): any;
   bidiStream?(service: string, method: string, call?: CallOptions): any;
   /** The client's settings, when the plane is a real client. */
-  opts?: { protoRoot?: string; meta?: { correlationId?: string } };
+  opts?: { protoRoot?: string; meta?: { correlationId?: string }; deadlineMs?: number };
 }
 
 // ── Error codes ─────────────────────────────────────────────────────────────
@@ -302,13 +302,17 @@ function structMap(value: Record<string, unknown>): Record<string, unknown> {
 function decodeRows<T>(response: any): T[] {
   const raw = response?.records_json;
   const items: unknown[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  if (items.length === 0 && Array.isArray(response?.rows) && response.rows.length > 0) {
+    throw new Error(`udb: the broker sent ${response.rows.length} row(s) without records_json`);
+  }
   const rows: T[] = [];
   for (const item of items) {
     const text = Buffer.isBuffer(item) || item instanceof Uint8Array ? Buffer.from(item).toString("utf8") : typeof item === "string" ? item : "";
-    if (!text) continue;
-    const parsed = parseRecordJson(text);
-    if (Array.isArray(parsed)) rows.push(...(parsed as T[]));
-    else rows.push(parsed as T);
+    const parsed: unknown = text ? parseRecordJson(text) : undefined;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("udb: a row in records_json is not a JSON object");
+    }
+    rows.push(parsed as T);
   }
   return rows;
 }
@@ -827,7 +831,9 @@ export async function tx(
   await body(scope);
   if (scope.failure !== undefined) throw scope.failure;
   if (scope.mutations.length === 0) return;
-  const stream = plane.bidiStream(DATABROKER, "BeginTx", opts.call);
+  // A transaction ends, unlike a subscription, so the call deadline bounds it.
+  const deadlineMs = opts.call?.deadlineMs ?? plane.opts?.deadlineMs;
+  const stream = plane.bidiStream(DATABROKER, "BeginTx", deadlineMs ? { ...opts.call, deadlineMs } : opts.call);
   await new Promise<void>((resolve, reject) => {
     let committed = false;
     let refused: unknown;
@@ -1444,4 +1450,18 @@ export class InMemoryDataPlane implements StorePlane {
         throw new Error(`udb: InMemoryDataPlane does not implement ${method}`);
     }
   }
+}
+
+/** Call options that make a Select read `tenant`'s rows instead of the caller's. The credential
+ *  needs platform authority and the `udb:cross_tenant:read` scope, and the broker records
+ *  `reason` in the durable audit log before it reads. */
+export function crossTenantRead(tenant: string, reason: string, call: CallOptions = {}): CallOptions {
+  return {
+    ...call,
+    headers: {
+      ...call.headers,
+      "x-udb-cross-tenant-target": tenant,
+      "x-udb-cross-tenant-reason": reason,
+    },
+  };
 }

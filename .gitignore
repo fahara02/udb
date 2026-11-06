@@ -63,6 +63,7 @@ sdk/typescript/third_party/
 # Built by `npm run build:mls-wasm` (crates/udb-mls-wasm); shipped in the npm
 # package, never committed.
 sdk/typescript/mls-wasm/
+sdk/typescript/mls-wasm-web/
 sdk/typescript/coverage/
 sdk/typescript/.turbo/
 sdk/typescript/.next/

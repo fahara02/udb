@@ -4585,6 +4585,18 @@
   },
   {
     "file": "vault.md",
+    "rpc": "LeaseOAuthToken",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/LeaseOAuthToken",
+    "api_alias": "lease_oauth_token",
+    "operation_id": "leaseOauthToken",
+    "op_kind": "MUTATION",
+    "request_msg": "LeaseOAuthTokenRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"secret_path\": \"<seed:vault_oauth_secret_path>\", \"min_valid_seconds\": 60 }`",
+    "notes": "leases the token of the seeded OAuth credential, which stays valid, so no provider is called."
+  },
+  {
+    "file": "vault.md",
     "rpc": "ListSecrets",
     "service": "VaultService",
     "wire_rpc": "VaultService/ListSecrets",

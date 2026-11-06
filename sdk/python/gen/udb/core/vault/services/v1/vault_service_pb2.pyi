@@ -61,6 +61,34 @@ class GetSecretResponse(_message.Message):
     error: _dto_pb2.ApiError
     def __init__(self, secret_path: _Optional[str] = ..., version: _Optional[int] = ..., secret_value: _Optional[str] = ..., metadata_json: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
+class LeaseOAuthTokenRequest(_message.Message):
+    __slots__ = ("tenant_id", "secret_path", "min_valid_seconds")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    SECRET_PATH_FIELD_NUMBER: _ClassVar[int]
+    MIN_VALID_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    secret_path: str
+    min_valid_seconds: int
+    def __init__(self, tenant_id: _Optional[str] = ..., secret_path: _Optional[str] = ..., min_valid_seconds: _Optional[int] = ...) -> None: ...
+
+class LeaseOAuthTokenResponse(_message.Message):
+    __slots__ = ("secret_path", "access_token", "expires_at_unix", "version", "refreshed", "message", "error")
+    SECRET_PATH_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
+    REFRESHED_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    secret_path: str
+    access_token: str
+    expires_at_unix: int
+    version: int
+    refreshed: bool
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, secret_path: _Optional[str] = ..., access_token: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., version: _Optional[int] = ..., refreshed: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
 class ListSecretsRequest(_message.Message):
     __slots__ = ("tenant_id", "path_prefix", "page", "page_size", "page_token")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]

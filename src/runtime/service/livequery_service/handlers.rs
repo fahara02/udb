@@ -226,7 +226,8 @@ pub(crate) async fn subscribe(
         projection: None,
         sort: Vec::new(),
         include: Vec::new(),
-        pagination: Some(LogicalPagination::limit(limit)),
+        // One past the limit, so a cut snapshot can say so.
+        pagination: Some(LogicalPagination::limit(limit.saturating_add(1))),
     };
     // MEDIATED snapshot: IR query plan + read-fence (carried on the context),
     // tenant predicate injected server-side. Never a raw query. A catalog table reads
@@ -267,9 +268,15 @@ pub(crate) async fn subscribe(
             .filter_map(|raw| serde_json::from_slice(raw).ok())
             .collect::<Vec<serde_json::Value>>()
     } else {
-        runtime
+        let mut rows = runtime
             .native_entity_read_for_service(SERVICE_ID, &context, read)
-            .await?
+            .await?;
+        let keep = usize::try_from(limit).unwrap_or(usize::MAX);
+        if rows.len() > keep {
+            matched_rows = Some(rows.len() as i64);
+            rows.truncate(keep);
+        }
+        rows
     };
     // PII masking for BOTH the snapshot and the live deltas. The relational read
     // path masks these columns; LiveQuery shipped the raw row image, so a

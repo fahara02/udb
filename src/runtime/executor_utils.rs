@@ -2263,7 +2263,12 @@ pub(crate) fn canonical_record(
             continue;
         };
         // A caller who read this column masked must not store the mask over the real value.
-        if value.as_str() == Some("***MASKED***") {
+        // In a column nothing masks, the same text is an ordinary value.
+        if value.as_str() == Some(REDACTION_PLACEHOLDER)
+            && (column.security.is_pii
+                || column.security.mask_in_logs
+                || is_encrypted_column(column))
+        {
             return Err(value_refused(
                 name,
                 "this is the redaction placeholder, not a value",

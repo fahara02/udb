@@ -122,13 +122,9 @@ fn change_has_no_executor(kind: &ChangeKind) -> bool {
     matches!(
         kind,
         ChangeKind::ManualChange
-            | ChangeKind::CreatePartition
-            | ChangeKind::AttachPartition
             | ChangeKind::DetachPartition
-            | ChangeKind::DropPartition
             | ChangeKind::UpdateCollection
             | ChangeKind::DropCollection
-            | ChangeKind::UpdateValidator
             | ChangeKind::UpdateConstraint
             | ChangeKind::DropConstraint
             | ChangeKind::ChangeTableEngine
@@ -147,10 +143,7 @@ mod change_executor_tests {
     fn a_change_with_no_renderer_is_refused_at_startup() {
         for kind in [
             ChangeKind::ManualChange,
-            ChangeKind::CreatePartition,
-            ChangeKind::AttachPartition,
             ChangeKind::DetachPartition,
-            ChangeKind::DropPartition,
             ChangeKind::UpdateStore,
             ChangeKind::DropStore,
         ] {
@@ -162,6 +155,14 @@ mod change_executor_tests {
             ChangeKind::DropCheck,
             ChangeKind::SetForceRls,
             ChangeKind::UpdateExtension,
+            ChangeKind::UpdateValidator,
+            ChangeKind::ChangePrimaryKey,
+            ChangeKind::ChangeColumnGeneration,
+            ChangeKind::RebuildDerivedIndex,
+            ChangeKind::RepartitionTable,
+            ChangeKind::CreatePartition,
+            ChangeKind::AttachPartition,
+            ChangeKind::DropPartition,
         ] {
             assert!(!change_has_no_executor(&kind), "{kind:?}");
         }
@@ -1557,15 +1558,6 @@ async fn run_startup_lifecycle_core(
                                 format!("missing manifest store {}", action.resource_name),
                             )
                         })?;
-                    if store.backend.to_ascii_lowercase().contains("mongo")
-                        && !store.payload_schema_json.trim().is_empty()
-                    {
-                        report.warnings.push(format!(
-                            "MongoDB collection {} declares a payload schema; UDB creates the \
-                             collection and its indexes but does not install the validator",
-                            action.resource_name
-                        ));
-                    }
                     let spec_json =
                         crate::generation::backends::store_ensure_spec(store, manifest).to_string();
                     match runtime

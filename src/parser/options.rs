@@ -15,7 +15,7 @@ use super::naming::{
 const DEFAULT_TRIGGER_FOR_EACH: &str = "ROW";
 const DEFAULT_INDEX_TYPE: &str = "BTREE";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum OptionKind {
     Table,
     Column,
@@ -273,7 +273,36 @@ const DB_COLUMN_SECURITY_KEYS: &[&str] = &[
     "hashing_algorithm",
     "encryption_key_class",
     "searchable_encrypted",
+    "uniqueness_scope",
     "owner_field",
+    "tenant_field",
+    "project_field",
+];
+const COLUMN_SECURITY_KEYS: &[&str] = &[
+    "is_pii",
+    "pii_kind",
+    "is_encrypted",
+    "is_blind_index",
+    "mask_in_logs",
+    "data_class",
+    "consent_required",
+    "retention_days",
+];
+/// Spellings of `pg_table` keys the parser has always read besides the proto field names.
+const TABLE_KEY_ALIASES: &[&str] = &[
+    "extension",
+    "fk",
+    "fks",
+    "foreign_key",
+    "index",
+    "materialized_view",
+    "matview",
+    "policies",
+    "policy",
+    "rls_policy",
+    "sql_artifact",
+    "trigger",
+    "native_service_id",
 ];
 const FIELD_SECURITY_SCALAR_KEYS: &[&str] = &["<scalar value>"];
 const GENERIC_STORE_KEYS: &[&str] = &[
@@ -512,8 +541,8 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         required: false,
         since_version: "0.3.0",
         description: "Attaches structured field redaction and secret handling metadata.",
-        example: r#"string password_hash = 3 [(udb.core.common.v1.column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY }];"#,
-        accepted_keys: DB_COLUMN_SECURITY_KEYS,
+        example: r#"string email = 3 [(udb.core.common.v1.column_security) = { is_pii: true }];"#,
+        accepted_keys: COLUMN_SECURITY_KEYS,
         numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
@@ -1156,6 +1185,68 @@ pub(super) fn apply_column_security_values(
     });
 }
 
+/// Apply a column security block, whichever of its two messages it was written with. Both
+/// describe the same column, so neither spelling can lose a protection the other would apply.
+pub(super) fn apply_column_security_block(
+    column: &mut ProtoColumn,
+    values: &HashMap<String, Vec<OptionValue>>,
+) {
+    apply_column_security_values(&mut column.security, values);
+    apply_db_column_security_values(&mut column.security, values);
+    for (key, value) in scalar_entries(values) {
+        match key.as_str() {
+            "tenant_field" if parse_bool(&value) => column.is_tenant = true,
+            "project_field" if parse_bool(&value) => column.is_project = true,
+            _ => {}
+        }
+    }
+}
+
+/// The keys a UDB option block can carry, or `None` when it takes free-form keys: the
+/// generic store options keep an unknown key as a backend option, and `udb check` warns
+/// about it there.
+fn accepted_option_key_sets(kind: OptionKind) -> Option<&'static [&'static [&'static str]]> {
+    Some(match kind {
+        OptionKind::Table => &[TABLE_KEYS, TABLE_KEY_ALIASES],
+        OptionKind::Column => &[COLUMN_KEYS],
+        OptionKind::VectorStore => &[VECTOR_KEYS],
+        OptionKind::GraphStore => &[GRAPH_KEYS],
+        OptionKind::DocumentStore => &[DOCUMENT_KEYS],
+        OptionKind::TimeSeriesStore => &[TIMESERIES_KEYS],
+        OptionKind::Cache => &[CACHE_KEYS],
+        OptionKind::Storage => &[STORAGE_KEYS],
+        OptionKind::TableSecurity => &[TABLE_SECURITY_KEYS],
+        OptionKind::Security | OptionKind::ColumnSecurity => {
+            &[SECURITY_KEYS, COLUMN_SECURITY_KEYS, DB_COLUMN_SECURITY_KEYS]
+        }
+        OptionKind::ModelRegistry => &[MODEL_REGISTRY_KEYS],
+        OptionKind::ColumnStore => &[COLUMN_STORE_KEYS],
+        OptionKind::FieldSecurityScalar
+        | OptionKind::SqlStore
+        | OptionKind::NoSqlStore
+        | OptionKind::GenericStore
+        | OptionKind::ObjectStore => return None,
+    })
+}
+
+/// Whether a UDB option accepts `key`. A key nothing reads must not pass unnoticed: the
+/// column it was meant to protect or constrain would be built without it.
+pub(super) fn option_accepts_key(kind: OptionKind, key: &str) -> bool {
+    accepted_option_key_sets(kind).is_none_or(|sets| sets.iter().any(|keys| keys.contains(&key)))
+}
+
+/// The accepted keys of a UDB option, for the message that refuses another one.
+pub(super) fn accepted_option_keys(kind: OptionKind) -> Vec<&'static str> {
+    let mut keys: Vec<&'static str> = accepted_option_key_sets(kind)
+        .unwrap_or_default()
+        .iter()
+        .flat_map(|keys| keys.iter().copied())
+        .collect();
+    keys.sort_unstable();
+    keys.dedup();
+    keys
+}
+
 pub(super) fn apply_column_security_scalar_option(
     security: &mut ProtoColumnSecurity,
     option_name: &str,
@@ -1248,6 +1339,22 @@ pub(super) fn apply_db_column_security_values(
         },
         "owner_field" => security.owner_field = parse_bool(&value),
     });
+    // A classification names what the column holds. Holding a secret or personal data means
+    // it does not reach a client in clear text, unless the option says it is public.
+    let scalar = |name: &str| {
+        scalar_entries(values)
+            .into_iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| normalize_enum(&value))
+            .unwrap_or_default()
+    };
+    if matches!(
+        scalar("secret_classification").trim_start_matches("SECRET_CLASSIFICATION_"),
+        "CREDENTIAL" | "TOKEN" | "KEY" | "PRIVATE_KEY" | "BIOMETRIC" | "IDENTITY" | "PII"
+    ) && scalar("output_view") != "OUTPUT_VIEW_PUBLIC"
+    {
+        security.mask_in_logs = true;
+    }
 }
 
 fn extension_from_values(values: &HashMap<String, Vec<OptionValue>>) -> DbExtension {
@@ -1559,6 +1666,20 @@ pub(super) fn generic_store_from_values(
             "dsn" | "uri" => out.dsn = value,
             "payload_schema_json" | "options_json" => out.payload_schema_json = value,
             _ => out.options.push(StoreOption { key, value }),
+        }
+    }
+    // `options: { key: "k" value: "v" }`, the text form of the proto's map field.
+    for entry in values.get("options").into_iter().flatten() {
+        if let OptionValue::Block(entry) = entry {
+            let field = |name: &str| {
+                scalar_entries(entry)
+                    .into_iter()
+                    .find(|(key, _)| key == name)
+                    .map(|(_, value)| value)
+            };
+            if let (Some(key), Some(value)) = (field("key"), field("value")) {
+                out.options.push(StoreOption { key, value });
+            }
         }
     }
     out

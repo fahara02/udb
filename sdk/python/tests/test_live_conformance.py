@@ -3888,6 +3888,7 @@ def perf_seed(
     fix.set("vault_db_idempotency_key", f"sdk-perf-vault-db-generate-{suffix}")
     fix.set("vault_secret_path", f"app/config-{suffix}")
     fix.set("vault_put_secret_path", f"app/put-{suffix}")
+    fix.set("vault_oauth_secret_path", f"app/oauth-{suffix}")
     fix.set("vault_delete_secret_path", f"app/delete-{suffix}")
     fix.set("vault_destroy_secret_path", f"app/destroy-{suffix}")
     try:
@@ -3927,6 +3928,12 @@ def perf_seed(
             vault.PutSecret(vault_pb.PutSecretRequest(tenant_id=tenant, secret_path=fix.m[_path_key], secret_value="perf-secret", expected_version=0, metadata_json="{}"), metadata=md, timeout=8.0)
         except grpc.RpcError:
             pass
+
+    # A token valid for decades, so the measured lease reaches no provider.
+    try:
+        vault.PutSecret(vault_pb.PutSecretRequest(tenant_id=tenant, secret_path=fix.m["vault_oauth_secret_path"], secret_value='{"token_url":"https://oauth.example.com/token","client_id":"perf","access_token":"perf-token","expires_at_unix":4102444800}', expected_version=0, metadata_json="{}"))
+    except grpc.RpcError:
+        pass
 
     # Use a separate live lease for the destructive revoke row. The measured
     # Generate body has its own stable idempotency key and therefore exercises

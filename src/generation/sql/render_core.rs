@@ -532,9 +532,7 @@ pub(crate) fn render_delta_operation(
         ChangeKind::CreateEnum => table
             .and_then(|table| find_column(table, &op.column))
             .and_then(|column| {
-                let mut values = column.enum_values.clone();
-                values.sort();
-                values.dedup();
+                let values = super::render_ext::declared_enum_values(&column.enum_values);
                 let type_name = format!(
                     "{}.{}_{}_enum",
                     qi(&op.schema),
@@ -585,10 +583,24 @@ pub(crate) fn render_delta_operation(
             qi(&op.schema),
             qi(&op.object_name)
         ),
-        // GAP 3: Partition management (informational stubs — actual partition
-        // creation is handled by pg_partman at runtime)
-        ChangeKind::CreatePartition | ChangeKind::AttachPartition
-        | ChangeKind::DetachPartition | ChangeKind::DropPartition => String::new(),
+        // A table entering or leaving partitioning, or changing its strategy or column, is
+        // rebuilt. Its options apply to the partitions still to come.
+        ChangeKind::CreatePartition | ChangeKind::DropPartition | ChangeKind::RepartitionTable => {
+            table.map(render_table_rebuild).unwrap_or_default()
+        }
+        ChangeKind::AttachPartition => table.map(render_partition_options).unwrap_or_default(),
+        // Refused at startup before any delta is generated.
+        ChangeKind::DetachPartition => String::new(),
+        ChangeKind::ChangePrimaryKey => table.map(render_primary_key_change).unwrap_or_default(),
+        ChangeKind::ChangeColumnGeneration => table
+            .and_then(|table| {
+                find_column(table, &op.column)
+                    .map(|column| render_column_generation_change(table, column))
+            })
+            .unwrap_or_default(),
+        ChangeKind::RebuildDerivedIndex => table
+            .map(|table| render_derived_index_rebuild(table, &op.column))
+            .unwrap_or_default(),
 
         // ── Deliberately no relational DDL ───────────────────────────────────
         // There is NO wildcard arm below on purpose. A `_ => String::new()`

@@ -17,6 +17,7 @@ import pytest
 
 from udb.core.apikey.events.v1 import apikey_events_pb2
 from udb.core.common.v1 import db_pb2
+from udb.core.authn.entity.v1 import device_pb2
 from udb.core.storage.entity.v1 import file_pb2
 from udb_client import (
     WRITE_INSERT,
@@ -255,3 +256,15 @@ def test_timestamps_have_one_text_form() -> None:
     assert parse_timestamp("") is None
     with pytest.raises(ValueError):
         parse_timestamp("yesterday")
+
+
+def test_a_masked_column_is_no_value_and_stays_unset_on_decode() -> None:
+    file = decode_record(
+        {"file_id": "f", "size_bytes": "***MASKED***", "filename": "***MASKED***"}, File()
+    )
+    assert file.file_id == "f"
+    assert file.size_bytes == 0
+    # An unprotected text column may really hold the text.
+    assert file.filename == "***MASKED***"
+    device = decode_record({"last_ip_masked": "***MASKED***"}, device_pb2.Device())
+    assert device.last_ip_masked == ""

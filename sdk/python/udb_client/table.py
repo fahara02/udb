@@ -822,12 +822,14 @@ def udb_row_from_record(
     fields: Sequence[str],
     enums: Mapping[str, str],
     big_ints: Sequence[str],
+    masked: Sequence[str] = (),
 ) -> dict[str, Any]:
-    """The typed row: a NULL or missing column is left out."""
+    """The typed row: a NULL or missing column, or a ``masked`` column read as the redaction
+    placeholder, is left out."""
     out: dict[str, Any] = {}
     for name in fields:
         value = record.get(name)
-        if value is None:
+        if value is None or (name in masked and value == "***MASKED***"):
             continue
         if name in enums:
             value = udb_enum_from_text(value, enums[name])

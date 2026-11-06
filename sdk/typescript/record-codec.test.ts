@@ -235,3 +235,17 @@ test("the schema reads keys, scope columns and event contracts from annotations"
   assert.equal(event.eventType, "udb.core.apikey.events.v1.ApiKeyCreatedEvent");
   assert.equal(schemas.find("udb.no.such.Message"), undefined);
 });
+
+test("a masked column is no value: it stays unset on decode", () => {
+  const file = decodeRecord<Record<string, unknown>>(FILE, {
+    file_id: "f",
+    size_bytes: "***MASKED***",
+    filename: "***MASKED***",
+  });
+  assert.equal(file.file_id, "f");
+  assert.equal(file.size_bytes, undefined);
+  // An unprotected text column may really hold the text.
+  assert.equal(file.filename, "***MASKED***");
+  const device = decodeRecord<Record<string, unknown>>("udb.core.authn.entity.v1.Device", { last_ip_masked: "***MASKED***" });
+  assert.equal(device.last_ip_masked, undefined);
+});

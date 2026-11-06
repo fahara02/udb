@@ -79,8 +79,22 @@ def _flag(field: FieldDescriptor, extension: Any) -> bool:
     return bool(options.HasExtension(extension) and options.Extensions[extension])
 
 
+_SENSITIVE_CLASSIFICATIONS = frozenset(
+    {
+        "SECRET_CLASSIFICATION_CREDENTIAL",
+        "SECRET_CLASSIFICATION_TOKEN",
+        "SECRET_CLASSIFICATION_KEY",
+        "SECRET_CLASSIFICATION_PRIVATE_KEY",
+        "SECRET_CLASSIFICATION_BIOMETRIC",
+        "SECRET_CLASSIFICATION_IDENTITY",
+        "SECRET_CLASSIFICATION_PII",
+    }
+)
+
+
 def is_masked(field: FieldDescriptor) -> bool:
-    """Whether reads mask this column. A secret classification alone does not."""
+    """Whether reads mask this column: output-view and redaction rules do, and so does a
+    secret or personal classification unless the view is public."""
     legacy = legacy_column_security_options(field)
     security = column_security_options(field)
     view = security_pb2.OutputView.Name(security.output_view) if security is not None else ""
@@ -89,6 +103,13 @@ def is_masked(field: FieldDescriptor) -> bool:
         if security is not None
         else ""
     )
+    classification = (
+        security_pb2.SecretClassification.Name(security.secret_classification)
+        if security is not None
+        else ""
+    )
+    if classification in _SENSITIVE_CLASSIFICATIONS and view != "OUTPUT_VIEW_PUBLIC":
+        return True
     return (
         bool(legacy is not None and (legacy.is_pii or legacy.mask_in_logs))
         or _flag(field, security_pb2.pii)

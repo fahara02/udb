@@ -24,6 +24,7 @@ from dataclasses import replace
 import grpc
 import pytest
 
+from udb.entity.v1 import admin_pb2
 from udb.core.apikey.services.v1 import core_pb2 as apikey_pb
 from udb.core.authn.entity.v1 import enums_pb2 as authn_enums
 from udb.core.authn.services.v1 import authn_service_pb2 as authn_service_pb
@@ -114,21 +115,13 @@ def _native(session: EnterpriseSession):
 
 
 def _probe_ready(project) -> None:
-    """``ready`` reached the broker. This posture's ``file://`` audit sink makes the
-    broker report NOT_SERVING, which is that same probe's real answer; the serving path
-    is proven in the unit tests."""
-    try:
-        project.ready()
-    except UdbError as error:
-        assert str(error) == "udb: broker is NOT_SERVING", str(error)
+    """A broker with its dependencies healthy reports SERVING."""
+    project.ready()
 
 
 async def _probe_ready_async(project) -> None:
     """See :func:`_probe_ready`."""
-    try:
-        await project.ready()
-    except UdbError as error:
-        assert str(error) == "udb: broker is NOT_SERVING", str(error)
+    await project.ready()
 
 
 @pytest.fixture(scope="module")
@@ -740,6 +733,28 @@ def test_live_flags_evaluate_put_values_and_refuse_a_foreign_tenant(operator) ->
     assert operator.flags.enabled(key) is False
 
 
+def _activate_the_served_catalog(operator, project: str) -> None:
+    """Give the project the catalog the broker serves, as an operator would before migrating."""
+    client = operator.admin._client
+    manifest = client.call("GetCatalogManifest", admin_pb2.CatalogManifestRequest())
+    key = uuid.uuid4().hex
+    client.call(
+        "StageCatalog",
+        admin_pb2.StageCatalogRequest(
+            project_id=project,
+            manifest_json=manifest.manifest_json,
+            reason="python live parity",
+            idempotency_key=f"stage-{key}",
+        ),
+    )
+    client.call(
+        "ActivateCatalog",
+        admin_pb2.CatalogVersionRequest(
+            project_id=project, reason="python live parity", idempotency_key=f"activate-{key}"
+        ),
+    )
+
+
 # ── migrations ──────────────────────────────────────────────────────────────
 def test_live_apply_current_runs_the_whole_chain_repeatedly_and_refuses_another_project(operator) -> None:
     project = operator.canonical_project_id or required_env("UDB_LIVE_PROJECT")
@@ -750,11 +765,13 @@ def test_live_apply_current_runs_the_whole_chain_repeatedly_and_refuses_another_
         try:
             status = operator.admin.apply_current(project)
         except UdbRpcError as error:
-            if error.code == grpc.StatusCode.FAILED_PRECONDITION and "ACTIVE project catalog" in error.details:
-                pytest.skip(f"this broker has no ACTIVE catalog for project {project!r}: {error.details}")
-            raise
+            if error.code != grpc.StatusCode.FAILED_PRECONDITION or "ACTIVE project catalog" not in error.details:
+                raise
+            _activate_the_served_catalog(operator, project)
+            status = operator.admin.apply_current(project)
         assert status.run_id, f"attempt {attempt}: ApplyMigration returned no run id"
         assert status.state, f"attempt {attempt}: ApplyMigration returned no state"
+        assert "FAIL" not in status.state.upper(), f"attempt {attempt}: {status.state}"
         run_ids.add(status.run_id)
     assert len(run_ids) == REPEATS, "each apply_current must be its own migration run"
 

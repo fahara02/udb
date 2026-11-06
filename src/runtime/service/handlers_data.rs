@@ -87,9 +87,13 @@ impl DataBrokerService {
         request: Request<SelectRequest>,
     ) -> Result<Response<RecordSet>, Status> {
         let started = Instant::now();
-        let security = match security_from_request(&request) {
+        let mut security = match security_from_request(&request) {
             Ok(s) => s,
             Err(e) => return self.record_grpc("Select", started, Err(e)),
+        };
+        let cross_tenant = match cross_tenant_read::requested(request.metadata()) {
+            Ok(read) => read,
+            Err(err) => return self.record_grpc("Select", started, Err(err)),
         };
         let request = request.into_inner();
         let decision_id = match self
@@ -99,6 +103,21 @@ impl DataBrokerService {
             Ok(id) => id,
             Err(err) => return self.record_grpc("Select", started, Err(err)),
         };
+        // The caller was authorized as itself; the read then runs as the named tenant's.
+        if let Some(read) = &cross_tenant {
+            if let Err(err) = cross_tenant_read::admit(
+                self.runtime_snapshot().pg_pool_clone(),
+                &security,
+                read,
+                &request.message_type,
+                &decision_id,
+            )
+            .await
+            {
+                return self.record_grpc("Select", started, Err(err));
+            }
+            security.tenant_id = read.target.clone();
+        }
         if let Err(err) = enforce_select_export_controls(
             &self.catalog.active_for(&security.project_id).manifest,
             &security,
@@ -153,9 +172,13 @@ impl DataBrokerService {
         request: Request<SelectRequest>,
     ) -> Result<Response<ResponseStream<crate::proto::RecordBatchV2>>, Status> {
         let started = Instant::now();
-        let security = match security_from_request(&request) {
+        let mut security = match security_from_request(&request) {
             Ok(s) => s,
             Err(e) => return self.record_grpc("SelectV2", started, Err(e)),
+        };
+        let cross_tenant = match cross_tenant_read::requested(request.metadata()) {
+            Ok(read) => read,
+            Err(err) => return self.record_grpc("SelectV2", started, Err(err)),
         };
         let request = request.into_inner();
         let decision_id = match self
@@ -165,6 +188,21 @@ impl DataBrokerService {
             Ok(id) => id,
             Err(err) => return self.record_grpc("SelectV2", started, Err(err)),
         };
+        // The caller was authorized as itself; the read then runs as the named tenant's.
+        if let Some(read) = &cross_tenant {
+            if let Err(err) = cross_tenant_read::admit(
+                self.runtime_snapshot().pg_pool_clone(),
+                &security,
+                read,
+                &request.message_type,
+                &decision_id,
+            )
+            .await
+            {
+                return self.record_grpc("SelectV2", started, Err(err));
+            }
+            security.tenant_id = read.target.clone();
+        }
         if let Err(err) = enforce_select_export_controls(
             &self.catalog.active_for(&security.project_id).manifest,
             &security,

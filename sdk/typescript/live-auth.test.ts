@@ -798,7 +798,7 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     rollback_policy_set_id: "rollback-policy-set-1", rollback_target_version_id: "rollback-target-version-1",
     rollback_resource_version: "rollback-resource-version-1",
     update_draft_id: "update-draft-1", release_fencing_token: "1", renew_fencing_token: "1",
-    vault_create_key_name: "transit-create-key", vault_put_secret_path: "secret/put",
+    vault_create_key_name: "transit-create-key", vault_put_secret_path: "secret/put", vault_oauth_secret_path: "secret/oauth",
     webauthn_delete_user_id: "webauthn-delete-user-1", webauthn_delete_credential_id: "webauthn-delete-credential-1",
     webauthn_rename_user_id: "webauthn-rename-user-1", webauthn_rename_credential_id: "webauthn-rename-credential-1",
   })) {
@@ -1886,6 +1886,7 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   fixtures.set("vault_db_lease_id", "sdk-vault-db-lease");
   fixtures.set("vault_create_key_name", "sdk-perf-create-key");
   fixtures.set("vault_put_secret_path", "app/put");
+  fixtures.set("vault_oauth_secret_path", "app/oauth");
   const created = manifestJSONBody("VaultService", "create_transit_key", fixtures);
   const decrypt = manifestJSONBody("VaultService", "decrypt", fixtures);
   const deleted = manifestJSONBody("VaultService", "delete_secret", fixtures);
@@ -3138,6 +3139,8 @@ async function seedPerfFixtures(
   // ── VaultService: secret + transit key material for crypto/read rows ──────────
   await tryRun("SeedVaultSecret", async () => {
     await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/path", secret_value: "perf-secret", expected_version: 0, metadata_json: "{}" }, opts);
+    // A token valid for decades, so the measured lease reaches no provider.
+    await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/oauth", secret_value: JSON.stringify({ token_url: "https://oauth.example.com/token", client_id: "perf", access_token: "perf-token", expires_at_unix: 4102444800 }), expected_version: 0, metadata_json: "{}" }, opts);
   });
   await tryRun("SeedVaultDeleteSecret", async () => {
     await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/delete", secret_value: "perf-secret-delete", expected_version: 0, metadata_json: "{}" }, opts);

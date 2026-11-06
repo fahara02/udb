@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.6.7",
+    "version": "0.6.8",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -44845,6 +44845,156 @@
         "x-udb-operation-kind": "destructive"
       }
     },
+    "/v1/vault/oauth-tokens/{secretPath}:lease": {
+      "post": {
+        "summary": "A usable access token for the OAuth credential stored as a secret. The secret's value is\nJSON: token_url, client_id, client_secret, and refresh_token (or none, for the client\ncredentials grant), with optional scope. The broker refreshes the token when it has fewer\nthan min_valid_seconds left, stores the result as a new secret version, including a rotated\nrefresh token, and lets only one caller refresh at a time across replicas.",
+        "operationId": "leaseOauthToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LeaseOAuthTokenResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "secretPath",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": ".+"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VaultServiceLeaseOAuthTokenBody"
+            }
+          }
+        ],
+        "tags": [
+          "VaultService"
+        ],
+        "x-udb-sdk-alias": "lease_oauth_token",
+        "x-udb-scope": [
+          "udb:vault:lease-oauth-token"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "vault",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
     "/v1/vault/seal-status": {
       "get": {
         "summary": "Report whether the vault is sealed (master key unavailable). Always answers,\neven when sealed, so operators can diagnose a sealed vault.",
@@ -53695,6 +53845,19 @@
         }
       }
     },
+    "VaultServiceLeaseOAuthTokenBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "minValidSeconds": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The token must stay valid at least this long. 0 means 60 seconds."
+        }
+      }
+    },
     "VaultServiceRevokeDatabaseCredentialsBody": {
       "type": "object",
       "properties": {
@@ -60195,6 +60358,37 @@
         "error": {
           "$ref": "#/definitions/v1ApiError",
           "title": "Error information if operation failed"
+        }
+      }
+    },
+    "v1LeaseOAuthTokenResponse": {
+      "type": "object",
+      "properties": {
+        "secretPath": {
+          "type": "string"
+        },
+        "accessToken": {
+          "type": "string"
+        },
+        "expiresAtUnix": {
+          "type": "string",
+          "format": "int64",
+          "description": "Unix seconds. 0 when the provider did not say when the token expires."
+        },
+        "version": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The secret version holding this token."
+        },
+        "refreshed": {
+          "type": "boolean",
+          "description": "This call fetched the token from the provider."
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError"
         }
       }
     },

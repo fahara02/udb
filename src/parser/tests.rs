@@ -444,3 +444,191 @@ message M {
     assert_eq!(s.fully_qualified_name("java", "M"), "M");
     assert_eq!(s.fully_qualified_name("objc", "M"), "M");
 }
+
+fn parse_result(source: &str) -> Result<Vec<ProtoSchema>, String> {
+    let cfg = ParserConfig::default();
+    let tokens = Lexer::new(source.as_bytes(), "<test>".to_string())
+        .tokenize()
+        .expect("lex test source");
+    ProtoParser::new(tokens, "<test>".to_string(), &cfg)
+        .parse_report()
+        .map(|report| report.schemas)
+        .map_err(|err| err.to_string())
+}
+
+fn one_column(annotation: &str) -> crate::ast::ProtoColumn {
+    let source = format!(
+        r#"package x;
+message M {{
+  option (udb.core.common.v1.pg_table) = {{ table_name: "m" schema_name: "x" is_table: true }};
+  string secret = 1 [{annotation}];
+}}
+"#
+    );
+    parse_str(&source)
+        .remove(0)
+        .columns
+        .into_iter()
+        .find(|column| column.column_name == "secret")
+        .expect("the column")
+}
+
+#[test]
+fn column_security_applies_every_field_of_its_proto_message() {
+    let column = one_column(
+        r#"(udb.core.common.v1.column_security) = { is_pii: true is_encrypted: true is_blind_index: true mask_in_logs: true data_class: "PHI" consent_required: true retention_days: 30 }"#,
+    );
+    assert!(column.security.is_pii);
+    assert!(column.security.is_encrypted);
+    assert!(column.security.is_blind_index);
+    assert!(column.security.mask_in_logs);
+    assert_eq!(column.security.data_class, "PHI");
+    assert!(column.security.consent_required);
+    assert_eq!(column.security.retention_days, 30);
+}
+
+#[test]
+fn a_sensitive_classification_masks_the_column_unless_it_is_declared_public() {
+    for class in [
+        "CREDENTIAL",
+        "TOKEN",
+        "KEY",
+        "PRIVATE_KEY",
+        "BIOMETRIC",
+        "IDENTITY",
+        "PII",
+    ] {
+        let column = one_column(&format!(
+            "(udb.core.common.v1.db_column_security) = {{ secret_classification: SECRET_CLASSIFICATION_{class} }}"
+        ));
+        assert!(column.security.mask_in_logs, "{class} reaches a client");
+    }
+    let public = one_column(
+        "(udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_PII output_view: OUTPUT_VIEW_PUBLIC }",
+    );
+    assert!(!public.security.mask_in_logs);
+    let internal = one_column(
+        "(udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_INTERNAL }",
+    );
+    assert!(!internal.security.mask_in_logs);
+}
+
+#[test]
+fn a_column_security_block_names_the_tenant_and_project_column() {
+    let tenant = one_column("(udb.core.common.v1.db_column_security) = { tenant_field: true }");
+    assert!(tenant.is_tenant);
+    let project = one_column("(udb.core.common.v1.db_column_security) = { project_field: true }");
+    assert!(project.is_project);
+}
+
+#[test]
+fn a_key_a_udb_option_does_not_have_is_refused() {
+    for (annotation, key) in [
+        (
+            "(udb.core.common.v1.column_security) = { is_pi: true }",
+            "is_pi",
+        ),
+        (
+            "(udb.core.common.v1.pg_column) = { not_nul: true }",
+            "not_nul",
+        ),
+        ("(udb.core.common.v1.pg_column).not_nul = true", "not_nul"),
+    ] {
+        let source = format!(
+            r#"package x;
+message M {{
+  option (udb.core.common.v1.pg_table) = {{ table_name: "m" schema_name: "x" is_table: true }};
+  string secret = 1 [{annotation}];
+}}
+"#
+        );
+        let refused = parse_result(&source).expect_err(annotation);
+        assert!(refused.contains(key), "{refused}");
+        assert!(refused.contains("it accepts"), "{refused}");
+    }
+    let refused = parse_result(
+        r#"package x;
+message M {
+  option (udb.core.common.v1.pg_table) = { table_nam: "m" schema_name: "x" is_table: true };
+  string id = 1;
+}
+"#,
+    )
+    .expect_err("a table option");
+    assert!(refused.contains("table_nam"), "{refused}");
+}
+
+#[test]
+fn an_option_of_another_namespace_keeps_its_own_keys() {
+    parse_result(
+        r#"package x;
+message M {
+  option (udb.core.common.v1.pg_table) = { table_name: "m" schema_name: "x" is_table: true };
+  string id = 1 [(gorm.field.column) = { serializer: "json" }];
+}
+"#,
+    )
+    .expect("not a UDB option");
+}
+
+#[test]
+fn a_data_store_keeps_the_entries_of_its_options_map() {
+    let schemas = parse_str(
+        r#"package x;
+message M {
+  option (udb.core.common.v1.pg_table) = { table_name: "m" schema_name: "x" is_table: true };
+  option (udb.core.common.v1.data_store) = {
+    store_kind: "search" backend: "opensearch" fts_config: "english"
+    options: { key: "shards" value: "3" }
+    options: { key: "replicas" value: "2" }
+  };
+  string id = 1;
+}
+"#,
+    );
+    let options = &schemas[0].generic_stores[0].options;
+    for (key, value) in [
+        ("shards", "3"),
+        ("replicas", "2"),
+        ("fts_config", "english"),
+    ] {
+        assert!(
+            options
+                .iter()
+                .any(|option| option.key == key && option.value == value),
+            "{key} is lost: {options:?}"
+        );
+    }
+}
+
+/// Every proto this repository ships still parses under the refusal.
+#[test]
+fn every_shipped_proto_uses_only_keys_its_options_have() {
+    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().is_some_and(|ext| ext == "proto") {
+                out.push(path);
+            }
+        }
+    }
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut files = Vec::new();
+    walk(&root.join("proto"), &mut files);
+    walk(&root.join("examples"), &mut files);
+    assert!(files.len() > 50, "the protos were not found");
+    let mut refused = Vec::new();
+    for file in files {
+        if let Err(err) = super::parse_file_report(&file, &ParserConfig::default())
+            && err.to_string().contains("unknown_udb_option_key")
+        {
+            refused.push(err.to_string());
+        }
+    }
+    assert!(refused.is_empty(), "{}", refused.join("\n"));
+}

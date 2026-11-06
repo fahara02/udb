@@ -775,6 +775,19 @@ impl MongoDbExecutor {
         .map(|_| ())
     }
 
+    /// Install the collection's declared validator. `moderate` checks every insert and every
+    /// update of a document that already passes, so a collection holding older documents
+    /// stays writable while new data obeys the schema.
+    async fn ensure_validator(&self, collection: &str, spec: &Json) -> Result<(), tonic::Status> {
+        let Some(validator) = spec.get("validator").filter(|value| !value.is_null()) else {
+            return Ok(());
+        };
+        self.run_command(validator_command(collection, validator))
+            .await
+            .map(|_| ())
+            .map_err(|err| mongodb_internal_status("ensure_resource_validator", err))
+    }
+
     async fn list_indexes(&self, collection: &str) -> Result<Vec<Json>, String> {
         let resp = self
             .run_command(json!({ "listIndexes": collection }))
@@ -1497,10 +1510,10 @@ impl ResourceAdminExecutor for MongoDbExecutor {
                 .and_then(Json::as_array)
                 .cloned()
                 .unwrap_or_default();
-            return self
-                .ensure_indexes(resource_name, &indexes)
+            self.ensure_indexes(resource_name, &indexes)
                 .await
-                .map_err(crate::runtime::executor_utils::status_from_store_string);
+                .map_err(crate::runtime::executor_utils::status_from_store_string)?;
+            return self.ensure_validator(resource_name, &spec).await;
         }
 
         // createCollection is idempotent when the collection already exists
@@ -1516,7 +1529,8 @@ impl ResourceAdminExecutor for MongoDbExecutor {
             .unwrap_or_default();
         self.ensure_indexes(resource_name, &indexes)
             .await
-            .map_err(|err| mongodb_internal_status("ensure_resource_indexes", err))
+            .map_err(|err| mongodb_internal_status("ensure_resource_indexes", err))?;
+        self.ensure_validator(resource_name, &spec).await
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
         #[cfg(feature = "mongodb-native")]
@@ -1559,6 +1573,15 @@ impl ResourceAdminExecutor for MongoDbExecutor {
             .unwrap_or_default();
         Ok(names)
     }
+}
+
+fn validator_command(collection: &str, validator: &Json) -> Json {
+    json!({
+        "collMod": collection,
+        "validator": validator,
+        "validationLevel": "moderate",
+        "validationAction": "error",
+    })
 }
 
 impl BackendExecutor for MongoDbExecutor {

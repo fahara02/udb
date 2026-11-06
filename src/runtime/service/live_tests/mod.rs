@@ -27,6 +27,7 @@ mod data_revision_live;
 mod journal_reader_gate_live;
 #[cfg(feature = "kafka")]
 mod livequery_journal_live;
+mod migration_apply_live;
 mod native_events_live;
 mod native_worker_seams_live;
 #[cfg(feature = "http-client")]
@@ -60,6 +61,8 @@ pub(crate) mod support;
 ))]
 mod vector_backends_live;
 // C2/C3/C8: served Qdrant vector RPC isolation on persisted routes.
+#[cfg(feature = "http-client")]
+mod vault_oauth_live;
 #[cfg(all(feature = "http-client", feature = "qdrant"))]
 mod vector_tenant_iso_live;
 #[cfg(feature = "http-client")]

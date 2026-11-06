@@ -3491,6 +3491,7 @@ it('manifest JSON body hydrates VaultService requests', function () {
     $fix->set('vault_hmac_key_name', 'vault-hmac-key-php');
     $fix->set('vault_ciphertext', 'udb-vault:v1:php');
     $fix->set('vault_secret_path', 'app/config');
+    $fix->set('vault_oauth_secret_path', 'app/oauth');
     $fix->set('vault_signature', 'udb-vault-sig:v1:php');
     $fix->set('vault_delete_secret_path', 'app/delete');
     $fix->set('vault_destroy_secret_path', 'app/destroy');
@@ -5108,6 +5109,7 @@ function perfSeedPhp(array $s): array
     $fix->set('vault_create_key_name', "sdk-perf-create-key-$suffix");
     $fix->set('vault_secret_path', "app/config-$suffix");
     $fix->set('vault_put_secret_path', "app/put-$suffix");
+    $fix->set('vault_oauth_secret_path', "app/oauth-$suffix");
     $fix->set('vault_delete_secret_path', "app/delete-$suffix");
     $fix->set('vault_destroy_secret_path', "app/destroy-$suffix");
     $fix->set('vault_db_role', 'readonly');
@@ -5150,7 +5152,9 @@ function perfSeedPhp(array $s): array
     if ($sig && $sig->getSignature() !== '') {
         $fix->set('vault_signature', $sig->getSignature());
     }
-    foreach (['vault_secret_path' => 'perf-secret', 'vault_delete_secret_path' => 'delete-secret', 'vault_destroy_secret_path' => 'destroy-secret'] as $ref => $val) {
+    // A token valid for decades, so the measured lease reaches no provider.
+    $oauthCredential = '{"token_url":"https://oauth.example.com/token","client_id":"perf","access_token":"perf-token","expires_at_unix":4102444800}';
+    foreach (['vault_secret_path' => 'perf-secret', 'vault_delete_secret_path' => 'delete-secret', 'vault_destroy_secret_path' => 'destroy-secret', 'vault_oauth_secret_path' => $oauthCredential] as $ref => $val) {
         $seedStub("VaultPutSecret:$ref", $vault, 'PutSecret', \Udb\Core\Vault\Services\V1\PutSecretRequest::class,
             ['tenant_id' => $tenant, 'secret_path' => $fix->lookup($ref), 'secret_value' => $val, 'expected_version' => 0, 'metadata_json' => '{}']);
     }

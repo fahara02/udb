@@ -18,10 +18,10 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.6.7
+ *   UDB version ...... 0.6.8
  *   Protocol version . 1.0.0
  *   Services ......... 29
- *   RPCs ............. 423
+ *   RPCs ............. 424
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -362,6 +362,7 @@ final class GeneratedClient
         "GetSecret" => "read_only",
         "GetTransitPublicKey" => "read_only",
         "Hmac" => "mutation",
+        "LeaseOAuthToken" => "mutation",
         "ListSecrets" => "read_only",
         "PutSecret" => "mutation",
         "RevokeDatabaseCredentials" => "destructive",
@@ -794,6 +795,7 @@ final class GeneratedClient
         "VaultService/GetSecret" => "read_only",
         "VaultService/GetTransitPublicKey" => "read_only",
         "VaultService/Hmac" => "mutation",
+        "VaultService/LeaseOAuthToken" => "mutation",
         "VaultService/ListSecrets" => "read_only",
         "VaultService/PutSecret" => "mutation",
         "VaultService/RevokeDatabaseCredentials" => "destructive",
@@ -1226,6 +1228,7 @@ final class GeneratedClient
         "VaultService/GetSecret" => "get_secret",
         "VaultService/GetTransitPublicKey" => "get_transit_public_key",
         "VaultService/Hmac" => "hmac",
+        "VaultService/LeaseOAuthToken" => "lease_oauth_token",
         "VaultService/ListSecrets" => "list_secrets",
         "VaultService/PutSecret" => "put_secret",
         "VaultService/RevokeDatabaseCredentials" => "revoke_database_credentials",
@@ -1657,6 +1660,7 @@ final class GeneratedClient
         "VaultService/GetSecret" => "getSecret",
         "VaultService/GetTransitPublicKey" => "vaultGetTransitPublicKey",
         "VaultService/Hmac" => "vaultHmac",
+        "VaultService/LeaseOAuthToken" => "leaseOauthToken",
         "VaultService/ListSecrets" => "listSecrets",
         "VaultService/PutSecret" => "putSecret",
         "VaultService/RevokeDatabaseCredentials" => "revokeDatabaseCredentials",
@@ -2088,6 +2092,7 @@ final class GeneratedClient
         "VaultService/GetSecret" => "get",
         "VaultService/GetTransitPublicKey" => "post",
         "VaultService/Hmac" => "post",
+        "VaultService/LeaseOAuthToken" => "post",
         "VaultService/ListSecrets" => "get",
         "VaultService/PutSecret" => "post",
         "VaultService/RevokeDatabaseCredentials" => "post",
@@ -2519,6 +2524,7 @@ final class GeneratedClient
         "VaultService/GetSecret" => "/v1/vault/secrets/{secret_path=**}",
         "VaultService/GetTransitPublicKey" => "/v1/vault/transit:publicKey",
         "VaultService/Hmac" => "/v1/vault/transit:hmac",
+        "VaultService/LeaseOAuthToken" => "/v1/vault/oauth-tokens/{secret_path=**}:lease",
         "VaultService/ListSecrets" => "/v1/vault/secrets",
         "VaultService/PutSecret" => "/v1/vault/secrets:put",
         "VaultService/RevokeDatabaseCredentials" => "/v1/vault/database/credentials/{lease_id}:revoke",
@@ -3065,6 +3071,8 @@ final class GeneratedClient
         "get_secret" => "getSecret",
         "get_transit_public_key" => "getTransitPublicKey",
         "hmac" => "hmac",
+        "lease_oauth_token" => "leaseOauthToken",
+        "lease_o_auth_token" => "leaseOauthToken",
         "list_secrets" => "listSecrets",
         "put_secret" => "putSecret",
         "revoke_database_credentials" => "revokeDatabaseCredentials",
@@ -9428,6 +9436,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.vault.services.v1.VaultService / LeaseOAuthToken (unary), public alias lease_oauth_token.
+     *
+     * Forwards to {@see stubFor()}->LeaseOAuthToken(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/LeaseOAuthToken
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded LeaseOAuthTokenResponse
+     */
+    public function leaseOauthToken($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'LeaseOAuthToken',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->LeaseOAuthToken($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.vault.services.v1.VaultService / ListSecrets (unary), public alias list_secrets.
      *
      * Forwards to {@see stubFor()}->ListSecrets(); retries transient codes.
@@ -12301,7 +12330,7 @@ final class GeneratedClient
         return $this->stubFor('TenantService', 'udb.core.tenant.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.vault.services.v1.VaultService (22 RPC(s)).
+     * Underlying buf-generated stub for udb.core.vault.services.v1.VaultService (23 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a VaultServiceClient

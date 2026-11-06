@@ -118,7 +118,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"signal_peer_id": "signal-peer-1", "step_id": "step-1", "topic_pattern": "topic.*", "ts_table": "sdk_timeseries",
 		"unpublish_track_id": "unpublish-track-1", "update_draft_id": "update-draft-1", "update_key_id": "update-key-1", "username": "perf-u",
 		"vault_ciphertext": "vault-ciphertext-1", "vault_db_role": "readonly", "vault_db_idempotency_key": "vault-db-idempotency-1", "vault_db_lease_id": "vault-db-lease-1", "vault_delete_secret_path": "secret/delete",
-		"vault_create_key_name": "transit-create-key", "vault_destroy_secret_path": "secret/destroy", "vault_key_name": "transit-key", "vault_put_secret_path": "secret/put", "vault_secret_path": "secret/path",
+		"vault_create_key_name": "transit-create-key", "vault_destroy_secret_path": "secret/destroy", "vault_key_name": "transit-key", "vault_put_secret_path": "secret/put", "vault_oauth_secret_path": "secret/oauth", "vault_secret_path": "secret/path",
 		"vault_signature": "vault-signature-1", "vault_signing_key_name": "transit-signing-key", "vault_hmac_key_name": "transit-hmac-key",
 		"webauthn_delete_user_id": "webauthn-delete-user-1", "webauthn_delete_credential_id": "delete-credential-1",
 		"webauthn_rename_user_id": "webauthn-rename-user-1", "webauthn_rename_credential_id": "rename-credential-1",
@@ -1947,6 +1947,7 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	fix.set("vault_ciphertext", "udb-vault:v1:seed")
 	fix.set("vault_secret_path", "app/config")
 	fix.set("vault_put_secret_path", "app/put")
+	fix.set("vault_oauth_secret_path", "app/oauth")
 	fix.set("vault_signature", "udb-vault-sig:v1:seed")
 	fix.set("vault_delete_secret_path", "app/delete")
 	fix.set("vault_destroy_secret_path", "app/destroy")

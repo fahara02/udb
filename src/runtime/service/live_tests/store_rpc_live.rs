@@ -1095,3 +1095,135 @@ async fn raw_object_keys_are_tenant_prefixed_live() {
         ))
         .await;
 }
+
+// ── What provisioning installs ─────────────────────────────────────────────
+
+/// A collection's declared schema is installed by the same spec startup provisions from:
+/// a document it refuses does not land.
+#[tokio::test]
+#[ignore = "requires live Postgres + MongoDB (UDB_MONGODB_DSN); runs in the CI --ignored live step"]
+async fn a_declared_mongo_validator_refuses_a_document_live() {
+    let (Some(pg), Some(_)) = (store_live_pg_dsn(), require_live_dsn("UDB_MONGODB_DSN")) else {
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let collection = format!("sr_valid_{}", Uuid::new_v4().simple());
+    let svc = store_service(&pg, note_manifest(&collection)).await;
+    let tenant = Uuid::new_v4().to_string();
+    let spec = crate::generation::backends::store_ensure_spec(
+        &crate::generation::ManifestStore {
+            backend: "mongodb".to_string(),
+            store_kind: "nosql".to_string(),
+            resource_name: collection.clone(),
+            payload_schema_json: r#"{"required":["body"]}"#.to_string(),
+            ..Default::default()
+        },
+        &CatalogManifest::default(),
+    );
+    svc.generic_dispatch(store_ctx(
+        generic_dispatch("mongodb", "ensure_resource", &collection, &spec.to_string()),
+        &tenant,
+    ))
+    .await
+    .expect("provisioning installs the validator");
+    // Provisioning twice is what every startup does.
+    svc.generic_dispatch(store_ctx(
+        generic_dispatch("mongodb", "ensure_resource", &collection, &spec.to_string()),
+        &tenant,
+    ))
+    .await
+    .expect("provisioning is repeatable");
+
+    let upsert = |document: serde_json::Value| {
+        let request = DocumentUpsertRequest {
+            resource: resource("mongodb", &collection, NOTE_MESSAGE),
+            document_id: format!("note-{}", Uuid::new_v4().simple()),
+            document: json_to_struct(&document),
+            ..DocumentUpsertRequest::default()
+        };
+        svc.document_upsert(store_ctx(request, &tenant))
+    };
+    upsert(json!({ "body": "fits the schema" }))
+        .await
+        .expect("a document the schema accepts");
+    upsert(json!({ "other": "no body" }))
+        .await
+        .expect_err("a document the schema refuses");
+    let _ = svc
+        .generic_dispatch(store_ctx(
+            generic_dispatch("mongodb", "drop_resource", &collection, "{}"),
+            &tenant,
+        ))
+        .await;
+}
+
+/// A constraint on a declared property is created by the spec and removed with the resource,
+/// and a constraint the data breaks is an error, not a quiet downgrade.
+#[cfg(feature = "neo4j")]
+#[tokio::test]
+#[ignore = "requires live Postgres + Neo4j (UDB_GRAPH_HTTP_URL); runs in the CI --ignored live step"]
+async fn a_neo4j_constraint_is_reported_and_dropped_on_its_declared_property_live() {
+    let (Some(pg), Some(_)) = (store_live_pg_dsn(), require_live_dsn("UDB_GRAPH_HTTP_URL")) else {
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let svc = store_service(&pg, CatalogManifest::default()).await;
+    let tenant = Uuid::new_v4().to_string();
+    let label = format!("SrProp{}", Uuid::new_v4().simple());
+    let spec = json!({ "constraint_property": "code" }).to_string();
+    let executor = graph_executor();
+    let constraints = |label: String| {
+        let executor = graph_executor();
+        async move {
+            executor
+                .cypher_rows(
+                    &format!(
+                        "SHOW CONSTRAINTS YIELD name, labelsOrTypes \
+                         WHERE '{label}' IN labelsOrTypes RETURN name"
+                    ),
+                    json!({}),
+                )
+                .await
+                .expect("list constraints")
+                .len()
+        }
+    };
+
+    // Two nodes the composite constraint cannot hold.
+    for _ in 0..2 {
+        executor
+            .cypher_rows(
+                &format!("CREATE (:{label} {{code: 'same', _tenant_id: 't', _project_id: 'p'}})"),
+                json!({}),
+            )
+            .await
+            .expect("seed a node");
+    }
+    let refused = svc
+        .generic_dispatch(store_ctx(
+            generic_dispatch("neo4j", "ensure_resource", &label, &spec),
+            &tenant,
+        ))
+        .await;
+    assert!(refused.is_err(), "duplicates must not pass as ensured");
+    drop_label(&label).await;
+
+    svc.generic_dispatch(store_ctx(
+        generic_dispatch("neo4j", "ensure_resource", &label, &spec),
+        &tenant,
+    ))
+    .await
+    .expect("the constraint is created");
+    assert_eq!(constraints(label.clone()).await, 1);
+    svc.generic_dispatch(store_ctx(
+        generic_dispatch("neo4j", "drop_resource", &label, "{}"),
+        &tenant,
+    ))
+    .await
+    .expect("the resource is dropped");
+    assert_eq!(
+        constraints(label.clone()).await,
+        0,
+        "the constraint stayed behind"
+    );
+}

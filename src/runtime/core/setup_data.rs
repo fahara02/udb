@@ -1804,8 +1804,7 @@ impl DataBrokerRuntime {
                 )
             });
             let record_is_partial = table.columns.iter().any(|column| {
-                !column.generated
-                    && encrypted_record.get(column.column_name.as_str()).is_none()
+                !column.generated && encrypted_record.get(column.column_name.as_str()).is_none()
             });
             let mut stored_row = None;
             if projects_this_message && record_is_partial && !table.primary_key.is_empty() {
@@ -2571,14 +2570,22 @@ impl DataBrokerRuntime {
                 .iter()
                 .map(|value| JsonValue::String(value.clone())),
         );
+        // Every removed row is reported by its own identity: a range delete's filter does not
+        // say which rows went.
+        let delete_sql = delete_sql_returning_identity(
+            bridged
+                .as_ref()
+                .map_or(plan.sql.as_str(), |stmt| stmt.sql.as_str()),
+            table,
+        );
         let query = match bridged.as_ref() {
             Some(stmt) => bind_typed_generic_pg_params(
-                sqlx::query(&stmt.sql),
+                sqlx::query(&delete_sql),
                 &stmt.params,
                 Some(&stmt.param_types),
             )?,
             None => bind_values(
-                sqlx::query(&plan.sql),
+                sqlx::query(&delete_sql),
                 table,
                 &plan.parameter_columns,
                 &values,
@@ -2697,50 +2704,64 @@ impl DataBrokerRuntime {
             )
             .await?;
         }
-        let result = query.execute(&mut *tx).await.map_err(|err| {
-            crate::runtime::executor_utils::sqlx_error_to_status("delete_query", &err)
-        })?;
-        enforce_require_affected(guards.require_affected, result.rows_affected())?;
+        let (affected_rows, removed) = if deleted_row_identity_columns(table).is_empty() {
+            let result = query.execute(&mut *tx).await.map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status("delete_query", &err)
+            })?;
+            let affected = result.rows_affected();
+            (affected, deleted_row_events(table, &[], &filter, affected)?)
+        } else {
+            let rows = query.fetch_all(&mut *tx).await.map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status("delete_query", &err)
+            })?;
+            let affected = rows.len() as u64;
+            (
+                affected,
+                deleted_row_events(table, &rows, &filter, affected)?,
+            )
+        };
+        enforce_require_affected(guards.require_affected, affected_rows)?;
         let mut projection_task_ids = Vec::new();
-        if result.rows_affected() > 0 {
+        if affected_rows > 0 {
             let projection_plans =
                 crate::runtime::projection::ProjectionPlan::from_manifest(manifest);
-            projection_task_ids =
-                crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+            for row in &removed {
+                projection_task_ids.extend(
+                    crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+                        &mut tx,
+                        &crate::runtime::system::SystemCatalogConfig::current(),
+                        crate::runtime::projection::task_project_id(&context.project_id),
+                        message_type,
+                        "delete",
+                        // The row's identity plus the VERIFIED tenant the delete ran
+                        // under, so the worker removes exactly this tenant's record.
+                        &crate::runtime::projection::scoped_delete_payload(
+                            manifest,
+                            message_type,
+                            row,
+                            &context.tenant_id,
+                        ),
+                        &projection_plans,
+                    )
+                    .await
+                    .map_err(|err| {
+                        setup_data_internal_status(
+                            "delete_projection_task_enqueue",
+                            format!("projection task enqueue failed: {err}"),
+                        )
+                    })?,
+                );
+                // mutations→CDC: one delete change event per removed row, in the same tx.
+                self.emit_cdc_outbox_on_mutation(
                     &mut tx,
-                    &crate::runtime::system::SystemCatalogConfig::current(),
-                    crate::runtime::projection::task_project_id(&context.project_id),
+                    manifest,
                     message_type,
                     "delete",
-                    // The filter plus the VERIFIED tenant the delete ran under,
-                    // so the worker can resolve which tenant's projected
-                    // record to remove instead of refusing (or widening).
-                    &crate::runtime::projection::scoped_delete_payload(
-                        manifest,
-                        message_type,
-                        &filter,
-                        &context.tenant_id,
-                    ),
-                    &projection_plans,
+                    row,
+                    &context,
                 )
-                .await
-                .map_err(|err| {
-                    setup_data_internal_status(
-                        "delete_projection_task_enqueue",
-                        format!("projection task enqueue failed: {err}"),
-                    )
-                })?;
-            // mutations→CDC: emit a delete change event for CDC-enabled entities in
-            // the same tx (the filter carries the deleted row's key).
-            self.emit_cdc_outbox_on_mutation(
-                &mut tx,
-                manifest,
-                message_type,
-                "delete",
-                &filter,
-                &context,
-            )
-            .await?;
+                .await?;
+            }
         }
         // NW1-3e: route through SystemStores trait.
         let receipt = match self.default_system_stores_clone() {
@@ -2773,7 +2794,7 @@ impl DataBrokerRuntime {
         let response = MutationResponse {
             mutation_id: Uuid::new_v4().to_string(),
             resource_uri,
-            affected_rows: result.rows_affected() as i64,
+            affected_rows: affected_rows as i64,
             // Fresh path only — a replayed keyed delete returned early above with
             // was_duplicate=true, so the default `false` here is truthful.
             was_duplicate: false,

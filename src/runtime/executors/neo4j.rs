@@ -1328,6 +1328,31 @@ fn scoped_uniqueness_statements(label: &str, prop: &str) -> ScopedUniquenessStat
     }
 }
 
+/// Whether the server refused the composite constraint's syntax, as a server older than
+/// Neo4j 5 does, rather than the constraint itself.
+fn composite_constraint_unsupported(error: &str) -> bool {
+    let error = error.to_ascii_lowercase();
+    !error.contains("constraintcreationfailed")
+        && (error.contains("syntaxerror")
+            || error.contains("invalid input")
+            || error.contains("invalid constraint syntax"))
+}
+
+#[cfg(test)]
+#[test]
+fn only_a_syntax_refusal_downgrades_the_composite_constraint() {
+    assert!(composite_constraint_unsupported(
+        "Neo.ClientError.Statement.SyntaxError: Invalid input 'REQUIRE'"
+    ));
+    assert!(!composite_constraint_unsupported(
+        "Neo.DatabaseError.Schema.ConstraintCreationFailed: found duplicate nodes"
+    ));
+    assert!(!composite_constraint_unsupported("connection refused"));
+    assert!(!composite_constraint_unsupported(
+        "Neo.ClientError.Security.Forbidden"
+    ));
+}
+
 /// `(adopt legacy node, scoped MERGE)` statements for [`Neo4jExecutor::upsert_scoped_node`].
 fn scoped_node_upsert_cypher(label: &str, scope: &GraphScope) -> (String, String) {
     let unscoped = GRAPH_SCOPE_FIELDS
@@ -1660,6 +1685,11 @@ impl ResourceAdminExecutor for Neo4jExecutor {
             .await
         {
             Ok(_) => Ok(()),
+            // Existing duplicates, a lost connection or a permission error are not an old
+            // server: reporting Ok over them would leave the data without its constraint.
+            Err(err) if !composite_constraint_unsupported(&err.to_string()) => {
+                Err(neo4j_internal_status("ensure_resource", err))
+            }
             Err(err) => {
                 // Composite property uniqueness needs Neo4j 5 (Community or
                 // Enterprise). On an older server keep the scoped MERGE key
@@ -1692,6 +1722,40 @@ impl ResourceAdminExecutor for Neo4jExecutor {
             self.run_single(&cypher, json!({}))
                 .await
                 .map_err(|err| neo4j_internal_status("drop_resource", err))?;
+        }
+        // The constraint property is declared per resource, so what was created under
+        // another property is found by its label.
+        for (list, drop) in [
+            (
+                format!(
+                    "SHOW CONSTRAINTS YIELD name, labelsOrTypes \
+                     WHERE name STARTS WITH 'udb_' AND '{resource_name}' IN labelsOrTypes RETURN name"
+                ),
+                "DROP CONSTRAINT",
+            ),
+            (
+                format!(
+                    "SHOW INDEXES YIELD name, labelsOrTypes, owningConstraint \
+                     WHERE name STARTS WITH 'udb_' AND owningConstraint IS NULL \
+                     AND '{resource_name}' IN labelsOrTypes RETURN name"
+                ),
+                "DROP INDEX",
+            ),
+        ] {
+            let rows = self
+                .run_single(&list, json!({}))
+                .await
+                .map_err(|err| neo4j_internal_status("drop_resource", err))?;
+            for name in rows
+                .iter()
+                .filter_map(|row| row.get("name").and_then(|value| value.as_str()))
+            {
+                validate_neo4j_identifier(name)
+                    .map_err(|err| neo4j_identifier_status("constraint_name", err))?;
+                self.run_single(&format!("{drop} {name} IF EXISTS"), json!({}))
+                    .await
+                    .map_err(|err| neo4j_internal_status("drop_resource", err))?;
+            }
         }
         Ok(())
     }

@@ -3,10 +3,10 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.6.7
+//   UDB version:      0.6.8
 //   Protocol version: 1.0.0
 //   Services:         29
-//   RPCs:             423
+//   RPCs:             424
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -361,6 +361,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.vault.services.v1.VaultService/GetSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GetSecret", "VaultService", "GetSecret", "get_secret", "getSecret", "read_only", "get", "/v1/vault/secrets/{secret_path=**}");
         map["/udb.core.vault.services.v1.VaultService/GetTransitPublicKey"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GetTransitPublicKey", "VaultService", "GetTransitPublicKey", "get_transit_public_key", "vaultGetTransitPublicKey", "read_only", "post", "/v1/vault/transit:publicKey");
         map["/udb.core.vault.services.v1.VaultService/Hmac"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Hmac", "VaultService", "Hmac", "hmac", "vaultHmac", "mutation", "post", "/v1/vault/transit:hmac");
+        map["/udb.core.vault.services.v1.VaultService/LeaseOAuthToken"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/LeaseOAuthToken", "VaultService", "LeaseOAuthToken", "lease_oauth_token", "leaseOauthToken", "mutation", "post", "/v1/vault/oauth-tokens/{secret_path=**}:lease");
         map["/udb.core.vault.services.v1.VaultService/ListSecrets"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/ListSecrets", "VaultService", "ListSecrets", "list_secrets", "listSecrets", "read_only", "get", "/v1/vault/secrets");
         map["/udb.core.vault.services.v1.VaultService/PutSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/PutSecret", "VaultService", "PutSecret", "put_secret", "putSecret", "mutation", "post", "/v1/vault/secrets:put");
         map["/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials", "VaultService", "RevokeDatabaseCredentials", "revoke_database_credentials", "revokeDatabaseCredentials", "destructive", "post", "/v1/vault/database/credentials/{lease_id}:revoke");
@@ -1038,7 +1039,7 @@ public sealed partial class GeneratedTenantServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.vault.services.v1.VaultService</c> service
-/// (22 RPCs). Forwards to the buf-generated
+/// (23 RPCs). Forwards to the buf-generated
 /// <c>VaultServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedVaultServiceClient : GeneratedServiceBase
@@ -8013,6 +8014,29 @@ public sealed partial class GeneratedVaultServiceClient
         return InvokeUnaryAsync(
             "/udb.core.vault.services.v1.VaultService/Hmac",
             co => (object)_stub.HmacAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>lease_oauth_token</c> (unary) — forwards to <c>VaultServiceClient.LeaseOAuthTokenAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/LeaseOAuthToken</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> LeaseOauthTokenAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.LeaseOAuthTokenAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/LeaseOAuthToken",
+            co => (object)_stub.LeaseOAuthTokenAsync(request, co),
             deadline,
             cancellationToken,
             "mutation" == "read_only",

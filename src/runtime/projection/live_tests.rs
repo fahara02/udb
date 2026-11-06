@@ -470,7 +470,13 @@ async fn a_partial_upsert_projects_the_whole_stored_row_live() {
         json!({"id": id, "tenant_id": tenant, "status": "a", "note": "kept"}),
     )
     .await;
-    served_upsert(&svc, &tenant, MSG, json!({"id": id, "tenant_id": tenant, "status": "b"})).await;
+    served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant, "status": "b"}),
+    )
+    .await;
     let rel = SystemCatalogConfig::current().projection_tasks_relation();
     let (status, note): (Option<String>, Option<String>) = sqlx::query_as(&format!(
         "SELECT source_payload ->> 'status', source_payload ->> 'note' FROM {rel}          WHERE resource_name = $1 AND source_payload ->> 'id' = $2          ORDER BY row_revision DESC LIMIT 1"
@@ -481,7 +487,67 @@ async fn a_partial_upsert_projects_the_whole_stored_row_live() {
     .await
     .expect("the newest projection task");
     assert_eq!(status.as_deref(), Some("b"));
-    assert_eq!(note.as_deref(), Some("kept"), "the projection lost a column");
+    assert_eq!(
+        note.as_deref(),
+        Some("kept"),
+        "the projection lost a column"
+    );
+}
+
+/// A range delete names no row in its filter, so each removed row gets its own projection
+/// task, keyed by its identity, or the projected copies would stay behind.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn a_range_delete_projects_each_removed_row_live() {
+    let _guard = crate::runtime::service::live_tests::support::live_native_service_db_lock()
+        .lock()
+        .await;
+    const MSG: &str = "acme.proj.v1.RangeGone";
+    let pool = ledger_pool().await;
+    let schema = format!("udb_gone_{}", Uuid::new_v4().simple());
+    create_source_table(&pool, &schema, "range_gone", ", status TEXT").await;
+    let resource = format!("gone_{}", Uuid::new_v4().simple());
+    let manifest = served_manifest(
+        &schema,
+        "range_gone",
+        "RangeGone",
+        vec![text_col("status", false)],
+        vec![projection(
+            "RangeGone",
+            "cache",
+            "redis",
+            &resource,
+            vec![opt("key_pattern", "gone:{id}")],
+        )],
+        Vec::new(),
+    );
+    let svc = served_service(manifest).await;
+    let tenant = Uuid::new_v4().to_string();
+    let ids: Vec<String> = (0..3)
+        .map(|n| format!("gone-{n}-{}", Uuid::new_v4().simple()))
+        .collect();
+    for id in &ids {
+        served_upsert(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": id, "tenant_id": tenant, "status": "old"}),
+        )
+        .await;
+    }
+    served_delete(&svc, &tenant, MSG, json!({"status": "old"})).await;
+    let rel = SystemCatalogConfig::current().projection_tasks_relation();
+    let removed: Vec<String> = sqlx::query_scalar(&format!(
+        "SELECT source_payload ->> 'id' FROM {rel} \
+         WHERE resource_name = $1 AND operation = 'delete' ORDER BY 1"
+    ))
+    .bind(&resource)
+    .fetch_all(&pool)
+    .await
+    .expect("the delete tasks");
+    let mut expected = ids.clone();
+    expected.sort();
+    assert_eq!(removed, expected, "each removed row has its own task");
 }
 
 async fn create_source_table(pool: &PgPool, schema: &str, table: &str, extra_ddl: &str) {

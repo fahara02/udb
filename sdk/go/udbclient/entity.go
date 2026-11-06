@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -599,4 +600,14 @@ type EntityDescriptor struct {
 	TenantField  string
 	ProjectField string
 	GoType       string
+}
+
+// WithCrossTenantRead makes a Select on ctx read tenant's rows instead of the caller's. The
+// credential needs platform authority and the udb:cross_tenant:read scope, and the broker
+// records reason in the durable audit log before it reads.
+func WithCrossTenantRead(ctx context.Context, tenant, reason string) context.Context {
+	return metadata.AppendToOutgoingContext(ctx,
+		"x-udb-cross-tenant-target", tenant,
+		"x-udb-cross-tenant-reason", reason,
+	)
 }

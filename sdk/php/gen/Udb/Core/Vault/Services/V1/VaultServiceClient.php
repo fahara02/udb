@@ -62,6 +62,25 @@ class VaultServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * A usable access token for the OAuth credential stored as a secret. The secret's value is
+     * JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+     * credentials grant), with optional scope. The broker refreshes the token when it has fewer
+     * than min_valid_seconds left, stores the result as a new secret version, including a rotated
+     * refresh token, and lets only one caller refresh at a time across replicas.
+     * @param \Udb\Core\Vault\Services\V1\LeaseOAuthTokenRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Vault\Services\V1\LeaseOAuthTokenResponse>
+     */
+    public function LeaseOAuthToken(\Udb\Core\Vault\Services\V1\LeaseOAuthTokenRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/LeaseOAuthToken',
+        $argument,
+        ['\Udb\Core\Vault\Services\V1\LeaseOAuthTokenResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * List secret paths under an optional prefix. Returns metadata only — NEVER
      * any secret value.
      * @param \Udb\Core\Vault\Services\V1\ListSecretsRequest $argument input argument

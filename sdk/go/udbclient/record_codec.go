@@ -83,17 +83,26 @@ func EncodeRecord(m proto.Message, mode WriteMode) (Record, error) {
 	return rec, nil
 }
 
-// columnIsSensitive reports a column a default read leaves out.
+// columnIsSensitive reports a column a default read leaves out or masks.
 func columnIsSensitive(fd protoreflect.FieldDescriptor) bool {
-	return protoschema.PII(fd) || protoschema.Encrypted(fd)
+	return protoschema.PII(fd) || protoschema.Encrypted(fd) || protoschema.Masked(fd)
+}
+
+// redactedValue is what a protected column reads as for a caller without the PII read
+// scope. An unprotected text column may really hold this text, so only a protected column
+// or a column that is not text can be sure it is no value.
+const redactedValue = `"***MASKED***"`
+
+func isRedacted(fd protoreflect.FieldDescriptor, v json.RawMessage) bool {
+	return string(v) == redactedValue && (columnIsSensitive(fd) || fd.Kind() != protoreflect.StringKind)
 }
 
 // encodeColumn applies the column rules to rec[fd.Name()], which holds the
 // field's protojson form.
 func encodeColumn(pr protoreflect.Message, fd protoreflect.FieldDescriptor, c *udbcommonv1.ColumnOptions, rec Record) error {
 	name := string(fd.Name())
-	// A default read leaves PII and encrypted columns out, so an unset one here may
-	// only be unread. A full-row write must not erase it: clear it with Patch and nil.
+	// A default read leaves PII and encrypted columns out or masks them, so an unset one
+	// here may only be unread. A full-row write must not erase it: clear it with Patch and nil.
 	if !fd.IsList() && !pr.Has(fd) && (c.GetEncrypted() || columnIsSensitive(fd)) {
 		delete(rec, name)
 		return nil
@@ -356,7 +365,7 @@ func DecodeRecord(r Record, m proto.Message) error {
 		fd := fields.Get(i)
 		name := string(fd.Name())
 		v, ok := cols[name]
-		if !ok || string(v) == "null" {
+		if !ok || string(v) == "null" || isRedacted(fd, v) {
 			continue
 		}
 		if v, err = normalise(fd, v); err != nil {

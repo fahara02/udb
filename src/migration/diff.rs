@@ -63,6 +63,15 @@ pub enum ChangeKind {
     DropStore,
     ValidationError,
     CreateEnum,
+    /// The table's primary key becomes the declared one.
+    ChangePrimaryKey,
+    /// How the database fills a column changed: generated expression, identity or sequence.
+    ChangeColumnGeneration,
+    /// An index UDB derives from a column is rebuilt.
+    RebuildDerivedIndex,
+    /// The table is rebuilt under another partition strategy or column. The rows are copied
+    /// and the previous table is kept beside it.
+    RepartitionTable,
     AlterEnumAddValue,
     DropEnum,
     /// Partitioning lifecycle marker. Existing table partition conversion is
@@ -697,11 +706,15 @@ fn diff_table_properties(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec
     }
 
     if old.primary_key != new.primary_key {
-        ops.push(manual_change(
-            new,
+        ops.push(op(
+            ChangeKind::ChangePrimaryKey,
+            ChangeSafety::RequiresReview,
+            &new.schema,
+            &new.table,
             "",
             "primary_key",
             "desired proto AST changes the primary key",
+            "changing a primary key locks the table and fails if the rows or a foreign key do not allow it",
         ));
     }
 
@@ -772,8 +785,21 @@ fn diff_partitioning(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<Cha
         )),
         (true, true)
             if old.partition_strategy != new.partition_strategy
-                || old.partition_column != new.partition_column
-                || old.partition_interval != new.partition_interval
+                || old.partition_column != new.partition_column =>
+        {
+            ops.push(op(
+                ChangeKind::RepartitionTable,
+                ChangeSafety::RequiresReview,
+                &new.schema,
+                &new.table,
+                &new.partition_column,
+                "partitioning",
+                "desired proto AST changes the partition strategy or column",
+                "the table is rebuilt and its rows copied, under a lock for the whole copy",
+            ));
+        }
+        (true, true)
+            if old.partition_interval != new.partition_interval
                 || old.partition_premake != new.partition_premake
                 || old.partition_default != new.partition_default
                 || old.retention_days != new.retention_days =>
@@ -967,11 +993,15 @@ fn diff_column(
         || old.is_identity != new.is_identity
         || old.auto_increment != new.auto_increment
     {
-        ops.push(manual_change(
-            table,
+        ops.push(op(
+            ChangeKind::ChangeColumnGeneration,
+            ChangeSafety::RequiresReview,
+            &table.schema,
+            &table.table,
             &new.column_name,
             "column_generation",
             "desired proto AST changes how the database fills this column",
+            "a column becoming generated has its stored values replaced by the expression",
         ));
     }
     if old.is_jsonb != new.is_jsonb
@@ -981,12 +1011,15 @@ fn diff_column(
         || old.tsvector_source_columns != new.tsvector_source_columns
         || old.trigram_index != new.trigram_index
     {
-        ops.push(manual_change(
-            table,
+        ops.push(op(
+            ChangeKind::RebuildDerivedIndex,
+            ChangeSafety::RequiresReview,
+            &table.schema,
+            &table.table,
             &new.column_name,
             "derived_index",
-            "desired proto AST changes an index UDB derives from this column, and an index \
-             of the same name is not rebuilt",
+            "desired proto AST changes an index UDB derives from this column",
+            "the index is rebuilt in the migration transaction, which blocks writes to the table",
         ));
     }
     if old.sql_type != new.sql_type {
@@ -2088,6 +2121,7 @@ pub fn is_data_destructive(kind: &ChangeKind) -> bool {
         ChangeKind::DropTable
         | ChangeKind::DropColumn
         | ChangeKind::DropPartition
+        | ChangeKind::ChangeColumnGeneration
         | ChangeKind::DropCollection
         | ChangeKind::DropBucket
         | ChangeKind::DropStore => true,
@@ -2113,6 +2147,10 @@ fn priority(kind: &ChangeKind) -> i32 {
         ChangeKind::HintWarning => 1,
         ChangeKind::ApplySqlArtifact => 87,
         ChangeKind::ManualChange => 2,
+        ChangeKind::ChangePrimaryKey => 62,
+        ChangeKind::ChangeColumnGeneration => 63,
+        ChangeKind::RebuildDerivedIndex => 64,
+        ChangeKind::RepartitionTable => 65,
         ChangeKind::DropExtension => 4,
         ChangeKind::CreateExtension | ChangeKind::UpdateExtension => 5,
         ChangeKind::AddSchema => 10,
@@ -2774,21 +2812,37 @@ mod tests {
     }
 
     #[test]
-    fn a_change_udb_cannot_apply_is_never_an_empty_diff() {
+    fn a_structural_change_is_never_an_empty_diff() {
         let mut changed = sample_table();
         changed.primary_key.push("tenant_id".to_string());
-        assert!(kinds_between(sample_table(), changed).contains(&ChangeKind::ManualChange));
+        assert!(kinds_between(sample_table(), changed).contains(&ChangeKind::ChangePrimaryKey));
 
-        for change in [
-            (|column: &mut ManifestColumn| column.is_identity = true) as fn(&mut ManifestColumn),
-            |column| column.auto_increment = true,
-            |column| column.generated_expr = "1".to_string(),
-            |column| column.json_path_ops = true,
-            |column| column.tsvector_language = "simple".to_string(),
+        for (change, kind) in [
+            (
+                (|column: &mut ManifestColumn| column.is_identity = true)
+                    as fn(&mut ManifestColumn),
+                ChangeKind::ChangeColumnGeneration,
+            ),
+            (
+                |column| column.auto_increment = true,
+                ChangeKind::ChangeColumnGeneration,
+            ),
+            (
+                |column| column.generated_expr = "1".to_string(),
+                ChangeKind::ChangeColumnGeneration,
+            ),
+            (
+                |column| column.json_path_ops = true,
+                ChangeKind::RebuildDerivedIndex,
+            ),
+            (
+                |column| column.tsvector_language = "simple".to_string(),
+                ChangeKind::RebuildDerivedIndex,
+            ),
         ] {
             let mut changed = sample_table();
             change(&mut changed.columns[0]);
-            assert!(kinds_between(sample_table(), changed).contains(&ChangeKind::ManualChange));
+            assert!(kinds_between(sample_table(), changed).contains(&kind));
         }
     }
 

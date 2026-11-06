@@ -182,7 +182,13 @@ pub(super) fn ensure_spec(store: &ManifestStore) -> Json {
             "expire_after_seconds": ttl_seconds,
         }));
     }
-    json!({ "indexes": indexes })
+    let mut spec = json!({ "indexes": indexes });
+    if store_opt_bool_any(store, &["udb.mongo_json_schema", "json_schema"], true)
+        && let Some(validator) = payload_schema_validator(store)
+    {
+        spec["validator"] = validator;
+    }
+    spec
 }
 
 fn collection_name(store: &ManifestStore) -> String {

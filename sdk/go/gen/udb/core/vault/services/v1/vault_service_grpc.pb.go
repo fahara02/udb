@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	VaultService_PutSecret_FullMethodName                          = "/udb.core.vault.services.v1.VaultService/PutSecret"
 	VaultService_GetSecret_FullMethodName                          = "/udb.core.vault.services.v1.VaultService/GetSecret"
+	VaultService_LeaseOAuthToken_FullMethodName                    = "/udb.core.vault.services.v1.VaultService/LeaseOAuthToken"
 	VaultService_ListSecrets_FullMethodName                        = "/udb.core.vault.services.v1.VaultService/ListSecrets"
 	VaultService_DeleteSecret_FullMethodName                       = "/udb.core.vault.services.v1.VaultService/DeleteSecret"
 	VaultService_UndeleteSecret_FullMethodName                     = "/udb.core.vault.services.v1.VaultService/UndeleteSecret"
@@ -82,6 +83,20 @@ type VaultServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	GetSecret(ctx context.Context, in *GetSecretRequest, opts ...grpc.CallOption) (*GetSecretResponse, error)
+	// A usable access token for the OAuth credential stored as a secret. The secret's value is
+	// JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+	// credentials grant), with optional scope. The broker refreshes the token when it has fewer
+	// than min_valid_seconds left, stores the result as a new secret version, including a rotated
+	// refresh token, and lets only one caller refresh at a time across replicas.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/LeaseOAuthToken
+	// Listener: control plane.
+	// Scopes: udb:vault:lease-oauth-token.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	LeaseOAuthToken(ctx context.Context, in *LeaseOAuthTokenRequest, opts ...grpc.CallOption) (*LeaseOAuthTokenResponse, error)
 	// List secret paths under an optional prefix. Returns metadata only — NEVER
 	// any secret value.
 	// UDB contract: /udb.core.vault.services.v1.VaultService/ListSecrets
@@ -355,6 +370,16 @@ func (c *vaultServiceClient) GetSecret(ctx context.Context, in *GetSecretRequest
 	return out, nil
 }
 
+func (c *vaultServiceClient) LeaseOAuthToken(ctx context.Context, in *LeaseOAuthTokenRequest, opts ...grpc.CallOption) (*LeaseOAuthTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LeaseOAuthTokenResponse)
+	err := c.cc.Invoke(ctx, VaultService_LeaseOAuthToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *vaultServiceClient) ListSecrets(ctx context.Context, in *ListSecretsRequest, opts ...grpc.CallOption) (*ListSecretsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListSecretsResponse)
@@ -578,6 +603,12 @@ type VaultServiceServer interface {
 	// Read the secret value (latest active version, or a specific version). This
 	// is the sensitive vault read: it is AUDITED via the outbox compliance envelope.
 	GetSecret(context.Context, *GetSecretRequest) (*GetSecretResponse, error)
+	// A usable access token for the OAuth credential stored as a secret. The secret's value is
+	// JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+	// credentials grant), with optional scope. The broker refreshes the token when it has fewer
+	// than min_valid_seconds left, stores the result as a new secret version, including a rotated
+	// refresh token, and lets only one caller refresh at a time across replicas.
+	LeaseOAuthToken(context.Context, *LeaseOAuthTokenRequest) (*LeaseOAuthTokenResponse, error)
 	// List secret paths under an optional prefix. Returns metadata only — NEVER
 	// any secret value.
 	ListSecrets(context.Context, *ListSecretsRequest) (*ListSecretsResponse, error)
@@ -673,6 +704,9 @@ func (UnimplementedVaultServiceServer) PutSecret(context.Context, *PutSecretRequ
 }
 func (UnimplementedVaultServiceServer) GetSecret(context.Context, *GetSecretRequest) (*GetSecretResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSecret not implemented")
+}
+func (UnimplementedVaultServiceServer) LeaseOAuthToken(context.Context, *LeaseOAuthTokenRequest) (*LeaseOAuthTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LeaseOAuthToken not implemented")
 }
 func (UnimplementedVaultServiceServer) ListSecrets(context.Context, *ListSecretsRequest) (*ListSecretsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSecrets not implemented")
@@ -786,6 +820,24 @@ func _VaultService_GetSecret_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(VaultServiceServer).GetSecret(ctx, req.(*GetSecretRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VaultService_LeaseOAuthToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LeaseOAuthTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VaultServiceServer).LeaseOAuthToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VaultService_LeaseOAuthToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VaultServiceServer).LeaseOAuthToken(ctx, req.(*LeaseOAuthTokenRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1164,6 +1216,10 @@ var VaultService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSecret",
 			Handler:    _VaultService_GetSecret_Handler,
+		},
+		{
+			MethodName: "LeaseOAuthToken",
+			Handler:    _VaultService_LeaseOAuthToken_Handler,
 		},
 		{
 			MethodName: "ListSecrets",

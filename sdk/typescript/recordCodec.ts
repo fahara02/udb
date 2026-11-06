@@ -611,9 +611,9 @@ function enumTokens(field: FieldSchema, value: unknown): unknown {
 /** Apply the column rules to `record[field.name]`, which holds proto JSON. */
 function encodeColumn(schema: MessageSchema, field: FieldSchema, isSet: boolean, record: UdbRecord): void {
   const name = field.name;
-  // A default read leaves PII and encrypted columns out, so an unset one here may only be
-  // unread. A full-row write must not erase it: clear it with patch and null.
-  if (!isSet && !field.repeated && !field.map && (field.pii || field.encrypted)) {
+  // A default read leaves PII and encrypted columns out or masks them, so an unset one here
+  // may only be unread. A full-row write must not erase it: clear it with patch and null.
+  if (!isSet && !field.repeated && !field.map && (field.pii || field.encrypted || field.masked)) {
     delete record[name];
     return;
   }
@@ -979,7 +979,10 @@ export function decodeRecord<T = Record<string, unknown>>(
   const groups = new Map<string, string>();
   for (const field of schema.fields) {
     const value = record[field.name];
+    // A protected column reads as this placeholder. An unprotected text column may really
+    // hold the text, so only a protected or non-text column can be sure it is no value.
     if (value === undefined || value === null) continue;
+    if (value === "***MASKED***" && (field.masked || field.pii || field.encrypted || field.kind !== "string")) continue;
     let normal: unknown;
     try {
       normal = normalise(field, value);

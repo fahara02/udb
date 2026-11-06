@@ -4395,6 +4395,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("sdk/SDK_PERF_LISTING.md", "SDK performance generated doc"),
     ("scripts/ffmpeg_transcode_smoke.py", "ffmpeg transcode smoke"),
     ("scripts/playground_wasm_smoke.mjs", "playground WASM smoke"),
+    ("scripts/mls_web_browser_smoke.mjs", "MLS web browser smoke"),
     ("scripts/collect_sdk_bench_results.py", "benchmark collector"),
     ("scripts/validate_benchmark_publication.py", "released benchmark publication validator"),
     ("scripts/locate_benchmark_report.py", "canonical benchmark artifact locator"),

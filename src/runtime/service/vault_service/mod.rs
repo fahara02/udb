@@ -70,6 +70,7 @@ mod events;
 mod handlers;
 mod lifecycle;
 mod model;
+mod oauth;
 #[cfg(test)]
 mod project_store_live;
 mod quota;
@@ -328,6 +329,13 @@ impl VaultService for VaultServiceImpl {
         request: Request<vault_pb::GetSecretRequest>,
     ) -> Result<Response<vault_pb::GetSecretResponse>, Status> {
         handlers::get_secret(self, request).await
+    }
+
+    async fn lease_o_auth_token(
+        &self,
+        request: Request<vault_pb::LeaseOAuthTokenRequest>,
+    ) -> Result<Response<vault_pb::LeaseOAuthTokenResponse>, Status> {
+        oauth::lease_oauth_token(self, request).await
     }
 
     async fn list_secrets(

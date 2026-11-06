@@ -26,6 +26,7 @@ from .schema import (
     legacy_column_security_options,
     column_options,
     is_map,
+    is_masked,
     is_repeated,
     message_type,
     project_column,
@@ -250,6 +251,8 @@ def _encode_column(message: Message, field: FieldDescriptor, column: Any, value:
 def _is_sensitive(field: FieldDescriptor, column: Any) -> bool:
     legacy = legacy_column_security_options(field)
     if legacy is not None and (legacy.is_pii or legacy.is_encrypted):
+        return True
+    if is_masked(field):
         return True
     return bool(column is not None and column.encrypted)
 
@@ -487,6 +490,12 @@ def decode_record(record: Mapping[str, Any], message: Message) -> Message:
     for field in message.DESCRIPTOR.fields:
         value = record.get(field.name)
         if value is None:
+            continue
+        # A protected column reads as this placeholder. An unprotected text column may
+        # really hold the text, so only a protected or non-text column can be sure.
+        if value == "***MASKED***" and (
+            _is_sensitive(field, column_options(field)) or field.type != FieldDescriptor.TYPE_STRING
+        ):
             continue
         try:
             clean[field.name] = _normalise(field, value)

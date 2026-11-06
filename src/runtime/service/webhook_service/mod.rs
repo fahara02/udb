@@ -62,7 +62,7 @@ mod errors;
 mod events;
 mod handlers;
 mod model;
-mod security;
+pub(crate) mod security;
 #[cfg(test)]
 mod tests;
 mod worker;

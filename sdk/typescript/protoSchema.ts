@@ -139,12 +139,24 @@ function fieldSchema(field: protobuf.Field): FieldSchema {
     ),
     masked:
       pii ||
+      (view !== "OUTPUT_VIEW_PUBLIC" && SENSITIVE_CLASSIFICATIONS.has(security.secret_classification)) ||
       Boolean(legacy.mask_in_logs || notes.log_masked || notes.log_redacted || notes.sensitive) ||
       view === "OUTPUT_VIEW_STORAGE_ONLY" ||
       view === "OUTPUT_VIEW_NEVER" ||
       (redaction !== undefined && redaction !== "REDACTION_STRATEGY_UNSPECIFIED" && redaction !== "REDACTION_STRATEGY_NONE"),
   };
 }
+
+/** Classifications that keep a column from a client in clear text unless its view is public. */
+const SENSITIVE_CLASSIFICATIONS = new Set([
+  "SECRET_CLASSIFICATION_CREDENTIAL",
+  "SECRET_CLASSIFICATION_TOKEN",
+  "SECRET_CLASSIFICATION_KEY",
+  "SECRET_CLASSIFICATION_PRIVATE_KEY",
+  "SECRET_CLASSIFICATION_BIOMETRIC",
+  "SECRET_CLASSIFICATION_IDENTITY",
+  "SECRET_CLASSIFICATION_PII",
+]);
 
 /** Whether a field stores a 64-bit integer. */
 export function is64BitField(field: FieldSchema): boolean {

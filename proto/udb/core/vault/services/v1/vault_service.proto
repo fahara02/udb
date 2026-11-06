@@ -161,6 +161,55 @@ service VaultService {
     option (google.api.http) = {get: "/v1/vault/secrets/{secret_path=**}"};
   }
 
+  // A usable access token for the OAuth credential stored as a secret. The secret's value is
+  // JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+  // credentials grant), with optional scope. The broker refreshes the token when it has fewer
+  // than min_valid_seconds left, stores the result as a new secret version, including a rotated
+  // refresh token, and lets only one caller refresh at a time across replicas.
+  rpc LeaseOAuthToken(LeaseOAuthTokenRequest) returns (LeaseOAuthTokenResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:lease-oauth-token"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "vault.LeaseOAuthToken"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "lease_oauth_token" rest_operation_id: "leaseOauthToken"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 1
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.LeaseOAuthToken"
+      outbox_topic: "udb.vault.secret.accessed.v1"
+      partition_key_field: "secret_path"
+      payload_redaction_profile: "strict"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/oauth-tokens/{secret_path=**}:lease" body: "*"};
+  }
+
   // List secret paths under an optional prefix. Returns metadata only — NEVER
   // any secret value.
   rpc ListSecrets(ListSecretsRequest) returns (ListSecretsResponse) {
@@ -1115,6 +1164,36 @@ message GetSecretResponse {
   string metadata_json = 4;
   string message = 5;
   udb.core.common.v1.ApiError error = 6;
+}
+
+message LeaseOAuthTokenRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 1 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string secret_path = 2;
+  // The token must stay valid at least this long. 0 means 60 seconds.
+  int32 min_valid_seconds = 3;
+}
+
+message LeaseOAuthTokenResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 1 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string secret_path = 1;
+  string access_token = 2 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true];
+  // Unix seconds. 0 when the provider did not say when the token expires.
+  int64 expires_at_unix = 3;
+  // The secret version holding this token.
+  int32 version = 4;
+  // This call fetched the token from the provider.
+  bool refreshed = 5;
+  string message = 6;
+  udb.core.common.v1.ApiError error = 7;
 }
 
 message ListSecretsRequest {

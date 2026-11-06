@@ -191,6 +191,121 @@ pub(crate) async fn execute_tx_plan(
     Ok(result.rows_affected())
 }
 
+/// The columns that identify a row a delete removed: its primary key and scope. Nothing else
+/// is read back, so a delete never pulls PII or ciphertext into an event.
+pub(crate) fn deleted_row_identity_columns(table: &ManifestTable) -> Vec<String> {
+    let mut columns = table.primary_key.clone();
+    if columns.is_empty() {
+        return columns;
+    }
+    for scope in [
+        crate::generation::sql::resolve_tenant_column(table),
+        crate::generation::sql::resolve_project_column(table),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if !columns.iter().any(|column| column == scope) {
+            columns.push(scope.to_string());
+        }
+    }
+    columns
+}
+
+/// `sql` returning the identity of each row it removes. A table without a primary key has
+/// no identity to return, and a statement that already returns keeps its own list.
+pub(crate) fn delete_sql_returning_identity(sql: &str, table: &ManifestTable) -> String {
+    let columns = deleted_row_identity_columns(table);
+    if columns.is_empty() || sql.contains(" RETURNING ") {
+        return sql.to_string();
+    }
+    let list = columns
+        .iter()
+        .map(|column| format!("\"{}\"", column.replace('"', "\"\"")))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("{sql} RETURNING {list}")
+}
+
+/// One event body per removed row, keyed by its identity. Without a primary key the filter
+/// is all that names what went, so it stays the one event.
+pub(crate) fn deleted_row_events(
+    table: &ManifestTable,
+    rows: &[sqlx::postgres::PgRow],
+    filter: &JsonValue,
+    affected: u64,
+) -> Result<Vec<JsonValue>, tonic::Status> {
+    use sqlx::{Column, Row, TypeInfo};
+    let identity = deleted_row_identity_columns(table);
+    if identity.is_empty() {
+        return Ok(if affected > 0 {
+            vec![filter.clone()]
+        } else {
+            Vec::new()
+        });
+    }
+    rows.iter()
+        .map(|row| {
+            let mut event = serde_json::Map::with_capacity(identity.len());
+            for (idx, column) in row.columns().iter().enumerate() {
+                if identity.iter().any(|name| name == column.name()) {
+                    event.insert(
+                        column.name().to_string(),
+                        crate::runtime::core::row_value_to_json(
+                            row,
+                            idx,
+                            column.type_info().name(),
+                        )?,
+                    );
+                }
+            }
+            Ok(JsonValue::Object(event))
+        })
+        .collect()
+}
+
+/// [`execute_tx_plan`] for a delete: the rows it removed, and how many.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn execute_tx_delete_plan(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    manifest: &CatalogManifest,
+    message_type: &str,
+    sql: &str,
+    columns: &[String],
+    values: &[JsonValue],
+    errors: &[String],
+    filter: &JsonValue,
+) -> Result<(u64, Vec<JsonValue>), tonic::Status> {
+    reject_plan(errors)?;
+    let table = resolve_table_for_message(manifest, message_type).map_err(|error| {
+        postgres_invalid_field(
+            "message_type",
+            "must match exactly one manifest table message type",
+            error.to_string(),
+        )
+    })?;
+    let returning = delete_sql_returning_identity(sql, table);
+    let query = bind_values(sqlx::query(&returning), table, columns, values)?;
+    if deleted_row_identity_columns(table).is_empty() {
+        let result = query.execute(&mut **tx).await.map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "transaction mutation failed",
+                &err,
+            )
+        })?;
+        let affected = result.rows_affected();
+        return Ok((affected, deleted_row_events(table, &[], filter, affected)?));
+    }
+    let rows = query.fetch_all(&mut **tx).await.map_err(|err| {
+        crate::runtime::executor_utils::sqlx_error_to_status("transaction mutation failed", &err)
+    })?;
+    let affected = rows.len() as u64;
+    Ok((
+        affected,
+        deleted_row_events(table, &rows, filter, affected)?,
+    ))
+}
+
 // ── Join fusion ───────────────────────────────────────────────────────────────
 
 pub(crate) struct JoinFusionPlan {

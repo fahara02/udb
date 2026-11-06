@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 423 RPCs across 29 services.
+Current generated RPC surface: 424 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -75,7 +75,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | TenantService | 8 | 3 | 3 | 2 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
-| VaultService | 22 | 6 | 13 | 3 | 0 |
+| VaultService | 23 | 6 | 14 | 3 | 0 |
 | WebhookService | 6 | 3 | 2 | 1 | 0 |
 | WorkflowService | 6 | 2 | 3 | 1 | 0 |
 
@@ -489,6 +489,7 @@ identity surface available to benchmark reports.
 | `VaultService/GetSecret` | `get_secret` | `getSecret` | READ_ONLY |
 | `VaultService/GetTransitPublicKey` | `get_transit_public_key` | `vaultGetTransitPublicKey` | READ_ONLY |
 | `VaultService/Hmac` | `hmac` | `vaultHmac` | MUTATION |
+| `VaultService/LeaseOAuthToken` | `lease_oauth_token` | `leaseOauthToken` | MUTATION |
 | `VaultService/ListSecrets` | `list_secrets` | `listSecrets` | READ_ONLY |
 | `VaultService/PutSecret` | `put_secret` | `putSecret` | MUTATION |
 | `VaultService/RevokeDatabaseCredentials` | `revoke_database_credentials` | `revokeDatabaseCredentials` | DESTRUCTIVE |

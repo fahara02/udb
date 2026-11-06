@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Expected UDB release version, for example 0.6.7"
+        description: "Expected UDB release version, for example 0.6.8"
         required: true
 
 permissions:
@@ -96,6 +96,8 @@ jobs:
           npm run build:mls-wasm
           test -f mls-wasm/udb_mls_wasm.js
           test -f mls-wasm/udb_mls_wasm_bg.wasm
+          test -f mls-wasm-web/udb_mls_wasm.js
+          test -f mls-wasm-web/udb_mls_wasm_bg.wasm
 
       # `build` bundles the runtime proto assets into the package (bundle-proto)
       # and emits dist/*.js + *.d.ts. The committed `gen/` tree is hard-verified

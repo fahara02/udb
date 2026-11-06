@@ -1594,8 +1594,26 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Resu
              // cannot be decoded into its message field fails the read (the row is\n\
              // rejected) instead of silently decoding to a zero value.\n\
              func {name}FromUDBRow(row map[string]any) (*{qualified}, error) {{\n\
-             \tm := &{qualified}{{}}\n",
+             {redacted}\tm := &{qualified}{{}}\n",
             name = entity.short_name,
+            redacted = {
+                let protected: Vec<String> = entity
+                    .columns
+                    .iter()
+                    .filter(|column| {
+                        column.declared_in_proto && (column.is_pii || column.is_encrypted)
+                    })
+                    .map(|column| format!("{:?}", column.field_name))
+                    .collect();
+                if protected.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        "\trow = udbWithoutRedacted(row, {})\n",
+                        protected.join(", ")
+                    )
+                }
+            },
         ));
         for column in &entity.columns {
             if !column.declared_in_proto {
@@ -2456,8 +2474,13 @@ fn render_ts_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
             } else {
                 "v".to_string()
             };
+            let unredacted = if column.is_pii || column.is_encrypted {
+                " && v !== \"***MASKED***\""
+            } else {
+                ""
+            };
             body.push_str(&format!(
-                "  v = row[{:?}];\n  if (v !== null && v !== undefined) m.{property} = {value};\n",
+                "  v = row[{:?}];\n  if (v !== null && v !== undefined{unredacted}) m.{property} = {value};\n",
                 column.field_name
             ));
         }
@@ -2799,7 +2822,14 @@ fn render_py_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
              return record\n\n\n\
              def {name}FromUDBRow(row: Mapping[str, Any]) -> {name}:\n    \
              \"\"\"The typed row: a NULL or missing column is left out.\"\"\"\n    \
-             return udb_row_from_record(row, {name}Fields, _{name}Enums, _{name}BigInts)  # type: ignore[return-value]\n\n\n"
+             return udb_row_from_record(row, {name}Fields, _{name}Enums, _{name}BigInts, {protected})  # type: ignore[return-value]\n\n\n",
+            protected = py_str_tuple(
+                entity
+                    .columns
+                    .iter()
+                    .filter(|column| column.is_pii || column.is_encrypted)
+                    .map(|column| column.field_name.as_str())
+            ),
         ));
 
         if keys.primary.is_empty() {
@@ -3304,6 +3334,11 @@ fn go_scalar_kind(proto_type: &str) -> GoScalar {
 /// value with a nil error so an absent column leaves the field unset.
 fn go_coercion_helpers(needs_time: bool, needs_json_message: bool) -> String {
     let mut out = String::new();
+    // A protected column read without the PII scope holds this placeholder, which is no
+    // value of the field, whatever the field's type.
+    out.push_str(
+        "func udbWithoutRedacted(row map[string]any, protected ...string) map[string]any {\n\tvar clean map[string]any\n\tfor _, column := range protected {\n\t\tif row[column] == \"***MASKED***\" {\n\t\t\tif clean == nil {\n\t\t\t\tclean = make(map[string]any, len(row))\n\t\t\t\tfor k, v := range row {\n\t\t\t\t\tclean[k] = v\n\t\t\t\t}\n\t\t\t}\n\t\t\tdelete(clean, column)\n\t\t}\n\t}\n\tif clean != nil {\n\t\treturn clean\n\t}\n\treturn row\n}\n\n",
+    );
     out.push_str(
         "func udbAsString(v any) (string, error) {\n\tswitch s := v.(type) {\n\tcase nil:\n\t\treturn \"\", nil\n\tcase string:\n\t\treturn s, nil\n\t}\n\treturn \"\", fmt.Errorf(\"expected string, got %T\", v)\n}\n\n",
     );
@@ -3314,15 +3349,15 @@ fn go_coercion_helpers(needs_time: bool, needs_json_message: bool) -> String {
     // arm (legacy/non-UseNumber sources) rejects a non-integral value and any value
     // outside int64 (int64(n) round-trips only when the value is representable).
     out.push_str(
-        "func udbAsInt64(v any) (int64, error) {\n\tswitch n := v.(type) {\n\tcase nil:\n\t\treturn 0, nil\n\tcase int64:\n\t\treturn n, nil\n\tcase int32:\n\t\treturn int64(n), nil\n\tcase int:\n\t\treturn int64(n), nil\n\tcase json.Number:\n\t\ti, err := n.Int64()\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected 64-bit integer, got %q: %w\", n.String(), err)\n\t\t}\n\t\treturn i, nil\n\tcase float64:\n\t\tif i := int64(n); float64(i) == n {\n\t\t\treturn i, nil\n\t\t}\n\t\treturn 0, fmt.Errorf(\"expected integer, got non-integral or out-of-range %v\", n)\n\t}\n\treturn 0, fmt.Errorf(\"expected integer, got %T\", v)\n}\n\n",
+        "func udbAsInt64(v any) (int64, error) {\n\tswitch n := v.(type) {\n\tcase nil:\n\t\treturn 0, nil\n\tcase int64:\n\t\treturn n, nil\n\tcase int32:\n\t\treturn int64(n), nil\n\tcase int:\n\t\treturn int64(n), nil\n\tcase json.Number:\n\t\ti, err := n.Int64()\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected 64-bit integer, got %q: %w\", n.String(), err)\n\t\t}\n\t\treturn i, nil\n\tcase string:\n\t\ti, err := strconv.ParseInt(n, 10, 64)\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected 64-bit integer, got %q: %w\", n, err)\n\t\t}\n\t\treturn i, nil\n\tcase float64:\n\t\tif i := int64(n); float64(i) == n {\n\t\t\treturn i, nil\n\t\t}\n\t\treturn 0, fmt.Errorf(\"expected integer, got non-integral or out-of-range %v\", n)\n\t}\n\treturn 0, fmt.Errorf(\"expected integer, got %T\", v)\n}\n\n",
     );
     // #12: unsigned coercer. json.Number is parsed with ParseUint so a negative or
     // overflowing value is rejected; the signed arms reject a negative source.
     out.push_str(
-        "func udbAsUint64(v any) (uint64, error) {\n\tswitch n := v.(type) {\n\tcase nil:\n\t\treturn 0, nil\n\tcase uint64:\n\t\treturn n, nil\n\tcase uint32:\n\t\treturn uint64(n), nil\n\tcase uint:\n\t\treturn uint64(n), nil\n\tcase int64:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %d\", n)\n\t\t}\n\t\treturn uint64(n), nil\n\tcase int32:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %d\", n)\n\t\t}\n\t\treturn uint64(n), nil\n\tcase int:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %d\", n)\n\t\t}\n\t\treturn uint64(n), nil\n\tcase json.Number:\n\t\tu, err := strconv.ParseUint(n.String(), 10, 64)\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected 64-bit unsigned integer, got %q: %w\", n.String(), err)\n\t\t}\n\t\treturn u, nil\n\tcase float64:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %v\", n)\n\t\t}\n\t\tif u := uint64(n); float64(u) == n {\n\t\t\treturn u, nil\n\t\t}\n\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got non-integral or out-of-range %v\", n)\n\t}\n\treturn 0, fmt.Errorf(\"expected unsigned integer, got %T\", v)\n}\n\n",
+        "func udbAsUint64(v any) (uint64, error) {\n\tswitch n := v.(type) {\n\tcase nil:\n\t\treturn 0, nil\n\tcase uint64:\n\t\treturn n, nil\n\tcase uint32:\n\t\treturn uint64(n), nil\n\tcase uint:\n\t\treturn uint64(n), nil\n\tcase int64:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %d\", n)\n\t\t}\n\t\treturn uint64(n), nil\n\tcase int32:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %d\", n)\n\t\t}\n\t\treturn uint64(n), nil\n\tcase int:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %d\", n)\n\t\t}\n\t\treturn uint64(n), nil\n\tcase json.Number:\n\t\tu, err := strconv.ParseUint(n.String(), 10, 64)\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected 64-bit unsigned integer, got %q: %w\", n.String(), err)\n\t\t}\n\t\treturn u, nil\n\tcase string:\n\t\tu, err := strconv.ParseUint(n, 10, 64)\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected 64-bit unsigned integer, got %q: %w\", n, err)\n\t\t}\n\t\treturn u, nil\n\tcase float64:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %v\", n)\n\t\t}\n\t\tif u := uint64(n); float64(u) == n {\n\t\t\treturn u, nil\n\t\t}\n\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got non-integral or out-of-range %v\", n)\n\t}\n\treturn 0, fmt.Errorf(\"expected unsigned integer, got %T\", v)\n}\n\n",
     );
     out.push_str(
-        "func udbAsFloat64(v any) (float64, error) {\n\tswitch n := v.(type) {\n\tcase nil:\n\t\treturn 0, nil\n\tcase float64:\n\t\treturn n, nil\n\tcase float32:\n\t\treturn float64(n), nil\n\tcase int64:\n\t\treturn float64(n), nil\n\tcase int:\n\t\treturn float64(n), nil\n\tcase json.Number:\n\t\tf, err := n.Float64()\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected number, got %q: %w\", n.String(), err)\n\t\t}\n\t\treturn f, nil\n\t}\n\treturn 0, fmt.Errorf(\"expected number, got %T\", v)\n}\n\n",
+        "func udbAsFloat64(v any) (float64, error) {\n\tswitch n := v.(type) {\n\tcase nil:\n\t\treturn 0, nil\n\tcase float64:\n\t\treturn n, nil\n\tcase float32:\n\t\treturn float64(n), nil\n\tcase int64:\n\t\treturn float64(n), nil\n\tcase int:\n\t\treturn float64(n), nil\n\tcase json.Number:\n\t\tf, err := n.Float64()\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected number, got %q: %w\", n.String(), err)\n\t\t}\n\t\treturn f, nil\n\tcase string:\n\t\t// NaN, Infinity and a NUMERIC read as text.\n\t\tf, err := strconv.ParseFloat(n, 64)\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected number, got %q: %w\", n, err)\n\t\t}\n\t\treturn f, nil\n\t}\n\treturn 0, fmt.Errorf(\"expected number, got %T\", v)\n}\n\n",
     );
     // #2: a bytes column round-trips through record_json as a base64 STRING
     // (json.Marshal encodes []byte that way), so decode it — the old `[]byte(s)`

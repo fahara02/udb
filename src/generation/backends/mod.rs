@@ -44,6 +44,25 @@ pub fn store_ensure_spec(
 #[cfg(test)]
 mod ensure_spec_tests {
     use super::store_ensure_spec;
+
+    #[test]
+    fn a_declared_mongo_schema_is_in_the_ensure_spec() {
+        let store = crate::generation::ManifestStore {
+            backend: "mongodb".to_string(),
+            store_kind: "nosql".to_string(),
+            resource_name: "docs".to_string(),
+            payload_schema_json: r#"{"required":["name"]}"#.to_string(),
+            ..Default::default()
+        };
+        let spec = store_ensure_spec(&store, &crate::generation::CatalogManifest::default());
+        assert_eq!(spec["validator"]["$jsonSchema"]["required"][0], "name");
+        let bare = crate::generation::ManifestStore {
+            payload_schema_json: String::new(),
+            ..store
+        };
+        let spec = store_ensure_spec(&bare, &crate::generation::CatalogManifest::default());
+        assert!(spec.get("validator").is_none());
+    }
     use crate::generation::manifest::{
         CatalogManifest, ManifestColumn, ManifestStore, ManifestStoreOption, ManifestTable,
     };

@@ -180,8 +180,7 @@ message Task {{
     .expect("the fixture parses");
     let manifest = crate::generation::CatalogManifest::from_schemas(&report.schemas)
         .expect("the fixture builds a manifest");
-    let (manifest, _) =
-        crate::runtime::native_catalog::merge_native(&manifest, &report.schemas);
+    let (manifest, _) = crate::runtime::native_catalog::merge_native(&manifest, &report.schemas);
     let bytes = serde_json::to_vec(&manifest).expect("manifest");
     let (catalog_id, _, _) = runtime
         .stage_project_catalog(&project, &bytes, "live query test", "test")
@@ -229,10 +228,7 @@ message Task {{
         panic!("the first frame is the snapshot");
     };
     assert_eq!(snapshot.rows_json.len(), 2, "cut at the limit");
-    assert_eq!(
-        snapshot.row_count, 3,
-        "every open row"
-    );
+    assert_eq!(snapshot.row_count, 3, "every open row");
     for row in &snapshot.rows_json {
         assert!(!row.contains("real@x"), "PII leaked: {row}");
     }
@@ -332,6 +328,176 @@ async fn live_livequery_non_leader_streams_own_tenant_deltas_from_the_journal() 
     let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
     let _ = sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = ANY($1)"))
         .bind([foreign_event, own_event].as_slice())
+        .execute(&pool)
+        .await;
+}
+
+/// A native snapshot cut at its limit says how many rows matched.
+#[tokio::test]
+#[ignore = "requires live Postgres; runs in the CI native live lane (UDB_LIVE_AUTH_TESTS=1 ... -- --ignored)"]
+async fn live_livequery_native_snapshot_reports_that_it_was_cut() {
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let runtime = live_runtime().await;
+    let tenant = Uuid::new_v4().to_string();
+    for name in ["cut-a", "cut-b", "cut-c"] {
+        sqlx::query(
+            "INSERT INTO udb_lock.locks (tenant_id, lock_name, owner_id) VALUES ($1, $2, 'o')",
+        )
+        .bind(&tenant)
+        .bind(name)
+        .execute(&pool)
+        .await
+        .expect("seed lock");
+    }
+    let service = LiveQueryServiceImpl::new()
+        .with_runtime(Some(runtime.clone()))
+        .with_channels(Some(runtime.channels().clone()));
+    let mut request = subscribe_request(&tenant);
+    request.get_mut().snapshot_limit = 2;
+    let mut stream = service
+        .subscribe(request)
+        .await
+        .expect("a native source")
+        .into_inner();
+    let first = tokio::time::timeout(Duration::from_secs(10), stream.next())
+        .await
+        .expect("the snapshot arrives")
+        .expect("the stream has a snapshot")
+        .expect("the snapshot is no error");
+    let Some(lq_pb::subscribe_response::Payload::Snapshot(snapshot)) = first.payload else {
+        panic!("the first frame is the snapshot");
+    };
+    assert_eq!(snapshot.rows_json.len(), 2, "cut at the limit");
+    assert!(
+        snapshot.row_count > 2,
+        "row_count says the snapshot was cut: {}",
+        snapshot.row_count
+    );
+    drop(stream);
+    let _ = sqlx::query("DELETE FROM udb_lock.locks WHERE tenant_id = $1")
+        .bind(&tenant)
+        .execute(&pool)
+        .await;
+}
+
+/// Through the journal, on a filtered subscription: a matching change arrives, a row that
+/// stops matching arrives as a delete, and a delete naming only its key is forwarded.
+#[tokio::test]
+#[ignore = "requires live Postgres; runs in the CI native live lane (UDB_LIVE_AUTH_TESTS=1 ... -- --ignored)"]
+async fn live_livequery_filtered_stream_reports_a_row_leaving_and_every_delete() {
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let runtime = live_runtime().await;
+    let topic = lock_cdc_topic();
+    let service = LiveQueryServiceImpl::new()
+        .with_runtime(Some(runtime.clone()))
+        .with_cdc_engine(Some(idle_cdc_engine(pool.clone())))
+        .with_channels(Some(runtime.channels().clone()));
+    let tenant = Uuid::new_v4().to_string();
+    let mut request = subscribe_request(&tenant);
+    request.get_mut().filters = vec![lq_pb::LiveQueryPredicate {
+        field: "lock_name".to_string(),
+        value: "keep".to_string(),
+        op: lq_pb::LiveQueryComparison::Eq as i32,
+        ..Default::default()
+    }];
+    let mut stream = service
+        .subscribe(request)
+        .await
+        .expect("a filtered subscription")
+        .into_inner();
+    let first = tokio::time::timeout(Duration::from_secs(10), stream.next())
+        .await
+        .expect("the snapshot arrives")
+        .expect("the stream has a snapshot")
+        .expect("the snapshot is no error");
+    assert!(matches!(
+        first.payload,
+        Some(lq_pb::subscribe_response::Payload::Snapshot(_))
+    ));
+
+    let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+    let lock_id = Uuid::new_v4().to_string();
+    let other_id = Uuid::new_v4().to_string();
+    let mut events = Vec::new();
+    for (operation, inner) in [
+        (
+            "update",
+            serde_json::json!({"lock_id": lock_id, "tenant_id": tenant, "row": {
+                "lock_id": lock_id, "tenant_id": tenant, "lock_name": "keep"}}),
+        ),
+        (
+            "update",
+            serde_json::json!({"lock_id": lock_id, "tenant_id": tenant, "row": {
+                "lock_id": lock_id, "tenant_id": tenant, "lock_name": "moved"}}),
+        ),
+        (
+            "delete",
+            serde_json::json!({"lock_id": other_id, "tenant_id": tenant}),
+        ),
+    ] {
+        let event_id = Uuid::new_v4();
+        let payload = serde_json::json!({
+            "event_id": event_id.to_string(),
+            "event_type": topic,
+            "topic": topic,
+            "tenant_id": tenant,
+            "project_id": PROJECT,
+            "operation": operation,
+            "message_type": LOCK_MSG,
+            "payload": inner,
+        });
+        sqlx::query(&format!(
+            "INSERT INTO {journal} (event_id, topic, partition_key, payload, published_at, delivery_state) \
+             VALUES ($1, $2, $3, $4::JSONB, NOW(), 'published')"
+        ))
+        .bind(event_id)
+        .bind(&topic)
+        .bind(&tenant)
+        .bind(payload.to_string())
+        .execute(&pool)
+        .await
+        .expect("journal a change");
+        events.push(event_id);
+    }
+
+    let mut changes = Vec::new();
+    while changes.len() < 3 {
+        let frame = tokio::time::timeout(Duration::from_secs(15), stream.next())
+            .await
+            .expect("every change arrives through the journal")
+            .expect("the stream stays open")
+            .expect("a frame, not an error");
+        if let Some(lq_pb::subscribe_response::Payload::Change(change)) = frame.payload
+            && !change.event_id.is_empty()
+        {
+            changes.push(change);
+        }
+    }
+    let row = |index: usize| -> serde_json::Value {
+        serde_json::from_str(&changes[index].row_json).expect("a JSON row")
+    };
+    assert_ne!(changes[0].op, lq_pb::LiveQueryChangeOp::Delete as i32);
+    assert_eq!(row(0)["lock_name"], "keep");
+    assert_eq!(
+        changes[1].op,
+        lq_pb::LiveQueryChangeOp::Delete as i32,
+        "the row left the filter"
+    );
+    assert_eq!(row(1)["lock_id"], lock_id.as_str());
+    assert_eq!(
+        changes[2].op,
+        lq_pb::LiveQueryChangeOp::Delete as i32,
+        "a delete is forwarded whatever the filter"
+    );
+    assert_eq!(row(2)["lock_id"], other_id.as_str());
+
+    drop(stream);
+    let _ = sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = ANY($1)"))
+        .bind(events.as_slice())
         .execute(&pool)
         .await;
 }

@@ -26,7 +26,7 @@ Contract version `8.0.0` · 28 native services.
 | `search` | Search | search | yes | postgres | 5 | control-plane |
 | `storage` | Storage | storage | yes | postgres, object_store | 10 | control-plane |
 | `tenant` | Tenants | tenant | yes | postgres | 8 | control-plane |
-| `vault` | Vault | vault | yes | postgres | 22 | control-plane |
+| `vault` | Vault | vault | yes | postgres | 23 | control-plane |
 | `webhook` | Webhooks | webhook | yes | postgres | 6 | control-plane |
 | `webrtc_peer` | WebRTC Peers | realtime | yes | postgres | 5 | control-plane, peer |
 | `webrtc_room` | WebRTC Rooms | realtime | yes | postgres | 9 | control-plane |

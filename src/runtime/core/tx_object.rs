@@ -780,7 +780,7 @@ impl DataBrokerRuntime {
                         .iter()
                         .map(|value| JsonValue::String(value.clone())),
                 );
-                let affected = execute_tx_plan(
+                let affected = execute_tx_delete_plan(
                     &mut tx,
                     manifest,
                     &mutation.message_type,
@@ -788,59 +788,63 @@ impl DataBrokerRuntime {
                     &plan.parameter_columns,
                     &bind_values,
                     &plan.errors,
+                    &filter,
                 )
                 .await;
                 match affected {
-                    Ok(affected) => {
+                    Ok((affected, removed)) => {
                         #[cfg(feature = "mysql")]
                         if mysql_xa_capture {
                             mysql_xa_statements.push((plan.sql.clone(), bind_values.clone()));
                         }
-                        if affected == 0 {
-                            Ok(affected)
-                        } else if let Err(err) =
-                            crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
-                                &mut tx,
-                                &projection_config,
-                                crate::runtime::projection::task_project_id(&context.project_id),
-                                &mutation.message_type,
-                                "delete",
-                                // Filter + the VERIFIED tenant, so the worker's
-                                // scoped delete resolves to this tenant only.
-                                &crate::runtime::projection::scoped_delete_payload(
+                        // One projection task and one change event per removed row, as on
+                        // the unary delete, so a BeginTx delete is visible row by row.
+                        let mut side_effect = Ok(affected);
+                        for row in &removed {
+                            if let Err(err) =
+                                crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+                                    &mut tx,
+                                    &projection_config,
+                                    crate::runtime::projection::task_project_id(
+                                        &context.project_id,
+                                    ),
+                                    &mutation.message_type,
+                                    "delete",
+                                    // Identity + the VERIFIED tenant, so the worker's
+                                    // scoped delete resolves to this tenant only.
+                                    &crate::runtime::projection::scoped_delete_payload(
+                                        manifest,
+                                        &mutation.message_type,
+                                        row,
+                                        &context.tenant_id,
+                                    ),
+                                    &projection_plans,
+                                )
+                                .await
+                            {
+                                side_effect = Err(tx_object_internal_status(
+                                    "enqueue_projection_tasks",
+                                    format!("projection task enqueue failed: {err}"),
+                                ));
+                                break;
+                            }
+                            if let Err(err) = self
+                                .emit_cdc_outbox_on_mutation_checked(
+                                    &mut tx,
                                     manifest,
                                     &mutation.message_type,
-                                    &filter,
-                                    &context.tenant_id,
-                                ),
-                                &projection_plans,
-                            )
-                            .await
-                        {
-                            Err(tx_object_internal_status(
-                                "enqueue_projection_tasks",
-                                format!("projection task enqueue failed: {err}"),
-                            ))
-                        // mutations→CDC: emit the delete change event in the same
-                        // tx (filter carries the deleted row's key), matching the
-                        // unary delete path so BeginTx deletes are not invisible
-                        // to CDC subscribers and journal readers.
-                        } else if let Err(err) = self
-                            .emit_cdc_outbox_on_mutation_checked(
-                                &mut tx,
-                                manifest,
-                                &mutation.message_type,
-                                "delete",
-                                &filter,
-                                &context,
-                                mutation.cdc_required,
-                            )
-                            .await
-                        {
-                            Err(err)
-                        } else {
-                            Ok(affected)
+                                    "delete",
+                                    row,
+                                    &context,
+                                    mutation.cdc_required,
+                                )
+                                .await
+                            {
+                                side_effect = Err(err);
+                                break;
+                            }
                         }
+                        side_effect
                     }
                     Err(err) => Err(err),
                 }

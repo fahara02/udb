@@ -883,7 +883,9 @@ pub(crate) fn column_from_proto(column: &ProtoColumn) -> ManifestColumn {
         trigram_index: column.trigram_index,
         references: column.references.trim().to_string(),
         security: ManifestColumnSecurity {
-            is_pii: column.security.is_pii,
+            // What a client does not read back in clear: a generated type does not promise
+            // it, and a full-row write leaves it alone when unset.
+            is_pii: column.security.is_pii || column.security.mask_in_logs,
             is_encrypted: column.security.is_encrypted,
             is_blind_index: column.security.is_blind_index,
             mask_in_logs: column.security.mask_in_logs,

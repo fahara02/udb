@@ -584,37 +584,43 @@ pub(crate) fn validate_enum_value(v: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// An enum's values as declared, which is the order PostgreSQL sorts them by. Repeats go.
+pub(crate) fn declared_enum_values(values: &[String]) -> Vec<String> {
+    let mut seen = std::collections::BTreeSet::new();
+    values
+        .iter()
+        .filter(|value| seen.insert(value.as_str()))
+        .cloned()
+        .collect()
+}
+
 pub(crate) fn render_enum_types(table: &ManifestTable) -> String {
     let mut out = String::new();
     for column in &table.columns {
         if column.enum_values.is_empty() {
             continue;
         }
-        let mut values = column.enum_values.clone();
-        values.sort();
-        values.dedup();
+        let values = declared_enum_values(&column.enum_values);
         let type_name = format!(
             "{}.{}_{}_enum",
             qi(&table.schema),
             table.table,
             column.column_name
         );
+        // GAP 31: a value that could break out of the SQL literal or the surrounding
+        // DO $$…END$$ block never reaches the text. The type would lack a declared value, so
+        // the migration stops instead.
+        if values.iter().any(|v| validate_enum_value(v).is_err()) {
+            out.push_str(&format!(
+                "DO $$BEGIN\n  RAISE EXCEPTION 'enum column {}.{}.{} declares a value that fails SQL safety validation';\nEND$$;\n\n",
+                table.schema.replace('\'', "''"),
+                table.table.replace('\'', "''"),
+                column.column_name.replace('\'', "''"),
+            ));
+            continue;
+        }
         let value_list = values
             .iter()
-            .filter(|v| {
-                // GAP 31: skip values that could break out of the SQL literal or
-                // the surrounding DO $$…END$$ block.
-                if let Err(reason) = validate_enum_value(v) {
-                    tracing::warn!(
-                        enum_type = %type_name,
-                        value = %v,
-                        reason = %reason,
-                        "skipping unsafe enum value in DDL generation"
-                    );
-                    return false;
-                }
-                true
-            })
             .map(|v| format!("'{}'", v.replace('\'', "''")))
             .collect::<Vec<_>>()
             .join(", ");
@@ -873,21 +879,29 @@ fn render_current_partition_fallback(table: &ManifestTable, interval: &str) -> S
          \tIF _parent IS NULL OR to_regclass('partman.part_config') IS NOT NULL THEN\n\
          \t\tRETURN;\n\
          \tEND IF;\n\
+         \tRAISE WARNING 'pg_partman is not installed: % has partitions up to % periods ahead and nothing creates more, so later writes fail until it is installed', _table, {periods};\n\
          \t_start_ts := date_trunc({date_trunc}, now());\n\
-         \t_end_ts := _start_ts + INTERVAL {interval};\n\
-         \t_child_table := format('%s_p_%s', _table, to_char(_start_ts, {suffix_format}));\n\
-         \tIF to_regclass(format('%I.%I', _schema, _child_table)) IS NOT NULL THEN\n\
-         \t\tRETURN;\n\
-         \tEND IF;\n\
-         \tBEGIN\n\
-         \t\tEXECUTE format(\n\
-         \t\t\t'CREATE TABLE IF NOT EXISTS %I.%I PARTITION OF %I.%I FOR VALUES FROM (%L) TO (%L)',\n\
-         \t\t\t_schema, _child_table, _schema, _table, _start_ts, _end_ts\n\
-         \t\t);\n\
-         \tEXCEPTION WHEN duplicate_table OR invalid_object_definition THEN\n\
-         \t\tRAISE NOTICE 'Skipping fallback current partition %.%: %', _schema, _child_table, SQLERRM;\n\
-         \tEND;\n\
+         \tFOR _period IN 0..{periods} LOOP\n\
+         \t\t_end_ts := _start_ts + INTERVAL {interval};\n\
+         \t\t_child_table := format('%s_p_%s', _table, to_char(_start_ts, {suffix_format}));\n\
+         \t\tIF to_regclass(format('%I.%I', _schema, _child_table)) IS NULL THEN\n\
+         \t\t\tBEGIN\n\
+         \t\t\t\tEXECUTE format(\n\
+         \t\t\t\t\t'CREATE TABLE IF NOT EXISTS %I.%I PARTITION OF %I.%I FOR VALUES FROM (%L) TO (%L)',\n\
+         \t\t\t\t\t_schema, _child_table, _schema, _table, _start_ts, _end_ts\n\
+         \t\t\t\t);\n\
+         \t\t\tEXCEPTION WHEN duplicate_table OR invalid_object_definition THEN\n\
+         \t\t\t\tRAISE NOTICE 'Skipping fallback partition %.%: %', _schema, _child_table, SQLERRM;\n\
+         \t\t\tEND;\n\
+         \t\tEND IF;\n\
+         \t\t_start_ts := _end_ts;\n\
+         \tEND LOOP;\n\
          END$$;\n\n",
+        periods = if table.partition_premake > 0 {
+            table.partition_premake
+        } else {
+            4
+        },
         parent_table = ql(&format!("{}.{}", table.schema, table.table)),
         schema = ql(&table.schema),
         table = ql(&table.table),
@@ -895,6 +909,269 @@ fn render_current_partition_fallback(table: &ManifestTable, interval: &str) -> S
         interval = ql(&normalized),
         suffix_format = ql(suffix_format),
     )
+}
+
+fn table_ident(table: &ManifestTable) -> String {
+    format!("{}.{}", qi(&table.schema), qi(&table.table))
+}
+
+/// The declared primary key replaces the table's. A foreign key that depends on the old one,
+/// duplicate rows or a key without the partition column stop the migration, in its transaction.
+pub(crate) fn render_primary_key_change(table: &ManifestTable) -> String {
+    let ident = table_ident(table);
+    let mut out = format!(
+        "DO $udb$\nDECLARE _name TEXT;\nBEGIN\n  \
+         SELECT conname INTO _name FROM pg_constraint \
+         WHERE conrelid = to_regclass({regclass}) AND contype = 'p';\n  \
+         IF _name IS NOT NULL THEN\n    \
+         EXECUTE format('ALTER TABLE {literal_ident} DROP CONSTRAINT %I', _name);\n  \
+         END IF;\nEND $udb$;\n",
+        regclass = ql(&ident),
+        literal_ident = ident.replace('\'', "''").replace('%', "%%"),
+    );
+    if !table.primary_key.is_empty() {
+        out.push_str(&format!(
+            "ALTER TABLE {ident} ADD PRIMARY KEY ({});\n",
+            table
+                .primary_key
+                .iter()
+                .map(|column| qi(column))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    out
+}
+
+/// The column is filled the declared way. What it is filled by today is read from the
+/// database, so a re-run after a partial failure lands in the same place.
+pub(crate) fn render_column_generation_change(
+    table: &ManifestTable,
+    column: &ManifestColumn,
+) -> String {
+    let ident = table_ident(table);
+    let name = qi(&column.column_name);
+    let attribute = format!(
+        "FROM pg_attribute WHERE attrelid = to_regclass({}) AND attname = {} AND NOT attisdropped",
+        ql(&ident),
+        ql(&column.column_name)
+    );
+    let mut out = format!(
+        "DO $udb$\nDECLARE _generated \"char\"; _identity \"char\";\nBEGIN\n  \
+         SELECT attgenerated, attidentity INTO _generated, _identity {attribute};\n"
+    );
+    if !column.is_identity {
+        out.push_str(&format!(
+            "  IF _identity <> '' THEN\n    EXECUTE {};\n  END IF;\n",
+            ql(&format!(
+                "ALTER TABLE {ident} ALTER COLUMN {name} DROP IDENTITY"
+            ))
+        ));
+    }
+    let expression = column.generated_expr.trim();
+    if column.generated && !expression.is_empty() {
+        let replace = format!(
+            "ALTER TABLE {ident} DROP COLUMN {name}; ALTER TABLE {ident} ADD COLUMN {}",
+            render_column(column)
+        );
+        out.push_str(&format!(
+            "  IF _generated <> '' AND current_setting('server_version_num')::INT >= 170000 THEN\n    \
+             EXECUTE {};\n  ELSE\n    EXECUTE {};\n  END IF;\n",
+            ql(&format!(
+                "ALTER TABLE {ident} ALTER COLUMN {name} SET EXPRESSION AS ({expression})"
+            )),
+            ql(&replace),
+        ));
+    } else {
+        // A column that stops being generated keeps the values it holds.
+        out.push_str(&format!(
+            "  IF _generated <> '' THEN\n    EXECUTE {};\n  END IF;\n",
+            ql(&format!(
+                "ALTER TABLE {ident} ALTER COLUMN {name} DROP EXPRESSION"
+            ))
+        ));
+    }
+    if column.is_identity {
+        out.push_str(&format!(
+            "  IF _identity = '' THEN\n    EXECUTE {};\n    EXECUTE {};\n  END IF;\n",
+            ql(&format!(
+                "ALTER TABLE {ident} ALTER COLUMN {name} ADD GENERATED ALWAYS AS IDENTITY"
+            )),
+            ql(&format!(
+                "SELECT setval(pg_get_serial_sequence({}, {}), COALESCE((SELECT MAX({name}) FROM {ident}), 1))",
+                ql(&ident),
+                ql(&column.column_name),
+            )),
+        ));
+    }
+    if column.auto_increment {
+        let sequence = format!(
+            "{}.{}",
+            qi(&table.schema),
+            qi(&format!("{}_{}_seq", table.table, column.column_name))
+        );
+        out.push_str(&format!(
+            "  EXECUTE {};\n  EXECUTE {};\n  EXECUTE {};\n",
+            ql(&format!(
+                "CREATE SEQUENCE IF NOT EXISTS {sequence} OWNED BY {ident}.{name}"
+            )),
+            ql(&format!(
+                "ALTER TABLE {ident} ALTER COLUMN {name} SET DEFAULT nextval({})",
+                ql(&sequence)
+            )),
+            ql(&format!(
+                "SELECT setval({}, COALESCE((SELECT MAX({name}) FROM {ident}), 1))",
+                ql(&sequence)
+            )),
+        ));
+    } else {
+        out.push_str(&format!(
+            "  IF EXISTS (SELECT 1 FROM pg_attrdef d JOIN pg_attribute a \
+             ON a.attrelid = d.adrelid AND a.attnum = d.adnum \
+             WHERE d.adrelid = to_regclass({}) AND a.attname = {} \
+             AND pg_get_expr(d.adbin, d.adrelid) LIKE 'nextval(%') THEN\n    EXECUTE {};\n  END IF;\n",
+            ql(&ident),
+            ql(&column.column_name),
+            ql(&format!("ALTER TABLE {ident} ALTER COLUMN {name} DROP DEFAULT")),
+        ));
+    }
+    out.push_str("END $udb$;\n");
+    // Replacing the column took its indexes with it.
+    out.push_str(&render_jsonb_gin_indexes(table));
+    out.push_str(&render_tsvector_indexes(table));
+    for index in table
+        .indexes
+        .iter()
+        .filter(|index| index.columns.iter().any(|name| *name == column.column_name))
+    {
+        out.push_str(&render_index_in_tx(table, index));
+    }
+    out
+}
+
+/// Every index UDB derives from `column` goes, and the table's declared ones come back.
+pub(crate) fn render_derived_index_rebuild(table: &ManifestTable, column: &str) -> String {
+    let mut out = String::new();
+    for prefix in ["gin", "idx_fts", "idx_trgm"] {
+        out.push_str(&format!(
+            "DROP INDEX IF EXISTS {}.{};\n",
+            qi(&table.schema),
+            qi(&format!(
+                "{prefix}_{}_{}_{column}",
+                table.schema, table.table
+            ))
+        ));
+    }
+    out.push_str(&render_jsonb_gin_indexes(table));
+    out.push_str(&render_tsvector_indexes(table));
+    out
+}
+
+/// Options of a partitioned table: they steer the partitions still to come.
+pub(crate) fn render_partition_options(table: &ManifestTable) -> String {
+    if !is_partitioned(table) {
+        return String::new();
+    }
+    let interval = normalize_partition_interval(&partition_interval_for_table(table));
+    let mut out = format!(
+        "DO $udb$\nBEGIN\n  IF to_regclass('partman.part_config') IS NOT NULL THEN\n    \
+         UPDATE partman.part_config SET partition_interval = {interval}{premake} \
+         WHERE parent_table = {parent};\n  END IF;\nEND $udb$;\n",
+        interval = ql(&interval),
+        premake = if table.partition_premake > 0 {
+            format!(", premake = {}", table.partition_premake)
+        } else {
+            String::new()
+        },
+        parent = ql(&format!("{}.{}", table.schema, table.table)),
+    );
+    out.push_str(&render_partition_setup(table));
+    out
+}
+
+/// Rebuild the table in its declared partitioning: a new table takes the name, the rows are
+/// copied in the migration transaction, and the previous table stays under
+/// `<table>__pre_repartition` until an operator drops it. A table other tables reference is
+/// refused, because their foreign keys would follow the old table.
+pub(crate) fn render_table_rebuild(table: &ManifestTable) -> String {
+    let ident = table_ident(table);
+    let previous_name = {
+        let mut name = format!("{}__pre_repartition", table.table);
+        name.truncate(63);
+        name
+    };
+    let previous = format!("{}.{}", qi(&table.schema), qi(&previous_name));
+    let partition_by = if is_partitioned(table) {
+        format!(
+            " PARTITION BY {} ({})",
+            normalize_partition_strategy(&table.partition_strategy),
+            qi(&table.partition_column)
+        )
+    } else {
+        String::new()
+    };
+    let mut out = format!(
+        "DO $udb$\nBEGIN\n  IF EXISTS (SELECT 1 FROM pg_constraint \
+         WHERE confrelid = to_regclass({regclass}) AND contype = 'f') THEN\n    \
+         RAISE EXCEPTION 'table % is referenced by a foreign key: drop it before changing how the table is partitioned', {regclass};\n  \
+         END IF;\nEND $udb$;\n\
+         ALTER TABLE {ident} RENAME TO {previous_quoted};\n\
+         CREATE TABLE {ident} (LIKE {previous} INCLUDING ALL){partition_by};\n",
+        regclass = ql(&ident),
+        previous_quoted = qi(&previous_name),
+    );
+    if is_partitioned(table) {
+        out.push_str(&render_partition_setup(table));
+        // Rows older than the premade range still need a home for the copy.
+        if !table.partition_default
+            && normalize_partition_strategy(&table.partition_strategy) != "HASH"
+        {
+            out.push_str(&format!(
+                "CREATE TABLE IF NOT EXISTS {}.{} PARTITION OF {ident} DEFAULT;\n",
+                qi(&table.schema),
+                qi(&format!("{}_default", table.table)),
+            ));
+        }
+    }
+    out.push_str(&format!(
+        "DO $udb$\nDECLARE _columns TEXT; _identity RECORD;\nBEGIN\n  \
+         SELECT string_agg(quote_ident(attname), ', ' ORDER BY attnum) INTO _columns \
+         FROM pg_attribute WHERE attrelid = to_regclass({previous_literal}) \
+         AND attnum > 0 AND NOT attisdropped AND attgenerated = '';\n  \
+         EXECUTE format('INSERT INTO %s (%s) OVERRIDING SYSTEM VALUE SELECT %s FROM %s', \
+         {ident_literal}, _columns, _columns, {previous_literal});\n  \
+         FOR _identity IN SELECT attname FROM pg_attribute \
+         WHERE attrelid = to_regclass({ident_literal}) AND attidentity <> '' AND NOT attisdropped LOOP\n    \
+         EXECUTE format('SELECT setval(pg_get_serial_sequence(%L, %L), COALESCE((SELECT MAX(%I) FROM %s), 1))', \
+         {ident_literal}, _identity.attname, _identity.attname, {ident_literal});\n  \
+         END LOOP;\nEND $udb$;\n",
+        previous_literal = ql(&previous),
+        ident_literal = ql(&ident),
+    ));
+    for fk in &table.foreign_keys {
+        out.push_str(&render_add_fk(
+            &table.schema,
+            &table.table,
+            fk,
+            is_partitioned(table),
+        ));
+        out.push('\n');
+    }
+    if table.enable_rls {
+        out.push_str(&format!("ALTER TABLE {ident} ENABLE ROW LEVEL SECURITY;\n"));
+        if table.force_rls {
+            out.push_str(&format!("ALTER TABLE {ident} FORCE ROW LEVEL SECURITY;\n"));
+        }
+        for policy in &table.rls_policies {
+            out.push_str(&render_policy(&table.schema, &table.table, policy));
+            out.push('\n');
+        }
+    }
+    for trigger in &table.triggers {
+        out.push_str(&render_trigger(trigger));
+        out.push('\n');
+    }
+    out
 }
 
 pub(crate) fn is_partitioned(table: &ManifestTable) -> bool {

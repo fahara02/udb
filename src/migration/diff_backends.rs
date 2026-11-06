@@ -316,7 +316,8 @@ pub fn diff_mongodb_targets(
         },
         |_old, new_store| {
             let validator_changed = option_value(&_old.options, "validator")
-                != option_value(&new_store.options, "validator");
+                != option_value(&new_store.options, "validator")
+                || _old.payload_schema_json != new_store.payload_schema_json;
             Some(ChangeOperation {
                 kind: ChangeKind::UpdateValidator,
                 data_destructive: is_data_destructive(&ChangeKind::UpdateValidator),

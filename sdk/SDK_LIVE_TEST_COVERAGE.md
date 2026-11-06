@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 423 RPCs across 29 services.
+Current generated RPC surface: 424 RPCs across 29 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -60,7 +60,7 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | TenantService | 8 | 3 | 3 | 2 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
-| VaultService | 22 | 6 | 13 | 3 | 0 |
+| VaultService | 23 | 6 | 14 | 3 | 0 |
 | WebhookService | 6 | 3 | 2 | 1 | 0 |
 | WorkflowService | 6 | 2 | 3 | 1 | 0 |
 
@@ -473,6 +473,7 @@ benchmark harnesses.
 | VaultService | `VaultService/GetSecret` | `get_secret` | `getSecret` | READ_ONLY | vault.md |
 | VaultService | `VaultService/GetTransitPublicKey` | `get_transit_public_key` | `vaultGetTransitPublicKey` | READ_ONLY | vault.md |
 | VaultService | `VaultService/Hmac` | `hmac` | `vaultHmac` | MUTATION | vault.md |
+| VaultService | `VaultService/LeaseOAuthToken` | `lease_oauth_token` | `leaseOauthToken` | MUTATION | vault.md |
 | VaultService | `VaultService/ListSecrets` | `list_secrets` | `listSecrets` | READ_ONLY | vault.md |
 | VaultService | `VaultService/PutSecret` | `put_secret` | `putSecret` | MUTATION | vault.md |
 | VaultService | `VaultService/RevokeDatabaseCredentials` | `revoke_database_credentials` | `revokeDatabaseCredentials` | DESTRUCTIVE | vault.md |

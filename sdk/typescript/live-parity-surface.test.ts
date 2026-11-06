@@ -41,14 +41,9 @@ const LOCK = "udb.core.lock.entity.v1.Lock";
 const NO_GRAPH_STORE = "no graph store in the Postgres-only CI posture; the broker's refusal is proven instead";
 const NO_VECTOR_STORE = "no vector store in the Postgres-only CI posture; the broker's refusal is proven instead";
 
-/** `ready` reached the broker. A serving broker passes; this job's `file://` audit
- *  sink makes the broker report NOT_SERVING, which is that same probe's real answer. */
+/** A broker with its dependencies healthy reports SERVING. */
 async function probeReady(udb: { ready(): Promise<void> }): Promise<void> {
-  try {
-    await udb.ready();
-  } catch (err) {
-    assert.match((err as Error).message, /udb: broker is NOT_SERVING/);
-  }
+  await udb.ready();
 }
 
 function requiredEnv(name: string): string {

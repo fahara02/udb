@@ -25,8 +25,8 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 423 RPCs across 29 services
-// (UDB v0.6.7, wire protocol 1.0.0).
+// Covers 424 RPCs across 29 services
+// (UDB v0.6.8, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.6.7"
+const SDKVersion = "0.6.8"
 
 // VersionMismatchError reports an absent, malformed, or incompatible broker
 // release header. Compatibility requires the same major and minor release;
@@ -1252,6 +1252,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "VaultService", ServicePkg: "udb.core.vault.services.v1", FullMethod: "/udb.core.vault.services.v1.VaultService/GetSecret", Name: "GetSecret", APIAlias: "get_secret", OperationID: "getSecret", HTTPMethod: "get", HTTPPath: "/v1/vault/secrets/{secret_path=**}", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:vault:get-secret"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "VaultService", ServicePkg: "udb.core.vault.services.v1", FullMethod: "/udb.core.vault.services.v1.VaultService/GetTransitPublicKey", Name: "GetTransitPublicKey", APIAlias: "get_transit_public_key", OperationID: "vaultGetTransitPublicKey", HTTPMethod: "post", HTTPPath: "/v1/vault/transit:publicKey", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:vault:get-public-key"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "VaultService", ServicePkg: "udb.core.vault.services.v1", FullMethod: "/udb.core.vault.services.v1.VaultService/Hmac", Name: "Hmac", APIAlias: "hmac", OperationID: "vaultHmac", HTTPMethod: "post", HTTPPath: "/v1/vault/transit:hmac", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:vault:hmac"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "VaultService", ServicePkg: "udb.core.vault.services.v1", FullMethod: "/udb.core.vault.services.v1.VaultService/LeaseOAuthToken", Name: "LeaseOAuthToken", APIAlias: "lease_oauth_token", OperationID: "leaseOauthToken", HTTPMethod: "post", HTTPPath: "/v1/vault/oauth-tokens/{secret_path=**}:lease", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:vault:lease-oauth-token"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "VaultService", ServicePkg: "udb.core.vault.services.v1", FullMethod: "/udb.core.vault.services.v1.VaultService/ListSecrets", Name: "ListSecrets", APIAlias: "list_secrets", OperationID: "listSecrets", HTTPMethod: "get", HTTPPath: "/v1/vault/secrets", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:vault:list-secrets"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "VaultService", ServicePkg: "udb.core.vault.services.v1", FullMethod: "/udb.core.vault.services.v1.VaultService/PutSecret", Name: "PutSecret", APIAlias: "put_secret", OperationID: "putSecret", HTTPMethod: "post", HTTPPath: "/v1/vault/secrets:put", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:vault:put-secret"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "VaultService", ServicePkg: "udb.core.vault.services.v1", FullMethod: "/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials", Name: "RevokeDatabaseCredentials", APIAlias: "revoke_database_credentials", OperationID: "revokeDatabaseCredentials", HTTPMethod: "post", HTTPPath: "/v1/vault/database/credentials/{lease_id}:revoke", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: true, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:vault:revoke-db-credentials"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
@@ -1401,7 +1402,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.search.services.v1.SearchService": 5,
 	"udb.core.storage.services.v1.StorageService": 10,
 	"udb.core.tenant.services.v1.TenantService": 8,
-	"udb.core.vault.services.v1.VaultService": 22,
+	"udb.core.vault.services.v1.VaultService": 23,
 	"udb.core.webhook.services.v1.WebhookService": 6,
 	"udb.core.webrtc.services.v1.PeerService": 5,
 	"udb.core.webrtc.services.v1.RoomService": 9,

@@ -3474,7 +3474,11 @@ fn column_decode_failed(
     )
 }
 
-fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonValue, tonic::Status> {
+pub(crate) fn row_value_to_json(
+    row: &PgRow,
+    idx: usize,
+    type_name: &str,
+) -> Result<JsonValue, tonic::Status> {
     let type_name = type_name.to_ascii_uppercase();
     // Enums first: a user type name can contain any of the substrings the
     // scalar branches below match on (`realm_status` contains REAL).

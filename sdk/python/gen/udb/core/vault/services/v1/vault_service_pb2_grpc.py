@@ -35,6 +35,11 @@ class VaultServiceStub(object):
                 request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetSecretRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetSecretResponse.FromString,
                 _registered_method=True)
+        self.LeaseOAuthToken = channel.unary_unary(
+                '/udb.core.vault.services.v1.VaultService/LeaseOAuthToken',
+                request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.LeaseOAuthTokenRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.LeaseOAuthTokenResponse.FromString,
+                _registered_method=True)
         self.ListSecrets = channel.unary_unary(
                 '/udb.core.vault.services.v1.VaultService/ListSecrets',
                 request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.ListSecretsRequest.SerializeToString,
@@ -164,6 +169,17 @@ class VaultServiceServicer(object):
     def GetSecret(self, request, context):
         """Read the secret value (latest active version, or a specific version). This
         is the sensitive vault read: it is AUDITED via the outbox compliance envelope.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def LeaseOAuthToken(self, request, context):
+        """A usable access token for the OAuth credential stored as a secret. The secret's value is
+        JSON: token_url, client_id, client_secret, and refresh_token (or none, for the client
+        credentials grant), with optional scope. The broker refreshes the token when it has fewer
+        than min_valid_seconds left, stores the result as a new secret version, including a rotated
+        refresh token, and lets only one caller refresh at a time across replicas.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -369,6 +385,11 @@ def add_VaultServiceServicer_to_server(servicer, server):
                     request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetSecretRequest.FromString,
                     response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetSecretResponse.SerializeToString,
             ),
+            'LeaseOAuthToken': grpc.unary_unary_rpc_method_handler(
+                    servicer.LeaseOAuthToken,
+                    request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.LeaseOAuthTokenRequest.FromString,
+                    response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.LeaseOAuthTokenResponse.SerializeToString,
+            ),
             'ListSecrets': grpc.unary_unary_rpc_method_handler(
                     servicer.ListSecrets,
                     request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.ListSecretsRequest.FromString,
@@ -535,6 +556,33 @@ class VaultService(object):
             '/udb.core.vault.services.v1.VaultService/GetSecret',
             udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetSecretRequest.SerializeToString,
             udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetSecretResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def LeaseOAuthToken(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.vault.services.v1.VaultService/LeaseOAuthToken',
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.LeaseOAuthTokenRequest.SerializeToString,
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.LeaseOAuthTokenResponse.FromString,
             options,
             channel_credentials,
             insecure,
