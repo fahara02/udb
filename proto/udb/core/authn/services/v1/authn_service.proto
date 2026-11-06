@@ -3220,6 +3220,7 @@ service AuthnService {
       scopes: "udb:authn:read-auth-policy"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.GetTenantAuthPolicy"
       request_context_required: true
       tenant_required: true

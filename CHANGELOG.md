@@ -7,6 +7,28 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.9] - 2026-11-06
+
+### Breaking for callers
+
+- None.
+
+### Added
+
+- **A service account can read a tenant's sign-in policy.** `GetTenantAuthPolicy` admits
+  `SERVICE_ACCOUNT`, so a gateway's sign-in page can ask which channels are offered before anyone
+  has signed in. It still needs `udb:authn:read-auth-policy` and reads only the caller's own
+  tenant. A gateway serving several tenants reads another tenant's policy with a token exchanged
+  for that tenant, once that tenant's membership approves the scope.
+
+### Fixed
+
+- **Live proof that SDKs send no default catalog pin.** Every SDK reads with no pin, and has a
+  pin the active catalog cannot serve refused with `FAILED_PRECONDITION`, against a real broker.
+- **Live proof of a lossless column widening.** A longer `VARCHAR`, `VARCHAR` to `TEXT`, a larger
+  integer, `REAL` to `DOUBLE PRECISION` and a larger `NUMERIC` are applied to a real table, and
+  every stored value is kept.
+
 ## [0.6.8] - 2026-11-06
 
 ### Breaking for callers

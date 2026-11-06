@@ -792,7 +792,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy
 	// Listener: control plane.
 	// Scopes: udb:authn:read-auth-policy.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: read_only.
 	// Idempotency: read-only unary calls may retry transient failures.
 	// Idempotency fields: no declared method replay contract.

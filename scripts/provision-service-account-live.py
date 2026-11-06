@@ -63,6 +63,7 @@ SERVICE_SCOPES = (
     "udb:authz:check-access",
     "udb:authz:check-access-for",
     "udb:authn:exchange-tenant-token",
+    "udb:authn:read-auth-policy",
 )
 #: What the target tenant approves the account for.
 MEMBERSHIP_SCOPES = ("udb:authz:check-access",)

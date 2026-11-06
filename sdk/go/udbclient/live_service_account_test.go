@@ -161,6 +161,20 @@ func TestLiveServiceAccountDelegationConformance(t *testing.T) {
 		t.Fatalf("step 3: delegated CheckAccess for the unknown id %s must be PERMISSION_DENIED, got code=%s %v", stranger, status.Code(err), err)
 	}
 
+	// ── 3b. a service account reads its own tenant's sign-in policy, repeatedly, and no other ──
+	for i := 0; i < 3; i++ {
+		policy, policyErr := serviceClient.Authn.GetTenantAuthPolicy(serviceCtx(), &authnv1.GetTenantAuthPolicyRequest{TenantId: homeTenantID})
+		if policyErr != nil {
+			t.Fatalf("step 3b: GetTenantAuthPolicy as a service account failed: code=%s %v", status.Code(policyErr), policyErr)
+		}
+		if policy.GetPolicy() == nil {
+			t.Fatalf("step 3b: GetTenantAuthPolicy returned no policy")
+		}
+	}
+	if _, policyErr := serviceClient.Authn.GetTenantAuthPolicy(serviceCtx(), &authnv1.GetTenantAuthPolicyRequest{TenantId: targetTenantID}); policyErr == nil {
+		t.Fatalf("step 3b: the home bearer read another tenant's sign-in policy")
+	}
+
 	// ── 4. tenant token exchange ───────────────────────────────────────────
 	const exchangedScope = "udb:authz:check-access"
 	exchanged, err := serviceClient.Authn.ExchangeServiceTokenForTenant(serviceCtx(), &authnv1.ExchangeServiceTokenForTenantRequest{

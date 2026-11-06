@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use super::data_plane_live::{col, create_schema, dp_live_pg_dsn, dp_pool};
 use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
-use crate::migration::diff::{ChangeKind, diff_manifests};
+use crate::migration::diff::{ChangeKind, ChangeSafety, diff_manifests};
 
 struct Fx {
     pool: sqlx::PgPool,
@@ -103,6 +103,90 @@ macro_rules! fixture {
         }
     };
 }
+
+live!(a_lossless_widening_keeps_every_row_live, {
+    let fx = fixture!(
+        "CREATE TABLE \"{schema}\".rows (id TEXT PRIMARY KEY, name VARCHAR(10), note VARCHAR(10), \
+           qty INTEGER, ratio REAL, price NUMERIC(6,2)); \
+         INSERT INTO \"{schema}\".rows VALUES ('a', 'short', 'text', 2147483647, 1.5, 1234.56)"
+    );
+    let id = col("id", "TEXT", true);
+    let mut old = fx.table(
+        &["id"],
+        vec![
+            id.clone(),
+            col("name", "VARCHAR(10)", false),
+            col("note", "VARCHAR(10)", false),
+            col("qty", "INTEGER", false),
+            col("ratio", "REAL", false),
+            col("price", "NUMERIC(6,2)", false),
+        ],
+    );
+    let mut new = fx.table(
+        &["id"],
+        vec![
+            id,
+            col("name", "VARCHAR(200)", false),
+            col("note", "TEXT", false),
+            col("qty", "BIGINT", false),
+            col("ratio", "DOUBLE PRECISION", false),
+            col("price", "NUMERIC(12,2)", false),
+        ],
+    );
+    old.checksum_sha256 = "a".to_string();
+    new.checksum_sha256 = "b".to_string();
+    let manifest = |table: ManifestTable, checksum: &str| CatalogManifest {
+        tables: vec![table],
+        checksum_sha256: checksum.to_string(),
+        ..CatalogManifest::default()
+    };
+    let old = manifest(old, "old");
+    let new = manifest(new, "new");
+    let changes = diff_manifests(Some(&old), &new);
+    let widenings: Vec<_> = changes
+        .iter()
+        .filter(|change| change.kind == ChangeKind::ChangeColumnType)
+        .collect();
+    assert_eq!(widenings.len(), 5, "{changes:?}");
+    for change in widenings {
+        assert_eq!(change.safety, ChangeSafety::SafeAuto, "{change:?}");
+        assert!(!change.data_destructive, "{change:?}");
+        let sql = crate::generation::sql::render_delta_operation(&new, new.tables.first(), change);
+        assert!(!sql.trim().is_empty(), "{change:?} renders nothing");
+        sqlx::raw_sql(&format!("BEGIN;\n{sql}\nCOMMIT;"))
+            .execute(&fx.pool)
+            .await
+            .unwrap_or_else(|err| panic!("{change:?} failed: {err}\n{sql}"));
+    }
+    assert_eq!(
+        fx.text(
+            "SELECT string_agg(data_type, ',' ORDER BY column_name) \
+             FROM information_schema.columns \
+             WHERE table_schema = '{schema}' AND table_name = 'rows' AND column_name <> 'id'"
+        )
+        .await
+        .as_deref(),
+        Some("character varying,text,numeric,bigint,double precision")
+    );
+    assert_eq!(
+        fx.text(
+            "SELECT concat_ws('|', name, note, qty, ratio, price) FROM \"{schema}\".rows \
+             WHERE id = 'a'"
+        )
+        .await
+        .as_deref(),
+        Some("short|text|2147483647|1.5|1234.56")
+    );
+    // The wider columns hold what the old ones could not.
+    sqlx::raw_sql(&format!(
+        "UPDATE \"{0}\".rows SET name = repeat('x', 100), qty = 3000000000, price = 123456.78",
+        fx.schema
+    ))
+    .execute(&fx.pool)
+    .await
+    .expect("the widened columns take wider values");
+    fx.finish().await;
+});
 
 live!(a_changed_primary_key_is_applied_live, {
     let fx = fixture!(

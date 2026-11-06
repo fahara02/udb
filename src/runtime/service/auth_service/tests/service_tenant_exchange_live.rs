@@ -90,6 +90,120 @@ async fn event_tenants(pool: &sqlx::PgPool, topic: &str, membership_id: &str) ->
     tenants
 }
 
+/// A gateway serves several tenants: it reads its home tenant's sign-in policy with its home
+/// bearer, and another tenant's with a token exchanged for that tenant, before anyone signs in.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_a_service_account_reads_a_tenant_auth_policy -- --ignored --nocapture"]
+async fn live_postgres_a_service_account_reads_a_tenant_auth_policy() {
+    const SCOPE: &str = "udb:authn:read-auth-policy";
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    ensure_outbox_table(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone()).with_event_sink(Arc::new(
+        super::super::events::OutboxAuthEventSink::new(pool.clone(), OUTBOX_RELATION),
+    ));
+    let (account, grant) = create_service_account_with_grant(
+        &authn,
+        "policy_reader",
+        PASSWORD,
+        &[SCOPE, "udb:authn:exchange-tenant-token"],
+    )
+    .await;
+    let target = Uuid::new_v4().to_string();
+    let third = Uuid::new_v4().to_string();
+    let login = authn
+        .login(Request::new(authn_pb::LoginRequest {
+            username: account.email.clone(),
+            password: PASSWORD.to_string(),
+            device_name: "policy-reader-live".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("service-account login")
+        .into_inner();
+    let home = validate(&authn, &login.access_token).await;
+    assert!(home.valid);
+    let context_of =
+        |bearer: &authn_pb::ValidateTokenResponse, method: &str| VerifiedClaimContext {
+            subject: bearer.user_id.clone(),
+            service_identity: grant.service_identity.clone(),
+            tenant_id: bearer.tenant_id.clone(),
+            project_id: bearer.project_id.clone(),
+            scopes: bearer.scopes.clone(),
+            roles: bearer.roles.clone(),
+            // CREDENTIAL_TYPE_SERVICE_ACCOUNT
+            credential_type: 4,
+            credential_id: bearer.token_id.clone(),
+            auth_method: method.to_string(),
+            authenticated: true,
+        };
+    let read = |context: VerifiedClaimContext, tenant: String| {
+        scope_claim_context_for_test(
+            context,
+            authn.get_tenant_auth_policy(Request::new(authn_pb::GetTenantAuthPolicyRequest {
+                tenant_id: tenant,
+                ..Default::default()
+            })),
+        )
+    };
+
+    let home_context = context_of(&home, "pwd");
+    for _ in 0..3 {
+        let own = read(home_context.clone(), home.tenant_id.clone())
+            .await
+            .expect("the home bearer reads its own tenant")
+            .into_inner();
+        assert!(own.policy.is_some());
+    }
+    assert!(
+        read(home_context.clone(), target.clone()).await.is_err(),
+        "the home bearer does not read another tenant"
+    );
+
+    let target_admin = test_claim_context(
+        "target-admin",
+        &target,
+        "",
+        &["udb:authn:manage-grants"],
+        &[],
+    );
+    let mut membership = membership_request(&target, &account.user_id);
+    membership.get_mut().approved_scopes = vec![SCOPE.to_string()];
+    scope_claim_context_for_test(
+        target_admin,
+        authn.create_service_account_tenant_membership(membership),
+    )
+    .await
+    .expect("the target tenant approves the scope");
+    let exchanged = scope_claim_context_for_test(
+        home_context,
+        authn.exchange_service_token_for_tenant(exchange_request(&target)),
+    )
+    .await
+    .expect("exchange for the target tenant")
+    .into_inner();
+    assert_eq!(exchanged.scopes, vec![SCOPE]);
+    let in_target = validate(&authn, &exchanged.access_token).await;
+    assert!(in_target.valid);
+    let target_context = context_of(&in_target, "membership_exchange");
+    for _ in 0..3 {
+        let policy = read(target_context.clone(), target.clone())
+            .await
+            .expect("the exchanged token reads the target tenant")
+            .into_inner();
+        assert!(policy.is_default, "the target tenant wrote no policy");
+    }
+    assert!(
+        read(target_context.clone(), third).await.is_err(),
+        "the exchanged token does not read a third tenant"
+    );
+    assert!(
+        read(target_context, home.tenant_id.clone()).await.is_err(),
+        "the exchanged token does not read the home tenant"
+    );
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_service_tenant_token_exchange -- --ignored --nocapture"]
 async fn live_postgres_service_tenant_token_exchange() {

@@ -168,4 +168,27 @@ async fn live_data_contract_holds() {
         .expect("a delete");
     let gone = read(broker.clone(), id.clone(), meta.clone()).await;
     assert!(gone.records_json.is_empty(), "the row is gone");
+
+    // No catalog pin unless the caller asks for one, and a pin is honoured when it is sent.
+    assert!(meta.client_catalog_version.is_empty(), "a default pin");
+    for _ in 0..3 {
+        read(broker.clone(), id.clone(), meta.clone()).await;
+    }
+    let mut pinned = meta.clone();
+    pinned.client_catalog_version = "999.0.0".to_string();
+    for _ in 0..3 {
+        let refused = broker
+            .select(request(
+                &pinned,
+                SelectRequest {
+                    message_type: FILE.to_string(),
+                    filter: Some(key_filter(&id)),
+                    limit: 1,
+                    ..Default::default()
+                },
+            ))
+            .await
+            .expect_err("a pin the active catalog cannot serve");
+        assert_eq!(refused.code(), Code::FailedPrecondition, "{refused}");
+    }
 }

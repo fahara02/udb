@@ -26,7 +26,7 @@ package udbclient
 // hatches for RPCs that don't yet have a typed helper.
 //
 // Covers 424 RPCs across 29 services
-// (UDB v0.6.8, wire protocol 1.0.0).
+// (UDB v0.6.9, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.6.8"
+const SDKVersion = "0.6.9"
 
 // VersionMismatchError reports an absent, malformed, or incompatible broker
 // release header. Compatibility requires the same major and minor release;
@@ -1010,7 +1010,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetMfaPolicy", Name: "GetMfaPolicy", APIAlias: "get_mfa_policy", OperationID: "getMfaPolicy", HTTPMethod: "get", HTTPPath: "/v1/auth/tenants/{tenant_id}/mfa-policy", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:get-mfa-policy"}, CredentialTypes: []string{"bearer_jwt", "session"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetServiceAccountGrant", Name: "GetServiceAccountGrant", APIAlias: "get_service_account_grant", OperationID: "getServiceAccountGrant", HTTPMethod: "get", HTTPPath: "/v1/auth/service-accounts/{user_id}/grant", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:read-grants"}, CredentialTypes: []string{"bearer_jwt", "session"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetSession", Name: "GetSession", APIAlias: "get_session", OperationID: "getSession", HTTPMethod: "get", HTTPPath: "/v1/auth/sessions/{session_id}", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:get-session"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
-	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy", Name: "GetTenantAuthPolicy", APIAlias: "get_tenant_auth_policy", OperationID: "getTenantAuthPolicy", HTTPMethod: "get", HTTPPath: "/v1/auth/tenants/{tenant_id}/auth-policy", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:read-auth-policy"}, CredentialTypes: []string{"bearer_jwt", "session"}},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy", Name: "GetTenantAuthPolicy", APIAlias: "get_tenant_auth_policy", OperationID: "getTenantAuthPolicy", HTTPMethod: "get", HTTPPath: "/v1/auth/tenants/{tenant_id}/auth-policy", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:read-auth-policy"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/GetUser", Name: "GetUser", APIAlias: "get_user", OperationID: "getUser", HTTPMethod: "get", HTTPPath: "/v1/auth/users/{user_id}", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:get-user"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/IntrospectToken", Name: "IntrospectToken", APIAlias: "introspect_token", OperationID: "introspectToken", HTTPMethod: "post", HTTPPath: "/v1/auth/tokens:introspect", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:introspect-token"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge", Name: "IssueMfaChallenge", APIAlias: "issue_mfa_challenge", OperationID: "issueMfaChallenge", HTTPMethod: "post", HTTPPath: "/v1/auth/mfa/challenges:issue", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:issue-mfa-challenge"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},

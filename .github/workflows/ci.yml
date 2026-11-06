@@ -1619,6 +1619,13 @@ jobs:
       - name: Rust SDK refresh rotation
         working-directory: sdk/rust
         run: cargo test --test live_refresh_rotation -- --nocapture
+      - name: Go SDK catalog pin
+        working-directory: sdk/go
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test ./udbclient -run '^TestLiveNoDefaultCatalogPinAndASentPinIsHonoured$' -count=1 -v 2>&1 | tee /tmp/go-catalog-pin.log
+          grep -q -- '--- PASS: TestLiveNoDefaultCatalogPinAndASentPinIsHonoured' /tmp/go-catalog-pin.log
       - name: PHP SDK data contract
         working-directory: sdk/php
         run: vendor/bin/pest tests/Live/DataContractTest.php

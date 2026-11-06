@@ -105,6 +105,37 @@ class LiveDataContractTest {
           .data()
           .delete(DeleteRequest.newBuilder().setMessageType(FILE).setFilter(key(id)).build());
       assertEquals(0, project.data().select(read).getRecordsJsonCount(), "the row is gone");
+
+      // No catalog pin unless the caller asks for one, and a pin is honoured when it is sent.
+      for (int i = 0; i < 3; i++) {
+        assertEquals(0, project.data().select(read).getRecordsJsonCount());
+      }
+      UdbProjectConfig pinnedConfig =
+          UdbProjectConfig.builder()
+              .target(target)
+              .authTarget(env("UDB_AUTH_GRPC_TARGET", target))
+              .tenantId(tenant)
+              .projectId(projectId)
+              .purpose("java.live.data-contract")
+              .correlationId("java-live-data-contract")
+              .serviceIdentity("java.sdk.live")
+              .clientCatalogVersion("999.0.0")
+              .build();
+      try (UdbProject pinned = UdbProject.open(pinnedConfig)) {
+        pinned.loginAndAdoptTenant(
+            LoginRequest.newBuilder()
+                .setUsername(env("UDB_LIVE_USERNAME", null))
+                .setPassword(env("UDB_LIVE_PASSWORD", null))
+                .setTenantHint(tenant)
+                .setProjectHint(projectId)
+                .setDeviceName("java-sdk-data-contract")
+                .build());
+        for (int i = 0; i < 3; i++) {
+          StatusRuntimeException stale =
+              assertThrows(StatusRuntimeException.class, () -> pinned.data().select(read));
+          assertEquals(Status.Code.FAILED_PRECONDITION, stale.getStatus().getCode());
+        }
+      }
     }
   }
 }

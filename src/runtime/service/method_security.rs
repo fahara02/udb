@@ -2370,6 +2370,25 @@ mod tests {
     }
 
     #[test]
+    fn a_service_account_may_read_a_tenant_auth_policy() {
+        // A sign-in page asks which channels are offered before anyone has signed in, so only
+        // a service account can ask. The scope stays required.
+        let reg = method_security_registry();
+        let policy = reg
+            .get(&format!("{AUTHN}/GetTenantAuthPolicy"))
+            .expect("GetTenantAuthPolicy security must decode");
+        assert!(
+            policy
+                .allowed_credential_types
+                .contains(&(CredentialType::ServiceAccount as i32))
+        );
+        assert_eq!(
+            policy.scopes,
+            vec!["udb:authn:read-auth-policy".to_string()]
+        );
+    }
+
+    #[test]
     fn registry_decodes_descriptor_credential_type_requirements() {
         let reg = method_security_registry();
         let create_user = reg

@@ -84,5 +84,35 @@ public sealed class LiveDataContractTests
 
         await project.DeleteAsync(new DeleteRequest { MessageType = File, Filter = Key(id) });
         Assert.Empty((await project.SelectAsync(read)).RecordsJson);
+
+        // No catalog pin unless the caller asks for one, and a pin is honoured when it is sent.
+        for (var i = 0; i < 3; i++)
+        {
+            Assert.Empty((await project.SelectAsync(read)).RecordsJson);
+        }
+        await using var pinned = await UdbProject.ProjectAsync(new UdbProjectConfig
+        {
+            Target = Url(target),
+            AuthTarget = Url(Env("UDB_AUTH_GRPC_TARGET", target)),
+            TenantId = tenant,
+            ProjectId = projectId,
+            Purpose = "csharp.live.data-contract",
+            CorrelationId = "csharp-live-data-contract",
+            ServiceIdentity = "csharp.sdk.live",
+            ClientCatalogVersion = "999.0.0",
+        });
+        await pinned.LoginAndAdoptTenantAsync(new AuthnV1.LoginRequest
+        {
+            Username = Env("UDB_LIVE_USERNAME"),
+            Password = Env("UDB_LIVE_PASSWORD"),
+            TenantHint = tenant,
+            ProjectHint = projectId,
+            DeviceName = "csharp-sdk-data-contract",
+        });
+        for (var i = 0; i < 3; i++)
+        {
+            var stale = await Assert.ThrowsAnyAsync<Exception>(() => pinned.SelectAsync(read));
+            Assert.Contains("FailedPrecondition", stale.ToString());
+        }
     }
 }

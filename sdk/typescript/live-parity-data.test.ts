@@ -31,7 +31,7 @@ function requiredEnv(name: string): string {
 }
 
 /** A session logged in as the live test user, with the verified tenant adopted. */
-async function connect(t: { after(fn: () => void): void }, purpose: string): Promise<UdbProject> {
+async function connect(t: { after(fn: () => void): void }, purpose: string, clientCatalogVersion?: string): Promise<UdbProject> {
   const target = requiredEnv("UDB_GRPC_TARGET");
   const session = await UdbProject.connectEnterprise({
     target,
@@ -42,6 +42,7 @@ async function connect(t: { after(fn: () => void): void }, purpose: string): Pro
     password: requiredEnv("UDB_LIVE_PASSWORD"),
     purpose,
     deadlineMs: 15_000,
+    ...(clientCatalogVersion === undefined ? {} : { clientCatalogVersion }),
   });
   t.after(() => session.close());
   return session;
@@ -169,6 +170,23 @@ test("live consume resumes after its acknowledged events and dead-letters a pois
   assert.ok(replayed.includes(again));
   // Negative: an invalid consumer name is refused without reconnecting.
   await assert.rejects(u.consume("not a valid name!", TOPIC, async () => {}, { backoffMs: 1 }), (err) => inspect(err).grpc === grpc.status.INVALID_ARGUMENT);
+});
+
+test("live: no default catalog pin, and a sent pin is honoured", live, async (t) => {
+  const u = await connect(t, "ts.live.parity.pin");
+  const handle = u.entity(WORKFLOW, { key: ["workflow_id"] });
+  for (let i = 0; i < REPEATS; i += 1) {
+    assert.equal((await handle.select({ workflow_id: randomUUID() })).length, 0);
+  }
+  const pinned = await connect(t, "ts.live.parity.pin", "999.0.0");
+  const stale = pinned.entity(WORKFLOW, { key: ["workflow_id"] });
+  for (let i = 0; i < REPEATS; i += 1) {
+    let refused: unknown;
+    await stale.select({ workflow_id: randomUUID() }).catch((err: unknown) => {
+      refused = err;
+    });
+    assert.match(String((refused as Error | undefined)?.message), /incompatible catalog version/);
+  }
 });
 
 test("live error helpers read the broker's typed refusals", live, async (t) => {

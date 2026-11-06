@@ -160,6 +160,21 @@ def test_live_refusals_are_typed_every_time(project: UdbProject) -> None:
     assert unknown.value.code == grpc.StatusCode.INVALID_ARGUMENT, repr(unknown.value)
 
 
+def test_live_no_default_catalog_pin_and_a_sent_pin_is_honoured(project: UdbProject) -> None:
+    assert project.metadata.client_catalog_version == ""
+    for _ in range(REPEATS):
+        project.data.select(message_type=WORKFLOW, limit=1)
+    pinned = UdbProject(_config(client_catalog_version="999.0.0"))
+    try:
+        pinned.login_and_adopt_tenant(required_env("UDB_LIVE_USERNAME"), required_env("UDB_LIVE_PASSWORD"))
+        for _ in range(REPEATS):
+            with pytest.raises(UdbRpcError) as refused:
+                pinned.data.select(message_type=WORKFLOW, limit=1)
+            assert refused.value.code == grpc.StatusCode.FAILED_PRECONDITION, repr(refused.value)
+    finally:
+        pinned.close()
+
+
 def test_live_read_retries_a_dead_endpoint_then_gives_up(project: UdbProject) -> None:
     attempts = 0
     with UdbClient(
