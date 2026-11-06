@@ -7206,7 +7206,7 @@ jobs:
             ext: '.exe'
             target_cpu: x86-64-v2
             variant: portable
-          - os: macos-14
+          - os: macos-15
             target: aarch64-apple-darwin
             asset: udb-darwin-arm64
             ext: ''
