@@ -173,6 +173,9 @@ class UdbConfig:
     # idempotency-keyed.
     retry: Any = None
 
+    # A catalog version to pin. Blank sends no pin, and the broker skips the comparison.
+    client_catalog_version: str = ""
+
     def metadata(self) -> Metadata:
         """Build the shared :class:`Metadata` from this config."""
         return Metadata(
@@ -183,6 +186,7 @@ class UdbConfig:
             service_identity=self.service_identity,
             user_id=self.user_id,
             project_id=self.project_id,
+            client_catalog_version=self.client_catalog_version,
             bearer_token=self.bearer_token,
             api_key="",
         )

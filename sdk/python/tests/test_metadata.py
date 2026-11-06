@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from udb.entity.v1 import types_pb2
-from udb_client import Metadata, to_record_json, to_struct
+from udb_client import Metadata, UdbConfig, to_record_json, to_struct
 
 
 def test_no_catalog_version_is_sent_unless_the_caller_pins_one() -> None:
@@ -24,6 +24,12 @@ def test_no_catalog_version_is_sent_unless_the_caller_pins_one() -> None:
         client_catalog_version="generator-3",
     )
     assert dict(pinned.to_grpc_metadata())["x-udb-client-catalog-version"] == "generator-3"
+
+
+def test_a_project_config_carries_a_catalog_pin_only_when_set() -> None:
+    assert UdbConfig(target="t").metadata().client_catalog_version == ""
+    pinned = UdbConfig(target="t", client_catalog_version="generator-3").metadata()
+    assert pinned.client_catalog_version == "generator-3"
 
 
 def test_metadata_headers_include_required_and_routing_values() -> None:

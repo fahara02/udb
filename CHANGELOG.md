@@ -20,6 +20,8 @@ release line was tagged.
   has signed in. It still needs `udb:authn:read-auth-policy` and reads only the caller's own
   tenant. A gateway serving several tenants reads another tenant's policy with a token exchanged
   for that tenant, once that tenant's membership approves the scope.
+- **`UdbConfig.client_catalog_version` in Python.** TypeScript, Java, C# and PHP could already
+  set a catalog pin in their project config.
 
 ### Fixed
 
