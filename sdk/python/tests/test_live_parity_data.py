@@ -41,6 +41,7 @@ from udb_client import (
     UdbRpcError,
     code_of,
     consume,
+    decode_record,
     encode_record,
     inspect,
     is_cas_conflict,
