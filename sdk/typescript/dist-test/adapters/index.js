@@ -22,4 +22,3 @@ __exportStar(require("./context"), exports);
 __exportStar(require("./express"), exports);
 __exportStar(require("./fastify"), exports);
 __exportStar(require("./next"), exports);
-__exportStar(require("./grpc"), exports);

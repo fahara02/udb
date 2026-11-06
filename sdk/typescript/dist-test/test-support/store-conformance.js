@@ -8,9 +8,10 @@ exports.runStoreCases = runStoreCases;
 const strict_1 = __importDefault(require("node:assert/strict"));
 const node_crypto_1 = require("node:crypto");
 const node_fs_1 = __importDefault(require("node:fs"));
+const node_path_1 = __importDefault(require("node:path"));
 const stores_1 = require("../stores");
-const conformance_1 = require("../udbtest/conformance");
-const contract = JSON.parse(node_fs_1.default.readFileSync((0, conformance_1.tableCasesPath)(), "utf8"));
+const CASES_PATH = node_path_1.default.join(__dirname, "..", "..", "..", "conformance", "table-cases.json");
+const contract = JSON.parse(node_fs_1.default.readFileSync(CASES_PATH, "utf8"));
 function substitute(values, id) {
     return Object.fromEntries(Object.entries(values ?? {}).map(([key, value]) => [key, typeof value === "string" ? value.replaceAll("$id", id) : value]));
 }

@@ -61,7 +61,7 @@ function metadata(meta) {
     headers.set("x-scopes", (meta.scopes ?? []).join(","));
     headers.set("x-service-identity", meta.serviceIdentity ?? "example.service");
     headers.set("x-udb-project-id", meta.projectId ?? "default");
-    headers.set("x-udb-client-catalog-version", meta.clientCatalogVersion ?? "");
+    headers.set("x-udb-client-catalog-version", meta.clientCatalogVersion ?? exports.UDB_PROTOCOL_VERSION);
     if (meta.bearerToken)
         headers.set("authorization", `Bearer ${meta.bearerToken}`);
     if (meta.apiKey)
