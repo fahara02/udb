@@ -2080,6 +2080,17 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
             .execute(&mut *tx)
             .await
             .map_err(|err| status("copy table shape", err))?;
+            // A rule restored from a dump was re-parsed from its rendered text, and can render
+            // differently from the same rule as first written. Every rule, live or declared, is
+            // compared as it renders once re-parsing stops changing it.
+            let mut settled_live = std::collections::BTreeMap::new();
+            for rule in &live {
+                let settled = settled_check_rendering(&mut tx, &temp, rule)
+                    .await
+                    .map_err(|err| status("settle live rule", err))?
+                    .unwrap_or_else(|_| rule.clone());
+                settled_live.insert(settled, rule.clone());
+            }
             let mut expected = std::collections::BTreeSet::new();
             let finding = |kind: &str, message: String| ManifestDrift {
                 kind: kind.to_string(),
@@ -2091,34 +2102,14 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
                 not_null: false,
                 message,
             };
-            for (check_index, check) in table.checks.iter().enumerate() {
-                let constraint = format!("c{check_index}");
+            for check in &table.checks {
                 let fix =
                     crate::generation::sql::render_add_check(&table.schema, &table.table, check);
-                let mut savepoint = sqlx::Connection::begin(&mut *tx)
+                let rendered = match settled_check_rendering(&mut tx, &temp, &check.expression)
                     .await
-                    .map_err(|err| status("savepoint", err))?;
-                let added = sqlx::query(&format!(
-                    "ALTER TABLE {} ADD CONSTRAINT {} CHECK ({})",
-                    qi_runtime(&temp),
-                    qi_runtime(&constraint),
-                    check.expression
-                ))
-                .execute(&mut *savepoint)
-                .await;
-                let rendered: Option<String> = match added {
-                    Ok(_) => Some(
-                        sqlx::query_scalar(
-                            "SELECT pg_catalog.pg_get_expr(conbin, conrelid) \
-                             FROM pg_catalog.pg_constraint \
-                             WHERE conrelid = to_regclass($1) AND conname = $2",
-                        )
-                        .bind(format!("pg_temp.{}", qi_runtime(&temp)))
-                        .bind(&constraint)
-                        .fetch_one(&mut *savepoint)
-                        .await
-                        .map_err(|err| status("read expected rule", err))?,
-                    ),
+                    .map_err(|err| status("settle declared rule", err))?
+                {
+                    Ok(rendered) => rendered,
                     Err(err) => {
                         findings.push(finding(
                             "check_mismatch",
@@ -2128,17 +2119,10 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
                                 check.name, check.expression
                             ),
                         ));
-                        None
+                        continue;
                     }
                 };
-                savepoint
-                    .commit()
-                    .await
-                    .map_err(|err| status("savepoint release", err))?;
-                let Some(rendered) = rendered else {
-                    continue;
-                };
-                if !live.contains(&rendered) {
+                if !settled_live.contains_key(&rendered) {
                     findings.push(finding(
                         "check_mismatch",
                         format!(
@@ -2150,7 +2134,10 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
                 }
                 expected.insert(rendered);
             }
-            for extra in live.difference(&expected) {
+            for (settled, extra) in &settled_live {
+                if expected.contains(settled) {
+                    continue;
+                }
                 findings.push(finding(
                     "check_undeclared",
                     format!(
@@ -2477,6 +2464,46 @@ fn normalize_ledger_schema(schema: &str) -> &str {
 
 fn pg_ident(value: &str) -> String {
     format!("\"{}\"", value.replace('"', "\"\""))
+}
+
+/// PostgreSQL's rendering of `expression` as a CHECK on the TEMP table `temp`, re-parsed until it
+/// stops changing. The outer error is the connection's; the inner one means the table cannot
+/// hold the rule. Nothing outlives the call.
+async fn settled_check_rendering(
+    connection: &mut sqlx::PgConnection,
+    temp: &str,
+    expression: &str,
+) -> Result<Result<String, sqlx::Error>, sqlx::Error> {
+    // A restored rule settles after one parse; the bound only guards against a rendering that
+    // never repeats.
+    const MAX_PARSES: usize = 4;
+    let mut current = expression.to_string();
+    for _ in 0..MAX_PARSES {
+        let mut savepoint = sqlx::Connection::begin(&mut *connection).await?;
+        let added = sqlx::query(&format!(
+            "ALTER TABLE {} ADD CONSTRAINT udb_verify_rule CHECK ({current})",
+            qi_runtime(temp)
+        ))
+        .execute(&mut *savepoint)
+        .await;
+        let rendered = match added {
+            Ok(_) => Ok(sqlx::query_scalar::<_, String>(
+                "SELECT pg_catalog.pg_get_expr(conbin, conrelid) FROM pg_catalog.pg_constraint \
+                 WHERE conrelid = to_regclass($1) AND conname = 'udb_verify_rule'",
+            )
+            .bind(format!("pg_temp.{}", qi_runtime(temp)))
+            .fetch_one(&mut *savepoint)
+            .await?),
+            Err(err) => Err(err),
+        };
+        savepoint.rollback().await?;
+        match rendered {
+            Ok(next) if next == current => return Ok(Ok(next)),
+            Ok(next) => current = next,
+            Err(err) => return Ok(Err(err)),
+        }
+    }
+    Ok(Ok(current))
 }
 
 #[cfg(test)]

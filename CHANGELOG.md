@@ -7,6 +7,20 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.11] - 2026-11-08
+
+### Breaking for callers
+
+- None.
+
+### Fixed
+
+- **A database restored from a dump matches its protos.** `udb verify --live` and `udb up`
+  compared each CHECK rule's rendered text, and PostgreSQL can render a rule re-created from
+  `pg_dump` output differently from the same rule as first written, so every such rule read as
+  missing and `udb up` stopped. Both sides are now compared as they render once re-parsing stops
+  changing them. The broker's own startup never compared CHECK rules and was not affected.
+
 ## [0.6.10] - 2026-11-07
 
 ### Breaking for callers

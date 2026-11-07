@@ -452,6 +452,107 @@ async fn a_changed_check_changes_what_the_database_accepts_live() {
         .expect("clean up");
 }
 
+/// pg_restore re-creates each rule from its rendered text, and PostgreSQL can render that
+/// re-parsed rule differently from the rule as first written. It is the same rule, so a database
+/// restored from a dump matches its protos.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn a_check_rule_restored_from_a_dump_still_matches_live() {
+    use crate::generation::manifest::ManifestCheck;
+    let Some(dsn) = ops_pg_dsn() else {
+        eprintln!("live DSN unset - skipping restored CHECK comparison");
+        return;
+    };
+    let pool = ops_pool(&dsn).await;
+    let schema = format!("chk_{}", uuid::Uuid::new_v4().simple());
+    let relation = format!("\"{schema}\".widgets");
+    // As 0.6.7 left it: the rule inline and under its declared name.
+    sqlx::raw_sql(&format!(
+        "CREATE SCHEMA \"{schema}\"; \
+         CREATE TABLE {relation} (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, \
+         status VARCHAR(8) CHECK (status IN ('bn','en')), \
+         CONSTRAINT chk_widgets_status CHECK (status IN ('bn','en')))"
+    ))
+    .execute(&pool)
+    .await
+    .expect("a table holding the rule under both names");
+    let mut manifest = widget_manifest(&schema);
+    manifest.tables[0].checks = vec![ManifestCheck {
+        name: "chk_widgets_status".to_string(),
+        expression: "status IN ('bn','en')".to_string(),
+    }];
+    let service = DataBrokerRuntime::from_config(ops_config(&dsn)).await;
+    let findings = async || {
+        service
+            .verify_postgres_check_rules(&manifest)
+            .await
+            .expect("compare the CHECK rules")
+            .into_iter()
+            .filter(|finding| finding.schema == schema)
+            .map(|finding| format!("{}: {}", finding.kind, finding.message))
+            .collect::<Vec<_>>()
+    };
+    let rendered = async || {
+        sqlx::query_scalar::<_, String>(
+            "SELECT pg_get_expr(conbin, conrelid) FROM pg_constraint \
+             WHERE conrelid = to_regclass($1) AND contype = 'c' ORDER BY conname",
+        )
+        .bind(&relation)
+        .fetch_all(&pool)
+        .await
+        .expect("read the rules")
+    };
+    let found = findings().await;
+    assert!(found.is_empty(), "{found:?}");
+
+    let as_written = rendered().await;
+    for _ in 0..3 {
+        let definitions: Vec<(String, String)> = sqlx::query_as(
+            "SELECT conname::TEXT, pg_get_constraintdef(oid) FROM pg_constraint \
+             WHERE conrelid = to_regclass($1) AND contype = 'c'",
+        )
+        .bind(&relation)
+        .fetch_all(&pool)
+        .await
+        .expect("read the definitions");
+        for (name, definition) in definitions {
+            sqlx::raw_sql(&format!(
+                "ALTER TABLE {relation} DROP CONSTRAINT \"{name}\", ADD CONSTRAINT \"{name}\" {definition}"
+            ))
+            .execute(&pool)
+            .await
+            .expect("re-create the rule from its rendered text, as pg_restore does");
+        }
+        let found = findings().await;
+        assert!(
+            found.is_empty(),
+            "a restored rule reads as missing: {found:?}"
+        );
+    }
+    assert_ne!(
+        rendered().await,
+        as_written,
+        "the restored rule must render differently, or this test proves nothing"
+    );
+
+    // A rule that is really gone is still reported.
+    sqlx::raw_sql(&format!(
+        "ALTER TABLE {relation} DROP CONSTRAINT chk_widgets_status, \
+         DROP CONSTRAINT widgets_status_check"
+    ))
+    .execute(&pool)
+    .await
+    .expect("drop the rule");
+    let found = findings().await;
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].starts_with("check_mismatch"), "{found:?}");
+
+    sqlx::raw_sql(&format!("DROP SCHEMA \"{schema}\" CASCADE"))
+        .execute(&pool)
+        .await
+        .expect("clean up");
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn served_begin_tx_saga_is_swept_by_owner_and_recovered_live() {
