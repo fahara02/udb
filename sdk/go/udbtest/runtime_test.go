@@ -376,8 +376,13 @@ func TestFakeFaultAndRateLimitPreserveTypedErrorsBeforeWrites(t *testing.T) {
 	if err := files.Insert(context.Background(), row); err != nil {
 		t.Fatalf("Select consumed a different operation's budget: %v", err)
 	}
-	row.FileId, row.ObjectKey = conformance.NewID(), "rate/"+conformance.NewID()
-	err := files.Insert(context.Background(), row)
+	// The window is aligned to the clock, so a boundary can fall between two calls and let
+	// both through. It can fall only once among a few quick calls.
+	var err error
+	for attempt := 0; attempt < 3 && err == nil; attempt++ {
+		row.FileId, row.ObjectKey = conformance.NewID(), "rate/"+conformance.NewID()
+		err = files.Insert(context.Background(), row)
+	}
 	if info := udbclient.Inspect(err); info.Code != udbclient.CodeRateLimited || info.RetryAfter <= 0 {
 		t.Fatalf("rate limit: %v (%+v)", err, info)
 	}

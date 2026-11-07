@@ -950,9 +950,17 @@ def test_rate_limit_carries_retry_after(fake: Fake, project) -> None:
     project.data._retry = RetryPolicy(max_attempts=1)
     fake.set_rate_limit(1, 60.0)
     assert project.entity(FILE).select() == []
-    with pytest.raises(UdbRpcError) as raised:
-        project.entity(FILE).select()
-    info = inspect(raised.value)
+    # The window is aligned to the clock, so a boundary can fall between two calls and let
+    # both through. It can fall only once among a few quick calls.
+    refused = None
+    for _ in range(3):
+        try:
+            project.entity(FILE).select()
+        except UdbRpcError as error:
+            refused = error
+            break
+    assert refused is not None, "the rate limit never refused"
+    info = inspect(refused)
     assert info.code is ErrorCode.RATE_LIMITED and info.retry_after > 0
 
 

@@ -188,10 +188,14 @@ test("the rate limit refuses with the broker's reason and a retry delay", async 
   fake.setRateLimit(1, 60_000);
   const table = u.tableOf(FILE);
   await table.select({});
+  // The window is aligned to the clock, so a boundary can fall between two calls and let
+  // both through. It can fall only once among a few quick calls.
   let limited: unknown;
-  await table.select({}).catch((err) => {
-    limited = err;
-  });
+  for (let i = 0; i < 3 && limited === undefined; i += 1) {
+    await table.select({}).catch((err) => {
+      limited = err;
+    });
+  }
   const info = inspect(limited);
   assert.equal(info.code, ErrorCode.RateLimited);
   assert.ok(info.retryAfterMs! > 0);
