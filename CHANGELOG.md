@@ -7,6 +7,34 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.12] - 2026-11-08
+
+### Breaking for callers
+
+- None.
+
+### Fixed
+
+- **A migrating start after a reviewed catalog transition no longer stops the broker from
+  starting.** Once its manifest advances, a migrating start clears the applied-delta rows of
+  `public.schema_migrations`, and that took the receipts a reviewed transition records there.
+  Every start re-proves the active transition from those receipts, so each later start failed with
+  "catalog provenance upgrade failed: native target/application receipt is incomplete or
+  mismatched". The receipts are now kept.
+  - detect: sql: `SELECT count(*) FROM public.schema_migrations WHERE filename LIKE 'catalog-transition/%'`
+    is 0 while the active catalog came from a reviewed transition, and the broker refuses with the
+    error above
+  - fix: upgrade, then copy that transition's `catalog-transition/<run>/` rows back from a backup
+    taken before the migrating start, unchanged
+- **The documentation no longer promises that `UDB_MIGRATE_ENABLED=false` stops a restart from
+  migrating.** The broker never read that setting: every start applies safe schema changes, and
+  changes that need review still wait for an approved plan. `udb env` and the help said
+  otherwise. To start without executing any schema change, set `UDB_STARTUP_DRY_RUN=true`.
+- **`udb verify --live` says when no CDC tailer drains the outbox.** With rows waiting and no
+  tailer holding the delivery lease, the outbox check names the broker log lines to look for and
+  the settings to check. A `UDB_CDC_JOURNAL_ONLY` that never reached the broker process left an
+  outbox undrained for a day, with one info line in the log.
+
 ## [0.6.11] - 2026-11-08
 
 ### Breaking for callers

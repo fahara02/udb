@@ -96,6 +96,12 @@ pub(crate) enum Command {
         project: String,
         dsn: Option<String>,
     },
+    /// `udb catalog restore-receipts --run <id>`: rebuild a reviewed transition's cleared
+    /// receipts, kept only when they reproduce its stored evidence.
+    CatalogRestoreReceipts {
+        run: String,
+        dsn: Option<String>,
+    },
     /// Explicit authenticated reviewed transition over the broker's native
     /// migration/catalog RPCs. Ordinary catalog commands retain their policy.
     CatalogTransition(super::catalog_transition::TransitionCommand),
@@ -1459,6 +1465,13 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             Command::CatalogActivate {
                 project: flag_value("--project").unwrap_or_default(),
                 catalog_id: flag_value("--catalog-id").unwrap_or_default(),
+                dsn: flag_value("--dsn"),
+            }
+        }
+        Some("catalog") if matches!(args.get(1).map(String::as_str), Some("restore-receipts")) => {
+            offset = 2;
+            Command::CatalogRestoreReceipts {
+                run: flag_value("--run").unwrap_or_default(),
                 dsn: flag_value("--dsn"),
             }
         }

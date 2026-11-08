@@ -212,7 +212,7 @@ pub(crate) fn render(profile: EnvProfile, dsn: &str) -> String {
         match profile {
             EnvProfile::Dev => "Apply schema changes on startup. Convenient locally.",
             EnvProfile::Enterprise => {
-                "Off on purpose: run `udb plan` and apply deliberately, not on a restart."
+                "Records intent only: the broker does not read it yet, and every start applies                  safe changes. Changes that need review still need an approved plan. To start                  without executing any schema change, set UDB_STARTUP_DRY_RUN=true."
             }
         },
     );

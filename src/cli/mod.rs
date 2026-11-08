@@ -753,6 +753,34 @@ pub fn run() {
             );
             process::exit(exit_code);
         }
+        Command::CatalogRestoreReceipts { run, dsn } => {
+            if run.trim().is_empty() {
+                eprintln!(
+                    "catalog restore-receipts: --run <reviewed transition run id> is required"
+                );
+                process::exit(2);
+            }
+            let exit_code = with_catalog_runtime(
+                "catalog restore-receipts",
+                dsn.as_deref(),
+                |rt| async move {
+                    match rt.restore_reviewed_transition_receipts(&run).await {
+                        Ok(restored) => {
+                            println!(
+                                "{}",
+                                serde_json::json!({"run": run, "restored_receipts": restored})
+                            );
+                            0
+                        }
+                        Err(err) => {
+                            eprintln!("catalog restore-receipts: {}", err.message());
+                            1
+                        }
+                    }
+                },
+            );
+            process::exit(exit_code);
+        }
         Command::CatalogStatus { project, dsn } => {
             if project.trim().is_empty() {
                 eprintln!("catalog status: --project <id> is required");
@@ -1955,6 +1983,7 @@ pub fn run() {
         | Command::Dev { .. }
         | Command::CatalogActivate { .. }
         | Command::CatalogStatus { .. }
+        | Command::CatalogRestoreReceipts { .. }
         | Command::CatalogTransition(_)
         | Command::Auth(_)
         | Command::Authz(_)

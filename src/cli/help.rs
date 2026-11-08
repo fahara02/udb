@@ -136,6 +136,18 @@ const COMMANDS: &[CmdHelp] = &[
   is refused until one is bootstrapped or activated.",
     },
     CmdHelp {
+        name: "catalog restore-receipts",
+        group: "Core",
+        summary: "Rebuild a reviewed transition's cleared receipts so the broker starts again.",
+        usage: "udb catalog restore-receipts --run <run id> [--dsn <dsn>]",
+        details: "  Every start re-proves the active reviewed transition from its receipts in
+  public.schema_migrations, and refuses with \"native target/application receipt is
+  incomplete or mismatched\" when they are gone. This regenerates each receipt from the
+  transition's stored plan and keeps them only if they reproduce its stored application
+  evidence, which commits to every filename and checksum. Otherwise it writes nothing.
+  Find the run id in udb_system.udb_catalog_reviewed_transitions.",
+    },
+    CmdHelp {
         name: "verify",
         group: "Core",
         summary: "Compare the proto manifest against a LIVE database, read-only, before applying anything.",
@@ -164,7 +176,9 @@ const COMMANDS: &[CmdHelp] = &[
   shared placeholder.
 
   --profile enterprise (default) writes production posture: mandatory mTLS and
-  UDB_MIGRATE_ENABLED=false, so a restart never migrates a live database.
+  UDB_MIGRATE_ENABLED=false. The broker does not read that setting yet: every start
+  applies safe schema changes, and only changes that need review wait for an approved
+  plan. UDB_STARTUP_DRY_RUN=true starts without executing any schema change.
   --profile dev writes loopback posture with mTLS commented out.
 
   Prints to stdout unless --out is given, and refuses to overwrite an existing

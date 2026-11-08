@@ -92,16 +92,37 @@ impl DataBrokerRuntime {
         ))
         .fetch_one(pool)
         .await;
+        // The CDC tailer drains the outbox only while it holds this lease, renewed every 30s. A
+        // tailer that never started (a setting that never reached the process, say) leaves no
+        // row, and its only trace is one info line in the broker log.
+        let tailer_leased = sqlx::query_scalar::<_, bool>(&format!(
+            "SELECT EXISTS (SELECT 1 FROM {} WHERE lock_key = $1 \
+             AND acquired_at > NOW() - INTERVAL '90 seconds')",
+            config.cdc.lock_log_relation()
+        ))
+        .bind(config.cdc.advisory_lock_key)
+        .fetch_one(pool)
+        .await
+        .ok();
         checks.push(match outbox {
             Ok((pending, oldest, dlq)) => {
                 let oldest = oldest.unwrap_or(0);
+                let mut detail = format!(
+                    "{pending} undelivered (oldest {oldest}s, limit {}s), {dlq} dead-lettered",
+                    thresholds.outbox_max_age_secs
+                );
+                if pending > 0 && tailer_leased == Some(false) {
+                    detail.push_str(
+                        "; no CDC tailer holds the delivery lease, so nothing drains it: look \
+                         for 'CDC tailer disabled' or 'CDC engine start refused' in the broker \
+                         log, and check UDB_CDC_JOURNAL_ONLY or the Kafka brokers reach the \
+                         broker process",
+                    );
+                }
                 DeliveryCheck {
                     check: "outbox".to_string(),
                     passed: oldest <= thresholds.outbox_max_age_secs,
-                    detail: format!(
-                        "{pending} undelivered (oldest {oldest}s, limit {}s), {dlq} dead-lettered",
-                        thresholds.outbox_max_age_secs
-                    ),
+                    detail,
                 }
             }
             Err(err) => unreadable("outbox", err),

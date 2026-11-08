@@ -2014,11 +2014,17 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
 
     /// Clear the ledger rows of delta artifacts once the manifest has advanced. The run
     /// history stays in the migration run and operation ledgers.
+    ///
+    /// A reviewed catalog transition records its applied artifacts here too, under
+    /// `catalog-transition/<run>/`, and every start re-proves that transition from them, so
+    /// they are kept: clearing them left the broker refusing to start after any migrating
+    /// start that followed a reviewed transition.
     pub(crate) async fn forget_applied_deltas(&self) -> Result<(), tonic::Status> {
         let schema_migrations =
             ledger_relation(&self.config.migration.ledger_schema, "schema_migrations");
         sqlx::query(&format!(
-            "DELETE FROM {schema_migrations} WHERE migration_kind LIKE 'proto\\_delta%'"
+            "DELETE FROM {schema_migrations} WHERE migration_kind LIKE 'proto\\_delta%' \
+             AND filename NOT LIKE 'catalog-transition/%'"
         ))
         .execute(self.pg_pool()?)
         .await

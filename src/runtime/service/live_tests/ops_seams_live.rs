@@ -452,6 +452,80 @@ async fn a_changed_check_changes_what_the_database_accepts_live() {
         .expect("clean up");
 }
 
+/// An outbox nothing drains says why: no CDC tailer holds the delivery lease. A setting that never
+/// reached the broker process left a day of events undelivered with one info line in the log.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn verify_names_an_outbox_that_no_cdc_tailer_drains_live() {
+    let Some(dsn) = ops_pg_dsn() else {
+        eprintln!("live DSN unset - skipping outbox tailer health");
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let pool = ops_pool(&dsn).await;
+    ensure_system_catalog(&pool).await.expect("system catalog");
+    let config = SystemCatalogConfig::current();
+    let event = Uuid::new_v4();
+    sqlx::query(&format!(
+        "INSERT INTO {} (event_id, topic, payload) VALUES ($1, 'udb.test.tailer.v1', '{{}}')",
+        config.cdc.outbox_relation()
+    ))
+    .bind(event)
+    .execute(&pool)
+    .await
+    .expect("a pending outbox row");
+    let lease = async |age: &str| {
+        sqlx::query(&format!(
+            "INSERT INTO {0} (lock_key, holder_host, acquired_at) VALUES ($1, 'test', NOW() - $2::INTERVAL) \
+             ON CONFLICT (lock_key) DO UPDATE SET holder_host = 'test', acquired_at = NOW() - $2::INTERVAL",
+            config.cdc.lock_log_relation()
+        ))
+        .bind(config.cdc.advisory_lock_key)
+        .bind(age)
+        .execute(&pool)
+        .await
+        .expect("set the tailer lease");
+    };
+    let service = DataBrokerRuntime::from_config(ops_config(&dsn)).await;
+    let outbox = async || {
+        service
+            .delivery_health(crate::runtime::DeliveryThresholds::default())
+            .await
+            .expect("delivery health")
+            .into_iter()
+            .find(|check| check.check == "outbox")
+            .expect("the outbox check")
+            .detail
+    };
+    for _ in 0..3 {
+        lease("1 hour").await;
+        let detail = outbox().await;
+        assert!(
+            detail.contains("no CDC tailer holds the delivery lease"),
+            "{detail}"
+        );
+        lease("0 seconds").await;
+        let detail = outbox().await;
+        assert!(!detail.contains("no CDC tailer"), "a live lease: {detail}");
+    }
+    sqlx::query(&format!(
+        "DELETE FROM {} WHERE event_id = $1",
+        config.cdc.outbox_relation()
+    ))
+    .bind(event)
+    .execute(&pool)
+    .await
+    .expect("clean up the outbox row");
+    sqlx::query(&format!(
+        "DELETE FROM {} WHERE lock_key = $1 AND holder_host = 'test'",
+        config.cdc.lock_log_relation()
+    ))
+    .bind(config.cdc.advisory_lock_key)
+    .execute(&pool)
+    .await
+    .expect("clean up the lease");
+}
+
 /// pg_restore re-creates each rule from its rendered text, and PostgreSQL can render that
 /// re-parsed rule differently from the rule as first written. It is the same rule, so a database
 /// restored from a dump matches its protos.

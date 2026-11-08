@@ -1858,6 +1858,131 @@ impl DataBrokerRuntime {
         ]))
     }
 
+    /// Rebuild the receipts of a completed reviewed transition whose rows were cleared from
+    /// `public.schema_migrations`. Every start re-proves the active transition from them, so
+    /// without them the broker refuses to start. Each receipt is regenerated from the stored
+    /// plan, and they are kept only if they reproduce the transition's stored application
+    /// evidence, which commits to every filename and checksum. Otherwise nothing is written.
+    /// Returns how many receipts were restored.
+    pub async fn restore_reviewed_transition_receipts(
+        &self,
+        run_id: &str,
+    ) -> Result<usize, tonic::Status> {
+        let id = parse_migration_run_id(run_id)?;
+        let control = self.pg_pool()?.clone();
+        let mut tx = control.begin().await.map_err(|err| {
+            catalog_admin_internal_status("restore_receipts_begin", err.to_string())
+        })?;
+        let plan = self.load_reviewed_plan(&mut tx, id).await?.ok_or_else(|| {
+            refusal(
+                "reviewed_plan_missing",
+                "no reviewed transition has this run",
+            )
+        })?;
+        let stored: String = sqlx::query_scalar(&format!(
+            "SELECT application_evidence_sha256 FROM {} WHERE run_id=$1",
+            relation()
+        ))
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status("restore_receipts_evidence", err.to_string())
+        })?;
+        if stored.is_empty() {
+            return Err(refusal(
+                "reviewed_application_incomplete",
+                "this transition never completed its application, so it has no receipts to restore",
+            ));
+        }
+        let target = self
+            .project_postgres_write_target_on_connection(
+                &plan.project_id,
+                Some(&plan.target_instance),
+                Some(&mut *tx),
+            )
+            .await?;
+        if target.provenance_sha256 != plan.target_provenance_sha256 {
+            return Err(refusal(
+                "reviewed_target_authority_changed",
+                "the transition's routed target changed, so its receipts cannot be restored",
+            ));
+        }
+        let artifacts = native_artifacts(id, &plan);
+        let insert = |artifact: &crate::generation::sql::GeneratedArtifact| {
+            sqlx::query(
+                "INSERT INTO public.schema_migrations \
+                 (filename, checksum, state, migration_kind, source_schema, source_table, operation_kind) \
+                 VALUES ($1, $2, 'applied', $3, $4, $5, $3) ON CONFLICT (filename) DO NOTHING",
+            )
+            .bind(artifact.rel_path.clone())
+            .bind(artifact_content_checksum(&artifact.content))
+            .bind(artifact.kind.clone())
+            .bind(artifact.schema.clone())
+            .bind(artifact.table.clone())
+        };
+        let shared = super::accessors::postgres_pools_share_connections(&control, &target.pool);
+        let mut restored = 0usize;
+        if shared {
+            for artifact in &artifacts {
+                restored += insert(artifact)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|err| {
+                        catalog_admin_internal_status("restore_receipts_write", err.to_string())
+                    })?
+                    .rows_affected() as usize;
+            }
+        } else {
+            let mut target_tx = target.pool.begin().await.map_err(|err| {
+                catalog_admin_internal_status("restore_receipts_target_begin", err.to_string())
+            })?;
+            for artifact in &artifacts {
+                restored += insert(artifact)
+                    .execute(&mut *target_tx)
+                    .await
+                    .map_err(|err| {
+                        catalog_admin_internal_status("restore_receipts_write", err.to_string())
+                    })?
+                    .rows_affected() as usize;
+            }
+            target_tx.commit().await.map_err(|err| {
+                catalog_admin_internal_status("restore_receipts_target_commit", err.to_string())
+            })?;
+        }
+        let rebuilt = self
+            .reviewed_application_evidence(&mut tx, id, &plan, &target.pool)
+            .await;
+        if !matches!(&rebuilt, Ok(evidence) if *evidence == stored) {
+            if !shared {
+                // Take back exactly what this call wrote on the separate target.
+                let filenames: Vec<String> = artifacts
+                    .iter()
+                    .map(|artifact| artifact.rel_path.clone())
+                    .collect();
+                let _ = sqlx::query(
+                    "DELETE FROM public.schema_migrations WHERE filename = ANY($1) \
+                     AND migration_kind <> 'reviewed_native_verification'",
+                )
+                .bind(&filenames)
+                .execute(&target.pool)
+                .await;
+            }
+            return Err(match rebuilt {
+                Err(status) => status,
+                Ok(_) => refusal(
+                    "reviewed_application_evidence_mismatch",
+                    "receipts rebuilt from the stored plan do not reproduce the transition's \
+                     stored evidence; nothing was written",
+                ),
+            });
+        }
+        tx.commit().await.map_err(|err| {
+            catalog_admin_internal_status("restore_receipts_commit", err.to_string())
+        })?;
+        Ok(restored)
+    }
+
     pub(super) async fn reviewed_catalog_compatibility_evidence(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,

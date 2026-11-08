@@ -1778,6 +1778,18 @@ async fn run_reviewed_catalog_fixture(single_connection: bool, primary_as_target
     .await
     .unwrap();
 
+    // A migrating start clears the delta ledger; the transition's receipts must survive it, and a
+    // database an earlier release cleared is repaired from the stored plan. Boxed so this large
+    // test future stays within the test thread's stack.
+    Box::pin(receipts_survive_cleanup_and_restore(
+        config.clone(),
+        target_dsn.clone(),
+        target.clone(),
+        control.clone(),
+        fresh_plan.run_id.clone(),
+    ))
+    .await;
+
     // Drop the actual listener and create an independent runtime/service. No
     // previous serving cache or file receipt is consulted by the new runtime.
     served.stop().await;
@@ -2138,6 +2150,111 @@ fn capabilities_profile_authn(
     .with_runtime(Some(service.runtime_snapshot()))
     .with_authz_snapshot(Some(service.authz_snapshot()));
     (authn, authn_config)
+}
+
+/// The transition's receipts survive the delta cleanup a migrating start runs, and receipts an
+/// earlier release cleared are rebuilt from the stored plan only when they reproduce its evidence.
+async fn receipts_survive_cleanup_and_restore(
+    config: UdbConfig,
+    target_dsn: String,
+    target: sqlx::PgPool,
+    control: sqlx::PgPool,
+    run_id: String,
+) {
+    // A migrating start clears the delta ledger once its manifest advances. It must keep this
+    // transition's receipts, or the restart below, which re-proves the transition from them,
+    // refuses to start.
+    let fresh_receipts = format!("catalog-transition/{}/%", run_id);
+    let count_receipts = async |pool: &sqlx::PgPool| -> i64 {
+        sqlx::query_scalar("SELECT COUNT(*) FROM public.schema_migrations WHERE filename LIKE $1")
+            .bind(&fresh_receipts)
+            .fetch_one(pool)
+            .await
+            .expect("count the transition's receipts")
+    };
+    let receipts_before = count_receipts(&target).await;
+    assert!(receipts_before > 0, "the transition recorded no receipts");
+    // The cleanup runs on the database that holds the receipts, as on a single-database
+    // deployment.
+    let mut on_target = config.clone();
+    on_target.primary.direct_dsn = target_dsn;
+    DataBrokerRuntime::from_config(on_target)
+        .await
+        .forget_applied_deltas()
+        .await
+        .expect("clear the applied deltas, as a migrating start does");
+    assert_eq!(
+        count_receipts(&target).await,
+        receipts_before,
+        "clearing the applied deltas took a reviewed transition's receipts"
+    );
+
+    // A database whose receipts an earlier release cleared is repaired by rebuilding them from
+    // the stored plan, and only when they reproduce the stored evidence.
+    let delete_receipts = async || {
+        sqlx::query("DELETE FROM public.schema_migrations WHERE filename LIKE $1")
+            .bind(&fresh_receipts)
+            .execute(&target)
+            .await
+            .expect("clear the receipts, as 0.6.10 did");
+    };
+    let restorer = DataBrokerRuntime::from_config(config.clone()).await;
+    let evidence_relation = "udb_system.udb_catalog_reviewed_transitions";
+    let stored_evidence: String = sqlx::query_scalar(&format!(
+        "SELECT application_evidence_sha256 FROM {evidence_relation} WHERE run_id = $1::UUID"
+    ))
+    .bind(&run_id)
+    .fetch_one(&control)
+    .await
+    .expect("read the stored evidence");
+    // Negative: evidence the rebuilt receipts cannot reproduce writes nothing.
+    delete_receipts().await;
+    sqlx::query(&format!(
+        "UPDATE {evidence_relation} SET application_evidence_sha256 = 'tampered' WHERE run_id = $1::UUID"
+    ))
+    .bind(&run_id)
+    .execute(&control)
+    .await
+    .expect("tamper with the stored evidence");
+    let refused = restorer
+        .restore_reviewed_transition_receipts(&run_id)
+        .await
+        .expect_err("receipts that do not reproduce the evidence are refused");
+    assert!(
+        refused.message().contains("do not reproduce"),
+        "{}",
+        refused.message()
+    );
+    assert_eq!(
+        count_receipts(&target).await,
+        0,
+        "a refused restore wrote receipts"
+    );
+    sqlx::query(&format!(
+        "UPDATE {evidence_relation} SET application_evidence_sha256 = $2 WHERE run_id = $1::UUID"
+    ))
+    .bind(&run_id)
+    .bind(&stored_evidence)
+    .execute(&control)
+    .await
+    .expect("put the evidence back");
+    for _ in 0..3 {
+        delete_receipts().await;
+        let restored = restorer
+            .restore_reviewed_transition_receipts(&run_id)
+            .await
+            .expect("restore the receipts");
+        assert_eq!(restored as i64, receipts_before, "every receipt is rebuilt");
+        assert_eq!(count_receipts(&target).await, receipts_before);
+    }
+    assert_eq!(
+        restorer
+            .restore_reviewed_transition_receipts(&run_id)
+            .await
+            .expect("a second restore is harmless"),
+        0,
+        "receipts already present are left alone"
+    );
 }
 
 async fn capabilities_profile_serve(
