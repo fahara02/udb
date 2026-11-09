@@ -36,6 +36,10 @@ services:
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio123
+      # The object store declares server_side_encryption, so the broker asks MinIO to
+      # encrypt every object, and MinIO refuses without a key. This is MinIO's built-in
+      # static key: for local development only. Use a KMS (MINIO_KMS_KES_*) in production.
+      MINIO_KMS_SECRET_KEY: "udb-dev-key:KX2/0P8P97tsIyhTFfBrSvsMuJM7rtlntgzYsygvsqs="
     ports:
       - "${UDB_MINIO_PORT:-59000}:9000"
       - "${UDB_MINIO_CONSOLE_PORT:-59001}:9001"

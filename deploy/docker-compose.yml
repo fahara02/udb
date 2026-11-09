@@ -153,6 +153,11 @@ services:
   #   environment:
   #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-udb}
   #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+  #     # An object store whose proto sets server_side_encryption makes the broker ask
+  #     # MinIO to encrypt each object; MinIO refuses ("KMS is not configured") until it
+  #     # has a key: MINIO_KMS_SECRET_KEY=<name>:<base64 of 32 bytes> for a single host,
+  #     # or a KES/KMS (MINIO_KMS_KES_*) in production.
+  #     # MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:-}
   #   ports:
   #     - "${UDB_BIND:-127.0.0.1}:9000:9000"
   #     - "${UDB_BIND:-127.0.0.1}:9001:9001"

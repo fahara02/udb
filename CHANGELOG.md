@@ -69,6 +69,10 @@ release line was tagged.
   table had no rows, but every broker seeds its own `organization_owner` rule, so on a real
   broker it never applied and every data call was denied ("no allow rule grants action ...").
   It now applies until an operator writes the first policy. Production still refuses it.
+- **The arbitrary-project examples' MinIO can encrypt.** Their object store declares
+  `server_side_encryption`, so every upload asked MinIO to encrypt and MinIO refused ("KMS is
+  not configured"). Their compose now gives MinIO a dev-only static key; the `deploy/` MinIO
+  block explains the setting. python_arbitary_project passes end to end on a fresh Linux host.
 - **The examples run as their guides say.** Tested on a fresh Linux host: the Go, Python and
   TypeScript enterprise examples expect a read naming another tenant to be refused
   (`UDB_TENANT_MISMATCH`) instead of empty; the Go and Python guides no longer set `UDB_PASS`
