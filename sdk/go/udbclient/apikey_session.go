@@ -157,6 +157,11 @@ func (u *Udb) exchangeWithRetry(ctx context.Context, s *apiKeySession) (time.Tim
 			return exp, nil
 		}
 		lastErr = err
+		// Report each failed attempt as it happens, so CredentialErr shows the problem
+		// while the retries continue rather than only once they are all spent.
+		s.mu.Lock()
+		s.refreshErr = err
+		s.mu.Unlock()
 		if !transientRenewalError(ctx, err) {
 			break
 		}

@@ -17,8 +17,30 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const FIX = process.argv.includes("--fix");
+// `--set <x.y.z>` is the one way to change the release version: it writes every
+// component's version into versions.json, then propagates it like --fix.
+const setIndex = process.argv.indexOf("--set");
+const SET_VERSION = setIndex >= 0 ? process.argv[setIndex + 1] : null;
+if (setIndex >= 0 && !/^\d+\.\d+\.\d+$/.test(SET_VERSION || "")) {
+  console.error("--set needs a release version like 0.6.14");
+  process.exit(2);
+}
+const FIX = SET_VERSION !== null || process.argv.includes("--fix");
 const JSON_OUT = process.argv.includes("--json");
+
+if (SET_VERSION) {
+  const versionsPath = path.join(ROOT, "versions.json");
+  const raw = fs.readFileSync(versionsPath, "utf8");
+  // Replace only the component version values, so the rest of the file stays byte for byte.
+  const updated = raw.replace(/("version":\s*")(\d+\.\d+\.\d+)(")/g, `$1${SET_VERSION}$3`);
+  const components = Object.values(JSON.parse(updated).components);
+  if (components.some((component) => component.version !== SET_VERSION)) {
+    console.error("--set could not update every component version; versions.json has an unexpected shape");
+    process.exit(2);
+  }
+  fs.writeFileSync(versionsPath, updated);
+  console.log(`versions.json: every component set to ${SET_VERSION}`);
+}
 
 const spec = JSON.parse(fs.readFileSync(path.join(ROOT, "versions.json"), "utf8"));
 const PROTOCOL = spec.protocol;
@@ -233,6 +255,20 @@ processTriple("ops bench label", "docs/operations.md", C.udb.version,
   /(bench_snapshot\.py --label "release-)(\d+\.\d+\.\d+)(")/);
 processTriple("example go arbitrary release tag", "examples/go_arbitary_project/README.md", C.udb.version,
   /(e\.g\. `v)(\d+\.\d+\.\d+)(`)/);
+// Examples install a published SDK. Their pins follow the release, or `npm install` /
+// `pip install` / `go mod download` hand a new user an SDK from months ago.
+processTriple("example ts enterprise sdk", "examples/ts_enterprise/package.json", C["sdk-typescript"].version,
+  /("@udb_plus\/sdk": "\^)([^"]*)(")/);
+processTriple("example python arbitrary sdk", "examples/python_arbitary_project/pyproject.toml", C["sdk-python"].version,
+  /("udb-client>=)([^"]*)(")/);
+processTriple("example go arbitrary sdk", "examples/go_arbitary_project/go.mod", C["sdk-go"].version,
+  /(github\.com\/fahara02\/udb\/sdk\/go v)([^\s]+)(\s)/);
+processTriple("example php quickstart sdk", "examples/php_quickstart/composer.json", C["sdk-php"].version,
+  /("fahara02\/udb-laravel": "\^)([^"]*)(")/);
+processTriple("example php arbitrary sdk", "examples/php_arbitary_project/composer.json", C["sdk-php"].version,
+  /("fahara02\/udb-laravel": "\^)([^"]*)(")/);
+processTriple("example native php sdk", "examples/native-services/php/composer.json", C["sdk-php"].version,
+  /("fahara02\/udb-laravel": "\^)([^"]*)(")/);
 processAll("versioning release refs", "VERSIONING.md", C.udb.version,
   /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
 
