@@ -269,7 +269,7 @@ fn authz_default_posture_finding(
             name: "authz-default-allow-production",
             severity: PreflightSeverity::Fail,
             detail: "UDB_ABAC_DEFAULT_ALLOW is set in production: every request would be allowed \
-                     while zero policy rows exist; production startup refuses this"
+                     until an operator writes a policy; production startup refuses this"
                 .to_string(),
             fix: "unset UDB_ABAC_DEFAULT_ALLOW and apply policy with `udb policy apply -f <policies.yaml> --tenant <tenant-uuid>`",
         }),

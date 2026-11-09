@@ -126,12 +126,12 @@ transport: plaintext
 authn: logged in as admin
        tenant code "acme" → canonical UUID 00000000-0000-0000-0000-0000000d0001
        scopes: ["udb:admin","udb:*"]
-authz: data-plane ABAC gates every CRUD op below (default-deny without the seeded policy)
+authz: the Casbin policies in udb_authz.policy_rules gate every CRUD op below (default-deny without them)
 crud:  created invoice 1c1c1c1c-0000-4000-8000-000000000001
 crud:  read    {"invoice_id":"…","tenant_id":"…","amount_cents":4999,"status":"paid",…}
 crud:  updated {…,"status":"refunded",…}
 crud:  deleted; remaining rows = 0
-authz: cross-tenant read (tenant …d9999) → 0 row(s) — isolation enforced
+authz: cross-tenant read (tenant …d999) refused (UDB_TENANT_MISMATCH) — isolation enforced
 
 ENTERPRISE FLOW OK (authn + authz + tenant-scoped CRUD + isolation)
 ```

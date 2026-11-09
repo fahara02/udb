@@ -71,8 +71,8 @@ truth; the SDK is a thin typed client.
    seeded, even the `organization_owner` admin gets `PERMISSION_DENIED` on every
    CRUD call. You seed `udb_authz.policy_rules` using the **real action token**
    (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas`, NOT a `data.*` alias). The
-   dev bypass `UDB_ABAC_DEFAULT_ALLOW=true` works **only while zero policy rows
-   exist** — the first row flips the gate back to deny-by-default.
+   dev bypass `UDB_ABAC_DEFAULT_ALLOW=true` works **only until an operator writes the first policy** (UDB's own
+   organization_owner rule does not count) — the first row flips the gate back to deny-by-default.
 8. **Tenant is a canonical UUID, not the human code.** `udb auth bootstrap user
    --tenant acme` prints a canonical **tenant UUID** (e.g.
    `00000000-0000-0000-0000-0000000d0001`); the login JWT carries that UUID, not
@@ -191,7 +191,7 @@ The deny messages you will see (verbatim, so you can grep):
   policy for this tenant and apply it with `udb policy apply -f <policies.yaml>
   --tenant <tenant-uuid>` (or AuthzService PutAuthzPolicy), then bind
   principals to the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local
-  bootstrap (works only while zero policy rows exist)``
+  bootstrap (works only until an operator writes the first policy)``
 - No rule names this action: ``denied by Casbin PERM model: no policy allows
   action '<act>' on '<selectors>' for this caller in tenant '<t>'. A rule
   matches only when its action is exactly '<act>' (the RPC method name, or the
@@ -1525,8 +1525,7 @@ they need `UDB_AUTH_TARGET` (or `UDB_GRPC_TARGET`) and an admin bearer in
   `UDB_SESSION_HASH_SECRET`.
 
 **Authorization**
-- `UDB_ABAC_DEFAULT_ALLOW=true` — dev bypass; **works only while zero policy rows
-  exist**. Production-discouraged (doctor/preflight WARN).
+- `UDB_ABAC_DEFAULT_ALLOW=true` — dev bypass; **works only until an operator writes the first policy**. Production-discouraged (doctor/preflight WARN).
 - `UDB_AUTHZ_CASBIN_MODEL` / `_PATH` — override the Casbin model
   (`r=sub,dom,obj,act`; `p=sub,dom,obj,act,eft`; `g=_,_`). Startup-validated.
 - `UDB_AUTHZ_SNAPSHOT_TTL_SECS` (alias `UDB_ABAC_REFRESH_SECS`) — policy warm TTL
@@ -1584,7 +1583,7 @@ strings. General map:
 3. **On a DATA call (`:50051`)?** → it's Casbin (Surface 1) — after the coarse
    `udb:read`/`udb:write` scope check (a missing coarse scope is
    `INVALID_ARGUMENT`, see the table above):
-   - Message "no authz policy (default deny)" → **zero policy rows**. Add them
+   - Message "no authz policy (default deny)" → **no operator policy**. Add them
      — straightforward: `udb policy apply -f policies.yaml --tenant <T-UUID>`
      (Option C; or A/B), then `udb auth role bind`; or
      `UDB_ABAC_DEFAULT_ALLOW=true` for dev.
@@ -1982,7 +1981,7 @@ authz, and events apply **uniformly** across all backends.
   (or empty/`*` for a platform-wide rule). A platform admin role with empty
   `tenant_id` spans tenants — use sparingly.
 - **Isolation proof:** the enterprise examples include a cross-tenant read that
-  MUST return empty — keep it as a test.
+  MUST be refused with `UDB_TENANT_MISMATCH` (PERMISSION_DENIED) — keep it as a test.
 
 ## Streaming & batch
 

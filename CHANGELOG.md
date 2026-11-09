@@ -25,6 +25,14 @@ release line was tagged.
   missing" on a NOT NULL column). The SDK now leaves `payload` unset, and the broker treats an
   empty `payload` as no row, so released Python clients write correctly against a new broker.
 - **The Java SDK's entity `upsert` sends the row once**, in `record_json`.
+- **`UDB_ABAC_DEFAULT_ALLOW=true` works again.** The dev switch applied only while the policy
+  table had no rows, but every broker seeds its own `organization_owner` rule, so on a real
+  broker it never applied and every data call was denied ("no allow rule grants action ...").
+  It now applies until an operator writes the first policy. Production still refuses it.
+- **The examples run as their guides say.** Tested on a fresh Linux host: the Go, Python and
+  TypeScript enterprise examples expect a read naming another tenant to be refused
+  (`UDB_TENANT_MISMATCH`) instead of empty; the Go and Python guides no longer set `UDB_PASS`
+  from a variable nothing defines; the toy backend plugin builds outside the broker's workspace.
 
 ## [0.6.13] - 2026-11-09
 

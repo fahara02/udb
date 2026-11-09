@@ -14,7 +14,7 @@
 //
 // Env (see .env.example): UDB_TARGET, UDB_AUTH_TARGET, UDB_USER, UDB_PASS, UDB_TENANT.
 import * as fs from "fs";
-import { UdbProject } from "@udb_plus/sdk";
+import { UdbProject, inspect } from "@udb_plus/sdk";
 
 // The row type is GENERATED from billing/v1/invoice.proto (ts-proto, snake_case)
 // — run `buf generate` (see README). No hand-written duplicate of the schema.
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
     // (One engine: the SDK's udb.authz.can/require and this data-plane gate
     // both decide from the SAME policy_rules table, so a rule seeded here — via
     // udb policy apply or AuthzService.CreatePolicyRule — governs both.)
-    console.log("authz: data-plane ABAC gates every CRUD op below (default-deny without the seeded policy)");
+    console.log("authz: the Casbin policies in udb_authz.policy_rules gate every CRUD op below (default-deny without them)");
 
     // ── 3. CRUD the tenant-scoped billing table with the verified bearer ─────
     const invoices = udb.data.table<Invoice>("billing.v1.Invoice", { key: ["invoice_id"] });
@@ -128,12 +128,19 @@ async function main(): Promise<void> {
     console.log("crud:  deleted; remaining rows =", rows.length);
 
     // ── 4. Tenant isolation (authz, observable) ─────────────────────────────
-    // Ask for a FOREIGN tenant's data: the broker scopes every read to the
-    // bearer's tenant, so another tenant's id returns nothing. (Same single
-    // foreign-select check the Go and Python examples do.)
+    // Naming a FOREIGN tenant is refused outright: the broker never quietly
+    // answers a read for a tenant the bearer is not in. (Same check the Go and
+    // Python examples do.)
     const FOREIGN_TENANT = "00000000-0000-0000-0000-00000000d999";
-    const leaked = await invoices.select({ where: { tenant_id: FOREIGN_TENANT } });
-    console.log(`authz: cross-tenant read (tenant ${FOREIGN_TENANT}) → ${leaked.length} row(s) — isolation enforced`);
+    let refused = false;
+    try {
+      await invoices.select({ where: { tenant_id: FOREIGN_TENANT } });
+    } catch (err) {
+      if (inspect(err).reason !== "UDB_TENANT_MISMATCH") throw err;
+      refused = true;
+    }
+    if (!refused) throw new Error("FAILED: a read naming another tenant was not refused");
+    console.log(`authz: cross-tenant read (tenant ${FOREIGN_TENANT}) refused (UDB_TENANT_MISMATCH) — isolation enforced`);
 
     console.log("\nENTERPRISE FLOW OK (authn + authz + tenant-scoped CRUD + isolation)");
   } finally {

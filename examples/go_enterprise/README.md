@@ -81,10 +81,10 @@ cd ../ts_enterprise
 ./scripts/bootstrap.sh   # creates the admin user + seeds the access policy
 ./scripts/serve.sh
 
-# Terminal 2 — run this example. UDB_PASS is the admin password bootstrap.sh printed:
+# Terminal 2 — run this example. enterprise.env (written by bootstrap.sh) sets UDB_PASS and UDB_TENANT:
 cd ../go_enterprise
 set -a; source ../ts_enterprise/secrets/enterprise.env; set +a   # or export UDB_* yourself
-UDB_PASS="$UDB_ADMIN_PASSWORD" UDB_TENANT=acme go run .
+go run .
 ```
 
 ### Configuration

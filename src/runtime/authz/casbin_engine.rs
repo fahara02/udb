@@ -322,7 +322,27 @@ impl AuthzSnapshot {
     ) -> Decision {
         let decision_id = self.decision_id(req);
 
-        // Dev-only default-allow applies only when there is genuinely no policy.
+        // Dev-only default-allow applies while no operator has written a policy.
+        // UDB seeds its own organization_owner rule into every policy table, so
+        // "no rows at all" never held on a real broker and the switch did nothing;
+        // that rule is not an operator policy. Off, nothing changes: the owner rule
+        // still evaluates below like any other.
+        if self.default_allow
+            && self.policies.iter().all(|policy| {
+                policy.id == crate::runtime::service::auth_service::SYSTEM_ORG_OWNER_POLICY_ID
+            })
+        {
+            return Decision {
+                decision_id,
+                allowed: true,
+                effect: Effect::Allow,
+                deny_reason: String::new(),
+                policy_version: self.version.clone(),
+                relationship_version: self.relationship_version.clone(),
+                audit_required: false,
+                ..Default::default()
+            };
+        }
         if self.policies.is_empty() {
             let allowed = self.default_allow;
             return Decision {
@@ -341,7 +361,7 @@ impl AuthzSnapshot {
                      this tenant and apply it with `udb policy apply -f <policies.yaml> \
                      --tenant <tenant-uuid>` (or AuthzService PutAuthzPolicy), then bind \
                      principals to the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local \
-                     bootstrap (works only while zero policy rows exist)"
+                     bootstrap (works only until an operator writes the first policy)"
                         .to_string()
                 },
                 policy_version: self.version.clone(),
@@ -1059,6 +1079,71 @@ mod tests {
         assert!(
             !decision.allowed,
             "explicit deny must override the broad allow"
+        );
+    }
+
+    fn system_owner_rule() -> AuthzPolicy {
+        AuthzPolicy {
+            id: crate::runtime::service::auth_service::SYSTEM_ORG_OWNER_POLICY_ID.to_string(),
+            enabled: true,
+            effect: Effect::Allow,
+            tenant: "*".to_string(),
+            role: crate::runtime::service::auth_service::ORG_OWNER_ROLE_CODE.to_string(),
+            action: "*".to_string(),
+            resource: "*".to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn default_allow_ignores_the_seeded_owner_rule_and_ends_at_the_first_operator_policy() {
+        // Every broker seeds the organization_owner rule, so a switch that needed
+        // zero rows never applied. It now applies until an operator writes one.
+        let attrs = BTreeMap::new();
+        let resource = ResourceRef::message("acme.billing.v1.Product");
+        let caller = Principal {
+            subject: "dev-caller".to_string(),
+            tenant_id: "acme".to_string(),
+            ..Default::default()
+        };
+
+        let mut dev = AuthzSnapshot::default();
+        dev.policies.push(system_owner_rule());
+        dev.default_allow = true;
+        assert!(
+            dev.casbin_authorize(&query(&caller, &resource, "Delete", &attrs))
+                .await
+                .allowed,
+            "default-allow must apply while only UDB's own rule exists"
+        );
+
+        // Off, the seeded rule is evaluated as before: a non-owner is denied.
+        let mut deny = dev.clone();
+        deny.default_allow = false;
+        assert!(
+            !deny
+                .casbin_authorize(&query(&caller, &resource, "Delete", &attrs))
+                .await
+                .allowed
+        );
+
+        // The first operator policy ends the bypass: an action it does not grant is denied.
+        let mut configured = dev.clone();
+        configured.policies.push(AuthzPolicy {
+            id: "operator-1".to_string(),
+            enabled: true,
+            effect: Effect::Allow,
+            tenant: "acme".to_string(),
+            subject: "dev-caller".to_string(),
+            action: "Select".to_string(),
+            resource: "*".to_string(),
+            ..Default::default()
+        });
+        assert!(
+            !configured
+                .casbin_authorize(&query(&caller, &resource, "Delete", &attrs))
+                .await
+                .allowed
         );
     }
 

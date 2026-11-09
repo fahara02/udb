@@ -147,15 +147,6 @@ docker run --rm -it -v "${PWD}:/app" -w /app --network host php:8.3-cli bash -lc
   "pecl install grpc protobuf >/dev/null && docker-php-ext-enable grpc protobuf && php 01_crud.php"
 ```
 
-## Verify the broker yourself
-
-`.probe-unimplemented.sh` calls every RPC over gRPC reflection and prints which
-are reachable on the public port:
-
-```powershell
-bash .probe-unimplemented.sh 127.0.0.1:50051 | sort
-```
-
 ## Where to go next
 
 - `examples/php_arbitary_project` — vectors, object storage, caching, batch RPCs, a richer schema.

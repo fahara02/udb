@@ -7,7 +7,7 @@
 The Python SDK's UdbProject.login_and_adopt_tenant installs the bearer and the
 canonical tenant across every sub-client (incl. the data plane), so no manual
 bearer plumbing is needed. Run after a broker with a bootstrapped admin + seeded
-ABAC is up (examples/ts_enterprise/scripts/bootstrap.sh + serve.sh work verbatim):
+Casbin policies is up (examples/ts_enterprise/scripts/bootstrap.sh + serve.sh work verbatim):
 
     UDB_PASS=<admin-pass> UDB_TENANT=acme python main.py
 """
@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import sys
 
-from udb_client import create_udb
+from udb_client import create_udb, error_reason
 
 MESSAGE_TYPE = "billing.v1.Invoice"
 
@@ -48,8 +48,8 @@ def main() -> None:
         print(f'       tenant code "{tenant_code}" -> canonical UUID {tenant}')
         print(f"       scopes: {list(authn.principal.scopes)}")
         print(
-            "authz: data-plane ABAC gates every CRUD op below "
-            "(default-deny without the seeded policy)"
+            "authz: the Casbin policies in udb_authz.policy_rules gate every CRUD op below "
+            "(default-deny without them)"
         )
 
         invoice_id = "1c1c1c1c-0000-4000-8000-000000000001"
@@ -83,15 +83,19 @@ def main() -> None:
         udb.data.delete(message_type=MESSAGE_TYPE, filter=scoped)
         print("crud:  deleted")
 
-        # CROSS-TENANT ISOLATION — a read scoped to another tenant returns nothing.
-        other = udb.data.select(
-            message_type=MESSAGE_TYPE,
-            filter={"tenant_id": "00000000-0000-0000-0000-00000000d999"},
-        )
-        print(
-            f"authz: cross-tenant read -> {len(other.records_json)} row(s) "
-            "— isolation enforced"
-        )
+        # CROSS-TENANT ISOLATION — naming another tenant is refused outright: the
+        # broker never quietly answers a read for a tenant the bearer is not in.
+        try:
+            udb.data.select(
+                message_type=MESSAGE_TYPE,
+                filter={"tenant_id": "00000000-0000-0000-0000-00000000d999"},
+            )
+        except Exception as error:  # noqa: BLE001 — the reason is checked below
+            if error_reason(error) != "UDB_TENANT_MISMATCH":
+                raise
+            print("authz: cross-tenant read refused (UDB_TENANT_MISMATCH) — isolation enforced")
+        else:
+            sys.exit("FAILED: a read naming another tenant was not refused")
 
         print("\nENTERPRISE FLOW OK (authn + authz + tenant-scoped CRUD + isolation)")
     finally:

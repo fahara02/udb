@@ -2,7 +2,7 @@
   "name": "udb-ts-enterprise-example",
   "private": true,
   "version": "0.0.0",
-  "description": "Standalone UDB enterprise example: real JWT login + ABAC authorization + tenant-scoped CRUD, using the installed @udb_plus/sdk.",
+  "description": "Standalone UDB enterprise example: real JWT login + Casbin policy authorization + tenant-scoped CRUD, using the installed @udb_plus/sdk.",
   "scripts": {
     "gen": "udb proto export --out proto && buf generate --path proto/billing/v1/invoice.proto",
     "start": "tsx src/main.ts",

@@ -3,7 +3,7 @@
 // tenant-scoped CRUD -> isolation check) in ONE ConnectEnterprise call.
 //
 // Run (after examples/ts_enterprise/scripts/bootstrap.sh + serve.sh are up, or
-// any broker with a bootstrapped admin + seeded ABAC):
+// any broker with a bootstrapped admin + seeded Casbin policies):
 //
 //	UDB_PASS=<admin-pass> UDB_TENANT=acme go run .
 package main
@@ -56,7 +56,7 @@ func main() {
 	fmt.Printf("authn: logged in as %s\n", username)
 	fmt.Printf("       tenant code %q -> canonical UUID %s\n", tenantCode, tenant)
 	fmt.Printf("       scopes: %v\n", session.Principal.GetScopes())
-	fmt.Println("authz: data-plane ABAC gates every CRUD op below (default-deny without the seeded policy)")
+	fmt.Println("authz: the Casbin policies in udb_authz.policy_rules gate every CRUD op below (default-deny without them)")
 
 	const invoiceID = "1c1c1c1c-0000-4000-8000-000000000001"
 
@@ -103,10 +103,16 @@ func main() {
 	}
 	fmt.Println("crud:  deleted")
 
-	// CROSS-TENANT ISOLATION — reads scoped to another tenant return nothing.
-	if other, err := inv.Select(session.DataContext(ctx), map[string]any{"tenant_id": "00000000-0000-0000-0000-00000000d999"}); err == nil {
-		fmt.Printf("authz: cross-tenant read -> %d row(s) — isolation enforced\n", len(other))
+	// CROSS-TENANT ISOLATION — naming another tenant is refused outright: the
+	// broker never quietly answers a read for a tenant the bearer is not in.
+	_, err = inv.Select(session.DataContext(ctx), map[string]any{"tenant_id": "00000000-0000-0000-0000-00000000d999"})
+	if err == nil {
+		log.Fatal("FAILED: a read naming another tenant was not refused")
 	}
+	if reason := udb.Inspect(err).Reason; reason != "UDB_TENANT_MISMATCH" {
+		log.Fatalf("cross-tenant read: %v", err)
+	}
+	fmt.Println("authz: cross-tenant read refused (UDB_TENANT_MISMATCH) — isolation enforced")
 
 	fmt.Println("\nENTERPRISE FLOW OK (authn + authz + tenant-scoped CRUD + isolation)")
 }

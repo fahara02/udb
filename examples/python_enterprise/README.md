@@ -88,10 +88,10 @@ cd ../ts_enterprise
 ./scripts/bootstrap.sh   # creates the admin user + seeds the access policy
 ./scripts/serve.sh
 
-# Terminal 2 — run this example. UDB_PASS is the admin password bootstrap.sh printed:
+# Terminal 2 — run this example. enterprise.env (written by bootstrap.sh) sets UDB_PASS and UDB_TENANT:
 cd ../python_enterprise
 set -a; source ../ts_enterprise/secrets/enterprise.env; set +a   # or export UDB_* yourself
-UDB_PASS="$UDB_ADMIN_PASSWORD" UDB_TENANT=acme python main.py
+python main.py
 ```
 
 ### Configuration
@@ -118,4 +118,4 @@ Everything except `UDB_PASS` has a sensible default:
   what you mean.
 - **Forgetting isolation is server-enforced.** You don't police tenant
   boundaries in your app — UDB's row-level security does. The cross-tenant read
-  at the end of `main.py` returns zero rows to prove it.
+  at the end of `main.py` is refused with `UDB_TENANT_MISMATCH` to prove it.
