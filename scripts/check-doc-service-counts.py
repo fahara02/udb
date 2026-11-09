@@ -72,8 +72,17 @@ def tracked_docs(root: Path = REPO_ROOT) -> list[str]:
     return [p for p in files if p.endswith(DOC_SUFFIXES)]
 
 
+# Byte-for-byte copies of generated docs, kept equal to their source by
+# `udb-skill/sync_references.py --check` in CI, so they are generated too.
+ALLOWED_GENERATED_COPIES = (
+    "udb-skill/plugins/udb/skills/using-udb/references/native-services.md",
+)
+
+
 def is_allowed_dir(rel_path: str) -> bool:
-    return any(rel_path.startswith(prefix) for prefix in ALLOWED_DIR_PREFIXES)
+    return rel_path in ALLOWED_GENERATED_COPIES or any(
+        rel_path.startswith(prefix) for prefix in ALLOWED_DIR_PREFIXES
+    )
 
 
 def readme_marked_span(text: str) -> tuple[int, int] | None:

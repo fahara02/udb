@@ -510,6 +510,9 @@ jobs:
         run: |
           python3 scripts/check-doc-service-counts.py --selftest
           python3 scripts/check-doc-service-counts.py
+          # The Pages site's RPC/service counts come from the generated contract.
+          python3 scripts/site-counts.py --selftest
+          python3 scripts/site-counts.py --check
       - name: No internal tables guard (masterplan §12)
         # Published SDK helpers must not use GenericDispatch to run SQL against
         # internal udb_* control-plane schemas. The legitimate raw binding
