@@ -2152,204 +2152,6 @@ fn capabilities_profile_authn(
     (authn, authn_config)
 }
 
-/// The transition's receipts survive the delta cleanup a migrating start runs, and receipts an
-/// earlier release cleared are rebuilt from the stored plan only when they reproduce its evidence.
-async fn receipts_survive_cleanup_and_restore(
-    config: UdbConfig,
-    target_dsn: String,
-    target: sqlx::PgPool,
-    control: sqlx::PgPool,
-    run_id: String,
-) {
-    // A migrating start clears the delta ledger once its manifest advances. It must keep this
-    // transition's receipts, or the restart below, which re-proves the transition from them,
-    // refuses to start.
-    let fresh_receipts = format!("catalog-transition/{}/%", run_id);
-    let count_receipts = async |pool: &sqlx::PgPool| -> i64 {
-        sqlx::query_scalar("SELECT COUNT(*) FROM public.schema_migrations WHERE filename LIKE $1")
-            .bind(&fresh_receipts)
-            .fetch_one(pool)
-            .await
-            .expect("count the transition's receipts")
-    };
-    let receipts_before = count_receipts(&target).await;
-    assert!(receipts_before > 0, "the transition recorded no receipts");
-    // The cleanup runs on the database that holds the receipts, as on a single-database
-    // deployment.
-    let mut on_target = config.clone();
-    on_target.primary.direct_dsn = target_dsn;
-    DataBrokerRuntime::from_config(on_target)
-        .await
-        .forget_applied_deltas()
-        .await
-        .expect("clear the applied deltas, as a migrating start does");
-    assert_eq!(
-        count_receipts(&target).await,
-        receipts_before,
-        "clearing the applied deltas took a reviewed transition's receipts"
-    );
-
-    // A database whose receipts an earlier release cleared is repaired by rebuilding them from
-    // the stored plan, and only when they reproduce the stored evidence.
-    let delete_receipts = async || {
-        sqlx::query("DELETE FROM public.schema_migrations WHERE filename LIKE $1")
-            .bind(&fresh_receipts)
-            .execute(&target)
-            .await
-            .expect("clear the receipts, as 0.6.10 did");
-    };
-    let restorer = DataBrokerRuntime::from_config(config.clone()).await;
-    let evidence_relation = "udb_system.udb_catalog_reviewed_transitions";
-    let stored_evidence: String = sqlx::query_scalar(&format!(
-        "SELECT application_evidence_sha256 FROM {evidence_relation} WHERE run_id = $1::UUID"
-    ))
-    .bind(&run_id)
-    .fetch_one(&control)
-    .await
-    .expect("read the stored evidence");
-    // Negative: evidence the rebuilt receipts cannot reproduce writes nothing.
-    delete_receipts().await;
-    sqlx::query(&format!(
-        "UPDATE {evidence_relation} SET application_evidence_sha256 = 'tampered' WHERE run_id = $1::UUID"
-    ))
-    .bind(&run_id)
-    .execute(&control)
-    .await
-    .expect("tamper with the stored evidence");
-    let refused = restorer
-        .restore_reviewed_transition_receipts(&run_id)
-        .await
-        .expect_err("receipts that do not reproduce the evidence are refused");
-    assert!(
-        refused.message().contains("do not reproduce"),
-        "{}",
-        refused.message()
-    );
-    assert_eq!(
-        count_receipts(&target).await,
-        0,
-        "a refused restore wrote receipts"
-    );
-    sqlx::query(&format!(
-        "UPDATE {evidence_relation} SET application_evidence_sha256 = $2 WHERE run_id = $1::UUID"
-    ))
-    .bind(&run_id)
-    .bind(&stored_evidence)
-    .execute(&control)
-    .await
-    .expect("put the evidence back");
-    for _ in 0..3 {
-        delete_receipts().await;
-        let restored = restorer
-            .restore_reviewed_transition_receipts(&run_id)
-            .await
-            .expect("restore the receipts");
-        assert_eq!(restored as i64, receipts_before, "every receipt is rebuilt");
-        assert_eq!(count_receipts(&target).await, receipts_before);
-    }
-    assert_eq!(
-        restorer
-            .restore_reviewed_transition_receipts(&run_id)
-            .await
-            .expect("a second restore is harmless"),
-        0,
-        "receipts already present are left alone"
-    );
-
-    // A database restored to a new server, or whose server address changed, answers with another
-    // identity than the one the transition was bound to. A rebind row to an identity no database
-    // answers with stands in for that move: the transition is now bound elsewhere.
-    let rebinds = "udb_system.udb_catalog_reviewed_target_rebinds";
-    sqlx::query(&format!(
-        "INSERT INTO {rebinds}(run_id,from_provenance_sha256,to_provenance_sha256,rebound_by,reason) \
-         VALUES ($1::UUID,'reviewed-here','another-server','test','simulate a server move')"
-    ))
-    .bind(&run_id)
-    .execute(&control)
-    .await
-    .expect("bind the transition to another server");
-    let moved = restorer
-        .restore_reviewed_transition_receipts(&run_id)
-        .await
-        .expect_err("a transition bound to another server is refused");
-    assert!(
-        moved.message().contains("udb catalog rebind-target"),
-        "the refusal names the way out: {}",
-        moved.message()
-    );
-    let count_rebinds = async || -> i64 {
-        sqlx::query_scalar(&format!(
-            "SELECT COUNT(*) FROM {rebinds} WHERE run_id = $1::UUID"
-        ))
-        .bind(&run_id)
-        .fetch_one(&control)
-        .await
-        .expect("count the rebinds")
-    };
-    // Negative: an unattributed rebind writes nothing.
-    restorer
-        .rebind_reviewed_transition_target(&run_id, "operator", " ")
-        .await
-        .expect_err("a rebind without a reason is refused");
-    // Negative: a database that does not hold the reviewed schema cannot take the transition.
-    let (schema, table): (String, String) = sqlx::query_as(&format!(
-        "SELECT plan_json->'target_manifest'->'tables'->0->>'schema', \
-                plan_json->'target_manifest'->'tables'->0->>'table' \
-         FROM {evidence_relation} WHERE run_id = $1::UUID"
-    ))
-    .bind(&run_id)
-    .fetch_one(&control)
-    .await
-    .expect("read a table of the reviewed schema");
-    let rename =
-        |from: &str, to: &str| format!("ALTER TABLE \"{schema}\".\"{from}\" RENAME TO \"{to}\"");
-    let hidden = format!("{table}_moved_away");
-    sqlx::query(&rename(&table, &hidden))
-        .execute(&target)
-        .await
-        .expect("hide a reviewed table");
-    let unverified = restorer
-        .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
-        .await
-        .expect_err("a database without the reviewed schema is refused");
-    assert!(
-        unverified.message().contains("does not hold"),
-        "{}",
-        unverified.message()
-    );
-    sqlx::query(&rename(&hidden, &table))
-        .execute(&target)
-        .await
-        .expect("put the reviewed table back");
-    assert_eq!(count_rebinds().await, 1, "a refused rebind wrote a row");
-
-    let (from, to) = restorer
-        .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
-        .await
-        .expect("a database holding the reviewed schema takes the transition")
-        .expect("the transition moves");
-    assert_eq!(from, "another-server");
-    assert_ne!(to, "another-server");
-    for _ in 0..3 {
-        assert!(
-            restorer
-                .rebind_reviewed_transition_target(&run_id, "operator", "again")
-                .await
-                .expect("a repeated rebind is harmless")
-                .is_none(),
-            "a transition already bound here does not move again"
-        );
-    }
-    assert_eq!(count_rebinds().await, 2, "each move is recorded once");
-    assert_eq!(
-        restorer
-            .restore_reviewed_transition_receipts(&run_id)
-            .await
-            .expect("the moved transition re-proves on this database"),
-        0
-    );
-}
-
 async fn capabilities_profile_serve(
     service: DataBrokerService,
     authn: AuthnServiceImpl,
@@ -3454,3 +3256,201 @@ async fn capabilities_history_correctness(
     );
 }
 // END CAPABILITIES_HISTORY_CI_PROFILE
+
+/// The transition's receipts survive the delta cleanup a migrating start runs, and receipts an
+/// earlier release cleared are rebuilt from the stored plan only when they reproduce its evidence.
+async fn receipts_survive_cleanup_and_restore(
+    config: UdbConfig,
+    target_dsn: String,
+    target: sqlx::PgPool,
+    control: sqlx::PgPool,
+    run_id: String,
+) {
+    // A migrating start clears the delta ledger once its manifest advances. It must keep this
+    // transition's receipts, or the restart below, which re-proves the transition from them,
+    // refuses to start.
+    let fresh_receipts = format!("catalog-transition/{}/%", run_id);
+    let count_receipts = async |pool: &sqlx::PgPool| -> i64 {
+        sqlx::query_scalar("SELECT COUNT(*) FROM public.schema_migrations WHERE filename LIKE $1")
+            .bind(&fresh_receipts)
+            .fetch_one(pool)
+            .await
+            .expect("count the transition's receipts")
+    };
+    let receipts_before = count_receipts(&target).await;
+    assert!(receipts_before > 0, "the transition recorded no receipts");
+    // The cleanup runs on the database that holds the receipts, as on a single-database
+    // deployment.
+    let mut on_target = config.clone();
+    on_target.primary.direct_dsn = target_dsn;
+    DataBrokerRuntime::from_config(on_target)
+        .await
+        .forget_applied_deltas()
+        .await
+        .expect("clear the applied deltas, as a migrating start does");
+    assert_eq!(
+        count_receipts(&target).await,
+        receipts_before,
+        "clearing the applied deltas took a reviewed transition's receipts"
+    );
+
+    // A database whose receipts an earlier release cleared is repaired by rebuilding them from
+    // the stored plan, and only when they reproduce the stored evidence.
+    let delete_receipts = async || {
+        sqlx::query("DELETE FROM public.schema_migrations WHERE filename LIKE $1")
+            .bind(&fresh_receipts)
+            .execute(&target)
+            .await
+            .expect("clear the receipts, as 0.6.10 did");
+    };
+    let restorer = DataBrokerRuntime::from_config(config.clone()).await;
+    let evidence_relation = "udb_system.udb_catalog_reviewed_transitions";
+    let stored_evidence: String = sqlx::query_scalar(&format!(
+        "SELECT application_evidence_sha256 FROM {evidence_relation} WHERE run_id = $1::UUID"
+    ))
+    .bind(&run_id)
+    .fetch_one(&control)
+    .await
+    .expect("read the stored evidence");
+    // Negative: evidence the rebuilt receipts cannot reproduce writes nothing.
+    delete_receipts().await;
+    sqlx::query(&format!(
+        "UPDATE {evidence_relation} SET application_evidence_sha256 = 'tampered' WHERE run_id = $1::UUID"
+    ))
+    .bind(&run_id)
+    .execute(&control)
+    .await
+    .expect("tamper with the stored evidence");
+    let refused = restorer
+        .restore_reviewed_transition_receipts(&run_id)
+        .await
+        .expect_err("receipts that do not reproduce the evidence are refused");
+    assert!(
+        refused.message().contains("do not reproduce"),
+        "{}",
+        refused.message()
+    );
+    assert_eq!(
+        count_receipts(&target).await,
+        0,
+        "a refused restore wrote receipts"
+    );
+    sqlx::query(&format!(
+        "UPDATE {evidence_relation} SET application_evidence_sha256 = $2 WHERE run_id = $1::UUID"
+    ))
+    .bind(&run_id)
+    .bind(&stored_evidence)
+    .execute(&control)
+    .await
+    .expect("put the evidence back");
+    for _ in 0..3 {
+        delete_receipts().await;
+        let restored = restorer
+            .restore_reviewed_transition_receipts(&run_id)
+            .await
+            .expect("restore the receipts");
+        assert_eq!(restored as i64, receipts_before, "every receipt is rebuilt");
+        assert_eq!(count_receipts(&target).await, receipts_before);
+    }
+    assert_eq!(
+        restorer
+            .restore_reviewed_transition_receipts(&run_id)
+            .await
+            .expect("a second restore is harmless"),
+        0,
+        "receipts already present are left alone"
+    );
+
+    // A database restored to a new server, or whose server address changed, answers with another
+    // identity than the one the transition was bound to. A rebind row to an identity no database
+    // answers with stands in for that move: the transition is now bound elsewhere.
+    let rebinds = "udb_system.udb_catalog_reviewed_target_rebinds";
+    sqlx::query(&format!(
+        "INSERT INTO {rebinds}(run_id,from_provenance_sha256,to_provenance_sha256,rebound_by,reason) \
+         VALUES ($1::UUID,'reviewed-here','another-server','test','simulate a server move')"
+    ))
+    .bind(&run_id)
+    .execute(&control)
+    .await
+    .expect("bind the transition to another server");
+    let moved = restorer
+        .restore_reviewed_transition_receipts(&run_id)
+        .await
+        .expect_err("a transition bound to another server is refused");
+    assert!(
+        moved.message().contains("udb catalog rebind-target"),
+        "the refusal names the way out: {}",
+        moved.message()
+    );
+    let count_rebinds = async || -> i64 {
+        sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {rebinds} WHERE run_id = $1::UUID"
+        ))
+        .bind(&run_id)
+        .fetch_one(&control)
+        .await
+        .expect("count the rebinds")
+    };
+    // Negative: an unattributed rebind writes nothing.
+    restorer
+        .rebind_reviewed_transition_target(&run_id, "operator", " ")
+        .await
+        .expect_err("a rebind without a reason is refused");
+    // Negative: a database that does not hold the reviewed schema cannot take the transition.
+    let (schema, table): (String, String) = sqlx::query_as(&format!(
+        "SELECT plan_json->'target_manifest'->'tables'->0->>'schema', \
+                plan_json->'target_manifest'->'tables'->0->>'table' \
+         FROM {evidence_relation} WHERE run_id = $1::UUID"
+    ))
+    .bind(&run_id)
+    .fetch_one(&control)
+    .await
+    .expect("read a table of the reviewed schema");
+    let rename =
+        |from: &str, to: &str| format!("ALTER TABLE \"{schema}\".\"{from}\" RENAME TO \"{to}\"");
+    let hidden = format!("{table}_moved_away");
+    sqlx::query(&rename(&table, &hidden))
+        .execute(&target)
+        .await
+        .expect("hide a reviewed table");
+    let unverified = restorer
+        .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
+        .await
+        .expect_err("a database without the reviewed schema is refused");
+    assert!(
+        unverified.message().contains("does not hold"),
+        "{}",
+        unverified.message()
+    );
+    sqlx::query(&rename(&hidden, &table))
+        .execute(&target)
+        .await
+        .expect("put the reviewed table back");
+    assert_eq!(count_rebinds().await, 1, "a refused rebind wrote a row");
+
+    let (from, to) = restorer
+        .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
+        .await
+        .expect("a database holding the reviewed schema takes the transition")
+        .expect("the transition moves");
+    assert_eq!(from, "another-server");
+    assert_ne!(to, "another-server");
+    for _ in 0..3 {
+        assert!(
+            restorer
+                .rebind_reviewed_transition_target(&run_id, "operator", "again")
+                .await
+                .expect("a repeated rebind is harmless")
+                .is_none(),
+            "a transition already bound here does not move again"
+        );
+    }
+    assert_eq!(count_rebinds().await, 2, "each move is recorded once");
+    assert_eq!(
+        restorer
+            .restore_reviewed_transition_receipts(&run_id)
+            .await
+            .expect("the moved transition re-proves on this database"),
+        0
+    );
+}
