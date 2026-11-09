@@ -61,6 +61,13 @@ def was_duplicate(response: Any) -> bool:
     return bool(getattr(response, "was_duplicate", False))
 
 
+def optional_struct(value: JsonMapping | Struct | None) -> Struct | None:
+    """A request's `payload`, or None when the caller gave none. An empty Struct is
+    still a present payload, and the broker reads a present payload as the row, so
+    sending one beside `record_json` replaced the caller's record with nothing."""
+    return None if value is None else to_struct(value)
+
+
 def to_struct(value: JsonMapping | Struct | None) -> Struct:
     if isinstance(value, Struct):
         return value
@@ -429,7 +436,7 @@ class UdbClient(_ClientBase):
         req = request or types_pb2.UpsertRequest(
             message_type=message_type,
             record_json=to_record_json(record or {}),
-            payload=to_struct(payload),
+            payload=optional_struct(payload),
             conflict_fields=list(conflict_fields),
             return_record=return_record,
             idempotency_key=idempotency_key,
@@ -732,7 +739,7 @@ class UdbClient(_ClientBase):
         req = types_pb2.EnqueueOutboxEventRequest(
             topic=topic,
             partition_key=partition_key,
-            payload=to_struct(payload),
+            payload=optional_struct(payload),
             schema_uri=schema_uri,
             idempotency_key=idempotency_key,
         )
@@ -1208,7 +1215,7 @@ class UdbAsyncClient(_ClientBase):
         req = request or types_pb2.UpsertRequest(
             message_type=message_type,
             record_json=to_record_json(record or {}),
-            payload=to_struct(payload),
+            payload=optional_struct(payload),
             conflict_fields=list(conflict_fields),
             return_record=return_record,
             idempotency_key=idempotency_key,
@@ -1478,7 +1485,7 @@ class UdbAsyncClient(_ClientBase):
         req = types_pb2.EnqueueOutboxEventRequest(
             topic=topic,
             partition_key=partition_key,
-            payload=to_struct(payload),
+            payload=optional_struct(payload),
             schema_uri=schema_uri,
             idempotency_key=idempotency_key,
         )

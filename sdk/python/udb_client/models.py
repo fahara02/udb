@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from udb.entity.v1 import types_pb2
 
-from .client import to_record_json, to_struct
+from .client import optional_struct, to_record_json, to_struct
 from .metadata import Metadata
 
 
@@ -97,7 +97,7 @@ class UpsertCommand(UdbModel):
         request = types_pb2.UpsertRequest(
             message_type=self.message_type,
             record_json=to_record_json(self.record),
-            payload=to_struct(self.payload),
+            payload=optional_struct(self.payload),
             conflict_fields=list(self.conflict_fields),
             return_record=self.return_record,
             idempotency_key=self.idempotency_key,
@@ -132,5 +132,5 @@ class VectorPointModel(UdbModel):
         return types_pb2.VectorPointMutation(
             id=self.id,
             vector=list(self.vector),
-            payload=to_struct(self.payload),
+            payload=optional_struct(self.payload),
         )

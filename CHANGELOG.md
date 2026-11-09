@@ -7,6 +7,25 @@ release line was tagged.
 
 ## [Unreleased]
 
+### Breaking for callers
+
+- **A write that carries two different rows is refused.** An `Upsert`, `Insert` or transaction
+  mutation can carry its row in `payload` or in `record_json`. When both were set, the broker
+  wrote `payload` and dropped `record_json` without a word. Now the same row in both is written
+  from `record_json` (exact for int64), and two different rows are refused.
+  - detect: INVALID_ARGUMENT on field `payload`, "the write carries two different rows, one in
+    payload and one in record_json"
+  - fix: send the row in one field only
+
+### Fixed
+
+- **The Python SDK's record writes no longer store an empty row.** `upsert(record=...)` and the
+  model and async writes always set an empty `payload` Struct beside `record_json`, and the broker
+  read `payload` first, so the row was written with every column missing ("required field ...
+  missing" on a NOT NULL column). The SDK now leaves `payload` unset, and the broker treats an
+  empty `payload` as no row, so released Python clients write correctly against a new broker.
+- **The Java SDK's entity `upsert` sends the row once**, in `record_json`.
+
 ## [0.6.13] - 2026-11-09
 
 ### Breaking for callers

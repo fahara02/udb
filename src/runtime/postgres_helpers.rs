@@ -1174,43 +1174,86 @@ fn strip_nul_json(value: &JsonValue) -> JsonValue {
 // ── Record serialisation ──────────────────────────────────────────────────────
 
 pub(crate) fn upsert_record_json(request: &UpsertRequest) -> Result<JsonValue, tonic::Status> {
-    if let Some(payload) = &request.payload {
-        return Ok(struct_to_json(payload));
-    }
-    if !request.record_json.is_empty() {
-        return serde_json::from_slice(&request.record_json).map_err(|err| {
-            postgres_invalid_field(
-                "record_json",
-                "must contain valid JSON",
-                format!("record_json must be valid JSON: {err}"),
-            )
-        });
-    }
-    Err(postgres_invalid_field(
-        "payload",
-        "payload or record_json must be provided",
-        "payload or record_json is required",
-    ))
+    record_from_fields(request.payload.as_ref(), &request.record_json)
 }
 
 pub(crate) fn mutation_record_json(mutation: &Mutation) -> Result<JsonValue, tonic::Status> {
-    if let Some(payload) = &mutation.payload {
-        return Ok(struct_to_json(payload));
+    record_from_fields(mutation.payload.as_ref(), &mutation.record_json)
+}
+
+/// Whether a write's row arrived in `payload` (true) or in `record_json` (false).
+/// Callers that rewrite the row (scope autofill) put it back where it came from.
+pub(crate) fn mutation_row_is_in_payload(mutation: &Mutation) -> bool {
+    mutation
+        .payload
+        .as_ref()
+        .is_some_and(|payload| !payload.fields.is_empty())
+        && mutation.record_json.is_empty()
+}
+
+/// The row a write carries, from `payload` (a Struct) or `record_json` (JSON bytes).
+///
+/// An empty `payload` Struct carries no row: a client that builds a request from a
+/// record can still set the field (a Struct built from nothing is present on the
+/// wire), and reading it first wrote the row with every column missing. So an empty
+/// `payload` gives way to `record_json`. When both carry a row and they agree, the
+/// row is `record_json`, because a Struct holds every number as a double and
+/// `record_json` keeps int64 exact. When they disagree the write is refused: the
+/// broker never picks one of two different rows for the caller.
+fn record_from_fields(
+    payload: Option<&prost_types::Struct>,
+    record_json: &[u8],
+) -> Result<JsonValue, tonic::Status> {
+    let payload_row = payload
+        .filter(|payload| !payload.fields.is_empty())
+        .map(struct_to_json);
+    if record_json.is_empty() {
+        return match (payload_row, payload) {
+            (Some(row), _) => Ok(row),
+            // An explicitly empty payload is an empty row, as it always was.
+            (None, Some(_)) => Ok(JsonValue::Object(serde_json::Map::new())),
+            (None, None) => Err(postgres_invalid_field(
+                "payload",
+                "payload or record_json must be provided",
+                "payload or record_json is required",
+            )),
+        };
     }
-    if !mutation.record_json.is_empty() {
-        return serde_json::from_slice(&mutation.record_json).map_err(|err| {
-            postgres_invalid_field(
-                "record_json",
-                "must contain valid JSON",
-                format!("record_json must be valid JSON: {err}"),
-            )
-        });
+    let row: JsonValue = serde_json::from_slice(record_json).map_err(|err| {
+        postgres_invalid_field(
+            "record_json",
+            "must contain valid JSON",
+            format!("record_json must be valid JSON: {err}"),
+        )
+    })?;
+    if let Some(payload_row) = payload_row
+        && !same_row(&payload_row, &row)
+    {
+        return Err(postgres_invalid_field(
+            "payload",
+            "must be empty when record_json carries the row",
+            "the write carries two different rows, one in payload and one in record_json; \
+             send the row in one of them",
+        ));
     }
-    Err(postgres_invalid_field(
-        "payload",
-        "payload or record_json must be provided",
-        "payload or record_json is required",
-    ))
+    Ok(row)
+}
+
+/// Row equality across the two encodings: a Struct number is a double, so a number
+/// equals another when both read as the same double.
+fn same_row(left: &JsonValue, right: &JsonValue) -> bool {
+    match (left, right) {
+        (JsonValue::Number(a), JsonValue::Number(b)) => a.as_f64() == b.as_f64(),
+        (JsonValue::Array(a), JsonValue::Array(b)) => {
+            a.len() == b.len() && a.iter().zip(b).all(|(x, y)| same_row(x, y))
+        }
+        (JsonValue::Object(a), JsonValue::Object(b)) => {
+            a.len() == b.len()
+                && a.iter()
+                    .all(|(key, x)| b.get(key).is_some_and(|y| same_row(x, y)))
+        }
+        _ => left == right,
+    }
 }
 
 pub(crate) fn record_values(
@@ -1289,6 +1332,93 @@ mod tests {
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
     use serde_json::json;
+
+    fn upsert_with(payload: Option<JsonValue>, record_json: &str) -> UpsertRequest {
+        UpsertRequest {
+            payload: payload.map(|row| {
+                crate::runtime::executor_utils::json_to_struct(&row).expect("object row")
+            }),
+            record_json: record_json.as_bytes().to_vec(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn an_empty_payload_gives_way_to_record_json() {
+        // A client that builds the request from a record can leave an empty payload
+        // Struct set; the row in record_json is the one written, not an empty row.
+        let request = upsert_with(Some(json!({})), r#"{"id":"c1","email":"a@b.c"}"#);
+        assert_eq!(
+            upsert_record_json(&request).unwrap(),
+            json!({"id": "c1", "email": "a@b.c"})
+        );
+    }
+
+    #[test]
+    fn one_carrier_alone_is_the_row() {
+        let payload_only = upsert_with(Some(json!({"id": "c2"})), "");
+        assert_eq!(
+            upsert_record_json(&payload_only).unwrap(),
+            json!({"id": "c2"})
+        );
+        let json_only = upsert_with(None, r#"{"id":"c3"}"#);
+        assert_eq!(upsert_record_json(&json_only).unwrap(), json!({"id": "c3"}));
+        let empty_payload = upsert_with(Some(json!({})), "");
+        assert_eq!(upsert_record_json(&empty_payload).unwrap(), json!({}));
+        let status = upsert_record_json(&upsert_with(None, "")).unwrap_err();
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn the_same_row_in_both_reads_record_json_exactly() {
+        // A released Java client sends the row in both fields. They agree, and
+        // record_json keeps an int64 the Struct's double would round.
+        let big = 9_007_199_254_740_993_i64;
+        let request = upsert_with(
+            Some(json!({"id": "c4", "n": big, "tags": [1, 2]})),
+            &format!(r#"{{"id":"c4","n":{big},"tags":[1,2]}}"#),
+        );
+        assert_eq!(
+            upsert_record_json(&request).unwrap(),
+            json!({"id": "c4", "n": big, "tags": [1, 2]})
+        );
+    }
+
+    #[test]
+    fn two_different_rows_are_refused() {
+        for (payload, record_json) in [
+            (json!({"id": "c5"}), r#"{"id":"c6"}"#),
+            (json!({"id": "c5"}), r#"{"id":"c5","extra":1}"#),
+            (json!({"id": "c5", "n": 1}), r#"{"id":"c5","n":2}"#),
+        ] {
+            let status = upsert_record_json(&upsert_with(Some(payload), record_json)).unwrap_err();
+            assert_eq!(status.code(), tonic::Code::InvalidArgument);
+            assert!(
+                status.message().contains("two different rows"),
+                "{}",
+                status.message()
+            );
+        }
+    }
+
+    #[test]
+    fn a_mutation_resolves_its_row_by_the_same_rule() {
+        let mutation = Mutation {
+            payload: crate::runtime::executor_utils::json_to_struct(&json!({})),
+            record_json: br#"{"id":"m1"}"#.to_vec(),
+            ..Default::default()
+        };
+        assert_eq!(
+            mutation_record_json(&mutation).unwrap(),
+            json!({"id": "m1"})
+        );
+        assert!(!mutation_row_is_in_payload(&mutation));
+        let in_payload = Mutation {
+            payload: crate::runtime::executor_utils::json_to_struct(&json!({"id": "m2"})),
+            ..Default::default()
+        };
+        assert!(mutation_row_is_in_payload(&in_payload));
+    }
 
     #[test]
     fn geography_point_is_not_classified_as_an_integer_type() {

@@ -82,7 +82,6 @@ public final class UdbEntityHandle {
             .setContext(context(client.metadata()))
             .setMessageType(messageType)
             .setRecordJson(ByteString.copyFromUtf8(toJson(record)))
-            .setPayload(toStruct(record))
             .addAllConflictFields(key)
             .setReturnRecord(returnRecord);
     if (idempotencyKey != null && !idempotencyKey.isBlank()) {

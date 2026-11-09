@@ -91,7 +91,9 @@ fn autofill_tx_mutation_scope(
                     continue;
                 };
                 autofill_record(table, &mut record, context)?;
-                if mutation.payload.is_some() {
+                // Put the filled row back in the one field it came from, and leave
+                // the other empty so the two can never carry different rows.
+                if mutation_row_is_in_payload(mutation) {
                     mutation.payload = json_to_struct(&record);
                 } else {
                     mutation.record_json = serde_json::to_vec(&record).map_err(|err| {
@@ -100,6 +102,7 @@ fn autofill_tx_mutation_scope(
                             format!("record encode failed: {err}"),
                         )
                     })?;
+                    mutation.payload = None;
                 }
             }
             "update" | "delete" => {

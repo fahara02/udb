@@ -1112,6 +1112,24 @@ def test_table_writes_send_no_conflict_fields_like_go(project) -> None:
     assert [list(request.conflict_fields) for request in captured] == [[], []]
 
 
+def test_a_record_write_sends_no_payload_field(project) -> None:
+    # An empty payload Struct is still a present field on the wire, and the broker
+    # reads `payload` before `record_json`: the row would be written empty. A write
+    # built from a record must leave `payload` unset; an explicit payload is sent.
+    captured: list[Any] = []
+
+    def capture(request, *, metadata=None, timeout=None):
+        captured.append(request)
+        return types_pb2.MutationResponse(affected_rows=1)
+
+    project.data.stub.Upsert = project.data.stub.Insert = capture
+    project.data.upsert(message_type="acme.v1.Customer", record={"id": "c1", "email": "a@b.c"})
+    project.data.upsert(message_type="acme.v1.Customer", payload={"id": "c2"})
+    project.data.upsert(message_type="acme.v1.Customer", payload={})
+    assert [request.HasField("payload") for request in captured] == [False, True, True]
+    assert json.loads(captured[0].record_json) == {"id": "c1", "email": "a@b.c"}
+
+
 def test_update_if_never_writes_the_key_or_scope_columns(project) -> None:
     table = Table(project, SPEC)
     stored = row()
