@@ -39,7 +39,7 @@ change. The diff warns about a hint left behind.
 | `udb drift --prior prior.json` | What will this change do, by count? | `0` no drift, `1` drift found |
 | `udb plan --prior prior.json --emit-approval-plan plan.json` | The exact plan the broker will accept | `0` |
 
-`udb drift` and `udb plan` read the protos under `./proto` in the current directory,
+`udb drift`, `udb plan` and `udb verify` read the protos under `./proto` in the current directory,
 so run them from your project root. `drift` exits `1` whenever it finds a change, so a
 script that runs it with `set -e` must allow that.
 

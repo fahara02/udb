@@ -74,12 +74,13 @@ UDB_MANIFEST_EXPORT_PATH="$WORK/prior.json" "$UDB" manifest-export "$WORK/proto"
 [ -s "$WORK/prior.json" ] || fail "manifest-export wrote nothing"
 echo "prior manifest saved"
 
-# `udb drift` and `udb plan` read the protos under ./proto, so run them where the current
-# version is.
+# `udb drift`, `udb plan` and `udb verify` read the protos under ./proto, so run them
+# where the current version is.
 drift() { (cd "$WORK" && "$UDB" drift --prior "$WORK/prior.json"); }
 # `udb drift` exits 1 when it finds drift, so keep its report and print the summary.
 drift_report() { drift >"$1" 2>&1 || true; grep -m1 "^drift" "$1"; }
 plan() { (cd "$WORK" && "$UDB" plan --prior "$WORK/prior.json" --emit-approval-plan "$1"); }
+verify_live() { (cd "$WORK" && "$UDB" verify --live --dsn "$UDB_PG_DSN"); }
 save_prior() { UDB_MANIFEST_EXPORT_PATH="$WORK/prior.json" "$UDB" manifest-export "$WORK/proto" >/dev/null; }
 column_count() {
   sql "SELECT count(*) FROM information_schema.columns WHERE table_schema='shop' AND table_name='orders' AND column_name='$1'"
@@ -87,7 +88,7 @@ column_count() {
 
 step "4. Add a nullable column (v2) and see what it will do"
 use_protos v2
-set +e; "$UDB" verify --live --dsn "$UDB_PG_DSN" >"$WORK/verify-v2.txt" 2>&1; rc=$?; set -e
+set +e; verify_live >"$WORK/verify-v2.txt" 2>&1; rc=$?; set -e
 [ "$rc" -ne 0 ] || fail "verify --live should report the column the protos add"
 echo "verify --live exit $rc: the database lacks the new column"
 drift_report "$WORK/drift-v2.txt"
@@ -109,7 +110,7 @@ grep -q '"data_destructive": false' "$WORK/plan-v2.json" || fail "AddColumn is n
 UDB_MIGRATE_ENABLED=false UDB_MIGRATION_APPROVAL_PLAN="$WORK/plan-v2.json" start_broker approved >/dev/null \
   || fail "the approved start refused (see $WORK/broker-approved.log)"
 stop_broker
-"$UDB" verify --live --dsn "$UDB_PG_DSN" >/dev/null || fail "verify --live still finds drift after the apply"
+verify_live >/dev/null || fail "verify --live still finds drift after the apply"
 [ "$(column_count customer_note)" = 1 ] || fail "customer_note was not added"
 [ "$(sql "SELECT count(*) FROM shop.orders")" = 2 ] || fail "rows changed"
 echo "customer_note added, rows intact, verify --live clean"
