@@ -56,10 +56,17 @@ source "$SECRETS/hmac.env"
 
 # Mint the admin OFFLINE (needs only the DSN + password-hash secret).
 echo "bootstrapping admin user '$ADMIN_USER' (tenant code '$TENANT_CODE')..."
-BOOT_OUT="$(UDB_PG_DSN="$PG_DSN" UDB_PASSWORD_HASH_SECRET="$UDB_PASSWORD_HASH_SECRET" \
+# Creating a user seals one-time-code material too, so the CLI needs the session hash
+# secret as well as the password one (serve.sh gives the broker the same pair).
+if ! BOOT_OUT="$(UDB_PG_DSN="$PG_DSN" UDB_PASSWORD_HASH_SECRET="$UDB_PASSWORD_HASH_SECRET" \
+  UDB_SESSION_HASH_SECRET="$UDB_SESSION_HASH_SECRET" \
   "$CLI" auth bootstrap user \
     --username "$ADMIN_USER" --email "${ADMIN_USER}@acme.example" \
-    --password "$ADMIN_PASS" --tenant "$TENANT_CODE" --project default 2>&1)"
+    --password "$ADMIN_PASS" --tenant "$TENANT_CODE" --project default 2>&1)"; then
+  echo "$BOOT_OUT" >&2
+  echo "FAILED: udb auth bootstrap user (output above)" >&2
+  exit 1
+fi
 echo "$BOOT_OUT"
 TENANT_ID="$(printf '%s' "$BOOT_OUT" | grep -oE '"tenant_id"[[:space:]]*:[[:space:]]*"[^"]+"' | head -1 | sed -E 's/.*"tenant_id"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
 if [[ -z "$TENANT_ID" ]]; then echo "FAILED: could not parse canonical tenant_id from bootstrap output" >&2; exit 1; fi

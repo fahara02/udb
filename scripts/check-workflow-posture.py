@@ -4443,6 +4443,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/check-beta-versioning-posture.py", "beta versioning posture guard"),
     ("scripts/check-scaffold-compiles.sh", "scaffold compile guard"),
     ("scripts/check-doc-service-counts.py", "doc service-count guard"),
+    ("scripts/site-counts.py", "site surface-count guard"),
     ("scripts/check-no-internal-tables.py", "public-doc internal table guard"),
     ("scripts/check-markdown-links.mjs", "markdown link guard"),
     ("scripts/check-enterprise-readiness.mjs", "enterprise readiness guard"),
