@@ -60,11 +60,12 @@ final class TlsCredentials
     }
 
     /**
-     * The channel credentials for the `tls` block: insecure when TLS is off.
+     * The channel credentials for the `tls` block. With TLS off this is the gRPC
+     * extension's insecure credentials, which it represents as null.
      *
      * @param  array<string,mixed>  $tls
      */
-    public static function channelCredentials(array $tls): ChannelCredentials
+    public static function channelCredentials(array $tls): ?ChannelCredentials
     {
         if (! self::enabled($tls)) {
             return ChannelCredentials::createInsecure();
