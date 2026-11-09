@@ -137,5 +137,10 @@ services:
       - /bin/sh
       - -lc
       - |
-        if [ ! -d vendor ]; then php84 /usr/bin/composer.phar install; fi
-        php84 acme_billing.php
+        if [ ! -d vendor ]; then php84 /usr/bin/composer.phar install --no-interaction || exit 1; fi
+        # The broker is started, not yet ready: try for up to a minute, as the other smokes do.
+        for i in $(seq 1 30); do
+          php84 acme_billing.php && exit 0
+          sleep 2
+        done
+        exit 1

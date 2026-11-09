@@ -6,12 +6,6 @@
     "require": {
         "fahara02/udb-laravel": "^0.6.13"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/fahara02/udb-laravel.git"
-        }
-    ],
     "autoload": {
         "psr-4": {
             "PhpArbitaryProject\\": "gen/PhpArbitaryProject/"

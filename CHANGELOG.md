@@ -26,8 +26,8 @@ release line was tagged.
   mints the first admin and applies the data policies. Run on a fresh Linux host: both listeners
   serve and `udb doctor` reports only the optional services left off.
 - **A native-services tour that runs.** `examples/native-services` logs in on the real path
-  (control plane on `:50061`, password login, tenant UUID from the token) and calls every one of
-  the 28 native services in Go, TypeScript and Python, one line per service; a service whose
+  (control plane on `:50061`, password login, tenant UUID from the token) and calls every native
+  service in Go, TypeScript and Python, one line per service; a service whose
   backend is not configured prints the broker's reason and is counted as skipped. The old
   example dialed the data port with header-trusted scopes and covered three services. Run on a
   fresh Linux host: 24 called, 4 skipped (no Redis, Kafka or object store), in all three.
@@ -73,6 +73,11 @@ release line was tagged.
   `server_side_encryption`, so every upload asked MinIO to encrypt and MinIO refused ("KMS is
   not configured"). Their compose now gives MinIO a dev-only static key; the `deploy/` MinIO
   block explains the setting. python_arbitary_project passes end to end on a fresh Linux host.
+- **The PHP examples install their SDK from Packagist.** `php_arbitary_project` and
+  `php_quickstart` named the SDK's GitHub repository, which Composer cloned over SSH, so an
+  install without GitHub SSH access failed; and `php_arbitary_project` committed a lock that
+  pinned a local dev build. Both now resolve `fahara02/udb-laravel` from Packagist, and the
+  arbitrary-project smoke retries while the broker starts, as the Go and Python ones do.
 - **The examples run as their guides say.** Tested on a fresh Linux host: the Go, Python and
   TypeScript enterprise examples expect a read naming another tenant to be refused
   (`UDB_TENANT_MISMATCH`) instead of empty; the Go and Python guides no longer set `UDB_PASS`
