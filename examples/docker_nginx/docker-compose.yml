@@ -1,0 +1,102 @@
+# UDB behind nginx: a small "shop" project served over TLS.
+#
+#   client ──TLS :443──> nginx ──h2c──> udb:50051  /udb.services.v1.DataBroker/*
+#                                   └──> udb:50061  /udb.core.*  (login, authz, ...)
+#   udb ──> postgres
+#
+# Only nginx publishes a port. The broker and Postgres are reachable on the
+# compose network alone, which is what makes plaintext between nginx and the
+# broker acceptable here (README "Moving to production" covers the rest).
+#
+#   ./scripts/setup.sh                                   # certs, secrets, admin, policies
+#   docker compose up -d --wait
+#   docker compose --profile client run --rm client      # prints ... OK
+
+name: udb-docker-nginx
+
+services:
+  postgres:
+    # Postgres 16 + PostGIS + pg_partman, shared with deploy/.
+    build: ../../deploy/postgres
+    image: udb-postgres:16-postgis-partman
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: udb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./scripts/setup.sh first}
+      POSTGRES_DB: udb
+    shm_size: 256mb
+    volumes:
+      - shop-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U udb -d udb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  udb:
+    image: ${UDB_IMAGE:-ghcr.io/fahara02/udb}:${UDB_VERSION:?set UDB_VERSION in .env}
+    platform: linux/amd64
+    restart: unless-stopped
+    # Serve this project's protos (proto/shop/v1/order.proto).
+    command: ["serve", "/srv/proto", "", "0.0.0.0:50051"]
+    env_file: .env
+    environment:
+      # Native control plane on the container network, for nginx to reach.
+      UDB_AUTH_GRPC_ADDR: 0.0.0.0:50061
+      UDB_METRICS_ADDR: 0.0.0.0:50052
+      UDB_PROTO_ROOT: /srv/proto
+    volumes:
+      - ./proto:/srv/proto:ro
+      - ./secrets:/run/udb-secrets:ro
+    # No published ports: clients go through nginx. Metrics on loopback only.
+    ports:
+      - "127.0.0.1:50052:50052"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=127.0.0.1:50051"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 6
+    stop_grace_period: 30s
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/server.crt:/etc/nginx/certs/server.crt:ro
+      - ./certs/server.key:/etc/nginx/certs/server.key:ro
+    ports:
+      - "${UDB_EDGE_BIND:-127.0.0.1}:${UDB_EDGE_PORT:-443}:443"
+    depends_on:
+      udb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  # The example client. Not started by `up`; run it with
+  #   docker compose --profile client run --rm client
+  client:
+    profiles: ["client"]
+    build: ./client
+    image: udb-docker-nginx-client
+    env_file:
+      - path: admin.env
+        required: false
+    environment:
+      UDB_TARGET: nginx:443
+      UDB_CA_CERT: /certs/ca.crt
+    volumes:
+      - ./certs/ca.crt:/certs/ca.crt:ro
+    depends_on:
+      nginx:
+        condition: service_healthy
+
+volumes:
+  shop-pg:

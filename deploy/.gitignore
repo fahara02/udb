@@ -1,0 +1,6 @@
+# Generated per deployment by scripts/init.sh and scripts/bootstrap.sh. Secret.
+.env
+.env.bak-*
+admin.env
+secrets/
+policies/

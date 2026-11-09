@@ -1,0 +1,243 @@
+# UDB — single-host docker compose deployment.
+#
+# ON by default: the broker (pinned release image) and Postgres (PostGIS +
+# pg_partman). That is enough for the data plane and every native service that
+# needs only Postgres: authn, authz, apikey, tenant, idp, vault, config, control,
+# analytics, metering, scheduler, workflow, webhook, lock, livequery, search,
+# embedding, messaging, backup (metadata) and the WebRTC room/track/peer records.
+#
+# OFF (commented out below): Redis, MinIO, Qdrant, Kafka and LiveKit. Each block
+# names the native services that need it and the broker lines to uncomment. The
+# full map is docs/generated/native-services.md; `udb requirements` reports
+# what your own protos need.
+#
+# First run (README.md has the full walk-through):
+#   ./scripts/init.sh        # .env + generated secrets + RS256 keys
+#   ./scripts/bootstrap.sh   # first admin + default-deny data policies
+#   docker compose up -d --wait
+#
+# Every published port binds ${UDB_BIND} (loopback by default). Put a TLS proxy
+# in front for anything else; examples/docker_nginx shows one.
+
+name: udb
+
+services:
+  postgres:
+    build: ./postgres
+    image: udb-postgres:16-postgis-partman
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: udb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./scripts/init.sh first}
+      POSTGRES_DB: udb
+    shm_size: 256mb
+    ports:
+      - "${UDB_BIND:-127.0.0.1}:5432:5432"
+    volumes:
+      - udb-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U udb -d udb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  udb:
+    image: ${UDB_IMAGE:-ghcr.io/fahara02/udb}:${UDB_VERSION:?set UDB_VERSION in .env}
+    # The release image is published for linux/amd64 only.
+    platform: linux/amd64
+    restart: unless-stopped
+    # udb serve <proto_root> <namespace> <listen_addr>: serve the project protos
+    # mounted at /srv/proto on the data-plane port.
+    command: ["serve", "/srv/proto", "", "0.0.0.0:50051"]
+    env_file: .env
+    environment:
+      # Native control plane (udb.core.* services: auth, authz, storage, ...).
+      # Its default is loopback (data port + 10), unreachable from outside the
+      # container, so bind every interface of the container network.
+      UDB_AUTH_GRPC_ADDR: 0.0.0.0:50061
+      UDB_METRICS_ADDR: 0.0.0.0:50052
+      # So `udb requirements` / `udb doctor` run in this container read the same protos.
+      UDB_PROTO_ROOT: /srv/proto
+
+      # ── Redis ── uncomment with the redis service below.
+      # Needed by: cache (CacheService); also the shared rate-limit window
+      # across broker replicas (without it each process counts on its own).
+      # UDB_REDIS_DSN: redis://redis:6379/0
+
+      # ── MinIO (S3) ── uncomment with the minio + minio-bootstrap services.
+      # Needed by: storage (StorageService), asset (AssetService), backup
+      # artifacts, and any proto that declares an object bucket.
+      # UDB_MINIO_ENDPOINT: http://minio:9000
+      # UDB_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-udb}
+      # UDB_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-}
+      # UDB_MINIO_REGION: us-east-1
+      # UDB_STORAGE_BUCKET: udb-storage
+
+      # ── Qdrant ── uncomment with the qdrant service.
+      # Needed by: protos that declare a vector collection (data-plane vector
+      # search) and the vectors embedding results are written to.
+      # UDB_QDRANT_URL: http://qdrant:6333
+
+      # ── Kafka ── uncomment with the kafka service.
+      # Needed by: notification (NotificationService), CDC delivery to Kafka
+      # topics, and the embedding sidecar's work queue.
+      # UDB_KAFKA_BROKERS: kafka:9092
+      # UDB_CDC_JOURNAL_ONLY: "false"
+
+      # ── LiveKit ── uncomment with the livekit service.
+      # Needed by: webrtc_* services when media goes through an SFU. The peer
+      # listener (data port + 20) is loopback by default; bind it too.
+      # UDB_LIVEKIT_URL: ws://livekit:7880
+      # UDB_LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      # UDB_LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+      # UDB_LIVEKIT_ALLOW_INSECURE: "1"   # only for ws:// on a private network; use wss:// otherwise
+      # UDB_WEBRTC_GRPC_ADDR: 0.0.0.0:50071
+    volumes:
+      - ./proto:/srv/proto:ro
+      # RS256 key pair written by init.sh (owned by the image's udb user).
+      - ./secrets:/run/udb-secrets:ro
+    ports:
+      - "${UDB_BIND:-127.0.0.1}:50051:50051"   # data plane (DataBroker)
+      - "${UDB_BIND:-127.0.0.1}:50061:50061"   # native control plane (udb.core.*)
+      - "${UDB_BIND:-127.0.0.1}:50052:50052"   # Prometheus metrics
+      # - "${UDB_BIND:-127.0.0.1}:50071:50071" # WebRTC peer listener (with LiveKit)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # redis:
+      #   condition: service_healthy
+      # minio-bootstrap:
+      #   condition: service_completed_successfully
+      # qdrant:
+      #   condition: service_healthy
+      # kafka:
+      #   condition: service_healthy
+      # livekit:
+      #   condition: service_started
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=127.0.0.1:50051"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 6
+    stop_grace_period: 30s
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  # For: cache service, shared rate limiting. AOF stays on: UDB's Redis store
+  # refuses to run against `appendonly no`.
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
+  #   command: ["redis-server", "--appendonly", "yes"]
+  #   ports:
+  #     - "${UDB_BIND:-127.0.0.1}:6379:6379"
+  #   volumes:
+  #     - udb-redis:/data
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 20
+
+  # ── MinIO (S3-compatible object store) ───────────────────────────────────
+  # For: storage, asset, backup. Also set MINIO_ROOT_USER / MINIO_ROOT_PASSWORD
+  # in .env. minio-bootstrap creates the bucket StorageService presigns
+  # against (udb-storage); presigned PUTs 404 without it. Presigned URLs carry
+  # the endpoint host (minio:9000), so clients outside this network need that
+  # name to resolve to MinIO (README "Turn on storage").
+  # Pin a digest for production (cgr.dev/chainguard/minio@sha256:...).
+  # minio:
+  #   image: cgr.dev/chainguard/minio:latest
+  #   restart: unless-stopped
+  #   command: ["server", "/data", "--console-address", ":9001"]
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-udb}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+  #   ports:
+  #     - "${UDB_BIND:-127.0.0.1}:9000:9000"
+  #     - "${UDB_BIND:-127.0.0.1}:9001:9001"
+  #   volumes:
+  #     - udb-minio:/data
+  #   healthcheck:
+  #     test: ["CMD", "mc", "ready", "local"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 20
+  #
+  # minio-bootstrap:
+  #   image: cgr.dev/chainguard/minio:latest
+  #   depends_on:
+  #     minio:
+  #       condition: service_healthy
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-udb}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+  #   entrypoint: >-
+  #     /bin/sh -c "
+  #     mc alias set local http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\" &&
+  #     mc mb --ignore-existing local/udb-storage &&
+  #     echo 'bucket ready: udb-storage'"
+
+  # ── Qdrant (vector store) ────────────────────────────────────────────────
+  # For: vector collections declared in your protos.
+  # qdrant:
+  #   image: qdrant/qdrant:v1.18.2
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${UDB_BIND:-127.0.0.1}:6333:6333"
+  #   volumes:
+  #     - udb-qdrant:/qdrant/storage
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 20
+
+  # ── Kafka (official apache/kafka image, KRaft, single node) ──────────────
+  # For: notification, CDC to Kafka, the embedding sidecar. One listener for
+  # clients inside this network (kafka:9092). Topic auto-creation stays off:
+  # create topics deliberately.
+  # kafka:
+  #   image: apache/kafka:3.9.0
+  #   restart: unless-stopped
+  #   environment:
+  #     KAFKA_NODE_ID: 1
+  #     KAFKA_PROCESS_ROLES: broker,controller
+  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+  #     KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,CONTROLLER://kafka:9093
+  #     KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
+  #     KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  #     KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+  #     KAFKA_LOG_DIRS: /var/lib/kafka/data
+  #   volumes:
+  #     - udb-kafka:/var/lib/kafka/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 20
+
+  # ── LiveKit (WebRTC SFU) ─────────────────────────────────────────────────
+  # For: webrtc_* services with an SFU. `--dev` uses the devkey/secret pair;
+  # for real use give LiveKit a config file with your own keys and a TLS
+  # (wss://) endpoint. Browsers must reach 7880/7881 and the UDP port directly.
+  # livekit:
+  #   image: livekit/livekit-server:v1.8.4
+  #   restart: unless-stopped
+  #   command: ["--dev", "--bind", "0.0.0.0"]
+  #   ports:
+  #     - "${UDB_BIND:-127.0.0.1}:7880:7880"
+  #     - "${UDB_BIND:-127.0.0.1}:7881:7881"
+  #     - "${UDB_BIND:-127.0.0.1}:7882:7882/udp"
+
+volumes:
+  udb-pg:
+  # udb-redis:
+  # udb-minio:
+  # udb-qdrant:
+  # udb-kafka:

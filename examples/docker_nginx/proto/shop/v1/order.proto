@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package shop.v1;
+
+// The broker embeds the UDB annotation contract, so this import resolves
+// without copying UDB's protos into the project.
+import "udb/core/common/v1/db.proto";
+
+// A tenant-scoped order. `tenant_column` makes the broker enforce tenant
+// isolation on every read and write: a principal only ever sees and changes its
+// own tenant's rows, whatever the client sends.
+message Order {
+  option (udb.core.common.v1.table) = {
+    table_name: "orders"
+    schema_name: "shop"
+    migration_order: 10
+    is_table: true
+    comment: "Orders for the UDB docker + nginx example"
+  };
+
+  string order_id = 1 [(udb.core.common.v1.column) = {
+    column_name: "order_id"
+    sql_type: "UUID"
+    primary_key: true
+    default_value: "gen_random_uuid()"
+  }];
+
+  string tenant_id = 2 [(udb.core.common.v1.column) = {
+    column_name: "tenant_id"
+    sql_type: "UUID"
+    tenant_column: true
+    not_null: true
+  }];
+
+  string customer_email = 3 [(udb.core.common.v1.column) = {
+    column_name: "customer_email"
+    sql_type: "VARCHAR(320)"
+    not_null: true
+  }];
+
+  int64 total_cents = 4 [(udb.core.common.v1.column) = {
+    column_name: "total_cents"
+    sql_type: "BIGINT"
+    not_null: true
+    default_value: "0"
+  }];
+
+  string status = 5 [(udb.core.common.v1.column) = {
+    column_name: "status"
+    sql_type: "VARCHAR(32)"
+    not_null: true
+    default_value: "'placed'"
+  }];
+
+  string created_at = 6 [(udb.core.common.v1.column) = {
+    column_name: "created_at"
+    sql_type: "TIMESTAMPTZ"
+    not_null: true
+    default_value: "now()"
+    exclude_from_insert: true
+    exclude_from_update: true
+  }];
+}

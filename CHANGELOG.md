@@ -17,6 +17,18 @@ release line was tagged.
     payload and one in record_json"
   - fix: send the row in one field only
 
+### Added
+
+- **A deployment compose stack, `deploy/`.** The released broker image and Postgres
+  (PostGIS + pg_partman) run as shipped; Redis, MinIO, Qdrant, Kafka and LiveKit are commented
+  blocks that name the native services needing each and the broker lines to uncomment.
+  `scripts/init.sh` writes `.env` and the RS256 keys with `udb env fill`; `scripts/bootstrap.sh`
+  mints the first admin and applies the data policies. Run on a fresh Linux host: both listeners
+  serve and `udb doctor` reports only the optional services left off.
+- **`examples/docker_nginx`: UDB behind nginx.** TLS at nginx, gRPC routed by path (DataBroker to
+  `:50051`, `udb.core.*` native services to `:50061`), and a client that logs in, makes a native
+  call and writes and reads a row through it. Run on a fresh Linux host.
+
 ### Fixed
 
 - **The Python SDK's record writes no longer store an empty row.** `upsert(record=...)` and the
