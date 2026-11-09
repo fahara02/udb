@@ -319,10 +319,10 @@ consumer keep trying to reach the broker. Set **`UDB_CDC_ENABLED=false`** to mak
 this a clean full-stop: the tailer and consumer never start, **and** nothing
 writes transactional-outbox rows: data mutations, auth events and native-service
 events alike (so `udb_system.outbox_events` no longer grows unbounded with no
-consumer to drain it). A caller that asks for an event explicitly
-(`EnqueueOutboxEvent`, a transaction's enqueue step, DLQ replay) gets
-`FAILED_PRECONDITION`. To deliver events without Kafka, keep CDC on and set
-`UDB_CDC_JOURNAL_ONLY=true`. Default is enabled.
+consumer to drain it). An event a caller enqueues by name
+(`EnqueueOutboxEvent`, a transaction's enqueue step, DLQ replay) is still stored
+and is delivered once CDC runs. To deliver events without Kafka, keep CDC on and
+set `UDB_CDC_JOURNAL_ONLY=true`. Default is enabled.
 
 - When CDC stays enabled but Kafka is briefly unreachable, the broker no longer
   floods the log: the "failed to publish to kafka" and consumer recv-error lines

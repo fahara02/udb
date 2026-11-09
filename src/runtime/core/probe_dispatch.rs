@@ -619,11 +619,6 @@ impl DataBrokerRuntime {
         valid_topics: &[String],
         context: &RequestContext,
     ) -> Result<EnqueueOutboxEventResult, tonic::Status> {
-        if !crate::runtime::cdc::cdc_delivery_enabled() {
-            return Err(crate::runtime::cdc::cdc_delivery_disabled_status(
-                "EnqueueOutboxEvent",
-            ));
-        }
         let pool = self.pg_pool()?;
 
         // Validate topic against the database policy table when populated, then
@@ -690,7 +685,7 @@ impl DataBrokerRuntime {
         let outbox_relation = cdc_config.outbox_relation();
         // ONE shared insert path (`cdc::insert_outbox_row`) — same SQL + bind types as
         // every other outbox writer, so the §4 prepared-statement collision can't recur.
-        crate::runtime::cdc::insert_outbox_row(
+        crate::runtime::cdc::insert_requested_outbox_row(
             pool,
             &outbox_relation,
             event_id_uuid,

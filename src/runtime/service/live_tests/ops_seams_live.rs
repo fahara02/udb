@@ -452,9 +452,11 @@ async fn a_changed_check_changes_what_the_database_accepts_live() {
         .expect("clean up");
 }
 
-/// `UDB_CDC_ENABLED=false` stops every outbox write, not only the data path's. Native-service
-/// and auth events kept landing in an outbox no tailer drained (196k rows in three days on one
-/// deployment). The switch is read once per process, so each setting runs in its own child.
+/// `UDB_CDC_ENABLED=false` stops the broker's own events, not only the data path's.
+/// Native-service and auth events kept landing in an outbox no tailer drained (196k rows in
+/// three days on one deployment). An event a caller enqueues by name is still stored, to be
+/// delivered once a tailer runs. The switch is read once per process, so each setting runs in
+/// its own child.
 #[tokio::test]
 #[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
 async fn cdc_off_writes_no_outbox_rows_live() {
@@ -534,29 +536,36 @@ async fn cdc_off_writes_no_outbox_rows_live() {
     assert_eq!(
         written().await,
         0,
-        "with CDC off an event was written to the outbox"
+        "with CDC off a side-effect event was written to the outbox"
     );
-    // A caller that asks for an event explicitly is told why it is not written.
+    // An event a caller enqueues by name is stored, as asked, each time.
     let service = DataBrokerRuntime::from_config(ops_config(&dsn)).await;
-    let refused = service
-        .enqueue_outbox_event(
-            topic,
-            &key,
-            json!({"tenant_id": "cdc-gate"}),
-            None,
-            None,
-            &[],
-            &crate::broker::RequestContext::default(),
-        )
-        .await
-        .expect_err("an explicit enqueue with CDC off is refused");
-    assert_eq!(refused.code(), tonic::Code::FailedPrecondition);
-    assert!(
-        refused.message().contains("UDB_CDC_ENABLED=false"),
-        "{}",
-        refused.message()
-    );
-    assert_eq!(written().await, 0, "a refused enqueue wrote a row");
+    for expected in 1..=2 {
+        service
+            .enqueue_outbox_event(
+                topic,
+                &key,
+                json!({
+                    "event_id": Uuid::new_v4().to_string(),
+                    "event_type": topic,
+                    "correlation_id": "cdc-gate",
+                    "document_id": key,
+                    "tenant_id": "cdc-gate",
+                    "envelope_version": crate::runtime::cdc::EVENT_ENVELOPE_VERSION,
+                }),
+                None,
+                None,
+                &[],
+                &crate::broker::RequestContext::default(),
+            )
+            .await
+            .expect("an explicit enqueue is stored with CDC off");
+        assert_eq!(
+            written().await,
+            expected,
+            "the requested event was not stored"
+        );
+    }
 }
 
 /// An outbox nothing drains says why: no CDC tailer holds the delivery lease. A setting that never

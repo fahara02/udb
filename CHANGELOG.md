@@ -21,17 +21,6 @@ release line was tagged.
     "UDB_MIGRATE_ENABLED=false and the protos change the project's schema"
   - fix: review the change with `udb plan`, approve it and set `UDB_MIGRATION_APPROVAL_PLAN` to the
     plan, or set `UDB_MIGRATE_ENABLED=true` for the start that should apply it
-- **`UDB_CDC_ENABLED=false` now stops every outbox write, and explicit event requests are refused.**
-  Native-service and auth events (locks, authorization checks, cache, logins and the rest) were
-  written to the outbox with CDC off, where nothing drained them: one deployment collected 196,000
-  rows in three days. They are no longer written. `EnqueueOutboxEvent`, a transaction's
-  `enqueue_outbox_event` step and DLQ replay now fail with `FAILED_PRECONDITION` instead of writing
-  a row nothing would deliver. The metering rollup worker, whose only output is events, does not
-  start.
-  - detect: env: `UDB_CDC_ENABLED=false`, and a caller of `EnqueueOutboxEvent`, a transaction
-    enqueue step or DLQ replay now gets `FAILED_PRECONDITION` "CDC delivery is disabled"
-  - fix: enable CDC (with Kafka, or `UDB_CDC_JOURNAL_ONLY=true`) where events must be delivered;
-    rows already pending drain once a tailer runs
 
 ### Added
 
@@ -46,6 +35,14 @@ release line was tagged.
 
 ### Fixed
 
+- **`UDB_CDC_ENABLED=false` stops the broker's own events too.** Data mutations already skipped
+  their change events with CDC off, but native-service and auth events (locks, authorization
+  checks, cache, logins and the rest) were still written to the outbox, where nothing drained
+  them: one deployment collected 196,000 rows in three days. They are no longer written, and the
+  metering rollup worker, whose only output is events, does not start. An event a caller enqueues
+  by name (`EnqueueOutboxEvent`, a transaction's enqueue step, DLQ replay) is still stored, and is
+  delivered once CDC runs. Rows already pending drain when CDC is enabled (with Kafka, or
+  `UDB_CDC_JOURNAL_ONLY=true`).
 - **The CDC tailer logs each published event at debug, not info.** One line per event was 196,000
   lines while a backlog drained.
 

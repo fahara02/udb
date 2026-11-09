@@ -4572,11 +4572,6 @@ impl DataBrokerRuntime {
     ) -> Result<String, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let id: Uuid = parse_dlq_id(dlq_id)?;
-        if !crate::runtime::cdc::cdc_delivery_enabled() {
-            return Err(crate::runtime::cdc::cdc_delivery_disabled_status(
-                "DLQ replay",
-            ));
-        }
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::current();
         let dlq_rel = config.dlq_relation();
@@ -4652,7 +4647,7 @@ impl DataBrokerRuntime {
         // with the SAME SQL + bind types as every other writer. `replay_event_id` is
         // already a `Uuid` (Copy), and the canonical insert binds `$1::UUID` — folding
         // the prior bare-`$1` insert into the shared shape so it can't drift (§4).
-        crate::runtime::cdc::insert_outbox_row(
+        crate::runtime::cdc::insert_requested_outbox_row(
             &mut *tx,
             &outbox_rel,
             replay_event_id,

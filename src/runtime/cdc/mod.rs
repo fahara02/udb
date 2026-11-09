@@ -26,22 +26,6 @@ use wildmatch::WildMatch;
 use crate::generation::CatalogManifest;
 use crate::metrics::MetricsRecorder;
 
-/// The refusal for a caller that explicitly asked for a change event while delivery
-/// is off: the event could only sit undrained, so it is not written.
-pub(crate) fn cdc_delivery_disabled_status(what: &str) -> tonic::Status {
-    crate::runtime::executor_utils::failed_precondition_fields(
-        format!(
-            "{what}: CDC delivery is disabled (UDB_CDC_ENABLED=false), so no change event is \
-             written; nothing would deliver it. Enable CDC (with Kafka, or \
-             UDB_CDC_JOURNAL_ONLY=true) to publish events"
-        ),
-        [(
-            "UDB_CDC_ENABLED".to_string(),
-            "change-event delivery is off".to_string(),
-        )],
-    )
-}
-
 /// One info line per process the first time an event is skipped, so an operator can see
 /// why the outbox stays empty without a line per write.
 fn note_outbox_write_skipped(topic: &str) {
@@ -66,6 +50,11 @@ fn note_outbox_write_skipped(topic: &str) {
 /// that poisoned the pooled connection and cascaded into bogus "invalid byte sequence
 /// for encoding UTF8" failures on the next clean write (§4). Taking `event_id: Uuid`
 /// makes that drift unrepresentable at the type level.
+///
+/// This is the path for events the broker emits as a side effect of a write (data
+/// mutations, auth and native-service events), so it honours `UDB_CDC_ENABLED=false`:
+/// with no tailer such a row is never drained. An event a caller enqueues explicitly
+/// goes through [`insert_requested_outbox_row`] instead.
 pub(crate) async fn insert_outbox_row<'c, E>(
     executor: E,
     relation: &str,
@@ -77,12 +66,27 @@ pub(crate) async fn insert_outbox_row<'c, E>(
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
-    // Every outbox writer passes through here, so the delivery switch holds for all of
-    // them: with no tailer, a written row is never drained.
     if !cdc_delivery_enabled() {
         note_outbox_write_skipped(topic);
         return Ok(());
     }
+    insert_requested_outbox_row(executor, relation, event_id, topic, partition_key, envelope).await
+}
+
+/// The same insert for an event a caller asked for by name (`EnqueueOutboxEvent`, DLQ
+/// replay). It is stored even with CDC delivery off, as the caller requested, and is
+/// delivered once a tailer runs; a transaction's enqueue step stores it the same way.
+pub(crate) async fn insert_requested_outbox_row<'c, E>(
+    executor: E,
+    relation: &str,
+    event_id: Uuid,
+    topic: &str,
+    partition_key: &str,
+    envelope: &serde_json::Value,
+) -> Result<(), sqlx::Error>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
     let topic = strip_nul_text(topic);
     let partition_key = strip_nul_text(partition_key);
     let mut envelope = strip_nul_json(envelope);
@@ -244,12 +248,11 @@ pub(crate) fn fnv1a_64(bytes: &[u8]) -> u64 {
 
 /// Whether CDC change-event delivery is enabled. This gates BOTH every outbox
 /// WRITE AND the tailer / storage-finalized consumer that drain it, so
-/// `UDB_CDC_ENABLED=false` is a full stop: nothing writes outbox rows that nothing
-/// will drain (no unbounded `outbox_events` growth) and no broker connection is
-/// opened. Event side effects (data mutations, auth and native-service events) are
-/// skipped at [`insert_outbox_row`]; a caller that asked for an event explicitly
-/// (`EnqueueOutboxEvent`, a transaction's enqueue step, DLQ replay, a `cdc_required`
-/// mutation) is refused with [`cdc_delivery_disabled_status`]. Default = enabled.
+/// `UDB_CDC_ENABLED=false` is a full stop for the broker's own events: no side-effect
+/// event (data mutations, auth and native-service events) is written to an outbox that
+/// nothing drains, and no broker connection is opened. They are skipped at
+/// [`insert_outbox_row`]. An event a caller enqueues by name is still stored and waits
+/// for a tailer, and a `cdc_required` mutation is refused. Default = enabled.
 /// Resolved once: the env is fixed for the process lifetime, and this is read on the
 /// mutation hot path.
 pub(crate) fn cdc_delivery_enabled() -> bool {
