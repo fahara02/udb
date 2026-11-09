@@ -658,6 +658,11 @@ class _Entity:
                 raise _invalid(f"unknown expected column {field_name}")
             if column in out:
                 raise _invalid(f"expected column supplied through two aliases: {column}")
+            # A JSON column holds the document its text encodes, and the broker
+            # compares `expected` as that document: "[]" must equal the [] it stored.
+            if isinstance(value, str) and _is_json(self.options[column]):
+                out[column] = _json_column_document(column, value)
+                continue
             out[column] = copy.deepcopy(value)
         return out
 

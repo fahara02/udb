@@ -125,6 +125,9 @@ class EnterpriseConfig:
     user_id: str = ""
     tls: bool = False
     root_certificates: bytes | None = None
+    #: PEM client certificate chain + key for a mutual-TLS endpoint; both or neither.
+    client_certificate_chain: bytes | None = None
+    client_private_key: bytes | None = field(default=None, repr=False)
     deadline: float | None = 30.0
     channel_options: Sequence[tuple[str, Any]] | None = None
     retry: Any = None
@@ -183,6 +186,8 @@ class EnterpriseSession(UdbProject):
                 service_identity="",
                 tls=config.tls,
                 root_certificates=config.root_certificates,
+                client_certificate_chain=config.client_certificate_chain,
+                client_private_key=config.client_private_key,
                 deadline=config.deadline,
                 channel_options=config.channel_options,
                 retry=config.retry,

@@ -1,4 +1,7 @@
 using System.Net.Http;
+using System.Net.Security;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using Grpc.Net.Client;
 
 namespace Udb.Client;
@@ -39,4 +42,81 @@ public static class UdbChannel
     /// </summary>
     public static GrpcChannel ForAddress(string address) =>
         GrpcChannel.ForAddress(address, DefaultOptions());
+
+    /// <summary>
+    /// Create a long-lived <c>https://</c> channel that trusts
+    /// <paramref name="trustedRoots"/> instead of the system store (a private CA) and,
+    /// when <paramref name="clientCertificate"/> is set, presents it to a mutual-TLS
+    /// endpoint. Either may be null; both null is <see cref="ForAddress(string)"/>.
+    /// </summary>
+    public static GrpcChannel ForAddress(
+        string address,
+        X509Certificate2Collection? trustedRoots,
+        X509Certificate2? clientCertificate) =>
+        GrpcChannel.ForAddress(address, DefaultOptions(trustedRoots, clientCertificate));
+
+    /// <summary>
+    /// <see cref="DefaultOptions()"/> plus a custom trust store and an optional client
+    /// certificate on the handler's TLS options.
+    /// </summary>
+    public static GrpcChannelOptions DefaultOptions(
+        X509Certificate2Collection? trustedRoots,
+        X509Certificate2? clientCertificate)
+    {
+        var options = DefaultOptions();
+        var handler = (SocketsHttpHandler)options.HttpHandler!;
+        if (clientCertificate is not null)
+        {
+            if (!clientCertificate.HasPrivateKey)
+            {
+                throw new ArgumentException(
+                    "udb: the client certificate has no private key; mutual TLS needs both", nameof(clientCertificate));
+            }
+            handler.SslOptions.ClientCertificates = new X509CertificateCollection { clientCertificate };
+        }
+        if (trustedRoots is { Count: > 0 })
+        {
+            var policy = new X509ChainPolicy
+            {
+                TrustMode = X509ChainTrustMode.CustomRootTrust,
+                // Same as the SslStream default: no revocation fetch for a private CA.
+                RevocationMode = X509RevocationMode.NoCheck,
+            };
+            policy.CustomTrustStore.AddRange(trustedRoots);
+            handler.SslOptions.CertificateChainPolicy = policy;
+        }
+        return options;
+    }
+
+    /// <summary>
+    /// Load a PEM client certificate chain and its PEM private key (for example the
+    /// files an nginx <c>ssl_verify_client</c> deployment issues) as a certificate
+    /// usable for mutual TLS.
+    /// </summary>
+    public static X509Certificate2 LoadClientCertificate(string certificatePemPath, string privateKeyPemPath)
+    {
+        var certificate = X509Certificate2.CreateFromPemFile(certificatePemPath, privateKeyPemPath);
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return certificate;
+        }
+        // SChannel cannot use a PEM key held only in memory; round-trip through
+        // PKCS#12 so the key is usable for the TLS handshake on Windows.
+        using (certificate)
+        {
+            return new X509Certificate2(certificate.Export(X509ContentType.Pkcs12));
+        }
+    }
+
+    /// <summary>Load every certificate in a PEM bundle, for <c>trustedRoots</c>.</summary>
+    public static X509Certificate2Collection LoadTrustedRoots(string pemBundlePath)
+    {
+        var roots = new X509Certificate2Collection();
+        roots.ImportFromPemFile(pemBundlePath);
+        if (roots.Count == 0)
+        {
+            throw new ArgumentException($"udb: {pemBundlePath} holds no PEM certificate", nameof(pemBundlePath));
+        }
+        return roots;
+    }
 }

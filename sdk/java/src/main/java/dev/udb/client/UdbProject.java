@@ -61,11 +61,11 @@ public final class UdbProject implements AutoCloseable {
     this.metadata = new UdbMetadataRef(initialMetadata);
     this.credentials = UdbCredentials.fromMetadata(initialMetadata);
 
-    this.dataChannel = channel(config.target(), config.tls());
+    this.dataChannel = channel(config.target(), config);
     this.authChannel =
         config.authTarget().equals(config.target())
             ? dataChannel
-            : channel(config.authTarget(), config.tls());
+            : channel(config.authTarget(), config);
     // WebRTC rides the control-plane channel unless a distinct webrtcTarget is
     // configured.
     if (config.webrtcTarget().equals(config.authTarget())) {
@@ -73,7 +73,7 @@ public final class UdbProject implements AutoCloseable {
     } else if (config.webrtcTarget().equals(config.target())) {
       this.webrtcChannel = dataChannel;
     } else {
-      this.webrtcChannel = channel(config.webrtcTarget(), config.tls());
+      this.webrtcChannel = channel(config.webrtcTarget(), config);
     }
 
     this.data = new UdbClient(dataChannel, metadata, credentials);
@@ -101,9 +101,12 @@ public final class UdbProject implements AutoCloseable {
     return new UdbProject(config);
   }
 
-  private static ManagedChannel channel(String target, boolean tls) {
-    // Long-lived channel with UDB keepalive + UNAVAILABLE retry; reused across RPCs.
-    return UdbChannels.forTarget(target, tls);
+  private static ManagedChannel channel(String target, UdbProjectConfig config) {
+    // Long-lived channel with UDB keepalive; reused across RPCs.
+    if (config.channelCredentials() != null) {
+      return UdbChannels.forTarget(target, config.channelCredentials());
+    }
+    return UdbChannels.forTarget(target, config.tls());
   }
 
   // ── Raw clients / stubs (reachable, never hidden) ──────────────────────────

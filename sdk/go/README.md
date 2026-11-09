@@ -106,6 +106,23 @@ if err != nil {
 }
 ```
 
+## TLS, A Private CA, And Mutual TLS
+
+`Config.TLS` is a `*tls.Config`, so a private CA (`RootCAs`) and a client
+certificate for a mutual-TLS endpoint such as nginx with `ssl_verify_client on`
+(`Certificates`) are set there. `ConfigFromEnv` builds it from
+`UDB_TLS_CA_FILE` (PEM bundle to trust instead of the system roots) and
+`UDB_TLS_CERT_FILE` + `UDB_TLS_KEY_FILE` (client certificate chain and key, set
+both or neither). Any of the three turns TLS on; a file that cannot be read or
+parsed is an error naming the variable and path.
+
+```sh
+UDB_TARGET=udb.example.com:443
+UDB_TLS_CA_FILE=/etc/udb/ca.pem
+UDB_TLS_CERT_FILE=/etc/udb/client.pem
+UDB_TLS_KEY_FILE=/etc/udb/client.key
+```
+
 ## Timestamps: One Text Form
 
 udb returns every TIMESTAMPTZ value in one text form: RFC 3339 in UTC with

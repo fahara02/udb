@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Grpc.Net.Client;
 using Udb.Entity.V1;
 using Udb.Services.V1;
@@ -54,6 +55,18 @@ public sealed record UdbProjectConfig
     /// every returned bundle and throws on mismatch. Unset disables verification.
     /// </summary>
     public string? PolicyBundleSecret { get; init; }
+
+    /// <summary>
+    /// Certificates to trust instead of the system store for <c>https://</c> targets
+    /// (a private CA). See <see cref="UdbChannel.LoadTrustedRoots"/>.
+    /// </summary>
+    public X509Certificate2Collection? TlsTrustedRoots { get; init; }
+
+    /// <summary>
+    /// Client certificate (with its private key) presented to a mutual-TLS endpoint.
+    /// See <see cref="UdbChannel.LoadClientCertificate"/>.
+    /// </summary>
+    public X509Certificate2? TlsClientCertificate { get; init; }
 }
 
 /// <summary>
@@ -97,9 +110,11 @@ public sealed class UdbProject : IAsyncDisposable, IDisposable
 
         var authTarget = string.IsNullOrEmpty(config.AuthTarget) ? config.Target : config.AuthTarget!;
         var webrtcTarget = string.IsNullOrEmpty(config.WebrtcTarget) ? authTarget : config.WebrtcTarget!;
-        _dataChannel = UdbChannel.ForAddress(config.Target);
+        GrpcChannel Dial(string address) =>
+            UdbChannel.ForAddress(address, config.TlsTrustedRoots, config.TlsClientCertificate);
+        _dataChannel = Dial(config.Target);
         _separateAuthChannel = !string.Equals(authTarget, config.Target, StringComparison.Ordinal);
-        _authChannel = _separateAuthChannel ? UdbChannel.ForAddress(authTarget) : _dataChannel;
+        _authChannel = _separateAuthChannel ? Dial(authTarget) : _dataChannel;
         _nativeServicesChannel = _authChannel;
         // WebRTC rides the control-plane channel unless a distinct webrtcTarget is set.
         if (string.Equals(webrtcTarget, authTarget, StringComparison.Ordinal))
@@ -114,7 +129,7 @@ public sealed class UdbProject : IAsyncDisposable, IDisposable
         }
         else
         {
-            _webrtcChannel = UdbChannel.ForAddress(webrtcTarget);
+            _webrtcChannel = Dial(webrtcTarget);
             _separateWebrtcChannel = true;
         }
 

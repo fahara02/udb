@@ -18,8 +18,10 @@
 //   dotnet run -- admin
 //   UDB_API_KEY=udbk_... dotnet run -- consumer
 //
-// The integration `udb` service sets UDB_ABAC_DEFAULT_ALLOW=true so the admin
-// RPCs authorize without first bootstrapping policies for this example's identity.
+// This is an older dev-mode flow: it authorizes by sending `x-scopes: udb:*` as a
+// gRPC header, which the broker honours only when started with
+// UDB_ALLOW_HEADER_SCOPES=true (never in production). For the real login path see
+// ../README.md (the Go/TypeScript/Python tour).
 
 using Udb.Client;
 using AuthnV1 = udb.core.Authn.Services.V1;

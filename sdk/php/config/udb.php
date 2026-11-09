@@ -32,17 +32,23 @@ return [
     |--------------------------------------------------------------------------
     |
     | `tls.enabled` switches the channel from `createInsecure()` to
-    | `createSsl()`. When enabled, supply `tls.root_certs` as the
-    | absolute path to a PEM bundle. Server name override (`tls.target`)
-    | is useful when the broker presents a cert for a logical name
-    | different from `endpoint`'s host.
+    | `createSsl()`. `tls.root_certs` is the absolute path to a PEM bundle
+    | to trust instead of the system roots (a private CA). For a mutual-TLS
+    | endpoint (for example nginx with `ssl_verify_client on`), set
+    | `tls.cert_chain` and `tls.private_key` to the PEM client certificate
+    | and its key; both or neither. Any of the three paths turns TLS on, and
+    | a path that cannot be read is an error, never a silent fallback.
+    | Server name override (`tls.target`) is useful when the broker presents
+    | a cert for a logical name different from `endpoint`'s host.
     |
     */
 
     'tls' => [
-        'enabled'   => env('UDB_TLS_ENABLED', false),
-        'root_certs' => env('UDB_TLS_ROOT_CERTS', null),
-        'target'    => env('UDB_TLS_TARGET', null),
+        'enabled'     => env('UDB_TLS_ENABLED', false),
+        'root_certs'  => env('UDB_TLS_CA_FILE', env('UDB_TLS_ROOT_CERTS', null)),
+        'cert_chain'  => env('UDB_TLS_CERT_FILE', null),
+        'private_key' => env('UDB_TLS_KEY_FILE', null),
+        'target'      => env('UDB_TLS_TARGET', null),
     ],
 
     /*

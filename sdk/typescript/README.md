@@ -104,6 +104,28 @@ udb.principal(); // the verified principal
 udb.bearerExpiresAt(); // when the exchanged bearer expires
 ```
 
+A private CA and mutual TLS (for example nginx with `ssl_verify_client on`) come
+from `UDB_TLS_CA_FILE` (PEM bundle to trust instead of the system roots) and
+`UDB_TLS_CERT_FILE` + `UDB_TLS_KEY_FILE` (client certificate chain and key, set
+both or neither). Any of them turns TLS on; an unreadable file is an error naming
+the variable and path. In code, pass the PEMs as `tls`:
+
+```ts
+import { readFileSync } from "node:fs";
+
+const udb = await UdbProject.connect({
+  target: "udb.example.com:443",
+  tenantId,
+  purpose: "billing",
+  credentials: { apiKey },
+  tls: {
+    rootCerts: readFileSync("/etc/udb/ca.pem"),
+    certChain: readFileSync("/etc/udb/client.pem"),
+    privateKey: readFileSync("/etc/udb/client.key"),
+  },
+});
+```
+
 Serving several tenants? A pool keeps one client per tenant, shares it, and replaces
 one whose credential stops refreshing:
 

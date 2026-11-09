@@ -78,6 +78,23 @@ var (allowed, decision) = await auth.CanAsync(
     "read");
 ```
 
+## TLS, A Private CA, And Mutual TLS
+
+An `https://` target dials with the system trust store. For a private CA or a
+mutual-TLS endpoint (for example nginx with `ssl_verify_client on`), set
+`TlsTrustedRoots` and `TlsClientCertificate`; every channel the project opens uses
+them. `UdbChannel.ForAddress(address, roots, clientCertificate)` builds a single
+channel the same way.
+
+```csharp
+await using var project = UdbProject.Open(new UdbProjectConfig
+{
+    Target = "https://udb.example.com:443",
+    TlsTrustedRoots = UdbChannel.LoadTrustedRoots("/etc/udb/ca.pem"),
+    TlsClientCertificate = UdbChannel.LoadClientCertificate("/etc/udb/client.pem", "/etc/udb/client.key"),
+});
+```
+
 ## Consistency, Idempotency Replay, And Platform Services
 
 A mutation returns a `WriteReceipt`; a follow-up read can carry a fence built

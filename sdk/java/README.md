@@ -136,6 +136,24 @@ var enc = gen.Encrypt(EncryptRequest.newBuilder()
 The per-RPC retry class and idempotency contract are listed in
 [docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
 
+## TLS, A Private CA, And Mutual TLS
+
+`tls(true)` dials with the system roots. For a private CA or a mutual-TLS endpoint
+(for example nginx with `ssl_verify_client on`), pass gRPC channel credentials;
+every channel the project opens uses them. `UdbChannels.forTarget(target, creds)`
+builds a single channel the same way for `UdbClient` / `UdbAuthClient`.
+
+```java
+ChannelCredentials creds = TlsChannelCredentials.newBuilder()
+    .trustManager(new File("/etc/udb/ca.pem"))
+    .keyManager(new File("/etc/udb/client.pem"), new File("/etc/udb/client.key"))
+    .build(); // throws IOException when a file cannot be read
+UdbProject project = Udb.project(UdbProjectConfig.builder()
+    .target("udb.example.com:443")
+    .channelCredentials(creds)
+    .build());
+```
+
 ## Notes For Users
 
 Use `dev.udb.client.UdbClient` and `UdbAuthClient` for normal app code. The

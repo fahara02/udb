@@ -307,7 +307,11 @@ export class EntityRules {
       const column = this.aliases.get(field.trim().toLowerCase());
       if (!column) throw refuse(codes.INVALID_ARGUMENT, "", `unknown expected column ${field}`);
       if (column in out) throw refuse(codes.INVALID_ARGUMENT, "", `expected column supplied through two aliases: ${column}`);
-      out[column] = copyValue(value);
+      // A JSON column holds the document its text encodes, and the broker compares
+      // `expected` as that document; comparing the text itself made "[]" differ
+      // from the [] it stored.
+      const schemaField = this.columns.get(column);
+      out[column] = typeof value === "string" && schemaField && jsonColumn(schemaField) ? jsonColumnDocument(column, value) : copyValue(value);
     }
     return out;
   }

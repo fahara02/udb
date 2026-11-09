@@ -593,7 +593,7 @@ test("live parity surface", {
           assert.ok(err instanceof UdbError, `deleteFile failed before the broker: ${err?.message}`);
           const absent =
             err.code === grpc.status.UNIMPLEMENTED ||
-            (err.code === grpc.status.FAILED_PRECONDITION && /native service 'storage' is disabled/.test(err.message));
+            (err.code === grpc.status.FAILED_PRECONDITION && /native service 'storage' is (disabled|not running)/.test(err.message));
           unmounted ||= absent;
           assert.ok(
             err.code === grpc.status.NOT_FOUND || absent,

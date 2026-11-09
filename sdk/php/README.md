@@ -100,8 +100,11 @@ UDB_ENDPOINT=udb.prod.svc.cluster.local:50051
 
 # TLS
 UDB_TLS_ENABLED=true
-UDB_TLS_ROOT_CERTS=/etc/ssl/certs/udb-ca.pem
+UDB_TLS_CA_FILE=/etc/ssl/certs/udb-ca.pem   # UDB_TLS_ROOT_CERTS is still read
 UDB_TLS_TARGET=udb.prod.svc.cluster.local
+# Mutual TLS (client certificate + key, both or neither)
+UDB_TLS_CERT_FILE=/etc/udb/client.pem
+UDB_TLS_KEY_FILE=/etc/udb/client.key
 
 # Static metadata (per-request values come from middleware)
 UDB_SERVICE_IDENTITY=acme.api
@@ -120,6 +123,13 @@ UDB_MIDDLEWARE_AUTO=true
 ```
 
 The full reference lives in [`config/udb.php`](config/udb.php).
+
+`UDB_TLS_CA_FILE` is a PEM bundle to trust instead of the system roots (a private
+CA). `UDB_TLS_CERT_FILE` and `UDB_TLS_KEY_FILE` are the client certificate chain
+and key a mutual-TLS endpoint asks for (for example nginx with
+`ssl_verify_client on`); they map to `tls.cert_chain` and `tls.private_key`. Any
+of the three turns TLS on, and a file that cannot be read or holds no PEM is a
+`UdbConfigurationException` naming the setting and path.
 
 `UDB_ENDPOINT` accepts either a `host:port` value or a **Unix-domain-socket**
 target (`unix:///var/run/udb.sock`) for a co-located broker sidecar — see

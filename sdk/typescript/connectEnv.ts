@@ -14,6 +14,15 @@
 //   UDB_DEADLINE          per-call deadline when the caller sets none (Go duration, e.g. 10s)
 //   UDB_TLS               "true" to dial with TLS (system roots)
 //   UDB_TLS_SERVER_NAME   TLS server name override
+//   UDB_TLS_CA_FILE       PEM bundle to trust instead of the system roots
+//   UDB_TLS_CERT_FILE     PEM client certificate chain for mutual TLS (with UDB_TLS_KEY_FILE)
+//   UDB_TLS_KEY_FILE      PEM private key of that client certificate (with UDB_TLS_CERT_FILE)
+//
+// Setting any of the three file variables turns TLS on. A file that is missing,
+// unreadable or holds no PEM is an error naming the variable and path;
+// UDB_TLS_CERT_FILE and UDB_TLS_KEY_FILE must be set together.
+
+import { readFileSync } from "node:fs";
 
 import * as grpc from "@grpc/grpc-js";
 
@@ -107,8 +116,45 @@ export function configFromEnv(prefix = "", env: NodeJS.ProcessEnv = process.env)
   }
 
   const tls = get("TLS");
-  if (tls.toLowerCase() === "true" || tls === "1") {
+  const caFile = get("TLS_CA_FILE");
+  const certFile = get("TLS_CERT_FILE");
+  const keyFile = get("TLS_KEY_FILE");
+  if (tls.toLowerCase() === "true" || tls === "1" || caFile || certFile || keyFile) {
     config.secure = true;
+    // A named file is read now and refused loudly; it never falls back to the
+    // system roots or to dialing without the client certificate.
+    const readPem = (name: string, path: string, marker: RegExp): Buffer | undefined => {
+      let data: Buffer;
+      try {
+        data = readFileSync(path);
+      } catch (err) {
+        problems.push(`${pre}${name}: cannot read ${path}: ${(err as Error).message}`);
+        return undefined;
+      }
+      if (!marker.test(data.toString("latin1"))) {
+        problems.push(`${pre}${name}: ${path} holds no PEM ${name === "TLS_KEY_FILE" ? "private key" : "certificate"}`);
+        return undefined;
+      }
+      return data;
+    };
+    const tlsOptions: NonNullable<UdbProjectConfig["tls"]> = {};
+    if (caFile) {
+      const rootCerts = readPem("TLS_CA_FILE", caFile, /-----BEGIN CERTIFICATE-----/);
+      if (rootCerts) tlsOptions.rootCerts = rootCerts;
+    }
+    if (certFile && keyFile) {
+      const certChain = readPem("TLS_CERT_FILE", certFile, /-----BEGIN CERTIFICATE-----/);
+      const privateKey = readPem("TLS_KEY_FILE", keyFile, /-----BEGIN [A-Z ]*PRIVATE KEY-----/);
+      if (certChain && privateKey) {
+        tlsOptions.certChain = certChain;
+        tlsOptions.privateKey = privateKey;
+      }
+    } else if (certFile || keyFile) {
+      problems.push(
+        `${pre}TLS_CERT_FILE and ${pre}TLS_KEY_FILE must be set together (mutual TLS needs both the client certificate and its key)`,
+      );
+    }
+    if (caFile || certFile || keyFile) config.tls = tlsOptions;
     const serverName = get("TLS_SERVER_NAME");
     if (serverName) {
       config.channelOptions = {

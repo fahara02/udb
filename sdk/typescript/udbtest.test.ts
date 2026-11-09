@@ -44,6 +44,44 @@ test("the fake holds a JSON column as the broker does, for every kind of value",
   await assert.rejects(table.upsert({ workflow_id: "0190f1b2-0000-4000-8000-000000000099", workflow_type: "json", payload: "My" }), /not JSON/);
 });
 
+test("a JSON column read back is accepted as the expected value of the next write", async (t) => {
+  // A row read back and sent as `expected` must match the row it came from, for an
+  // empty JSON list as for any other document (MedDesk: medications "[]").
+  const workflow = "udb.core.workflow.entity.v1.WorkflowInstance";
+  const fake = await createFake(t, [workflow]);
+  const u = await fake.client(TENANT);
+  const table = u.tableOf<any>(workflow);
+  let n = 100;
+  for (const payload of ["[]", "{}", "[1]", '{"a":[]}', [], {}, [1], { a: [] }] as unknown[]) {
+    n += 1;
+    const id = `0190f1b2-0000-4000-8000-${String(n).padStart(12, "0")}`;
+    await table.upsert({ workflow_id: id, workflow_type: "json", status: "WORKFLOW_STATUS_PENDING", payload });
+    const stored = await table.get({ workflow_id: id });
+    await table.updateIf({ workflow_id: id }, { payload: stored.payload }, { workflow_type: "json-2" });
+    // The atomic-commit path: the whole row read back is the expectation.
+    const before = await table.get({ workflow_id: id });
+    await u.tx((scope) => scope.updateRowIf(workflow, { ...before, workflow_type: "json-3" }, before));
+    assert.equal((await table.get({ workflow_id: id })).workflow_type, "json-3", JSON.stringify(payload));
+  }
+});
+
+test("a raw record with an empty JSON list commits against itself as expected", async (t) => {
+  // MedDesk stages raw mapped records: insert, then updateIf with that record as
+  // the expectation. An empty list must compare equal to what was stored.
+  const workflow = "udb.core.workflow.entity.v1.WorkflowInstance";
+  const fake = await createFake(t, [workflow]);
+  const u = await fake.client(TENANT);
+  let n = 200;
+  for (const payload of [[], {}, [1], "[]"] as unknown[]) {
+    n += 1;
+    const id = `0190f1b2-0000-4000-8000-${String(n).padStart(12, "0")}`;
+    const record = { workflow_id: id, workflow_type: "json", payload };
+    await u.tx((scope) => scope.insert(workflow, record));
+    await u.tx((scope) => scope.updateIf(workflow, { workflow_id: id }, record, { workflow_type: "json-2" }));
+    assert.equal(fake.rows(workflow, TENANT).find((row: any) => row.workflow_id === id)?.workflow_type, "json-2", JSON.stringify(payload));
+  }
+});
+
 test("the fake meets the shared cross-SDK cases", async (t) => {
   const fake = await createFake(t, [FILE]);
   await runTableCases(t, (tenant) => fake.client(tenant));

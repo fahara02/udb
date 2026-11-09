@@ -1,5 +1,7 @@
 package dev.udb.client;
 
+import io.grpc.ChannelCredentials;
+import io.grpc.Grpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.util.concurrent.TimeUnit;
@@ -44,5 +46,25 @@ public final class UdbChannels {
       b.usePlaintext();
     }
     return b.build();
+  }
+
+  /**
+   * Build a long-lived channel to {@code target} over caller-supplied channel
+   * credentials, with UDB's default keepalive options. Use it for a private CA or a
+   * mutual-TLS endpoint, for example:
+   *
+   * <pre>{@code
+   * ChannelCredentials creds = TlsChannelCredentials.newBuilder()
+   *     .trustManager(new File("ca.pem"))                          // trust this CA
+   *     .keyManager(new File("client.pem"), new File("client.key")) // client certificate
+   *     .build();
+   * ManagedChannel channel = UdbChannels.forTarget("udb.example.com:443", creds);
+   * }</pre>
+   */
+  public static ManagedChannel forTarget(String target, ChannelCredentials credentials) {
+    if (credentials == null) {
+      throw new IllegalArgumentException("udb: channel credentials must not be null");
+    }
+    return tune(Grpc.newChannelBuilder(target, credentials)).build();
   }
 }

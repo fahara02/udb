@@ -9,7 +9,7 @@ use Fahara02\UdbLaravel\Exceptions\UdbConfigurationException;
 use Fahara02\UdbLaravel\Exceptions\UdbPolicyBundleSignatureException;
 use Fahara02\UdbLaravel\Exceptions\UdbRpcException;
 use Fahara02\UdbLaravel\Support\AuthzCache;
-use Grpc\ChannelCredentials;
+use Fahara02\UdbLaravel\Support\TlsCredentials;
 use Udb\Core\Authn\Services\V1\AuthnRequest;
 use Udb\Core\Authn\Services\V1\AuthnResponse;
 use Udb\Core\Authn\Services\V1\AuthnServiceClient;
@@ -515,13 +515,7 @@ class UdbAuthClient
     /** @return array<string,mixed> */
     private function channelOptions(): array
     {
-        $tls = (array) ($this->config['tls'] ?? []);
-        if ((bool) ($tls['enabled'] ?? false)) {
-            $root = $tls['root_certs'] ?? null;
-            $pem = $root !== null ? (string) file_get_contents((string) $root) : null;
-            return ['credentials' => ChannelCredentials::createSsl($pem)];
-        }
-        return ['credentials' => ChannelCredentials::createInsecure()];
+        return ['credentials' => TlsCredentials::channelCredentials((array) ($this->config['tls'] ?? []))];
     }
 
     /**

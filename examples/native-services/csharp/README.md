@@ -15,7 +15,8 @@ stubs under `sdk/csharp/gen`. No `protoc`/`buf` step is needed.
 ```bash
 docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis
 docker compose -f docker-compose.integration.yml --profile broker up -d --wait udb
-# broker gRPC: localhost:50051  (UDB_ABAC_DEFAULT_ALLOW=true so admin RPCs authorize)
+# broker gRPC: localhost:50051. This flow sends `x-scopes: udb:*` as a header, so the
+# broker must run with UDB_ALLOW_HEADER_SCOPES=true (dev only, never production).
 ```
 
 ## 2. Run the admin flow

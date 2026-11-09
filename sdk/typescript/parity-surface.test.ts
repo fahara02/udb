@@ -583,6 +583,50 @@ test("configFromEnv maps the contract", () => {
   assert.deepEqual(plain.credentials, { bearerToken: "tok" });
 });
 
+test("configFromEnv loads the TLS files and refuses bad ones", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "udb-tls-"));
+  try {
+    // Structurally PEM; the loader checks the blocks, grpc-js parses them on dial.
+    const pemBlock = (label: string) => `-----BEGIN ${label}-----\nAAAA\n-----END ${label}-----\n`;
+    const cert = path.join(dir, "client.pem");
+    const key = path.join(dir, "client.key");
+    const junk = path.join(dir, "junk.pem");
+    const missing = path.join(dir, "absent.pem");
+    fs.writeFileSync(cert, pemBlock("CERTIFICATE"));
+    fs.writeFileSync(key, pemBlock("PRIVATE KEY"));
+    fs.writeFileSync(junk, "not a certificate");
+    const base = { UDB_TARGET: "b:1", UDB_TENANT_ID: "t", UDB_PURPOSE: "p", UDB_BEARER: "tok" };
+
+    const full = configFromEnv("", { ...base, UDB_TLS_CA_FILE: cert, UDB_TLS_CERT_FILE: cert, UDB_TLS_KEY_FILE: key });
+    assert.equal(full.secure, true, "a TLS file variable turns TLS on");
+    assert.equal(full.tls?.rootCerts?.toString(), pemBlock("CERTIFICATE"));
+    assert.equal(full.tls?.certChain?.toString(), pemBlock("CERTIFICATE"));
+    assert.equal(full.tls?.privateKey?.toString(), pemBlock("PRIVATE KEY"));
+
+    const caOnly = configFromEnv("", { ...base, UDB_TLS_CA_FILE: cert });
+    assert.equal(caOnly.secure, true);
+    assert.ok(caOnly.tls?.rootCerts);
+    assert.equal(caOnly.tls?.certChain, undefined);
+    assert.equal(configFromEnv("", base).tls, undefined);
+
+    const refuses = (env: Record<string, string>, ...names: string[]) => {
+      assert.throws(
+        () => configFromEnv("", { ...base, ...env }),
+        (err: Error) => names.every((name) => err.message.includes(name)),
+        `expected an error naming ${names.join(", ")}`,
+      );
+    };
+    refuses({ UDB_TLS_CA_FILE: missing }, "UDB_TLS_CA_FILE", missing);
+    refuses({ UDB_TLS_CA_FILE: junk }, "UDB_TLS_CA_FILE", junk);
+    refuses({ UDB_TLS_CERT_FILE: cert }, "UDB_TLS_CERT_FILE", "UDB_TLS_KEY_FILE");
+    refuses({ UDB_TLS_KEY_FILE: key }, "UDB_TLS_CERT_FILE", "UDB_TLS_KEY_FILE");
+    refuses({ UDB_TLS_CERT_FILE: cert, UDB_TLS_KEY_FILE: missing }, "UDB_TLS_KEY_FILE", missing);
+    refuses({ UDB_TLS_CERT_FILE: cert, UDB_TLS_KEY_FILE: cert }, "UDB_TLS_KEY_FILE", cert);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("parseDurationMs follows Go durations", () => {
   assert.equal(parseDurationMs("10s"), 10_000);
   assert.equal(parseDurationMs("250ms"), 250);

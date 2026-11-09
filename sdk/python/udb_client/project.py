@@ -43,7 +43,7 @@ from typing import Any, Callable, Sequence
 
 import grpc
 
-from ._channel import merge_channel_options
+from ._channel import merge_channel_options, ssl_credentials
 from ._credentials import (
     RenewalFlight,
     UdbCredentialError,
@@ -161,6 +161,10 @@ class UdbConfig:
     # Transport.
     tls: bool = False
     root_certificates: bytes | None = None
+    # PEM client certificate chain + private key for a mutual-TLS endpoint (for
+    # example nginx with ssl_verify_client on). Both or neither.
+    client_certificate_chain: bytes | None = None
+    client_private_key: bytes | None = field(default=None, repr=False)
     deadline: float | None = 30.0  # per-call timeout, seconds
     channel_options: Sequence[tuple[str, Any]] | None = None
 
@@ -1444,10 +1448,12 @@ def _make_channel(
     tls: bool,
     root_certificates: bytes | None,
     options: Sequence[tuple[str, Any]] | None,
+    client_certificate_chain: bytes | None = None,
+    client_private_key: bytes | None = None,
 ) -> grpc.Channel:
     opts = merge_channel_options(options)
     if tls:
-        creds = grpc.ssl_channel_credentials(root_certificates)
+        creds = ssl_credentials(root_certificates, client_private_key, client_certificate_chain)
         return grpc.secure_channel(target, creds, options=opts)
     return grpc.insecure_channel(target, options=opts)
 
@@ -1505,6 +1511,8 @@ class UdbProject(_ProjectSurface):
             config.target,
             tls=config.tls,
             root_certificates=config.root_certificates,
+            client_certificate_chain=config.client_certificate_chain,
+            client_private_key=config.client_private_key,
             options=config.channel_options,
         )
         # Control plane (auth + native services) channel; reuse the data
@@ -1518,6 +1526,8 @@ class UdbProject(_ProjectSurface):
                 auth_target,
                 tls=config.tls,
                 root_certificates=config.root_certificates,
+                client_certificate_chain=config.client_certificate_chain,
+                client_private_key=config.client_private_key,
                 options=config.channel_options,
             )
             self._owns_ctl_channel = True
@@ -1536,6 +1546,8 @@ class UdbProject(_ProjectSurface):
                 webrtc_target,
                 tls=config.tls,
                 root_certificates=config.root_certificates,
+                client_certificate_chain=config.client_certificate_chain,
+                client_private_key=config.client_private_key,
                 options=config.channel_options,
             )
             self._owns_webrtc_channel = True
@@ -2301,6 +2313,8 @@ class UdbAsyncProject(_AsyncProjectSurface):
             self._metadata,
             secure=config.tls,
             root_certificates=config.root_certificates,
+            client_certificate_chain=config.client_certificate_chain,
+            client_private_key=config.client_private_key,
             channel_options=config.channel_options,
             timeout=config.deadline,
             retry=config.retry,

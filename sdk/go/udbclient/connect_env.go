@@ -3,6 +3,7 @@ package udbclient
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"os"
 	"strings"
@@ -30,6 +31,13 @@ import (
 //	UDB_DEADLINE          per-call deadline when the caller sets none (Go duration, e.g. 10s)
 //	UDB_TLS               "true" to dial with TLS (system roots)
 //	UDB_TLS_SERVER_NAME   TLS server name override
+//	UDB_TLS_CA_FILE       PEM bundle to trust instead of the system roots
+//	UDB_TLS_CERT_FILE     PEM client certificate chain for mutual TLS (with UDB_TLS_KEY_FILE)
+//	UDB_TLS_KEY_FILE      PEM private key of that client certificate (with UDB_TLS_CERT_FILE)
+//
+// Setting any of the three file variables turns TLS on. A file that is missing,
+// unreadable or holds no usable PEM is an error naming the variable and path;
+// UDB_TLS_CERT_FILE and UDB_TLS_KEY_FILE must be set together.
 
 // ConfigFromEnv reads the environment contract above. Every missing or invalid
 // variable is reported in one error, so a misconfigured deployment is fixed in
@@ -83,13 +91,58 @@ func ConfigFromEnv(prefix string) (Config, error) {
 			cfg.Deadline = deadline
 		}
 	}
-	if strings.EqualFold(get("TLS"), "true") || get("TLS") == "1" {
-		cfg.TLS = &tls.Config{MinVersion: tls.VersionTLS12, ServerName: get("TLS_SERVER_NAME")}
+	caFile, certFile, keyFile := get("TLS_CA_FILE"), get("TLS_CERT_FILE"), get("TLS_KEY_FILE")
+	if strings.EqualFold(get("TLS"), "true") || get("TLS") == "1" || caFile != "" || certFile != "" || keyFile != "" {
+		tlsCfg, tlsProblems := tlsConfigFromEnv(prefix, get("TLS_SERVER_NAME"), caFile, certFile, keyFile)
+		problems = append(problems, tlsProblems...)
+		cfg.TLS = tlsCfg
 	}
 	if len(problems) > 0 {
 		return Config{}, fmt.Errorf("udb: environment is incomplete: %s", strings.Join(problems, "; "))
 	}
 	return cfg, nil
+}
+
+// tlsConfigFromEnv builds the TLS config from the UDB_TLS_* file variables. It
+// never falls back to the system roots or to no client certificate when a file
+// was named: every problem is returned so ConfigFromEnv reports it.
+func tlsConfigFromEnv(prefix, serverName, caFile, certFile, keyFile string) (*tls.Config, []string) {
+	cfg := &tls.Config{MinVersion: tls.VersionTLS12, ServerName: serverName}
+	var problems []string
+	read := func(name, path string) []byte {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("%s%s: cannot read %s: %v", prefix, name, path, err))
+			return nil
+		}
+		return data
+	}
+	if caFile != "" {
+		if pem := read("TLS_CA_FILE", caFile); pem != nil {
+			pool := x509.NewCertPool()
+			if !pool.AppendCertsFromPEM(pem) {
+				problems = append(problems, fmt.Sprintf("%sTLS_CA_FILE: %s holds no PEM certificate", prefix, caFile))
+			} else {
+				cfg.RootCAs = pool
+			}
+		}
+	}
+	switch {
+	case certFile != "" && keyFile != "":
+		certPEM, keyPEM := read("TLS_CERT_FILE", certFile), read("TLS_KEY_FILE", keyFile)
+		if certPEM != nil && keyPEM != nil {
+			pair, err := tls.X509KeyPair(certPEM, keyPEM)
+			if err != nil {
+				problems = append(problems, fmt.Sprintf("%sTLS_CERT_FILE %s and %sTLS_KEY_FILE %s are not a usable certificate and key: %v",
+					prefix, certFile, prefix, keyFile, err))
+			} else {
+				cfg.Certificates = []tls.Certificate{pair}
+			}
+		}
+	case certFile != "" || keyFile != "":
+		problems = append(problems, fmt.Sprintf("%sTLS_CERT_FILE and %sTLS_KEY_FILE must be set together (mutual TLS needs both the client certificate and its key)", prefix, prefix))
+	}
+	return cfg, problems
 }
 
 func splitEnvScopes(raw string) []string {

@@ -282,6 +282,26 @@ project.ready()  # readiness probe: broker health plus credential state
 project.bearer_expires_at()
 ```
 
+A private CA and mutual TLS (for example nginx with `ssl_verify_client on`) come
+from `UDB_TLS_CA_FILE` (PEM bundle to trust instead of the system roots) and
+`UDB_TLS_CERT_FILE` + `UDB_TLS_KEY_FILE` (client certificate chain and key, set
+both or neither). Any of them turns TLS on; an unreadable file is an error naming
+the variable and path. In code, the same PEMs go on `UdbConfig` (and
+`EnterpriseConfig`, `UdbClient`, `UdbAuthClient`):
+
+```python
+from pathlib import Path
+from udb_client import UdbConfig, UdbProject
+
+project = UdbProject(UdbConfig(
+    target="udb.example.com:443",
+    tls=True,
+    root_certificates=Path("/etc/udb/ca.pem").read_bytes(),
+    client_certificate_chain=Path("/etc/udb/client.pem").read_bytes(),
+    client_private_key=Path("/etc/udb/client.key").read_bytes(),  # both or neither
+))
+```
+
 A service serving several tenants keeps one client per tenant:
 
 ```python

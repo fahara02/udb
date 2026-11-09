@@ -124,6 +124,34 @@ A service-account caller, delegated `CheckAccess` for a user, and tokens for a
 second tenant are covered in
 [Service accounts acting for users](../../docs/service-accounts.md).
 
+## TLS, a private CA, and mutual TLS
+
+`UdbClient::connect` dials with defaults; for TLS, build the channel yourself
+with tonic's `ClientTlsConfig` and hand it to `UdbClient::with_channel` (the
+`tls-ring` and `tls-native-roots` features are already on). `ca_certificate`
+trusts a private CA; `identity` presents a client certificate to a mutual-TLS
+endpoint such as nginx with `ssl_verify_client on`.
+
+```rust,no_run
+use tonic::transport::{Certificate, ClientTlsConfig, Endpoint, Identity};
+use udb_client::{Metadata, UdbClient};
+
+# async fn f() -> Result<(), Box<dyn std::error::Error>> {
+let tls = ClientTlsConfig::new()
+    .ca_certificate(Certificate::from_pem(std::fs::read("ca.pem")?))
+    .identity(Identity::from_pem(
+        std::fs::read("client.pem")?,
+        std::fs::read("client.key")?,
+    ));
+let channel = Endpoint::from_static("https://udb.example.com:443")
+    .tls_config(tls)?
+    .connect()
+    .await?;
+let udb = UdbClient::with_channel(channel, Metadata::new("tenant-1"));
+# Ok(())
+# }
+```
+
 ## Identity is per-connection, audit is per-request
 
 `Metadata` splits deliberately:

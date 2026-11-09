@@ -6,8 +6,8 @@ namespace Fahara02\UdbLaravel;
 
 use Fahara02\UdbLaravel\Exceptions\UdbConfigurationException;
 use Fahara02\UdbLaravel\Exceptions\UdbRpcException;
+use Fahara02\UdbLaravel\Support\TlsCredentials;
 use Grpc\BaseStub;
-use Grpc\ChannelCredentials;
 use Grpc\Timeval;
 use Udb\Entity\V1\CapabilitiesRequest;
 use Udb\Entity\V1\CapabilitiesResponse;
@@ -256,22 +256,7 @@ class UdbClient
     private function buildStub(): DataBrokerClient
     {
         $tls = (array) ($this->config['tls'] ?? []);
-        $tlsEnabled = (bool) ($tls['enabled'] ?? false);
-
-        if ($tlsEnabled) {
-            $rootCerts = $tls['root_certs'] ?? null;
-            if ($rootCerts !== null && ! is_readable((string) $rootCerts)) {
-                throw new UdbConfigurationException(
-                    "UDB TLS root cert bundle not readable at: {$rootCerts}"
-                );
-            }
-            $pem = $rootCerts !== null
-                ? (string) file_get_contents((string) $rootCerts)
-                : null;
-            $credentials = ChannelCredentials::createSsl($pem);
-        } else {
-            $credentials = ChannelCredentials::createInsecure();
-        }
+        $credentials = TlsCredentials::channelCredentials($tls);
 
         $options = (array) ($this->config['channel_options'] ?? []);
         $options['credentials'] = $credentials;

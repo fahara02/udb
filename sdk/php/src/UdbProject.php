@@ -15,7 +15,7 @@ use Fahara02\UdbLaravel\Services\StorageService;
 use Fahara02\UdbLaravel\Services\TenantService;
 use Fahara02\UdbLaravel\Services\WebRtcService;
 use Fahara02\UdbLaravel\Support\ScopeJoiner;
-use Grpc\ChannelCredentials;
+use Fahara02\UdbLaravel\Support\TlsCredentials;
 use Udb\Core\Analytics\Services\V1\AnalyticsServiceClient;
 use Udb\Core\Apikey\Services\V1\ApiKeyServiceClient;
 use Udb\Core\Asset\Services\V1\AssetServiceClient;
@@ -531,13 +531,7 @@ final class UdbProject
     /** @return array<string,mixed> */
     private function channelOptions(): array
     {
-        $tls = (array) ($this->config['tls'] ?? []);
-        if ((bool) ($tls['enabled'] ?? false)) {
-            $root = $tls['root_certs'] ?? null;
-            $pem = $root !== null ? (string) file_get_contents((string) $root) : null;
-            return ['credentials' => ChannelCredentials::createSsl($pem)];
-        }
-        return ['credentials' => ChannelCredentials::createInsecure()];
+        return ['credentials' => TlsCredentials::channelCredentials((array) ($this->config['tls'] ?? []))];
     }
 
     /** @return array{endpoint:string, tls?: array{enabled?:bool, root_certs?:?string, target?:?string}, deadline_ms:int} */

@@ -48,3 +48,33 @@ def merge_channel_options(
     """
 
     return [*default_channel_options(), *list(user_options or ())]
+
+
+def ssl_credentials(
+    root_certificates: bytes | None = None,
+    client_private_key: bytes | None = None,
+    client_certificate_chain: bytes | None = None,
+) -> Any:
+    """Build ``grpc.ssl_channel_credentials`` for a UDB channel.
+
+    ``root_certificates`` is the PEM bundle to trust (``None`` uses the system
+    roots). ``client_certificate_chain`` and ``client_private_key`` are the PEM
+    client certificate and key a mutual-TLS endpoint asks for; give both or
+    neither. One without the other raises :class:`UdbConfigurationError` instead
+    of dialing without a client certificate.
+    """
+
+    import grpc
+
+    from .exceptions import UdbConfigurationError
+
+    if bool(client_private_key) != bool(client_certificate_chain):
+        raise UdbConfigurationError(
+            "udb: client_certificate_chain and client_private_key must be set together "
+            "(mutual TLS needs both the client certificate and its key)"
+        )
+    return grpc.ssl_channel_credentials(
+        root_certificates or None,
+        client_private_key or None,
+        client_certificate_chain or None,
+    )

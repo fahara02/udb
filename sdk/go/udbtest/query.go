@@ -82,6 +82,16 @@ func (e *entity) expectedColumns(values map[string]any) (map[string]any, error) 
 		if _, duplicate := out[column]; duplicate {
 			return nil, refuse(codes.InvalidArgument, "", "expected column supplied through two aliases: "+column)
 		}
+		// A JSON column holds the document its text encodes, and the broker compares
+		// `expected` as that document: "[]" must equal the [] it stored.
+		if text, isText := value.(string); isText && jsonColumn(e.options[column]) {
+			document, err := jsonColumnDocument(column, text)
+			if err != nil {
+				return nil, err
+			}
+			out[column] = document
+			continue
+		}
 		out[column] = copyValue(value)
 	}
 	return out, nil

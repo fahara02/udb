@@ -28,7 +28,7 @@ from udb.core.authn.services.v1 import core_pb2 as authn
 from udb.core.authz.services.v1 import authz_service_pb2_grpc
 from udb.core.authz.services.v1 import core_pb2 as authz
 
-from ._channel import default_channel_options
+from ._channel import default_channel_options, ssl_credentials
 from ._credentials import normalized_bearer
 from .exceptions import (
     UdbAuthzDenied,
@@ -132,6 +132,8 @@ class UdbAuthClient:
         *,
         secure: bool = False,
         root_certificates: bytes | None = None,
+        client_certificate_chain: bytes | None = None,
+        client_private_key: bytes | None = None,
         timeout: float | None = 30.0,
         channel: grpc.Channel | None = None,
         policy_bundle_secret: str | bytes | None = None,
@@ -147,7 +149,7 @@ class UdbAuthClient:
         if channel is None:
             options = default_channel_options()
             if secure:
-                creds = grpc.ssl_channel_credentials(root_certificates)
+                creds = ssl_credentials(root_certificates, client_private_key, client_certificate_chain)
                 channel = grpc.secure_channel(target, creds, options=options)
             else:
                 channel = grpc.insecure_channel(target, options=options)

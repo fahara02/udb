@@ -43,7 +43,7 @@ from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
 
 import grpc
 
-from ._channel import merge_channel_options
+from ._channel import merge_channel_options, ssl_credentials
 from .exceptions import UdbConfigurationError, UdbError, UdbRpcError
 from .metadata import Metadata
 
@@ -3132,6 +3132,8 @@ class _ServiceClientBase:
         *,
         secure: bool = False,
         root_certificates: bytes | None = None,
+        client_certificate_chain: bytes | None = None,
+        client_private_key: bytes | None = None,
         call_credentials: grpc.CallCredentials | None = None,
         channel_credentials: grpc.ChannelCredentials | None = None,
         channel_options: Sequence[tuple[str, Any]] | None = None,
@@ -3154,7 +3156,7 @@ class _ServiceClientBase:
             if channel_credentials is not None:
                 channel = grpc.secure_channel(target, channel_credentials, options=options)
             elif secure:
-                creds = grpc.ssl_channel_credentials(root_certificates)
+                creds = ssl_credentials(root_certificates, client_private_key, client_certificate_chain)
                 if call_credentials is not None:
                     creds = grpc.composite_channel_credentials(creds, call_credentials)
                 channel = grpc.secure_channel(target, creds, options=options)

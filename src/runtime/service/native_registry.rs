@@ -247,6 +247,61 @@ pub fn native_service_enabled(service_id: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// Why a native service refuses traffic, worded so the caller can fix it: the
+/// switch that turns it on, or the backend it needs and the setting that provides
+/// it. "native service 'cache' is disabled" alone hid that Redis was missing.
+pub fn native_service_unavailable_message(service_id: &str) -> String {
+    let config = installed_native_service_runtime_config()
+        .unwrap_or_else(current_native_service_runtime_config);
+    let status = resolved_native_service_statuses(&config)
+        .into_iter()
+        .find(|status| status.service_id == service_id);
+    native_service_unavailable_text(service_id, status.as_ref())
+}
+
+fn native_service_unavailable_text(
+    service_id: &str,
+    status: Option<&NativeServiceStatus>,
+) -> String {
+    let Some(status) = status else {
+        return format!("native service '{service_id}' is not served by this broker");
+    };
+    let switch = format!(
+        "UDB_NATIVE_{}_ENABLED",
+        canonical_service_id(service_id).to_ascii_uppercase()
+    );
+    if !status.enabled {
+        return format!("native service '{service_id}' is disabled; set {switch}=true to serve it");
+    }
+    if !status.missing_dependencies.is_empty() {
+        let needs: Vec<String> = status
+            .missing_dependencies
+            .iter()
+            .map(|dependency| match dependency.as_str() {
+                "postgres" => "Postgres (UDB_PG_DSN)".to_string(),
+                "redis" => "Redis (UDB_REDIS_DSN)".to_string(),
+                "object_storage" | "s3" | "minio" => {
+                    "an S3/MinIO object store (UDB_MINIO_ENDPOINT)".to_string()
+                }
+                "kafka" => "Kafka (UDB_KAFKA_BROKERS)".to_string(),
+                other => other.to_string(),
+            })
+            .collect();
+        return format!(
+            "native service '{service_id}' is not running: it needs {}",
+            needs.join(" and ")
+        );
+    }
+    if status.disabled_reason.is_empty() {
+        format!("native service '{service_id}' is not running on this node")
+    } else {
+        format!(
+            "native service '{service_id}' is not running: {}",
+            status.disabled_reason
+        )
+    }
+}
+
 pub fn any_control_plane_enabled(config: &UdbConfig) -> bool {
     config.native_services.enabled
         && config.native_services.control_plane_enabled
@@ -728,5 +783,29 @@ mod tests {
                 .iter()
                 .any(|dep| dep == "postgres")
         );
+    }
+
+    #[test]
+    fn an_unavailable_service_says_what_to_set() {
+        // A default config has no Redis, object store or Kafka, so the services
+        // that need them are not mounted; the refusal names the setting.
+        let statuses = resolved_native_service_statuses(&UdbConfig::default());
+        let needs_redis = statuses
+            .iter()
+            .find(|status| status.missing_dependencies.iter().any(|dep| dep == "redis"))
+            .expect("a native service needs Redis");
+        let text = native_service_unavailable_text(&needs_redis.service_id, Some(needs_redis));
+        assert!(text.contains("UDB_REDIS_DSN"), "{text}");
+
+        let mut off = needs_redis.clone();
+        off.enabled = false;
+        let text = native_service_unavailable_text(&off.service_id, Some(&off));
+        let switch = format!(
+            "UDB_NATIVE_{}_ENABLED=true",
+            canonical_service_id(&off.service_id).to_ascii_uppercase()
+        );
+        assert!(text.contains(&switch), "{text}");
+
+        assert!(native_service_unavailable_text("nope", None).contains("not served"));
     }
 }

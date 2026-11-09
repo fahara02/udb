@@ -881,7 +881,10 @@ def test_live_delete_file_mode_reaches_the_broker_and_refuses_a_missing_file(ope
         storage.delete_file_mode("not-a-uuid", storage_pb.DELETE_MODE_HARD)
     if (
         malformed.value.code == grpc.StatusCode.FAILED_PRECONDITION
-        and "native service 'storage' is disabled" in malformed.value.details
+        and (
+            "native service 'storage' is disabled" in malformed.value.details
+            or "native service 'storage' is not running" in malformed.value.details
+        )
     ):
         pytest.skip(f"storage is off in this broker posture: {malformed.value.details}")
     assert malformed.value.code == grpc.StatusCode.INVALID_ARGUMENT, malformed.value.details

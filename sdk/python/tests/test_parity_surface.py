@@ -717,7 +717,7 @@ def test_validate_session_refuses_an_invalid_token_as_not_found(broker) -> None:
 # ── environment contract ────────────────────────────────────────────────────
 _ENV_NAMES = (
     "TARGET AUTH_TARGET WEBRTC_TARGET TENANT_ID PROJECT_ID PROJECT PURPOSE API_KEY BEARER "
-    "SCOPES SERVICE_IDENTITY DEADLINE TLS TLS_SERVER_NAME"
+    "SCOPES SERVICE_IDENTITY DEADLINE TLS TLS_SERVER_NAME TLS_CA_FILE TLS_CERT_FILE TLS_KEY_FILE"
 ).split()
 
 
@@ -786,6 +786,68 @@ def test_config_from_env_prefers_project_id_and_tolerates_defaults(env) -> None:
     config = config_from_env("PARITY_")
     assert config.project_id == "new" and config.tls is True and config.bearer_token == "b"
     assert config.channel_options is None and config.deadline == 30.0
+
+
+def _pem_block(label: str) -> bytes:
+    # Structurally PEM; the loader checks the blocks, grpc parses them on dial.
+    return f"-----BEGIN {label}-----\nAAAA\n-----END {label}-----\n".encode()
+
+
+@pytest.fixture
+def tls_files(tmp_path):
+    cert = tmp_path / "client.pem"
+    key = tmp_path / "client.key"
+    junk = tmp_path / "junk.pem"
+    cert.write_bytes(_pem_block("CERTIFICATE"))
+    key.write_bytes(_pem_block("PRIVATE KEY"))
+    junk.write_bytes(b"not a certificate")
+    return {"cert": str(cert), "key": str(key), "junk": str(junk), "missing": str(tmp_path / "absent.pem")}
+
+
+def test_config_from_env_loads_the_tls_files(env, tls_files) -> None:
+    base = {"TARGET": "h:1", "TENANT_ID": TENANT, "PURPOSE": "p", "BEARER": "b"}
+    env(**base, TLS_CA_FILE=tls_files["cert"], TLS_CERT_FILE=tls_files["cert"], TLS_KEY_FILE=tls_files["key"])
+    config = config_from_env("PARITY_")
+    assert config.tls is True, "a TLS file variable turns TLS on"
+    assert config.root_certificates == _pem_block("CERTIFICATE")
+    assert config.client_certificate_chain == _pem_block("CERTIFICATE")
+    assert config.client_private_key == _pem_block("PRIVATE KEY")
+    # The PEMs reach the channel credentials; grpc builds the channel lazily.
+    project = UdbProject(config)
+    project.close()
+
+
+def test_config_from_env_loads_a_ca_alone(env, tls_files) -> None:
+    env(TARGET="h:1", TENANT_ID=TENANT, PURPOSE="p", BEARER="b", TLS_CA_FILE=tls_files["cert"])
+    config = config_from_env("PARITY_")
+    assert config.tls is True and config.root_certificates == _pem_block("CERTIFICATE")
+    assert config.client_certificate_chain is None and config.client_private_key is None
+
+
+@pytest.mark.parametrize(
+    "files, needles",
+    [
+        ({"TLS_CA_FILE": "missing"}, ("PARITY_TLS_CA_FILE", "missing")),
+        ({"TLS_CA_FILE": "junk"}, ("PARITY_TLS_CA_FILE", "junk")),
+        ({"TLS_CERT_FILE": "cert"}, ("PARITY_TLS_CERT_FILE", "PARITY_TLS_KEY_FILE")),
+        ({"TLS_KEY_FILE": "key"}, ("PARITY_TLS_CERT_FILE", "PARITY_TLS_KEY_FILE")),
+        ({"TLS_CERT_FILE": "cert", "TLS_KEY_FILE": "missing"}, ("PARITY_TLS_KEY_FILE", "missing")),
+        ({"TLS_CERT_FILE": "cert", "TLS_KEY_FILE": "cert"}, ("PARITY_TLS_KEY_FILE", "cert")),
+    ],
+)
+def test_config_from_env_refuses_bad_tls_files(env, tls_files, files, needles) -> None:
+    env(TARGET="h:1", TENANT_ID=TENANT, PURPOSE="p", BEARER="b", **{k: tls_files[v] for k, v in files.items()})
+    with pytest.raises(UdbConfigurationError) as refused:
+        config_from_env("PARITY_")
+    message = str(refused.value)
+    for needle in needles:
+        assert tls_files.get(needle, needle) in message
+
+
+def test_client_certificate_needs_its_key() -> None:
+    config = UdbConfig(target="h:1", tls=True, client_certificate_chain=_pem_block("CERTIFICATE"))
+    with pytest.raises(UdbConfigurationError, match="client_certificate_chain and client_private_key"):
+        UdbProject(config)
 
 
 def test_connect_from_env_refuses_both_credentials(env) -> None:

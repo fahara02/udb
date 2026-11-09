@@ -1514,7 +1514,9 @@ fn enforce(
                 "native_service",
                 format!("{service_id}/dispatch"),
                 "native_service_enabled",
-                format!("native service '{service_id}' is disabled"),
+                crate::runtime::service::native_registry::native_service_unavailable_message(
+                    &service_id,
+                ),
             ),
             deny_reason::DISABLED,
         ));

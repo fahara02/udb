@@ -80,6 +80,39 @@ func TestFakeHoldsAJSONColumnAsTheBrokerDoes(t *testing.T) {
 	}
 }
 
+// The broker compares `expected` on a JSON column as the document its text encodes.
+// The fake compared the text with the stored document, so a row whose JSON was "[]"
+// could not be the expectation of its own next write.
+func TestFakeComparesExpectedJSONTextAsTheStoredDocument(t *testing.T) {
+	const message = "udb.core.workflow.entity.v1.WorkflowInstance"
+	fake := udbtest.New(t, &workflowentityv1.WorkflowInstance{})
+	tenant := "0190f1b2-0000-4000-8000-0000000000aa"
+	client := fake.Client(t, tenant)
+	ctx := context.Background()
+	for i, payload := range []string{`[]`, `{}`, `[1]`, `{"a":[]}`} {
+		id := fmt.Sprintf("0190f1b2-0000-4000-8000-%012d", i+100)
+		row := map[string]any{"workflow_id": id, "workflow_type": "json", "payload": payload}
+		body, err := json.Marshal(row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Data.Upsert(ctx, &entityv1.UpsertRequest{MessageType: message, RecordJson: body}); err != nil {
+			t.Fatalf("upsert %s: %v", payload, err)
+		}
+		expected, err := structpb.NewStruct(row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		next, err := json.Marshal(map[string]any{"workflow_id": id, "workflow_type": "json-2", "payload": payload})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Data.Upsert(ctx, &entityv1.UpsertRequest{MessageType: message, RecordJson: next, Expected: expected}); err != nil {
+			t.Fatalf("expected %s: %v", payload, err)
+		}
+	}
+}
+
 // The fake passes the cross-SDK cases the TypeScript runner shares.
 func TestFakeMeetsTheSharedTableCases(t *testing.T) {
 	fake := udbtest.New(t, &storagev1.File{})

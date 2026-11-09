@@ -269,6 +269,10 @@ processTriple("example php arbitrary sdk", "examples/php_arbitary_project/compos
   /("fahara02\/udb-laravel": "\^)([^"]*)(")/);
 processTriple("example native php sdk", "examples/native-services/php/composer.json", C["sdk-php"].version,
   /("fahara02\/udb-laravel": "\^)([^"]*)(")/);
+processTriple("example native ts sdk", "examples/native-services/typescript/package.json", C["sdk-typescript"].version,
+  /("@udb_plus\/sdk": "\^)([^"]*)(")/);
+processTriple("example native python sdk", "examples/native-services/python/requirements.txt", C["sdk-python"].version,
+  /(^udb-client>=)(\d+\.\d+\.\d+)($)/m);
 // The shipped compose stacks pull the broker image of the release they ship with.
 processTriple("deploy compose image", "deploy/.env.example", C.udb.version,
   /(^UDB_VERSION=)(\d+\.\d+\.\d+)($)/m);

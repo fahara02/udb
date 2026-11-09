@@ -1,17 +1,18 @@
 {
-  "name": "udb-native-services-ts-example",
+  "name": "udb-native-services-tour",
   "private": true,
   "version": "0.0.0",
-  "description": "Simplest→advanced UDB native auth services example (TypeScript).",
+  "description": "Tour of all 28 UDB native control-plane services on the real login path (TypeScript).",
   "scripts": {
-    "start": "tsx main.ts"
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.10.0",
-    "@grpc/proto-loader": "^0.7.0"
+    "@udb_plus/sdk": "^0.6.13"
   },
   "devDependencies": {
+    "@types/node": "^22.10.1",
     "tsx": "^4.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.7.2"
   }
 }

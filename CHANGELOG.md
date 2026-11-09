@@ -25,6 +25,19 @@ release line was tagged.
   `scripts/init.sh` writes `.env` and the RS256 keys with `udb env fill`; `scripts/bootstrap.sh`
   mints the first admin and applies the data policies. Run on a fresh Linux host: both listeners
   serve and `udb doctor` reports only the optional services left off.
+- **A native-services tour that runs.** `examples/native-services` logs in on the real path
+  (control plane on `:50061`, password login, tenant UUID from the token) and calls every one of
+  the 28 native services in Go, TypeScript and Python, one line per service; a service whose
+  backend is not configured prints the broker's reason and is counted as skipped. The old
+  example dialed the data port with header-trusted scopes and covered three services. Run on a
+  fresh Linux host: 24 called, 4 skipped (no Redis, Kafka or object store), in all three.
+- **Client certificates and a private CA from the environment, in every SDK.**
+  `UDB_TLS_CA_FILE` (PEM bundle to trust), `UDB_TLS_CERT_FILE` + `UDB_TLS_KEY_FILE` (client
+  certificate, both or neither) in the Go, TypeScript and Python env loaders; any of them turns
+  TLS on, and a missing or unreadable file is an error naming the variable. The Python SDK takes
+  `client_certificate_chain` + `client_private_key` beside `root_certificates`; Java gains
+  `channelCredentials(...)`, C# `TlsTrustedRoots` / `TlsClientCertificate`, PHP `tls.cert_chain`
+  / `tls.private_key`; the Rust README shows the tonic setup.
 - **`examples/docker_nginx`: UDB behind nginx.** TLS at nginx, gRPC routed by path (DataBroker to
   `:50051`, `udb.core.*` native services to `:50061`), and a client that logs in, makes a native
   call and writes and reads a row through it. Run on a fresh Linux host.
@@ -37,6 +50,14 @@ release line was tagged.
   missing" on a NOT NULL column). The SDK now leaves `payload` unset, and the broker treats an
   empty `payload` as no row, so released Python clients write correctly against a new broker.
 - **The Java SDK's entity `upsert` sends the row once**, in `record_json`.
+- **The test fakes compare a JSON column's `expected` as the broker does.** The Go, Python and
+  TypeScript fakes stored JSON text as the document it encodes but compared `expected` as the
+  text, so a row whose JSON was `"[]"` failed as the expectation of its own next commit
+  (`UDB_CAS_CONFLICT`), where the broker succeeds. Found by MedDesk.
+- **A native service that is off says what to set.** The refusal was "native service 'cache'
+  is disabled" even when the service was on but its backend was missing. It now names the
+  switch (`UDB_NATIVE_<ID>_ENABLED=true`) or the backend and its setting ("it needs Redis
+  (UDB_REDIS_DSN)").
 - **A failed S3/MinIO call says why.** Every object operation reported only "service error",
   the AWS SDK's text for any modeled S3 error, and marked it retryable. It now carries the S3
   code and message (`S3 put_object failed: AccessDenied: ...`), and a rejected call

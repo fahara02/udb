@@ -17,7 +17,16 @@ With prefix ``UDB_`` (the default):
 ``UDB_DEADLINE``         per-call deadline, a duration such as ``10s`` or ``1m30s``
 ``UDB_TLS``              ``true`` or ``1`` to dial with TLS (system roots)
 ``UDB_TLS_SERVER_NAME``  TLS server name override
+``UDB_TLS_CA_FILE``      PEM bundle to trust instead of the system roots
+``UDB_TLS_CERT_FILE``    PEM client certificate chain for mutual TLS
+                         (with ``UDB_TLS_KEY_FILE``)
+``UDB_TLS_KEY_FILE``     PEM private key of that client certificate
+                         (with ``UDB_TLS_CERT_FILE``)
 =======================  =========================================================
+
+Setting any of the three file variables turns TLS on. A file that is missing,
+unreadable or holds no PEM is an error naming the variable and path;
+``UDB_TLS_CERT_FILE`` and ``UDB_TLS_KEY_FILE`` must be set together.
 """
 
 from __future__ import annotations
@@ -31,6 +40,8 @@ from typing import Sequence
 from .exceptions import UdbConfigurationError
 from .project import UdbAsyncProject, UdbConfig, UdbProject
 
+_PEM_CERT = re.compile(rb"-----BEGIN CERTIFICATE-----")
+_PEM_KEY = re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----")
 _DURATION_PART = re.compile(r"((?:\d+(?:\.\d*)?)|(?:\.\d+))(ns|us|µs|μs|ms|s|m|h)")
 _DURATION_UNITS = {
     "ns": 1e-9,
@@ -104,10 +115,40 @@ def config_from_env(prefix: str = "") -> UdbConfig:
             )
         else:
             deadline = parsed
+
+    ca_file, cert_file, key_file = get("TLS_CA_FILE"), get("TLS_CERT_FILE"), get("TLS_KEY_FILE")
+    tls = get("TLS").lower() == "true" or get("TLS") == "1" or bool(ca_file or cert_file or key_file)
+
+    # A named file is read now and refused loudly; it never falls back to the
+    # system roots or to dialing without the client certificate.
+    def read_pem(name: str, path: str, marker: "re.Pattern[bytes]", kind: str) -> bytes | None:
+        try:
+            with open(path, "rb") as handle:
+                data = handle.read()
+        except OSError as exc:
+            problems.append(f"{prefix}{name}: cannot read {path}: {exc.strerror or exc}")
+            return None
+        if not marker.search(data):
+            problems.append(f"{prefix}{name}: {path} holds no PEM {kind}")
+            return None
+        return data
+
+    root_certificates: bytes | None = None
+    certificate_chain: bytes | None = None
+    private_key: bytes | None = None
+    if ca_file:
+        root_certificates = read_pem("TLS_CA_FILE", ca_file, _PEM_CERT, "certificate")
+    if cert_file and key_file:
+        certificate_chain = read_pem("TLS_CERT_FILE", cert_file, _PEM_CERT, "certificate")
+        private_key = read_pem("TLS_KEY_FILE", key_file, _PEM_KEY, "private key")
+    elif cert_file or key_file:
+        problems.append(
+            f"{prefix}TLS_CERT_FILE and {prefix}TLS_KEY_FILE must be set together "
+            "(mutual TLS needs both the client certificate and its key)"
+        )
     if problems:
         raise UdbConfigurationError(f"udb: environment is incomplete: {'; '.join(problems)}")
 
-    tls = get("TLS").lower() == "true" or get("TLS") == "1"
     server_name = get("TLS_SERVER_NAME")
     return UdbConfig(
         target=target,
@@ -122,6 +163,9 @@ def config_from_env(prefix: str = "") -> UdbConfig:
         bearer_token=bearer,
         deadline=deadline,
         tls=tls,
+        root_certificates=root_certificates,
+        client_certificate_chain=certificate_chain,
+        client_private_key=private_key,
         channel_options=(
             (("grpc.ssl_target_name_override", server_name),) if tls and server_name else None
         ),

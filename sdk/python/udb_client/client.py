@@ -14,7 +14,7 @@ from google.protobuf.struct_pb2 import Struct
 from udb.entity.v1 import types_pb2
 from udb.services.v1 import data_broker_pb2_grpc
 
-from ._channel import merge_channel_options
+from ._channel import merge_channel_options, ssl_credentials
 from .error_code import map_rpc_error
 from .exceptions import UdbConfigurationError
 from .generated_client import (
@@ -317,6 +317,8 @@ class UdbClient(_ClientBase):
         *,
         secure: bool = False,
         root_certificates: bytes | None = None,
+        client_certificate_chain: bytes | None = None,
+        client_private_key: bytes | None = None,
         channel_options: Sequence[tuple[str, Any]] | None = None,
         timeout: float | None = 30.0,
         channel: grpc.Channel | None = None,
@@ -332,7 +334,9 @@ class UdbClient(_ClientBase):
         if channel is None:
             options = merge_channel_options(channel_options)
             if secure:
-                credentials = grpc.ssl_channel_credentials(root_certificates)
+                credentials = ssl_credentials(
+                    root_certificates, client_private_key, client_certificate_chain
+                )
                 channel = grpc.secure_channel(target, credentials, options=options)
             else:
                 channel = grpc.insecure_channel(target, options=options)
@@ -1098,6 +1102,8 @@ class UdbAsyncClient(_ClientBase):
         *,
         secure: bool = False,
         root_certificates: bytes | None = None,
+        client_certificate_chain: bytes | None = None,
+        client_private_key: bytes | None = None,
         channel_options: Sequence[tuple[str, Any]] | None = None,
         timeout: float | None = 30.0,
         channel: grpc.aio.Channel | None = None,
@@ -1113,7 +1119,9 @@ class UdbAsyncClient(_ClientBase):
         if channel is None:
             options = merge_channel_options(channel_options)
             if secure:
-                credentials = grpc.ssl_channel_credentials(root_certificates)
+                credentials = ssl_credentials(
+                    root_certificates, client_private_key, client_certificate_chain
+                )
                 channel = grpc.aio.secure_channel(target, credentials, options=options)
             else:
                 channel = grpc.aio.insecure_channel(target, options=options)

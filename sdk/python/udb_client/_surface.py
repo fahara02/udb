@@ -397,13 +397,17 @@ class _AsyncProjectSurface:
         if auth_target == self.config.target:
             channel = self.data._channel
         else:
-            from ._channel import merge_channel_options
+            from ._channel import merge_channel_options, ssl_credentials
 
             options = merge_channel_options(self.config.channel_options)
             if self.config.tls:
                 channel = grpc.aio.secure_channel(
                     auth_target,
-                    grpc.ssl_channel_credentials(self.config.root_certificates),
+                    ssl_credentials(
+                        self.config.root_certificates,
+                        self.config.client_private_key,
+                        self.config.client_certificate_chain,
+                    ),
                     options=options,
                 )
             else:

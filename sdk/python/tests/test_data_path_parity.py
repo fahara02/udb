@@ -84,6 +84,21 @@ def test_the_fake_holds_a_json_column_as_the_broker_does() -> None:
                 entity.upsert({"workflow_id": str(uuid.uuid4()), "workflow_type": "json", "payload": text})
 
 
+def test_json_text_as_expected_matches_the_document_the_fake_stored() -> None:
+    # The broker compares `expected` on a JSON column as the document its text
+    # encodes. The fake compared the text with the stored document, so a row whose
+    # JSON was "[]" could not be the expectation of its own next write.
+    with udbtest.new(workflow_instance_pb2.WorkflowInstance) as served:
+        tenant = str(uuid.uuid4())
+        entity = served.client(tenant).entity(WORKFLOW_TYPE, key=["workflow_id"])
+        for payload in ("[]", "{}", "[1]", '{"a":[]}'):
+            row = {"workflow_id": str(uuid.uuid4()), "workflow_type": "json", "payload": payload}
+            entity.upsert(row)
+            entity.upsert({**row, "workflow_type": "json-2"}, expected=row)
+            stored = entity.select(where={"workflow_id": row["workflow_id"]})[0]
+            assert stored["workflow_type"] == "json-2", payload
+
+
 @pytest.fixture
 def fake():
     with udbtest.new(file_pb2.File) as served:

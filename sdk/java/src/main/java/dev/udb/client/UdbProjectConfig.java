@@ -1,5 +1,6 @@
 package dev.udb.client;
 
+import io.grpc.ChannelCredentials;
 import java.util.List;
 
 /**
@@ -25,6 +26,7 @@ public final class UdbProjectConfig {
   private final String bearerToken;
   private final String apiKey;
   private final boolean tls;
+  private final ChannelCredentials channelCredentials;
 
   private UdbProjectConfig(Builder b) {
     this.target = b.target;
@@ -42,6 +44,7 @@ public final class UdbProjectConfig {
     this.bearerToken = b.bearerToken;
     this.apiKey = b.apiKey;
     this.tls = b.tls;
+    this.channelCredentials = b.channelCredentials;
   }
 
   public String target() {
@@ -58,6 +61,11 @@ public final class UdbProjectConfig {
 
   public boolean tls() {
     return tls;
+  }
+
+  /** Caller-supplied channel credentials, or {@code null} to use {@link #tls()}. */
+  public ChannelCredentials channelCredentials() {
+    return channelCredentials;
   }
 
   /** Build the shared {@link UdbMetadata} identity context for all services. */
@@ -95,6 +103,7 @@ public final class UdbProjectConfig {
     private String bearerToken = "";
     private String apiKey = "";
     private boolean tls = false;
+    private ChannelCredentials channelCredentials;
 
     public Builder target(String v) {
       this.target = v;
@@ -164,6 +173,16 @@ public final class UdbProjectConfig {
     /** Use TLS for created channels (default plaintext). */
     public Builder tls(boolean v) {
       this.tls = v;
+      return this;
+    }
+
+    /**
+     * Dial every channel with these credentials instead of {@link #tls(boolean)}: use
+     * {@code io.grpc.TlsChannelCredentials} to trust a private CA or to present a
+     * client certificate to a mutual-TLS endpoint.
+     */
+    public Builder channelCredentials(ChannelCredentials v) {
+      this.channelCredentials = v;
       return this;
     }
 
