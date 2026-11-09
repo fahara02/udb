@@ -452,6 +452,113 @@ async fn a_changed_check_changes_what_the_database_accepts_live() {
         .expect("clean up");
 }
 
+/// `UDB_CDC_ENABLED=false` stops every outbox write, not only the data path's. Native-service
+/// and auth events kept landing in an outbox no tailer drained (196k rows in three days on one
+/// deployment). The switch is read once per process, so each setting runs in its own child.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn cdc_off_writes_no_outbox_rows_live() {
+    const CHILD: &str = "UDB_TEST_CDC_GATE_CHILD";
+    let Some(dsn) = ops_pg_dsn() else {
+        eprintln!("live DSN unset - skipping the CDC write gate");
+        return;
+    };
+    let Ok(setting) = std::env::var(CHILD) else {
+        for setting in ["false", "true", "false"] {
+            let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+                .args([
+                    "--ignored",
+                    "--exact",
+                    "runtime::service::live_tests::ops_seams_live::cdc_off_writes_no_outbox_rows_live",
+                ])
+                .env(CHILD, setting)
+                .env("UDB_CDC_ENABLED", setting)
+                .output()
+                .expect("run the CDC setting in its own process");
+            assert!(
+                output.status.success()
+                    && String::from_utf8_lossy(&output.stdout).contains("1 passed; 0 failed;"),
+                "UDB_CDC_ENABLED={setting} case failed:\n{}\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        return;
+    };
+    let enabled = setting == "true";
+    assert_eq!(crate::runtime::cdc::cdc_delivery_enabled(), enabled);
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let pool = ops_pool(&dsn).await;
+    ensure_system_catalog(&pool).await.expect("system catalog");
+    let relation = SystemCatalogConfig::current().cdc.outbox_relation();
+    let key = format!("cdc-gate-{}", Uuid::new_v4());
+    let topic = "udb.test.cdc_gate.v1";
+    let written = async || -> i64 {
+        sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {relation} WHERE partition_key = $1"
+        ))
+        .bind(&key)
+        .fetch_one(&pool)
+        .await
+        .expect("count the outbox rows")
+    };
+    // The shared writer every lane uses: data, auth, native services, transactions.
+    for _ in 0..3 {
+        crate::runtime::cdc::insert_outbox_row(
+            &pool,
+            &relation,
+            Uuid::new_v4(),
+            topic,
+            &key,
+            &json!({"tenant_id": "cdc-gate"}),
+        )
+        .await
+        .expect("an outbox write is not an error either way");
+    }
+    // A native-service event, as auth, storage or the scheduler emit one.
+    crate::runtime::service::native_helpers::enqueue_outbox_event(
+        &pool,
+        Some(&relation),
+        topic,
+        &key,
+        "cdc-gate",
+        "",
+        json!({"tenant_id": "cdc-gate"}),
+        None,
+    )
+    .await;
+    if enabled {
+        assert_eq!(written().await, 4, "with CDC on every event is written");
+        return;
+    }
+    assert_eq!(
+        written().await,
+        0,
+        "with CDC off an event was written to the outbox"
+    );
+    // A caller that asks for an event explicitly is told why it is not written.
+    let service = DataBrokerRuntime::from_config(ops_config(&dsn)).await;
+    let refused = service
+        .enqueue_outbox_event(
+            topic,
+            &key,
+            json!({"tenant_id": "cdc-gate"}),
+            None,
+            None,
+            &[],
+            &crate::broker::RequestContext::default(),
+        )
+        .await
+        .expect_err("an explicit enqueue with CDC off is refused");
+    assert_eq!(refused.code(), tonic::Code::FailedPrecondition);
+    assert!(
+        refused.message().contains("UDB_CDC_ENABLED=false"),
+        "{}",
+        refused.message()
+    );
+    assert_eq!(written().await, 0, "a refused enqueue wrote a row");
+}
+
 /// An outbox nothing drains says why: no CDC tailer holds the delivery lease. A setting that never
 /// reached the broker process left a day of events undelivered with one info line in the log.
 #[tokio::test]

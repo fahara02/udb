@@ -781,6 +781,45 @@ pub fn run() {
             );
             process::exit(exit_code);
         }
+        Command::CatalogRebindTarget {
+            run,
+            actor,
+            reason,
+            dsn,
+        } => {
+            if run.trim().is_empty() || actor.trim().is_empty() || reason.trim().is_empty() {
+                eprintln!(
+                    "catalog rebind-target: --run <reviewed transition run id>, --actor <who> \
+                     and --reason <why> are required"
+                );
+                process::exit(2);
+            }
+            let exit_code =
+                with_catalog_runtime("catalog rebind-target", dsn.as_deref(), |rt| async move {
+                    match rt
+                        .rebind_reviewed_transition_target(&run, &actor, &reason)
+                        .await
+                    {
+                        Ok(moved) => {
+                            println!(
+                                "{}",
+                                serde_json::json!({
+                                    "run": run,
+                                    "rebound": moved.is_some(),
+                                    "from_provenance_sha256": moved.as_ref().map(|m| m.0.clone()),
+                                    "to_provenance_sha256": moved.as_ref().map(|m| m.1.clone()),
+                                })
+                            );
+                            0
+                        }
+                        Err(err) => {
+                            eprintln!("catalog rebind-target: {}", err.message());
+                            1
+                        }
+                    }
+                });
+            process::exit(exit_code);
+        }
         Command::CatalogStatus { project, dsn } => {
             if project.trim().is_empty() {
                 eprintln!("catalog status: --project <id> is required");
@@ -1984,6 +2023,7 @@ pub fn run() {
         | Command::CatalogActivate { .. }
         | Command::CatalogStatus { .. }
         | Command::CatalogRestoreReceipts { .. }
+        | Command::CatalogRebindTarget { .. }
         | Command::CatalogTransition(_)
         | Command::Auth(_)
         | Command::Authz(_)

@@ -7,6 +7,48 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.13] - 2026-11-09
+
+### Breaking for callers
+
+- **`UDB_MIGRATE_ENABLED=false` now holds the project's schema on start.** The broker never read
+  the setting before, so every start applied the protos' safe changes even where `udb env
+  --profile enterprise` had written it off. Now a start with it off applies no change to the
+  project's own schemas unless the approved plan in `UDB_MIGRATION_APPROVAL_PLAN` covers it, and
+  refuses to start while one is pending, naming the changes. UDB's own system and native-service
+  tables still migrate. A start with nothing pending is unaffected.
+  - detect: env: `UDB_MIGRATE_ENABLED=false` (or `0`/`no`), and the broker exits with
+    "UDB_MIGRATE_ENABLED=false and the protos change the project's schema"
+  - fix: review the change with `udb plan`, approve it and set `UDB_MIGRATION_APPROVAL_PLAN` to the
+    plan, or set `UDB_MIGRATE_ENABLED=true` for the start that should apply it
+- **`UDB_CDC_ENABLED=false` now stops every outbox write, and explicit event requests are refused.**
+  Native-service and auth events (locks, authorization checks, cache, logins and the rest) were
+  written to the outbox with CDC off, where nothing drained them: one deployment collected 196,000
+  rows in three days. They are no longer written. `EnqueueOutboxEvent`, a transaction's
+  `enqueue_outbox_event` step and DLQ replay now fail with `FAILED_PRECONDITION` instead of writing
+  a row nothing would deliver. The metering rollup worker, whose only output is events, does not
+  start.
+  - detect: env: `UDB_CDC_ENABLED=false`, and a caller of `EnqueueOutboxEvent`, a transaction
+    enqueue step or DLQ replay now gets `FAILED_PRECONDITION` "CDC delivery is disabled"
+  - fix: enable CDC (with Kafka, or `UDB_CDC_JOURNAL_ONLY=true`) where events must be delivered;
+    rows already pending drain once a tailer runs
+
+### Added
+
+- **`udb catalog rebind-target --run <id> --actor <who> --reason <why>`.** A reviewed catalog
+  transition is bound to the identity its database answered with, which includes the server's
+  address and port. After a restore to a new server, or when a server's address changes, the
+  broker refused to start with "routed native target authority changed", and nothing could move
+  the transition. This command moves it, only when the database proves it holds the transition's
+  reviewed schema, and records who moved it, why and from which identity in
+  `udb_system.udb_catalog_reviewed_target_rebinds`. The startup refusal and `catalog
+  restore-receipts` name the command.
+
+### Fixed
+
+- **The CDC tailer logs each published event at debug, not info.** One line per event was 196,000
+  lines while a backlog drained.
+
 ## [0.6.12] - 2026-11-08
 
 ### Breaking for callers

@@ -967,7 +967,11 @@ impl DataBrokerRuntime {
                     .await
                 {
                     Ok(policy_decision) => {
-                        if policy_decision == Some(false)
+                        if !crate::runtime::cdc::cdc_delivery_enabled() {
+                            Err(crate::runtime::cdc::cdc_delivery_disabled_status(
+                                "a transaction's enqueue_outbox_event step",
+                            ))
+                        } else if policy_decision == Some(false)
                             || (!cdc_config.valid_topics.is_empty()
                                 && !cdc_config.valid_topics.iter().any(|t| t == topic)
                                 && policy_decision.is_none())

@@ -148,6 +148,20 @@ const COMMANDS: &[CmdHelp] = &[
   Find the run id in udb_system.udb_catalog_reviewed_transitions.",
     },
     CmdHelp {
+        name: "catalog rebind-target",
+        group: "Core",
+        summary: "Move a reviewed transition to the restored or relocated database it runs on.",
+        usage: "udb catalog rebind-target --run <run id> --actor <who> --reason <why> [--dsn <dsn>]",
+        details: "  A reviewed transition is bound to the identity its database answered with,
+  which includes the server's address and port. After a restore to a new server, or
+  when the server's address changes, the broker refuses to start with \"routed native
+  target authority changed\". This moves the transition only when the database proves
+  it holds the transition's reviewed schema, and records who moved it, why, and from
+  which identity in udb_system.udb_catalog_reviewed_target_rebinds. Otherwise it writes
+  nothing. Run it with the broker's own settings and network, so the database answers
+  as it does to the broker. Then run catalog restore-receipts if the receipts are gone.",
+    },
+    CmdHelp {
         name: "verify",
         group: "Core",
         summary: "Compare the proto manifest against a LIVE database, read-only, before applying anything.",
@@ -176,9 +190,10 @@ const COMMANDS: &[CmdHelp] = &[
   shared placeholder.
 
   --profile enterprise (default) writes production posture: mandatory mTLS and
-  UDB_MIGRATE_ENABLED=false. The broker does not read that setting yet: every start
-  applies safe schema changes, and only changes that need review wait for an approved
-  plan. UDB_STARTUP_DRY_RUN=true starts without executing any schema change.
+  UDB_MIGRATE_ENABLED=false: a start applies no change to the project's own schemas
+  unless an approved plan (UDB_MIGRATION_APPROVAL_PLAN) covers it, and refuses to start
+  while one is pending. UDB's own tables still migrate. UDB_STARTUP_DRY_RUN=true starts
+  without executing any schema change.
   --profile dev writes loopback posture with mTLS commented out.
 
   Prints to stdout unless --out is given, and refuses to overwrite an existing

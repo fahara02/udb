@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.12 | protocol v1.0.0                                          │
+│    crate v0.6.13 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -588,7 +588,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.6.12"
+python scripts/bench_snapshot.py --label "release-0.6.13"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the
@@ -646,10 +646,13 @@ immutable candidate **before staging**. Ordinary `catalog stage` and `activate`
 retain their compatibility checks. Blocked or data-destructive changes cannot use
 this workflow.
 
-Every start runs the startup migration: safe changes apply on their own, and changes
-that need review apply only with an approval plan. `UDB_MIGRATE_ENABLED` is not read by
-the broker yet. Set `UDB_STARTUP_DRY_RUN=true` to start without executing any schema
-change.
+Every start runs the startup migration. With `UDB_MIGRATE_ENABLED=true` (the default),
+safe changes apply on their own, and changes that need review apply only with an
+approval plan. With `UDB_MIGRATE_ENABLED=false`, a start applies no change to the
+project's own schemas unless the approval plan in `UDB_MIGRATION_APPROVAL_PLAN` covers
+it, and refuses to start while one is pending, naming the changes. UDB's own system and
+native-service tables still migrate, because the broker cannot run without them. Set
+`UDB_STARTUP_DRY_RUN=true` to start without executing any schema change at all.
 
 When a startup migration (with an approval plan) has
 already applied the changes, only the catalog is behind. Use `udb catalog stage` and

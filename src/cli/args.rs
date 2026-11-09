@@ -102,6 +102,14 @@ pub(crate) enum Command {
         run: String,
         dsn: Option<String>,
     },
+    /// `udb catalog rebind-target --run <id> --actor <who> --reason <why>`: move a completed
+    /// reviewed transition to the restored or relocated database it now runs on.
+    CatalogRebindTarget {
+        run: String,
+        actor: String,
+        reason: String,
+        dsn: Option<String>,
+    },
     /// Explicit authenticated reviewed transition over the broker's native
     /// migration/catalog RPCs. Ordinary catalog commands retain their policy.
     CatalogTransition(super::catalog_transition::TransitionCommand),
@@ -1472,6 +1480,15 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             offset = 2;
             Command::CatalogRestoreReceipts {
                 run: flag_value("--run").unwrap_or_default(),
+                dsn: flag_value("--dsn"),
+            }
+        }
+        Some("catalog") if matches!(args.get(1).map(String::as_str), Some("rebind-target")) => {
+            offset = 2;
+            Command::CatalogRebindTarget {
+                run: flag_value("--run").unwrap_or_default(),
+                actor: flag_value("--actor").unwrap_or_default(),
+                reason: flag_value("--reason").unwrap_or_default(),
                 dsn: flag_value("--dsn"),
             }
         }

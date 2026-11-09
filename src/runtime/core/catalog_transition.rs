@@ -6,6 +6,7 @@ use crate::migration::diff::{ChangeKind, ChangeOperation, ChangeSafety};
 use crate::runtime::system::SystemCatalogConfig;
 
 const TRANSITIONS_TABLE: &str = "udb_catalog_reviewed_transitions";
+const TARGET_REBINDS_TABLE: &str = "udb_catalog_reviewed_target_rebinds";
 const MAX_TRANSACTIONAL_ARTIFACT_BYTES: usize = 1024 * 1024;
 
 #[derive(Debug, PartialEq)]
@@ -117,6 +118,29 @@ fn relation() -> String {
         "{}.{}",
         qi_runtime(&config.cdc.system_schema),
         qi_runtime(TRANSITIONS_TABLE)
+    )
+}
+
+fn rebind_relation() -> String {
+    let config = SystemCatalogConfig::default();
+    format!(
+        "{}.{}",
+        qi_runtime(&config.cdc.system_schema),
+        qi_runtime(TARGET_REBINDS_TABLE)
+    )
+}
+
+/// The refusal for a completed transition whose routed target no longer matches, naming the
+/// command that proves a restored or relocated database and moves the transition to it.
+fn target_moved(id: Uuid, what: &str) -> tonic::Status {
+    refusal(
+        "reviewed_target_authority_changed",
+        format!(
+            "{what}: the database answers with another identity (a restore to a new server, or \
+             a server whose address or port changed). If this is the same data, prove it holds \
+             the reviewed schema and move the transition to it with `udb catalog rebind-target \
+             --run {id} --actor <who> --reason <why>`"
+        ),
     )
 }
 
@@ -483,7 +507,54 @@ impl DataBrokerRuntime {
         .map_err(|err| {
             catalog_admin_internal_status("reviewed_transition_storage", err.to_string())
         })?;
+        // A completed transition moved to the database it now runs on. Rows are only added; the
+        // newest one is the transition's target, and the plan keeps the one it was reviewed on.
+        sqlx::query(&format!(
+            "CREATE TABLE IF NOT EXISTS {} (
+            rebind_id BIGSERIAL PRIMARY KEY,
+            run_id UUID NOT NULL REFERENCES {rel}(run_id) ON DELETE CASCADE,
+            from_provenance_sha256 TEXT NOT NULL,
+            to_provenance_sha256 TEXT NOT NULL CHECK (to_provenance_sha256 <> ''),
+            rebound_by TEXT NOT NULL CHECK (rebound_by <> ''),
+            reason TEXT NOT NULL CHECK (reason <> ''),
+            rebound_at TIMESTAMPTZ NOT NULL DEFAULT NOW())",
+            rebind_relation()
+        ))
+        .execute(self.pg_pool()?)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status("reviewed_target_rebind_storage", err.to_string())
+        })?;
         Ok(())
+    }
+
+    /// The target a completed transition is bound to: its newest rebind, else the one its plan
+    /// was reviewed on. A database that predates rebinds has no table and keeps the plan's.
+    async fn bound_target_provenance(
+        &self,
+        connection: &mut sqlx::PgConnection,
+        id: Uuid,
+        plan: &ReviewedCatalogPlan,
+    ) -> Result<String, tonic::Status> {
+        let present: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+            .bind(rebind_relation())
+            .fetch_one(&mut *connection)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status("reviewed_rebind_lookup", err.to_string())
+            })?;
+        if !present {
+            return Ok(plan.target_provenance_sha256.clone());
+        }
+        let rebound: Option<String> = sqlx::query_scalar(&format!(
+            "SELECT to_provenance_sha256 FROM {} WHERE run_id=$1 ORDER BY rebind_id DESC LIMIT 1",
+            rebind_relation()
+        ))
+        .bind(id)
+        .fetch_optional(&mut *connection)
+        .await
+        .map_err(|err| catalog_admin_internal_status("reviewed_rebind_load", err.to_string()))?;
+        Ok(rebound.unwrap_or_else(|| plan.target_provenance_sha256.clone()))
     }
 
     pub(super) async fn reviewed_catalog_plan_exists(
@@ -977,7 +1048,7 @@ impl DataBrokerRuntime {
                 Some(&mut **tx),
             )
             .await?;
-        if target.provenance_sha256 != plan.target_provenance_sha256
+        if target.provenance_sha256 != self.bound_target_provenance(&mut **tx, id, &plan).await?
             || !self
                 .verified_reviewed_target(&plan, &target.pool, &mut **tx)
                 .await?
@@ -1902,9 +1973,9 @@ impl DataBrokerRuntime {
                 Some(&mut *tx),
             )
             .await?;
-        if target.provenance_sha256 != plan.target_provenance_sha256 {
-            return Err(refusal(
-                "reviewed_target_authority_changed",
+        if target.provenance_sha256 != self.bound_target_provenance(&mut *tx, id, &plan).await? {
+            return Err(target_moved(
+                id,
                 "the transition's routed target changed, so its receipts cannot be restored",
             ));
         }
@@ -1981,6 +2052,101 @@ impl DataBrokerRuntime {
             catalog_admin_internal_status("restore_receipts_commit", err.to_string())
         })?;
         Ok(restored)
+    }
+
+    /// Move a completed reviewed transition to the database it now runs on, after a restore to a
+    /// new server or a server whose address changed. The transition is bound to the identity its
+    /// target answered with, which includes the server's address, so such a database can never
+    /// re-prove it and the broker refuses to start. This moves it only when the database proves
+    /// it holds the transition's reviewed schema, the same check an apply replay makes, and
+    /// records who moved it, why, and from what. Returns the identities it moved between, or
+    /// `None` when the transition is already bound to this database.
+    pub async fn rebind_reviewed_transition_target(
+        &self,
+        run_id: &str,
+        actor: &str,
+        reason: &str,
+    ) -> Result<Option<(String, String)>, tonic::Status> {
+        let id = parse_migration_run_id(run_id)?;
+        if actor.trim().is_empty() || reason.trim().is_empty() {
+            return Err(refusal(
+                "reviewed_rebind_unattributed",
+                "a rebind records who moved the transition and why: give --actor and --reason",
+            ));
+        }
+        self.ensure_catalog_transition_storage().await?;
+        let control = self.pg_pool()?.clone();
+        let mut tx = control
+            .begin()
+            .await
+            .map_err(|err| catalog_admin_internal_status("rebind_target_begin", err.to_string()))?;
+        let plan = self.load_reviewed_plan(&mut tx, id).await?.ok_or_else(|| {
+            refusal(
+                "reviewed_plan_missing",
+                "no reviewed transition has this run",
+            )
+        })?;
+        let completed: bool = sqlx::query_scalar(&format!(
+            "SELECT application_evidence_sha256<>'' AND applied_at IS NOT NULL FROM {} \
+             WHERE run_id=$1 FOR UPDATE",
+            relation()
+        ))
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|err| catalog_admin_internal_status("rebind_target_state", err.to_string()))?;
+        if !completed {
+            return Err(refusal(
+                "reviewed_application_incomplete",
+                "this transition never completed its application; plan it again on this database",
+            ));
+        }
+        let target = self
+            .project_postgres_write_target_on_connection(
+                &plan.project_id,
+                Some(&plan.target_instance),
+                Some(&mut *tx),
+            )
+            .await?;
+        let bound = self.bound_target_provenance(&mut *tx, id, &plan).await?;
+        if target.provenance_sha256 == bound {
+            return Ok(None);
+        }
+        if !self
+            .verified_reviewed_target(&plan, &target.pool, &mut *tx)
+            .await?
+        {
+            return Err(refusal(
+                "reviewed_target_verification_failed",
+                "this database does not hold the transition's reviewed schema, so the transition \
+                 cannot move to it; nothing was written",
+            ));
+        }
+        sqlx::query(&format!(
+            "INSERT INTO {}(run_id,from_provenance_sha256,to_provenance_sha256,rebound_by,reason) \
+             VALUES($1,$2,$3,$4,$5)",
+            rebind_relation()
+        ))
+        .bind(id)
+        .bind(&bound)
+        .bind(&target.provenance_sha256)
+        .bind(actor.trim())
+        .bind(reason.trim())
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| catalog_admin_internal_status("rebind_target_write", err.to_string()))?;
+        tx.commit().await.map_err(|err| {
+            catalog_admin_internal_status("rebind_target_commit", err.to_string())
+        })?;
+        tracing::warn!(
+            run_id = %id,
+            from = %bound,
+            to = %target.provenance_sha256,
+            actor = actor.trim(),
+            reason = reason.trim(),
+            "reviewed catalog transition moved to the database it now runs on"
+        );
+        Ok(Some((bound, target.provenance_sha256)))
     }
 
     pub(super) async fn reviewed_catalog_compatibility_evidence(
@@ -2069,11 +2235,10 @@ impl DataBrokerRuntime {
                 Some(&mut **tx),
             )
             .await?;
-        if target_route.provenance_sha256 != plan.target_provenance_sha256 {
-            return Err(refusal(
-                "reviewed_target_authority_changed",
-                "routed native target authority changed",
-            ));
+        if target_route.provenance_sha256
+            != self.bound_target_provenance(&mut **tx, id, &plan).await?
+        {
+            return Err(target_moved(id, "routed native target authority changed"));
         }
         if self
             .reviewed_application_evidence(tx, id, &plan, &target_route.pool)

@@ -2255,6 +2255,99 @@ async fn receipts_survive_cleanup_and_restore(
         0,
         "receipts already present are left alone"
     );
+
+    // A database restored to a new server, or whose server address changed, answers with another
+    // identity than the one the transition was bound to. A rebind row to an identity no database
+    // answers with stands in for that move: the transition is now bound elsewhere.
+    let rebinds = "udb_system.udb_catalog_reviewed_target_rebinds";
+    sqlx::query(&format!(
+        "INSERT INTO {rebinds}(run_id,from_provenance_sha256,to_provenance_sha256,rebound_by,reason) \
+         VALUES ($1::UUID,'reviewed-here','another-server','test','simulate a server move')"
+    ))
+    .bind(&run_id)
+    .execute(&control)
+    .await
+    .expect("bind the transition to another server");
+    let moved = restorer
+        .restore_reviewed_transition_receipts(&run_id)
+        .await
+        .expect_err("a transition bound to another server is refused");
+    assert!(
+        moved.message().contains("udb catalog rebind-target"),
+        "the refusal names the way out: {}",
+        moved.message()
+    );
+    let count_rebinds = async || -> i64 {
+        sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {rebinds} WHERE run_id = $1::UUID"
+        ))
+        .bind(&run_id)
+        .fetch_one(&control)
+        .await
+        .expect("count the rebinds")
+    };
+    // Negative: an unattributed rebind writes nothing.
+    restorer
+        .rebind_reviewed_transition_target(&run_id, "operator", " ")
+        .await
+        .expect_err("a rebind without a reason is refused");
+    // Negative: a database that does not hold the reviewed schema cannot take the transition.
+    let (schema, table): (String, String) = sqlx::query_as(&format!(
+        "SELECT plan_json->'target_manifest'->'tables'->0->>'schema', \
+                plan_json->'target_manifest'->'tables'->0->>'table' \
+         FROM {evidence_relation} WHERE run_id = $1::UUID"
+    ))
+    .bind(&run_id)
+    .fetch_one(&control)
+    .await
+    .expect("read a table of the reviewed schema");
+    let rename =
+        |from: &str, to: &str| format!("ALTER TABLE \"{schema}\".\"{from}\" RENAME TO \"{to}\"");
+    let hidden = format!("{table}_moved_away");
+    sqlx::query(&rename(&table, &hidden))
+        .execute(&target)
+        .await
+        .expect("hide a reviewed table");
+    let unverified = restorer
+        .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
+        .await
+        .expect_err("a database without the reviewed schema is refused");
+    assert!(
+        unverified.message().contains("does not hold"),
+        "{}",
+        unverified.message()
+    );
+    sqlx::query(&rename(&hidden, &table))
+        .execute(&target)
+        .await
+        .expect("put the reviewed table back");
+    assert_eq!(count_rebinds().await, 1, "a refused rebind wrote a row");
+
+    let (from, to) = restorer
+        .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
+        .await
+        .expect("a database holding the reviewed schema takes the transition")
+        .expect("the transition moves");
+    assert_eq!(from, "another-server");
+    assert_ne!(to, "another-server");
+    for _ in 0..3 {
+        assert!(
+            restorer
+                .rebind_reviewed_transition_target(&run_id, "operator", "again")
+                .await
+                .expect("a repeated rebind is harmless")
+                .is_none(),
+            "a transition already bound here does not move again"
+        );
+    }
+    assert_eq!(count_rebinds().await, 2, "each move is recorded once");
+    assert_eq!(
+        restorer
+            .restore_reviewed_transition_receipts(&run_id)
+            .await
+            .expect("the moved transition re-proves on this database"),
+        0
+    );
 }
 
 async fn capabilities_profile_serve(

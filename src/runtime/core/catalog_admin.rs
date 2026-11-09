@@ -4572,6 +4572,11 @@ impl DataBrokerRuntime {
     ) -> Result<String, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let id: Uuid = parse_dlq_id(dlq_id)?;
+        if !crate::runtime::cdc::cdc_delivery_enabled() {
+            return Err(crate::runtime::cdc::cdc_delivery_disabled_status(
+                "DLQ replay",
+            ));
+        }
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::current();
         let dlq_rel = config.dlq_relation();

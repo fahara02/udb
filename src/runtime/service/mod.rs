@@ -3198,7 +3198,11 @@ pub async fn serve(
     }
     // 9.9: leader-elected metering rollup — aggregates closed durable usage
     // windows and emits deduped billing/export work events.
-    {
+    // Its only output is outbox events, deduped against the outbox and journal, so with
+    // CDC delivery off it would re-derive the same windows on every pass and write nothing.
+    if !crate::runtime::cdc::cdc_delivery_enabled() {
+        tracing::info!("metering rollup worker disabled: UDB_CDC_ENABLED=false");
+    } else {
         let metering_runtime = service.runtime.load_full();
         if let Ok(metering_pool) =
             metering_runtime.native_store_pool_for_service("metering", true, "")

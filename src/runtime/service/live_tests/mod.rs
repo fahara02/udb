@@ -43,6 +43,7 @@ mod scheduler_live;
 #[cfg(feature = "http-client")]
 mod search_tenant_iso_live;
 mod sql_generation_live;
+mod startup_migrate_gate_live;
 mod storage_live;
 #[cfg(feature = "http-client")]
 mod storage_object_live;

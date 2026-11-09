@@ -619,6 +619,11 @@ impl DataBrokerRuntime {
         valid_topics: &[String],
         context: &RequestContext,
     ) -> Result<EnqueueOutboxEventResult, tonic::Status> {
+        if !crate::runtime::cdc::cdc_delivery_enabled() {
+            return Err(crate::runtime::cdc::cdc_delivery_disabled_status(
+                "EnqueueOutboxEvent",
+            ));
+        }
         let pool = self.pg_pool()?;
 
         // Validate topic against the database policy table when populated, then

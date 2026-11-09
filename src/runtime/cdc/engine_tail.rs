@@ -3467,9 +3467,13 @@ impl CdcEngine {
         partition: i32,
         offset: i64,
     ) {
-        info!(
+        // One line per event: at info it was 196k lines while a backlog drained, and one per
+        // write after. Delivery volume is in the metrics; this stays for debugging.
+        tracing::debug!(
             "[cdc] published {} to partition {} offset {}",
-            event_id, partition, offset
+            event_id,
+            partition,
+            offset
         );
 
         // F-6: write the JOURNAL (the only replay source) BEFORE broadcasting to

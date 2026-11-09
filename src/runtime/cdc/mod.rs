@@ -26,6 +26,35 @@ use wildmatch::WildMatch;
 use crate::generation::CatalogManifest;
 use crate::metrics::MetricsRecorder;
 
+/// The refusal for a caller that explicitly asked for a change event while delivery
+/// is off: the event could only sit undrained, so it is not written.
+pub(crate) fn cdc_delivery_disabled_status(what: &str) -> tonic::Status {
+    crate::runtime::executor_utils::failed_precondition_fields(
+        format!(
+            "{what}: CDC delivery is disabled (UDB_CDC_ENABLED=false), so no change event is \
+             written; nothing would deliver it. Enable CDC (with Kafka, or \
+             UDB_CDC_JOURNAL_ONLY=true) to publish events"
+        ),
+        [(
+            "UDB_CDC_ENABLED".to_string(),
+            "change-event delivery is off".to_string(),
+        )],
+    )
+}
+
+/// One info line per process the first time an event is skipped, so an operator can see
+/// why the outbox stays empty without a line per write.
+fn note_outbox_write_skipped(topic: &str) {
+    static NOTED: std::sync::Once = std::sync::Once::new();
+    NOTED.call_once(|| {
+        tracing::info!(
+            topic,
+            "CDC delivery is disabled (UDB_CDC_ENABLED=false): change events are not written \
+             to the outbox"
+        );
+    });
+}
+
 /// THE one canonical outbox-row insert, shared by EVERY writer of the
 /// `(event_id, topic, partition_key, payload, created_at)` outbox table: the auth
 /// lane (`auth_service::events::write_outbox_row`), the native data-plane lane
@@ -48,6 +77,12 @@ pub(crate) async fn insert_outbox_row<'c, E>(
 where
     E: sqlx::Executor<'c, Database = sqlx::Postgres>,
 {
+    // Every outbox writer passes through here, so the delivery switch holds for all of
+    // them: with no tailer, a written row is never drained.
+    if !cdc_delivery_enabled() {
+        note_outbox_write_skipped(topic);
+        return Ok(());
+    }
     let topic = strip_nul_text(topic);
     let partition_key = strip_nul_text(partition_key);
     let mut envelope = strip_nul_json(envelope);
@@ -207,13 +242,16 @@ pub(crate) fn fnv1a_64(bytes: &[u8]) -> u64 {
     hash
 }
 
-/// Whether CDC change-event delivery is enabled. This gates BOTH the
-/// transactional outbox WRITE (in each mutation's tx) AND the Kafka tailer /
-/// storage-finalized consumer that drain it — so `UDB_CDC_ENABLED=false` is a
-/// true full-stop: a deployment with no Kafka neither writes undrained outbox
-/// rows (no unbounded `outbox_events` growth) nor opens any broker connection
-/// (no resolve-failure log flood). Default = enabled. Resolved once: the env is
-/// fixed for the process lifetime, and this is read on the mutation hot path.
+/// Whether CDC change-event delivery is enabled. This gates BOTH every outbox
+/// WRITE AND the tailer / storage-finalized consumer that drain it, so
+/// `UDB_CDC_ENABLED=false` is a full stop: nothing writes outbox rows that nothing
+/// will drain (no unbounded `outbox_events` growth) and no broker connection is
+/// opened. Event side effects (data mutations, auth and native-service events) are
+/// skipped at [`insert_outbox_row`]; a caller that asked for an event explicitly
+/// (`EnqueueOutboxEvent`, a transaction's enqueue step, DLQ replay, a `cdc_required`
+/// mutation) is refused with [`cdc_delivery_disabled_status`]. Default = enabled.
+/// Resolved once: the env is fixed for the process lifetime, and this is read on the
+/// mutation hot path.
 pub(crate) fn cdc_delivery_enabled() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ENABLED.get_or_init(|| {

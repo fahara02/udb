@@ -212,7 +212,9 @@ pub(crate) fn render(profile: EnvProfile, dsn: &str) -> String {
         match profile {
             EnvProfile::Dev => "Apply schema changes on startup. Convenient locally.",
             EnvProfile::Enterprise => {
-                "Records intent only: the broker does not read it yet, and every start applies                  safe changes. Changes that need review still need an approved plan. To start                  without executing any schema change, set UDB_STARTUP_DRY_RUN=true."
+                "A start applies no change to the project's own schemas unless the approved \
+                 plan in UDB_MIGRATION_APPROVAL_PLAN covers it, and refuses to start while one \
+                 is pending. UDB's own tables still migrate."
             }
         },
     );

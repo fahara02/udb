@@ -986,6 +986,11 @@ pub struct MigrationOptions {
     /// tradeoff is the same as `skip_unchanged_verify`: external drift is not
     /// re-checked on a fast start (`udb admin force-sync` is the escape hatch).
     pub skip_if_unchanged: bool,
+    /// `UDB_MIGRATE_ENABLED`. Off: a start applies no change to the project's own schemas
+    /// unless an approved plan (`UDB_MIGRATION_APPROVAL_PLAN`) covers it, and refuses to
+    /// start while one is pending. UDB's own system and native-service tables still
+    /// migrate, since the running broker needs them.
+    pub apply_on_start: bool,
 
     // ── Timeouts ──────────────────────────────────────────────────────────────
     /// PostgreSQL `lock_timeout` SET at the head of every generated SQL file.
@@ -1042,6 +1047,7 @@ impl Default for MigrationOptions {
             force_reseed: false,
             skip_unchanged_verify: false,
             skip_if_unchanged: false,
+            apply_on_start: true,
             lock_timeout: "5s".to_string(),
             statement_timeout: "120s".to_string(),
             exec_timeout_secs: 300,
@@ -1065,6 +1071,7 @@ impl MigrationOptions {
     /// - `UDB_FORCE_RESEED`, `UDB_SKIP_UNCHANGED_VERIFY`,
     ///   `UDB_STARTUP_SKIP_IF_UNCHANGED`, `UDB_MIGRATION_EMERGENCY_AUTO_ALTER`
     /// - `UDB_MIGRATION_APPROVAL_PLAN` (nonempty trimmed path overrides the file)
+    /// - `UDB_MIGRATE_ENABLED`
     pub fn from_env() -> Self {
         let mut opts = Self::default();
         opts.merge_env();
@@ -1106,6 +1113,9 @@ impl MigrationOptions {
         }
         if let Some(value) = bool_env("UDB_STARTUP_SKIP_IF_UNCHANGED") {
             self.skip_if_unchanged = value;
+        }
+        if let Some(value) = bool_env("UDB_MIGRATE_ENABLED") {
+            self.apply_on_start = value;
         }
         // Settable by env on purpose. This is the documented repair path for a
         // startup that fail-closes on live-vs-manifest drift, and an operator

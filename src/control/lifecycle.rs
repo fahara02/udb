@@ -535,6 +535,30 @@ fn stale_system_schema_inputs(schemas: &[ProtoSchema]) -> Vec<String> {
         .collect()
 }
 
+/// The changes a start holds while `UDB_MIGRATE_ENABLED=false`: every change outside the
+/// schemas of UDB's own system and native-service tables.
+fn project_changes_held_on_start(changes: &[ChangeOperation]) -> Vec<String> {
+    let owned: std::collections::HashSet<&str> = crate::runtime::native_catalog::native_schemas()
+        .iter()
+        .map(|schema| schema.schema_name.as_str())
+        .collect();
+    changes
+        .iter()
+        .filter(|change| !owned.contains(change.schema.as_str()))
+        .map(|change| {
+            let mut name = format!("{:?} {}", change.kind, change.schema);
+            if !change.table.is_empty() {
+                name.push('.');
+                name.push_str(&change.table);
+            }
+            if !change.column.is_empty() {
+                name.push_str(&format!("({})", change.column));
+            }
+            name
+        })
+        .collect()
+}
+
 async fn run_startup_lifecycle_core(
     runtime: &DataBrokerRuntime,
     manifest: &CatalogManifest,
@@ -1252,6 +1276,28 @@ async fn run_startup_lifecycle_core(
             .require_approval_plan
             .trim()
             .is_empty();
+        // UDB_MIGRATE_ENABLED=false: the project's schema changes only through an approved
+        // plan. Refuse before anything of the project's is touched; UDB's own tables are
+        // exempt, since the broker cannot run without them.
+        if !runtime.config().migration.apply_on_start && !force_sync && !approval_plan_configured {
+            let held = project_changes_held_on_start(&canonical_changes);
+            if !held.is_empty() {
+                return Err(fail(
+                    runtime,
+                    &mut report,
+                    "migrate_disabled",
+                    format!(
+                        "UDB_MIGRATE_ENABLED=false and the protos change the project's schema \
+                         ({} change(s): {}). A start applies no project schema change while \
+                         migration is off; nothing was applied. Review them with `udb plan`, \
+                         approve the plan and point UDB_MIGRATION_APPROVAL_PLAN at it, or set \
+                         UDB_MIGRATE_ENABLED=true for this start",
+                        held.len(),
+                        held.iter().take(10).cloned().collect::<Vec<_>>().join("; ")
+                    ),
+                ));
+            }
+        }
         // Validate once when there is review-required work OR a plan is configured
         // for an otherwise auto-safe migration (preserving the explicit-plan gate).
         // Fails closed on a missing plan for review work, or on any count / checksum
