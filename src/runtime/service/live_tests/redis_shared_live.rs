@@ -14,6 +14,10 @@ fn redis_dsn() -> Option<String> {
     ])
 }
 
+/// Connections the shared server may receive from other tests during a measured window. Far
+/// below what connecting per operation opens (one per operation), so the check still catches it.
+const UNRELATED_HEADROOM: u64 = 16;
+
 async fn connections_received(client: &redis::Client) -> u64 {
     let mut admin = client
         .get_multiplexed_async_connection()
@@ -55,8 +59,13 @@ async fn thousands_of_operations_share_one_connection_live() {
         ));
     }
     let opened = connections_received(&client).await - before;
-    // The two INFO reads each open one; 4,000 operations must open none.
-    assert!(opened <= 2, "4,000 operations opened {opened} connections");
+    // The counter is the server's, and CI shares this Redis with every other live test, whose
+    // background work can connect during the window. Connecting per operation would open at
+    // least 4,000 here; sharing opens only the two INFO reads plus that unrelated traffic.
+    assert!(
+        opened < UNRELATED_HEADROOM,
+        "4,000 operations opened {opened} connections"
+    );
 
     // Concurrent callers share it too.
     let before = connections_received(&client).await;
@@ -78,7 +87,11 @@ async fn thousands_of_operations_share_one_connection_live() {
     }
     values.sort_unstable();
     assert_eq!(values, (1..=64).collect::<Vec<i64>>());
-    assert!(connections_received(&client).await - before <= 2);
+    let opened = connections_received(&client).await - before;
+    assert!(
+        opened < UNRELATED_HEADROOM,
+        "64 concurrent operations opened {opened} connections"
+    );
 
     redis_engine::flush_namespace(&client, &tenant, &namespace)
         .await
