@@ -85,11 +85,7 @@ impl DataBrokerRuntime {
                 request = request.continuation_token(next);
             }
             let page = request.send().await.map_err(|err| {
-                crate::runtime::executor_utils::backend_transport_status(
-                    "S3",
-                    "list_objects_v2",
-                    err,
-                )
+                crate::runtime::executors::s3::s3_sdk_status("list_objects_v2", err)
             })?;
             for object in page.contents() {
                 let Some(key) = object.key() else { continue };
@@ -151,8 +147,7 @@ impl DataBrokerRuntime {
                         .as_service_error()
                         .is_some_and(|error| error.is_not_found()) => {}
                 Err(err) => {
-                    return Err(crate::runtime::executor_utils::backend_transport_status(
-                        "S3",
+                    return Err(crate::runtime::executors::s3::s3_sdk_status(
                         "head_object",
                         err,
                     ));
@@ -165,13 +160,7 @@ impl DataBrokerRuntime {
                 .copy_source(format!("{bucket}/{}", urlencoding_path(key)))
                 .send()
                 .await
-                .map_err(|err| {
-                    crate::runtime::executor_utils::backend_transport_status(
-                        "S3",
-                        "copy_object",
-                        err,
-                    )
-                })?;
+                .map_err(|err| crate::runtime::executors::s3::s3_sdk_status("copy_object", err))?;
             report.copied += 1;
         }
         Ok(report)

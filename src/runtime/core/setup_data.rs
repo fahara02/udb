@@ -5349,8 +5349,7 @@ impl DataBrokerRuntime {
                     if not_found {
                         Ok(None)
                     } else {
-                        Err(crate::runtime::executor_utils::backend_transport_status(
-                            "S3",
+                        Err(crate::runtime::executors::s3::s3_sdk_status(
                             "object head",
                             err,
                         ))
@@ -5420,11 +5419,7 @@ impl DataBrokerRuntime {
                 .send()
                 .await
                 .map_err(|err| {
-                    crate::runtime::executor_utils::backend_transport_status(
-                        "S3",
-                        "multipart init",
-                        err,
-                    )
+                    crate::runtime::executors::s3::s3_sdk_status("multipart init", err)
                 })?;
             let upload_id = upload.upload_id().unwrap_or_default().to_string();
             let ttl = bounded_ttl(request.ttl_seconds);
@@ -5441,11 +5436,7 @@ impl DataBrokerRuntime {
                     .presigned(config.clone())
                     .await
                     .map_err(|err| {
-                        crate::runtime::executor_utils::backend_transport_status(
-                            "S3",
-                            "part presign",
-                            err,
-                        )
+                        crate::runtime::executors::s3::s3_sdk_status("part presign", err)
                     })?;
                 part_urls.push(url.uri().to_string());
             }
@@ -5560,11 +5551,7 @@ impl DataBrokerRuntime {
                 .send()
                 .await
                 .map_err(|err| {
-                    crate::runtime::executor_utils::backend_transport_status(
-                        "S3",
-                        "multipart complete",
-                        err,
-                    )
+                    crate::runtime::executors::s3::s3_sdk_status("multipart complete", err)
                 })?;
             Ok(crate::proto::CompleteMultipartUploadResponse {
                 resource_uri: decision.resource_uri,
@@ -5635,8 +5622,7 @@ impl DataBrokerRuntime {
                     if no_such_upload {
                         Ok(crate::proto::AbortMultipartUploadResponse { aborted: false })
                     } else {
-                        Err(crate::runtime::executor_utils::backend_transport_status(
-                            "S3",
+                        Err(crate::runtime::executors::s3::s3_sdk_status(
                             "multipart abort",
                             err,
                         ))
@@ -5788,11 +5774,7 @@ async fn list_multipart_parts(
             call = call.part_number_marker(marker);
         }
         let page = call.send().await.map_err(|err| {
-            crate::runtime::executor_utils::backend_transport_status(
-                "S3",
-                "multipart list parts",
-                err,
-            )
+            crate::runtime::executors::s3::s3_sdk_status("multipart list parts", err)
         })?;
         for part in page.parts() {
             if let Some(number) = part.part_number() {
@@ -14588,9 +14570,7 @@ async fn presign_s3_url(
             .presigned(config)
             .await
             .map(|p| p.uri().to_string())
-            .map_err(|err| {
-                crate::runtime::executor_utils::backend_transport_status("S3", "presign", err)
-            })
+            .map_err(|err| crate::runtime::executors::s3::s3_sdk_status("presign", err))
     } else {
         s3.get_object()
             .bucket(bucket)
@@ -14598,9 +14578,7 @@ async fn presign_s3_url(
             .presigned(config)
             .await
             .map(|p| p.uri().to_string())
-            .map_err(|err| {
-                crate::runtime::executor_utils::backend_transport_status("S3", "presign", err)
-            })
+            .map_err(|err| crate::runtime::executors::s3::s3_sdk_status("presign", err))
     }
 }
 

@@ -2593,9 +2593,9 @@ impl DataBrokerRuntime {
             if plan.requires_server_side_encryption {
                 put = put.server_side_encryption(aws_sdk_s3::types::ServerSideEncryption::Aes256);
             }
-            put.send().await.map_err(|err| {
-                crate::runtime::executor_utils::backend_transport_status("S3", "put_object", err)
-            })?;
+            put.send()
+                .await
+                .map_err(|err| crate::runtime::executors::s3::s3_sdk_status("put_object", err))?;
             Ok((
                 1,
                 target_instance.map(str::to_string),

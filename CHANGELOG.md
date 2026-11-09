@@ -37,6 +37,12 @@ release line was tagged.
   missing" on a NOT NULL column). The SDK now leaves `payload` unset, and the broker treats an
   empty `payload` as no row, so released Python clients write correctly against a new broker.
 - **The Java SDK's entity `upsert` sends the row once**, in `record_json`.
+- **A failed S3/MinIO call says why.** Every object operation reported only "service error",
+  the AWS SDK's text for any modeled S3 error, and marked it retryable. It now carries the S3
+  code and message (`S3 put_object failed: AccessDenied: ...`), and a rejected call
+  (AccessDenied, NoSuchBucket, a bad signature) is FAILED_PRECONDITION with reason
+  `s3_rejected` instead of a retryable UNAVAILABLE that no retry could fix. Throttling and
+  S3-side 5xx codes stay retryable; a transport failure keeps its full error chain.
 - **`UDB_ABAC_DEFAULT_ALLOW=true` works again.** The dev switch applied only while the policy
   table had no rows, but every broker seeds its own `organization_owner` rule, so on a real
   broker it never applied and every data call was denied ("no allow rule grants action ...").

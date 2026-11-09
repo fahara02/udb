@@ -2234,11 +2234,7 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
                     .send()
                     .await
                     .map_err(|err| {
-                        crate::runtime::executor_utils::backend_transport_status(
-                            "S3/MinIO",
-                            "create bucket",
-                            err,
-                        )
+                        crate::runtime::executors::s3::s3_sdk_status("create bucket", err)
                     })?;
             }
             Ok(())
@@ -2259,11 +2255,7 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
                 .send()
                 .await
                 .map_err(|err| {
-                    crate::runtime::executor_utils::backend_transport_status(
-                        "S3/MinIO",
-                        "verify bucket",
-                        err,
-                    )
+                    crate::runtime::executors::s3::s3_sdk_status("verify bucket", err)
                 })?;
             Ok(())
         }

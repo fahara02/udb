@@ -105,6 +105,59 @@ fn s3_internal_status(operation: impl Into<String>, message: impl Into<String>) 
     internal_status("S3", operation, message)
 }
 
+/// S3 error codes that a later attempt can succeed past.
+const S3_TRANSIENT_CODES: &[&str] = &[
+    "SlowDown",
+    "InternalError",
+    "ServiceUnavailable",
+    "RequestTimeout",
+    "Throttling",
+    "ThrottlingException",
+];
+
+/// The status for a failed S3 SDK call.
+///
+/// The SDK error's `Display` is only "service error", which told a caller nothing:
+/// the S3 code and message live in the modeled error. A modeled error is reported
+/// with both, and is retryable only for a transient code; AccessDenied,
+/// NoSuchBucket or a bad signature are FAILED_PRECONDITION, since retrying cannot
+/// fix them. A transport failure (connect, timeout, DNS) carries its full error
+/// chain and stays retryable.
+pub(crate) fn s3_sdk_status<E, R>(
+    operation: &str,
+    err: aws_sdk_s3::error::SdkError<E, R>,
+) -> tonic::Status
+where
+    E: aws_sdk_s3::error::ProvideErrorMetadata + std::error::Error + Send + Sync + 'static,
+    R: std::fmt::Debug + Send + Sync + 'static,
+{
+    if let Some(service) = err.as_service_error() {
+        let code = service.code().unwrap_or("unknown").to_string();
+        let message = service.message().unwrap_or_default().to_string();
+        let text = format!("S3 {operation} failed: {code}: {message}");
+        return s3_coded_status(operation, &code, text);
+    }
+    backend_transport_status(
+        "S3",
+        operation,
+        aws_sdk_s3::error::DisplayErrorContext(&err),
+    )
+}
+
+fn s3_coded_status(operation: &str, code: &str, text: String) -> tonic::Status {
+    if S3_TRANSIENT_CODES.contains(&code) {
+        retryable_status("S3", operation, HTTP_RETRYABLE_BACKOFF_MS, text)
+    } else {
+        crate::runtime::executor_utils::schema_status(
+            tonic::Code::FailedPrecondition,
+            "S3",
+            operation,
+            "s3_rejected",
+            text,
+        )
+    }
+}
+
 /// Whether the request spec demands server-side encryption. Set from an object
 /// store's `server_side_encryption` annotation (the planner surfaces it as
 /// `ObjectStreamPlan.requires_server_side_encryption`). When true, every S3
@@ -132,7 +185,7 @@ impl ObjectExecutor for S3Executor {
             .key(object_key)
             .send()
             .await
-            .map_err(|err| backend_transport_status("S3", "get_object", err))?;
+            .map_err(|err| s3_sdk_status("get_object", err))?;
         let bytes = output
             .body
             .collect()
@@ -182,7 +235,7 @@ impl ObjectExecutor for S3Executor {
         request
             .send()
             .await
-            .map_err(|err| backend_transport_status("S3", "put_object", err))?;
+            .map_err(|err| s3_sdk_status("put_object", err))?;
         Ok(serde_json::json!({
             "resource_uri": format!("s3://{bucket}/{object_key}"),
             "affected_rows": 1,
@@ -210,7 +263,7 @@ impl ObjectExecutor for S3Executor {
             .key(&object_key)
             .send()
             .await
-            .map_err(|err| backend_transport_status("S3", "get_object", err))?;
+            .map_err(|err| s3_sdk_status("get_object", err))?;
         let chunk_bytes = s3_download_chunk_bytes();
         let stream = async_stream::try_stream! {
             use tokio::io::AsyncReadExt as _;
@@ -281,7 +334,7 @@ impl ObjectExecutor for S3Executor {
                 let created = create
                     .send()
                     .await
-                    .map_err(|e| backend_transport_status("S3", "create_multipart_upload", e))?;
+                    .map_err(|e| s3_sdk_status("create_multipart_upload", e))?;
                 let upload_id = created
                     .upload_id()
                     .ok_or_else(|| {
@@ -327,7 +380,7 @@ impl ObjectExecutor for S3Executor {
                         .upload_id(upload_id.clone())
                         .send()
                         .await;
-                    return Err(backend_transport_status("S3", "upload_part", e));
+                    return Err(s3_sdk_status("upload_part", e));
                 }
             }
         }
@@ -350,7 +403,7 @@ impl ObjectExecutor for S3Executor {
                 request
                     .send()
                     .await
-                    .map_err(|e| backend_transport_status("S3", "put_object", e))?;
+                    .map_err(|e| s3_sdk_status("put_object", e))?;
             }
             Some((upload_id, mut parts, part_number)) => {
                 // Flush the trailing (< part-size) remainder as the final part.
@@ -381,7 +434,7 @@ impl ObjectExecutor for S3Executor {
                                 .upload_id(upload_id.clone())
                                 .send()
                                 .await;
-                            return Err(backend_transport_status("S3", "upload_part (final)", e));
+                            return Err(s3_sdk_status("upload_part (final)", e));
                         }
                     }
                 }
@@ -406,11 +459,7 @@ impl ObjectExecutor for S3Executor {
                         .upload_id(upload_id)
                         .send()
                         .await;
-                    return Err(backend_transport_status(
-                        "S3",
-                        "complete_multipart_upload",
-                        e,
-                    ));
+                    return Err(s3_sdk_status("complete_multipart_upload", e));
                 }
             }
         }
@@ -436,7 +485,7 @@ impl ObjectExecutor for S3Executor {
             .send()
             .await
             .map(|_| ())
-            .map_err(|err| backend_transport_status("S3", "delete_object", err))
+            .map_err(|err| s3_sdk_status("delete_object", err))
     }
 }
 
@@ -452,6 +501,38 @@ mod tests {
             .get_bin(ERROR_DETAIL_METADATA_KEY)
             .expect("typed detail trailer is present");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn a_rejected_s3_call_names_the_code_and_is_not_retried() {
+        let status = s3_coded_status(
+            "put_object",
+            "AccessDenied",
+            "S3 put_object failed: AccessDenied: Access Denied.".to_string(),
+        );
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            status.message(),
+            "S3 put_object failed: AccessDenied: Access Denied."
+        );
+        let detail = decode_detail(&status);
+        assert!(!detail.retryable);
+        assert_eq!(detail.backend, "S3");
+        assert_eq!(detail.operation, "put_object");
+        assert_eq!(detail.capability_required, "s3_rejected");
+    }
+
+    #[test]
+    fn a_transient_s3_code_stays_retryable() {
+        for code in S3_TRANSIENT_CODES {
+            let status = s3_coded_status(
+                "put_object",
+                code,
+                format!("S3 put_object failed: {code}: try again"),
+            );
+            assert_eq!(status.code(), tonic::Code::Unavailable, "{code}");
+            assert!(decode_detail(&status).retryable, "{code}");
+        }
     }
 
     fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
@@ -553,7 +634,7 @@ impl ResourceAdminExecutor for S3Executor {
             .send()
             .await
             .map(|_| ())
-            .map_err(|e| backend_transport_status("S3", "delete_bucket", e))
+            .map_err(|e| s3_sdk_status("delete_bucket", e))
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
         let resp = self
@@ -561,7 +642,7 @@ impl ResourceAdminExecutor for S3Executor {
             .list_buckets()
             .send()
             .await
-            .map_err(|e| backend_transport_status("S3", "list_buckets", e))?;
+            .map_err(|e| s3_sdk_status("list_buckets", e))?;
         Ok(resp
             .buckets()
             .iter()
