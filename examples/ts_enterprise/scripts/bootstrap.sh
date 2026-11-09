@@ -27,6 +27,7 @@ elif command -v udb >/dev/null 2>&1; then CLI="$(command -v udb)"
 elif [[ -x "$REPO_ROOT/target/release/udb.exe" ]]; then CLI="$REPO_ROOT/target/release/udb.exe"
 elif [[ -x "$REPO_ROOT/target/debug/udb.exe" ]]; then CLI="$REPO_ROOT/target/debug/udb.exe"
 elif [[ -x "$REPO_ROOT/target/release/udb" ]]; then CLI="$REPO_ROOT/target/release/udb"
+elif [[ -x "$REPO_ROOT/target/debug/udb" ]]; then CLI="$REPO_ROOT/target/debug/udb"
 else echo "Could not find the UDB CLI (set UDB_CLI, or 'cargo build --bin udb')." >&2; exit 1; fi
 
 PG_PORT="${UDB_POSTGRES_PORT:-55432}"

@@ -20,7 +20,9 @@ use super::admission::{admission_metering_method, record_usage, record_usage_str
 use super::calc::{
     closed_rollup_upper_bound, event_in_window, now_unix, quota_decision, window_start_unix,
 };
-use super::config::{DEFAULT_ROLLUP_WINDOW_SECONDS, DEFAULT_WINDOW_SECONDS, TOPIC_USAGE_ROLLUP};
+use super::config::{
+    DEFAULT_ROLLUP_WINDOW_SECONDS, DEFAULT_UNIT, DEFAULT_WINDOW_SECONDS, TOPIC_USAGE_ROLLUP,
+};
 use super::errors::{metering_capability_status, metering_internal_status};
 use super::rollup::{rollup_id, run_metering_rollup_once};
 use super::store::{install_metering_tenant_scope_sql, windowed_usage_sum_sql};
@@ -375,6 +377,79 @@ async fn live_postgres_metering_rollup_exports_closed_window_once() {
         rollup_payload["rollup_id"],
         rollup_id(&tenant_id, method, unit, upper - window, upper)
     );
+}
+
+/// The rollup reads one time range across every tenant, and both tenant-led indexes
+/// missed it: on a deployment with 1.7M usage rows every pass scanned the table. The
+/// planner must reach the window through the time index, with history outside it.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with cargo test --lib live_postgres_metering_rollup_reads_its_window_by_index -- --ignored --nocapture"]
+async fn live_postgres_metering_rollup_reads_its_window_by_index() {
+    let (pool, _svc, outbox, journal) = live_metering_fixture().await;
+    let window = DEFAULT_ROLLUP_WINDOW_SECONDS;
+    let upper = closed_rollup_upper_bound(now_unix(), window);
+    let lower = upper - 86_400;
+    // Two hundred thousand events spread over the four weeks before the window, across
+    // fifty tenants, and a handful inside it.
+    sqlx::query(
+        "INSERT INTO udb_metering.usage_events \
+           (usage_id, tenant_id, principal_id, method, unit, quantity, occurred_at, occurred_at_unix, metadata_json) \
+         SELECT gen_random_uuid(), 'tenant-' || (g % 50), '', 'storage.History', 'request', 1, \
+                to_timestamp($1 - 2419200 + g * 12), $1 - 2419200 + g * 12, '{}'::jsonb \
+         FROM generate_series(1, 200000) AS g",
+    )
+    .bind(lower - 3_600)
+    .execute(&pool)
+    .await
+    .expect("seed usage history");
+    sqlx::query(
+        "INSERT INTO udb_metering.usage_events \
+           (usage_id, tenant_id, principal_id, method, unit, quantity, occurred_at, occurred_at_unix, metadata_json) \
+         SELECT gen_random_uuid(), 'tenant-now', '', 'storage.Recent', 'request', 1, \
+                to_timestamp($1 - g * 60), $1 - g * 60, '{}'::jsonb \
+         FROM generate_series(1, 20) AS g",
+    )
+    .bind(upper - 1)
+    .execute(&pool)
+    .await
+    .expect("seed usage in the window");
+    sqlx::query("ANALYZE udb_metering.usage_events")
+        .execute(&pool)
+        .await
+        .expect("analyze usage events");
+
+    let sql = super::rollup::usage_rollups_sql(&outbox, &journal);
+    for _ in 0..3 {
+        let plan: serde_json::Value = sqlx::query_scalar(&format!("EXPLAIN (FORMAT JSON) {sql}"))
+            .bind(window)
+            .bind(lower)
+            .bind(upper)
+            .bind(TOPIC_USAGE_ROLLUP)
+            .bind(100_i64)
+            .bind(DEFAULT_UNIT)
+            .fetch_one(&pool)
+            .await
+            .expect("explain the rollup query");
+        let text = plan.to_string();
+        assert!(
+            text.contains("idx_usage_events_ts"),
+            "the rollup window must be read through the time index: {text}"
+        );
+        fn seq_scans_usage_events(node: &serde_json::Value) -> bool {
+            let here = node["Node Type"] == "Seq Scan" && node["Relation Name"] == "usage_events";
+            here || node["Plans"]
+                .as_array()
+                .is_some_and(|plans| plans.iter().any(seq_scans_usage_events))
+        }
+        assert!(
+            !seq_scans_usage_events(&plan[0]["Plan"]),
+            "the rollup must not scan usage_events whole: {text}"
+        );
+    }
+    let emitted = run_metering_rollup_once(&pool, &outbox, &journal, 100, None)
+        .await
+        .expect("rollup pass");
+    assert!(emitted >= 1, "the events inside the window still roll up");
 }
 
 /// A caller scoped to tenant-a must not write tenant-b's quota by putting a

@@ -302,6 +302,22 @@ class ListServiceAccountTenantMembershipsResponse(_message.Message):
     error: _dto_pb2.ApiError
     def __init__(self, memberships: _Optional[_Iterable[_Union[_service_account_tenant_membership_pb2.ServiceAccountTenantMembership, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
+class ListOwnTenantMembershipsRequest(_message.Message):
+    __slots__ = ("page_size", "page_token")
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    page_size: int
+    page_token: str
+    def __init__(self, page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+
+class ListOwnTenantMembershipsResponse(_message.Message):
+    __slots__ = ("memberships", "next_page_token")
+    MEMBERSHIPS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    memberships: _containers.RepeatedCompositeFieldContainer[_service_account_tenant_membership_pb2.ServiceAccountTenantMembership]
+    next_page_token: str
+    def __init__(self, memberships: _Optional[_Iterable[_Union[_service_account_tenant_membership_pb2.ServiceAccountTenantMembership, _Mapping]]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
+
 class RevokeServiceAccountTenantMembershipRequest(_message.Message):
     __slots__ = ("target_tenant_id", "membership_id", "reason")
     TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]

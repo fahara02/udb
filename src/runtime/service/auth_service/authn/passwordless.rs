@@ -631,7 +631,7 @@ impl AuthnServiceImpl {
     /// tenant whose code it is, else the hint itself (deployments that key
     /// users by a literal tenant id). Never refuses: an unknown tenant simply
     /// has no accounts and the default policy.
-    async fn resolve_sign_in_tenant(&self, hint: &str) -> String {
+    pub(super) async fn resolve_sign_in_tenant(&self, hint: &str) -> String {
         let hint = hint.trim();
         if let Ok(tenant) = Uuid::parse_str(hint) {
             return tenant.to_string();

@@ -381,7 +381,7 @@ const COMMANDS: &[CmdHelp] = &[
         name: "auth service-account",
         group: "Auth & policy",
         summary: "Create a service-account user and make it ACTIVE through the authenticated native API.",
-        usage: "udb auth service-account <create|activate> --tenant <tenant-id> [flags]",
+        usage: "udb auth service-account <create|activate|set-password> --tenant <tenant-id> [flags]",
         details: "\
   Needs UDB_AUTH_TARGET (or UDB_GRPC_TARGET) and UDB_AUTH_TOKEN.
   create:   --tenant <tenant-id> --username <u> --email <e>

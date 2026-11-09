@@ -50,6 +50,11 @@ export interface RetryPolicy {
   backoffMultiplier: number;
   /** gRPC status codes considered transient for read-only unary RPCs. */
   retryableCodes: grpc.status[];
+  /** The longest broker-requested delay (`retry_after_ms`) the client waits
+   *  for automatically; a longer one is returned to the caller at once (the
+   *  `UdbError` keeps `retryAfterMs`). Within it the wait before a retry is
+   *  `max(jittered backoff, retry_after_ms)`. Default 10 000 ms. */
+  maxRetryAfterMs?: number;
 }
 
 export const DEFAULT_RETRY_POLICY: RetryPolicy = {
@@ -61,6 +66,7 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
     grpc.status.UNAVAILABLE,
     grpc.status.RESOURCE_EXHAUSTED,
   ],
+  maxRetryAfterMs: 10_000,
 };
 
 /**
@@ -251,6 +257,13 @@ export class UdbError extends Error {
 
   get retryable(): boolean {
     return Boolean(this.detail?.retryable);
+  }
+
+  /** Broker-requested wait before retrying, in milliseconds (the trailer's
+   *  `retry_after_ms`), or 0 when the broker sent none. */
+  get retryAfterMs(): number {
+    const ms = Number(this.detail?.retry_after_ms ?? 0);
+    return Number.isFinite(ms) && ms > 0 ? ms : 0;
   }
 
   /** Numeric `ErrorKind` decoded from the
@@ -687,6 +700,21 @@ export class UdbCore {
     return Math.random() * Math.min(base, this.retry.maxBackoffMs); // full jitter
   }
 
+  /** Wait before the next attempt, or `undefined` when there is no retry.
+   *  Without a broker-requested `retry_after_ms` it is the jittered backoff.
+   *  With one, it is `max(jittered backoff, retry_after_ms)`, unless the delay
+   *  is longer than `maxRetryAfterMs` or the wait would pass the call's
+   *  deadline: then the failure is returned at once, its detail intact. */
+  private retryWait(attempt: number, retryAfterMs: number, deadlineAt?: number): number | undefined {
+    const own = this.backoff(attempt);
+    if (!(retryAfterMs > 0)) return own;
+    const cap = this.retry.maxRetryAfterMs ?? DEFAULT_RETRY_POLICY.maxRetryAfterMs ?? 10_000;
+    if (retryAfterMs > cap) return undefined;
+    const wait = Math.max(own, retryAfterMs);
+    if (deadlineAt !== undefined && Date.now() + wait > deadlineAt) return undefined;
+    return wait;
+  }
+
   private delay(ms: number, signal?: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {
       const t = setTimeout(resolve, ms);
@@ -727,6 +755,10 @@ export class UdbCore {
     const retrySafe = readOnly || replaySafe;
     const stub = this.stub(fullName);
     const retryEnabled = !call?.noRetry;
+    // The call's overall budget: a broker-requested retry whose wait would run
+    // past it is not attempted; the last error is raised instead.
+    const budgetMs = call?.deadlineMs ?? this.opts?.deadlineMs;
+    const deadlineAt = budgetMs && budgetMs > 0 ? Date.now() + budgetMs : undefined;
     let attempt = 0;
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -749,12 +781,16 @@ export class UdbCore {
         });
       } catch (e) {
         const err = e as grpc.ServiceError;
+        const failure = new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));
         if (retryEnabled && attempt + 1 < this.retry.maxAttempts && this.isRetryable(err, retrySafe)) {
-          await this.delay(this.backoff(attempt), call?.signal);
-          attempt += 1;
-          continue;
+          const wait = this.retryWait(attempt, failure.retryAfterMs, deadlineAt);
+          if (wait !== undefined && !call?.signal?.aborted) {
+            await this.delay(wait, call?.signal);
+            attempt += 1;
+            continue;
+          }
         }
-        throw new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));
+        throw failure;
       }
     }
   }

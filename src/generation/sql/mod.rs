@@ -427,6 +427,22 @@ pub fn render_bootstrap_table(
     // This is required for partitioned tables too: ALTER TABLE on the parent is
     // supported and propagates to partitions. Skipping it leaves old parents
     // without newly introduced audit/partition columns such as created_at.
+    //
+    // A column renamed with previous_column_name is renamed in place FIRST, keeping
+    // its values. Otherwise the ADD COLUMN below creates it empty beside the old one,
+    // and a NOT NULL one fails on any table that has rows.
+    for column in &table.columns {
+        let previous = column.previous_column_name.trim();
+        if !previous.is_empty() && previous != column.column_name {
+            sql.push_str(&guarded_rename_column_sql(
+                &table.schema,
+                &table.table,
+                previous,
+                &column.column_name,
+            ));
+            sql.push('\n');
+        }
+    }
     for column in &table.columns {
         // Generated/identity columns cannot have their expression changed via
         // ADD COLUMN IF NOT EXISTS and are always part of the original CREATE
@@ -723,6 +739,38 @@ pub(crate) mod tests {
             }],
             ..Default::default()
         }
+    }
+
+    /// A rename on a table that already has rows: the bootstrap must rename the column in
+    /// place before it adds missing columns, or it creates the new name empty beside the
+    /// old one and a NOT NULL rename fails on every existing row.
+    #[test]
+    fn bootstrap_renames_a_previous_column_before_adding_columns() {
+        let table = ManifestTable {
+            schema: "shop".to_string(),
+            table: "orders".to_string(),
+            columns: vec![ManifestColumn {
+                field_name: "state".into(),
+                column_name: "state".into(),
+                sql_type: "VARCHAR(32)".into(),
+                not_null: true,
+                previous_column_name: "status".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let sql = render_bootstrap_table(&table, "fixture", &SqlGenerationConfig::default());
+        let rename = sql
+            .find("RENAME COLUMN \"status\" TO \"state\"")
+            .expect("the bootstrap renames the previous column");
+        let add = sql
+            .find("ADD COLUMN IF NOT EXISTS \"state\"")
+            .expect("the bootstrap still declares the column");
+        assert!(rename < add, "the rename must come first: {sql}");
+        assert!(
+            sql.contains("AND NOT EXISTS"),
+            "the rename is guarded so a second run is a no-op: {sql}"
+        );
     }
 
     #[test]

@@ -25,6 +25,7 @@ const (
 	AuthnService_UpdateUser_FullMethodName                           = "/udb.core.authn.services.v1.AuthnService/UpdateUser"
 	AuthnService_ChangeUserStatus_FullMethodName                     = "/udb.core.authn.services.v1.AuthnService/ChangeUserStatus"
 	AuthnService_AdminResetPassword_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/AdminResetPassword"
+	AuthnService_SetServiceAccountPassword_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword"
 	AuthnService_SendOTP_FullMethodName                              = "/udb.core.authn.services.v1.AuthnService/SendOTP"
 	AuthnService_VerifyOTP_FullMethodName                            = "/udb.core.authn.services.v1.AuthnService/VerifyOTP"
 	AuthnService_ResendOTP_FullMethodName                            = "/udb.core.authn.services.v1.AuthnService/ResendOTP"
@@ -82,6 +83,7 @@ const (
 	AuthnService_CreateServiceAccountTenantMembership_FullMethodName = "/udb.core.authn.services.v1.AuthnService/CreateServiceAccountTenantMembership"
 	AuthnService_ListServiceAccountTenantMemberships_FullMethodName  = "/udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships"
 	AuthnService_RevokeServiceAccountTenantMembership_FullMethodName = "/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountTenantMembership"
+	AuthnService_ListOwnTenantMemberships_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships"
 	AuthnService_ExchangeServiceTokenForTenant_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"
 	AuthnService_PutTenantAuthPolicy_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/PutTenantAuthPolicy"
 	AuthnService_GetTenantAuthPolicy_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy"
@@ -171,6 +173,19 @@ type AuthnServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	AdminResetPassword(ctx context.Context, in *AdminResetPasswordRequest, opts ...grpc.CallOption) (*AdminResetPasswordResponse, error)
+	// Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+	// no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+	// current password, so an account whose password was lost could never sign in again.
+	// Refused for a person. The account's sessions are revoked, and the change is audited.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword
+	// Listener: control plane.
+	// Scopes: udb:authn:admin-reset-password.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	SetServiceAccountPassword(ctx context.Context, in *SetServiceAccountPasswordRequest, opts ...grpc.CallOption) (*SetServiceAccountPasswordResponse, error)
 	// ── OTP ──────────────────────────────────────────────────────────────────
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/SendOTP
 	// Listener: control plane.
@@ -767,6 +782,18 @@ type AuthnServiceClient interface {
 	// session. Every use re-checks the membership (ACTIVE, same revision), the
 	// home grant and the account. No, expired or revoked membership: one
 	// uniform PERMISSION_DENIED.
+	// The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+	// whose home is the caller's tenant. Called with the same home service bearer and
+	// scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships
+	// Listener: control plane.
+	// Scopes: udb:authn:exchange-tenant-token.
+	// Credential types: SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	ListOwnTenantMemberships(ctx context.Context, in *ListOwnTenantMembershipsRequest, opts ...grpc.CallOption) (*ListOwnTenantMembershipsResponse, error)
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant
 	// Listener: control plane.
 	// Scopes: udb:authn:exchange-tenant-token.
@@ -1034,6 +1061,16 @@ func (c *authnServiceClient) AdminResetPassword(ctx context.Context, in *AdminRe
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AdminResetPasswordResponse)
 	err := c.cc.Invoke(ctx, AuthnService_AdminResetPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) SetServiceAccountPassword(ctx context.Context, in *SetServiceAccountPasswordRequest, opts ...grpc.CallOption) (*SetServiceAccountPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetServiceAccountPasswordResponse)
+	err := c.cc.Invoke(ctx, AuthnService_SetServiceAccountPassword_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1610,6 +1647,16 @@ func (c *authnServiceClient) RevokeServiceAccountTenantMembership(ctx context.Co
 	return out, nil
 }
 
+func (c *authnServiceClient) ListOwnTenantMemberships(ctx context.Context, in *ListOwnTenantMembershipsRequest, opts ...grpc.CallOption) (*ListOwnTenantMembershipsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOwnTenantMembershipsResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ListOwnTenantMemberships_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authnServiceClient) ExchangeServiceTokenForTenant(ctx context.Context, in *ExchangeServiceTokenForTenantRequest, opts ...grpc.CallOption) (*ExchangeServiceTokenForTenantResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ExchangeServiceTokenForTenantResponse)
@@ -1793,6 +1840,11 @@ type AuthnServiceServer interface {
 	ChangeUserStatus(context.Context, *ChangeUserStatusRequest) (*ChangeUserStatusResponse, error)
 	// Admin-triggered password reset — sends email OTP to complete flow
 	AdminResetPassword(context.Context, *AdminResetPasswordRequest) (*AdminResetPasswordResponse, error)
+	// Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+	// no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+	// current password, so an account whose password was lost could never sign in again.
+	// Refused for a person. The account's sessions are revoked, and the change is audited.
+	SetServiceAccountPassword(context.Context, *SetServiceAccountPasswordRequest) (*SetServiceAccountPasswordResponse, error)
 	// ── OTP ──────────────────────────────────────────────────────────────────
 	SendOTP(context.Context, *SendOTPRequest) (*SendOTPResponse, error)
 	VerifyOTP(context.Context, *VerifyOTPRequest) (*VerifyOTPResponse, error)
@@ -1933,6 +1985,10 @@ type AuthnServiceServer interface {
 	// session. Every use re-checks the membership (ACTIVE, same revision), the
 	// home grant and the account. No, expired or revoked membership: one
 	// uniform PERMISSION_DENIED.
+	// The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+	// whose home is the caller's tenant. Called with the same home service bearer and
+	// scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
+	ListOwnTenantMemberships(context.Context, *ListOwnTenantMembershipsRequest) (*ListOwnTenantMembershipsResponse, error)
 	ExchangeServiceTokenForTenant(context.Context, *ExchangeServiceTokenForTenantRequest) (*ExchangeServiceTokenForTenantResponse, error)
 	// Replace the tenant's sign-in policy: whether passwords are required, the
 	// channels sign-in codes may go over, the magic-link page and the step-up
@@ -2034,6 +2090,9 @@ func (UnimplementedAuthnServiceServer) ChangeUserStatus(context.Context, *Change
 }
 func (UnimplementedAuthnServiceServer) AdminResetPassword(context.Context, *AdminResetPasswordRequest) (*AdminResetPasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AdminResetPassword not implemented")
+}
+func (UnimplementedAuthnServiceServer) SetServiceAccountPassword(context.Context, *SetServiceAccountPasswordRequest) (*SetServiceAccountPasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetServiceAccountPassword not implemented")
 }
 func (UnimplementedAuthnServiceServer) SendOTP(context.Context, *SendOTPRequest) (*SendOTPResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendOTP not implemented")
@@ -2205,6 +2264,9 @@ func (UnimplementedAuthnServiceServer) ListServiceAccountTenantMemberships(conte
 }
 func (UnimplementedAuthnServiceServer) RevokeServiceAccountTenantMembership(context.Context, *RevokeServiceAccountTenantMembershipRequest) (*RevokeServiceAccountTenantMembershipResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeServiceAccountTenantMembership not implemented")
+}
+func (UnimplementedAuthnServiceServer) ListOwnTenantMemberships(context.Context, *ListOwnTenantMembershipsRequest) (*ListOwnTenantMembershipsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOwnTenantMemberships not implemented")
 }
 func (UnimplementedAuthnServiceServer) ExchangeServiceTokenForTenant(context.Context, *ExchangeServiceTokenForTenantRequest) (*ExchangeServiceTokenForTenantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExchangeServiceTokenForTenant not implemented")
@@ -2378,6 +2440,24 @@ func _AuthnService_AdminResetPassword_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthnServiceServer).AdminResetPassword(ctx, req.(*AdminResetPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_SetServiceAccountPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetServiceAccountPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).SetServiceAccountPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_SetServiceAccountPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).SetServiceAccountPassword(ctx, req.(*SetServiceAccountPasswordRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3408,6 +3488,24 @@ func _AuthnService_RevokeServiceAccountTenantMembership_Handler(srv interface{},
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthnService_ListOwnTenantMemberships_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOwnTenantMembershipsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ListOwnTenantMemberships(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ListOwnTenantMemberships_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ListOwnTenantMemberships(ctx, req.(*ListOwnTenantMembershipsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthnService_ExchangeServiceTokenForTenant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ExchangeServiceTokenForTenantRequest)
 	if err := dec(in); err != nil {
@@ -3728,6 +3826,10 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthnService_AdminResetPassword_Handler,
 		},
 		{
+			MethodName: "SetServiceAccountPassword",
+			Handler:    _AuthnService_SetServiceAccountPassword_Handler,
+		},
+		{
 			MethodName: "SendOTP",
 			Handler:    _AuthnService_SendOTP_Handler,
 		},
@@ -3954,6 +4056,10 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeServiceAccountTenantMembership",
 			Handler:    _AuthnService_RevokeServiceAccountTenantMembership_Handler,
+		},
+		{
+			MethodName: "ListOwnTenantMemberships",
+			Handler:    _AuthnService_ListOwnTenantMemberships_Handler,
 		},
 		{
 			MethodName: "ExchangeServiceTokenForTenant",

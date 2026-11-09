@@ -197,6 +197,9 @@ export function verifyPolicyBundle(signed: SignedPolicyBundle, secret: string): 
   return crypto.timingSafeEqual(a, b);
 }
 
+/** Authn RPCs that carry their own credential in the request body. */
+const CREDENTIAL_RPCS = new Set(["Authenticate", "Login", "RefreshToken"]);
+
 /** Convenience wrapper over AuthnService + AuthzService. The same `UdbMetadata`
  *  used for broker calls is attached to every auth RPC. */
 export class UdbAuthClient {
@@ -219,21 +222,43 @@ export class UdbAuthClient {
     this.policyBundleSecret = policyBundleSecret;
   }
 
-  private call<T>(client: any, method: string, request: any): Promise<T> {
+  /** Runs before every call that rides the connection's own credential, so a
+   *  session can renew an expiring bearer first (or refuse locally when it cannot).
+   *  Unset on a plain client and on the `withoutCredentials` renewal view. */
+  private callGate?: () => Promise<void>;
+  /** Per-call deadline; set on the renewal view so a lost reply cannot hang a renewal. */
+  private deadlineMs?: number;
+
+  private async call<T>(client: any, method: string, request: any): Promise<T> {
+    // These carry their credential in the request; they establish or renew one.
+    if (this.callGate && !CREDENTIAL_RPCS.has(method)) await this.callGate();
     return new Promise((resolve, reject) => {
-      client[method](request, metadata(this.meta), (err: grpc.ServiceError | null, resp: T) => {
+      const done = (err: grpc.ServiceError | null, resp: T) => {
         if (err) reject(err);
         else resolve(resp);
-      });
+      };
+      if (this.deadlineMs && this.deadlineMs > 0) {
+        client[method](request, metadata(this.meta), { deadline: new Date(Date.now() + this.deadlineMs) }, done);
+      } else {
+        client[method](request, metadata(this.meta), done);
+      }
     });
+  }
+
+  /** Install (or clear) the pre-call credential gate. */
+  setCallGate(gate?: () => Promise<void>): void {
+    this.callGate = gate;
   }
 
   /** A view of this client that sends no bearer or API key header, for the public
    *  calls that renew a credential: they carry theirs in the request, and an expired
-   *  or revoked bearer must not ride along. */
-  withoutCredentials(): UdbAuthClient {
+   *  or revoked bearer must not ride along. The view never runs the call gate (a
+   *  renewal must not wait on itself) and bounds each call by `deadlineMs`. */
+  withoutCredentials(options: { deadlineMs?: number } = {}): UdbAuthClient {
     const view: UdbAuthClient = Object.create(this);
     view.meta = { ...this.meta, bearerToken: undefined, apiKey: undefined };
+    view.callGate = undefined;
+    view.deadlineMs = options.deadlineMs ?? this.deadlineMs;
     return view;
   }
 

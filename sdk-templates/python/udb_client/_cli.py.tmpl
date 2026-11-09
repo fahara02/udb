@@ -8,7 +8,11 @@ version-matched ``udb`` binary and execs it, transparently forwarding all
 arguments and the exit code. Resolution order:
 
   1. An ``udb`` binary whose ``--version`` matches {{UDB_VERSION}} already on
-     ``PATH`` (but not this launcher itself).
+     ``PATH`` (but not this launcher itself). Every PATH match is tried in
+     order; this launcher and any other launcher copy or console-script shim
+     are skipped, each probe has a 5 s timeout, and a launcher started by
+     another launcher (``UDB_LAUNCHER_ACTIVE`` set) skips PATH entirely, so a
+     launcher can never recurse into itself.
   2. A previously downloaded binary cached for this version under the per-user
      cache dir.
   3. The matching release asset downloaded from
@@ -81,32 +85,113 @@ def _cache_dir() -> Path:
     return path
 
 
+# Recursion guard. Every child this launcher starts (a ``--version`` probe or
+# the final exec) gets UDB_LAUNCHER_ACTIVE=1. A launcher that starts with it
+# already set is nested (a PATH candidate was itself a launcher) and never
+# probes PATH, so one invocation can start only a bounded number of processes.
+_LAUNCHER_ENV = "UDB_LAUNCHER_ACTIVE"
+_PROBE_TIMEOUT_S = 5
+# A launcher script / console-script shim is small; the real binary is tens of MB.
+_SHIM_SNIFF_MAX_BYTES = 2 * 1024 * 1024
+# A console script for this package imports ``udb_client._cli``; any launcher
+# copy names the guard variable.
+_LAUNCHER_MARKERS = (_LAUNCHER_ENV.encode(), b"udb_client")
+
+
+def _child_env() -> dict[str, str]:
+    env = dict(os.environ)
+    env[_LAUNCHER_ENV] = "1"
+    return env
+
+
+def _is_nested_launcher() -> bool:
+    return bool(os.environ.get(_LAUNCHER_ENV))
+
+
 def _binary_version_matches(binary: str) -> bool:
     try:
         out = subprocess.run(
             [binary, "--version"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=_PROBE_TIMEOUT_S,
+            env=_child_env(),
+            stdin=subprocess.DEVNULL,
         )
     except (OSError, subprocess.SubprocessError):
         return False
     return UDB_VERSION in (out.stdout + out.stderr)
 
 
-def _path_binary() -> str | None:
-    """An ``udb`` on PATH that is not this launcher and matches the version."""
+def _norm(path: str) -> str:
+    resolved = os.path.realpath(path)
+    return os.path.normcase(resolved)
 
-    me = Path(sys.argv[0]).resolve()
-    found = shutil.which("udb")
-    if not found:
-        return None
+
+def _self_paths() -> set[str]:
+    """Paths that are this launcher: the console script and this module."""
+
+    selves: set[str] = set()
+    for raw in (sys.argv[0] if sys.argv else "", __file__):
+        if not raw:
+            continue
+        selves.add(_norm(raw))
+        # A Windows console script runs as ``udb.exe`` while argv[0] may lack
+        # the suffix (and the other way round).
+        if os.name == "nt":
+            root, ext = os.path.splitext(raw)
+            selves.add(_norm(root if ext.lower() == ".exe" else raw + ".exe"))
+    return selves
+
+
+def _is_launcher_candidate(candidate: str) -> bool:
+    """True when probing ``candidate`` would run a udb launcher again."""
+
     try:
-        if Path(found).resolve() == me:
-            return None
+        real = _norm(candidate)
     except OSError:
-        pass
-    return found if _binary_version_matches(found) else None
+        return True
+    if real in _self_paths():
+        return True
+    try:
+        size = os.path.getsize(real)
+        if size <= _SHIM_SNIFF_MAX_BYTES:
+            with open(real, "rb") as fh:
+                data = fh.read()
+            if any(marker in data for marker in _LAUNCHER_MARKERS):
+                return True
+    except OSError:
+        return True
+    return False
+
+
+def _path_candidates() -> list[str]:
+    """Every ``udb`` on PATH in PATH order (all matches, not only the first)."""
+
+    found: list[str] = []
+    seen: set[str] = set()
+    for directory in (os.environ.get("PATH") or "").split(os.pathsep):
+        if not directory:
+            continue
+        hit = shutil.which("udb", path=directory)
+        if hit and os.path.normcase(hit) not in seen:
+            seen.add(os.path.normcase(hit))
+            found.append(hit)
+    return found
+
+
+def _path_binary() -> str | None:
+    """An ``udb`` on PATH that is not a launcher and matches the version."""
+
+    if _is_nested_launcher():
+        # A nested launcher never probes PATH: that bounds the recursion.
+        return None
+    for candidate in _path_candidates():
+        if _is_launcher_candidate(candidate):
+            continue
+        if _binary_version_matches(candidate):
+            return candidate
+    return None
 
 
 def _cached_binary() -> str | None:
@@ -214,10 +299,11 @@ def main(argv: list[str] | None = None) -> int:
 
     args = list(sys.argv[1:] if argv is None else argv)
     binary = _resolve_binary()
+    env = _child_env()
     if os.name == "nt":
         # exec semantics on Windows are unreliable; spawn and propagate.
-        return subprocess.run([binary, *args]).returncode
-    os.execv(binary, [binary, *args])
+        return subprocess.run([binary, *args], env=env).returncode
+    os.execve(binary, [binary, *args], env)
     return 0  # unreachable on POSIX
 
 

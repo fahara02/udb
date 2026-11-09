@@ -72,11 +72,17 @@ never hand-build a raw RPC request body.
    [`sdk/typescript/project.ts`](../sdk/typescript/project.ts),
    [`sdk/php/src/UdbProject.php`](../sdk/php/src/UdbProject.php).
 
-   ```text
-   // First-page example — workflow helper, never a raw GenericDispatch body:
-   project := udb.LoginAndAdoptTenant(ctx, username, password)   // [Login, AuthenticateBearer]
-   file    := project.Storage().UploadFile(ctx, name, bytes)     // [RegisterUpload, PUT, FinalizeUpload]
-   room    := project.WebRTC().JoinSession(ctx, roomID)          // [JoinSession]
+   ```go
+   // First-page example (Go) — workflow helpers, never a raw GenericDispatch body:
+   s, err := udbclient.ConnectEnterprise(ctx, udbclient.EnterpriseConfig{ // [Login, AuthenticateBearer]
+       Target: "127.0.0.1:50051", AuthTarget: "127.0.0.1:50061",
+       TenantCode: "acme", Username: username, Password: password,
+   })
+   if err != nil { return err }
+   defer s.Close()
+   file, err := s.Storage.UploadFile(ctx, name, data,
+       udbclient.WithContentType("application/pdf"))           // [RegisterUpload, PUT, FinalizeUpload]
+   session, err := s.WebRTC.JoinSession(ctx, roomID, displayName, "", "", 0) // [JoinSession]
    ```
 
 2. **Thin generated client (advanced / admin / bench).** This is the raw generated
@@ -132,10 +138,13 @@ numbers are descriptor-owned, not hand-maintained here.
 | `ConfigService` | Feature flags and flag evaluation |
 | `BackupService` | Tenant backup/restore and backup policies |
 | `EmbeddingService` | Embedding sources, backfill enumeration, and vector retrieval |
+| `MessagingService` | End-to-end-encrypted (MLS) messaging: devices, key packages, groups, commits, inbox streaming, encrypted backups |
+| `CacheService` | Tenant-scoped cache namespaces: get, set, increment, delete, scan, namespace stats |
 | `RoomService` / `PeerService` / `TrackService` | WebRTC room, peer, and track lifecycle (incl. egress/SFU) |
 | `TurnService` / `SignalingService` | TURN credential issuance and the bidirectional signaling bridge |
 
-Generated table with exact counts: [generated/native-services.md](generated/native-services.md).
+Generated table with exact counts, per-RPC scopes, accepted credentials and tenant
+rules: [generated/native-services.md](generated/native-services.md) (`udb native docs`).
 
 ## Platform Services
 
@@ -177,8 +186,9 @@ UDB 0.5.7 tightens the operational boundary behind several of these surfaces:
 work items, and a sidecar computes the vectors and reports them back through the
 internal-only `ReportEmbedding`, `ReportEmbeddingBatch` and
 `ReportEmbeddingFailure` RPCs. Since 0.5.28, UDB ships that consumer. Set
-`UDB_EMBEDDING_SIDECAR_MODE=consumer` on the bundled embedding sidecar
-(`sidecars/embedding`) and it does the following:
+`UDB_EMBEDDING_SIDECAR_MODE=consumer` in the environment of the bundled embedding
+sidecar (`sidecars/embedding`) — the sidecar reads it; the broker does not — and it
+does the following:
 
 - reads the topic in a consumer group;
 - makes one batched provider call per (tenant, project, provider, model,
@@ -197,7 +207,10 @@ The sidecar needs three things:
 [`sidecars/embedding/README.md`](../sidecars/embedding/README.md) lists every
 setting.
 
-These services don't have `UdbProject` workflow facades yet. Until they do, call them
+Most of these services don't have `UdbProject` workflow facades yet. The exceptions:
+feature flags (`flags.evaluate` / `flags.enabled`) in TypeScript, Go and Python, and
+distributed locks (`lock.acquire` / `renew` / `release` / `get` / `list`) in TypeScript
+(Go's `EnterpriseSession.LockService()` wraps the same RPCs). For the rest, call them
 through the **thin generated client** — the generated robustness layer
 (`generatedClient.ts`, `generated_client.go`, `generated_client.py`,
 `Generated/GeneratedClient.php`) reaches every RPC. Python also exposes a per-service

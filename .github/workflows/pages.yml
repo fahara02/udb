@@ -125,6 +125,22 @@ jobs:
             exit 1
           fi
           python3 scripts/locate_benchmark_report.py --selftest
+          # A push deploy (docs, site, any commit to main) has no triggering
+          # benchmark. Publishing the committed board there put the dashboard
+          # back to v0.4.28 after every release. Instead republish the newest
+          # benchmark a Release triggered, from its immutable artifact, through
+          # the same provenance checks below. The live board is never re-fetched.
+          if [ -z "${TRIGGER_RUN_ID:-}" ] && [ "${PUBLICATION_EVENT}" = "push" ]; then
+            latest_benchmark_run="$(gh run list --repo "${GITHUB_REPOSITORY}" \
+              --workflow benchmark-sdks.yml --event workflow_run --status success \
+              --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+            if [ -n "${latest_benchmark_run}" ]; then
+              TRIGGER_RUN_ID="${latest_benchmark_run}"
+              TRIGGER_EVENT="workflow_run"
+              export TRIGGER_RUN_ID TRIGGER_EVENT
+              echo "push deploy republishes release benchmark run ${TRIGGER_RUN_ID}"
+            fi
+          fi
           got_fresh=0
           if [ -n "${TRIGGER_RUN_ID:-}" ]; then
             # The uploaded artifact can lag a few seconds behind the triggering
@@ -239,6 +255,17 @@ jobs:
               > release-proof/bench-bodies.json
             gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${TRIGGER_RUN_ID}" > release-proof/benchmark-run.json
             latest_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+            # A push deploy republishes the newest FINISHED release benchmark, which
+            # lags a just-published release until its benchmark completes. It names
+            # its own tag; require only that tag to be a published, non-draft release.
+            if [ "${PUBLICATION_EVENT}" = "push" ] && [ "${latest_tag}" != "${release_tag}" ]; then
+              if [ "$(gh release view "${release_tag}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft)" != "false" ]; then
+                echo "::error::benchmark tag ${release_tag} is not a published release"
+                exit 1
+              fi
+              echo "the newest finished release benchmark measures ${release_tag} (latest release ${latest_tag} has none yet)"
+              latest_tag="${release_tag}"
+            fi
             harness_commit="${artifact_commit}"
             harness_manifest="release-proof/bench-bodies.json"
             recovery_args=()

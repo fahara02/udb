@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.6.13
  *   Protocol version . 1.0.0
  *   Services ......... 29
- *   RPCs ............. 424
+ *   RPCs ............. 426
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -128,6 +128,7 @@ final class GeneratedClient
         "ListDevices" => "read_only",
         "ListInvitations" => "read_only",
         "ListMfaFactors" => "read_only",
+        "ListOwnTenantMemberships" => "read_only",
         "ListServiceAccountGrants" => "read_only",
         "ListServiceAccountTenantMemberships" => "read_only",
         "ListSessions" => "read_only",
@@ -157,6 +158,7 @@ final class GeneratedClient
         "SendLoginOtp" => "mutation",
         "SendOTP" => "mutation",
         "SendPhoneVerification" => "mutation",
+        "SetServiceAccountPassword" => "destructive",
         "StartInvitationAcceptance" => "mutation",
         "StartOidcLogin" => "mutation",
         "StartWebAuthnAuthentication" => "mutation",
@@ -561,6 +563,7 @@ final class GeneratedClient
         "AuthnService/ListDevices" => "read_only",
         "AuthnService/ListInvitations" => "read_only",
         "AuthnService/ListMfaFactors" => "read_only",
+        "AuthnService/ListOwnTenantMemberships" => "read_only",
         "AuthnService/ListServiceAccountGrants" => "read_only",
         "AuthnService/ListServiceAccountTenantMemberships" => "read_only",
         "AuthnService/ListSessions" => "read_only",
@@ -590,6 +593,7 @@ final class GeneratedClient
         "AuthnService/SendLoginOtp" => "mutation",
         "AuthnService/SendOTP" => "mutation",
         "AuthnService/SendPhoneVerification" => "mutation",
+        "AuthnService/SetServiceAccountPassword" => "destructive",
         "AuthnService/StartInvitationAcceptance" => "mutation",
         "AuthnService/StartOidcLogin" => "mutation",
         "AuthnService/StartWebAuthnAuthentication" => "mutation",
@@ -994,6 +998,7 @@ final class GeneratedClient
         "AuthnService/ListDevices" => "list_devices",
         "AuthnService/ListInvitations" => "list_invitations",
         "AuthnService/ListMfaFactors" => "list_mfa_factors",
+        "AuthnService/ListOwnTenantMemberships" => "list_own_tenant_memberships",
         "AuthnService/ListServiceAccountGrants" => "list_service_account_grants",
         "AuthnService/ListServiceAccountTenantMemberships" => "list_service_account_tenant_memberships",
         "AuthnService/ListSessions" => "list_sessions",
@@ -1023,6 +1028,7 @@ final class GeneratedClient
         "AuthnService/SendLoginOtp" => "send_login_otp",
         "AuthnService/SendOTP" => "send_otp",
         "AuthnService/SendPhoneVerification" => "send_phone_verification",
+        "AuthnService/SetServiceAccountPassword" => "set_service_account_password",
         "AuthnService/StartInvitationAcceptance" => "start_invitation_acceptance",
         "AuthnService/StartOidcLogin" => "start_oidc_login",
         "AuthnService/StartWebAuthnAuthentication" => "start_web_authn_authentication",
@@ -1426,6 +1432,7 @@ final class GeneratedClient
         "AuthnService/ListDevices" => "listDevices",
         "AuthnService/ListInvitations" => "listInvitations",
         "AuthnService/ListMfaFactors" => "listMfaFactors",
+        "AuthnService/ListOwnTenantMemberships" => "listOwnTenantMemberships",
         "AuthnService/ListServiceAccountGrants" => "listServiceAccountGrants",
         "AuthnService/ListServiceAccountTenantMemberships" => "listServiceAccountTenantMemberships",
         "AuthnService/ListSessions" => "listSessions",
@@ -1455,6 +1462,7 @@ final class GeneratedClient
         "AuthnService/SendLoginOtp" => "sendLoginOtp",
         "AuthnService/SendOTP" => "sendOtp",
         "AuthnService/SendPhoneVerification" => "sendPhoneVerification",
+        "AuthnService/SetServiceAccountPassword" => "setServiceAccountPassword",
         "AuthnService/StartInvitationAcceptance" => "startInvitationAcceptance",
         "AuthnService/StartOidcLogin" => "startOidcLogin",
         "AuthnService/StartWebAuthnAuthentication" => "startWebAuthnAuthentication",
@@ -1858,6 +1866,7 @@ final class GeneratedClient
         "AuthnService/ListDevices" => "get",
         "AuthnService/ListInvitations" => "get",
         "AuthnService/ListMfaFactors" => "get",
+        "AuthnService/ListOwnTenantMemberships" => "get",
         "AuthnService/ListServiceAccountGrants" => "get",
         "AuthnService/ListServiceAccountTenantMemberships" => "get",
         "AuthnService/ListSessions" => "get",
@@ -1887,6 +1896,7 @@ final class GeneratedClient
         "AuthnService/SendLoginOtp" => "post",
         "AuthnService/SendOTP" => "post",
         "AuthnService/SendPhoneVerification" => "post",
+        "AuthnService/SetServiceAccountPassword" => "post",
         "AuthnService/StartInvitationAcceptance" => "post",
         "AuthnService/StartOidcLogin" => "post",
         "AuthnService/StartWebAuthnAuthentication" => "post",
@@ -2290,6 +2300,7 @@ final class GeneratedClient
         "AuthnService/ListDevices" => "/v1/auth/users/{user_id}/devices",
         "AuthnService/ListInvitations" => "/v1/auth/invitations",
         "AuthnService/ListMfaFactors" => "/v1/auth/users/{user_id}/mfa/factors",
+        "AuthnService/ListOwnTenantMemberships" => "/v1/auth/own-tenant-memberships",
         "AuthnService/ListServiceAccountGrants" => "/v1/auth/service-account-grants",
         "AuthnService/ListServiceAccountTenantMemberships" => "/v1/auth/tenants/{target_tenant_id}/service-account-memberships",
         "AuthnService/ListSessions" => "/v1/auth/users/{user_id}/sessions",
@@ -2319,6 +2330,7 @@ final class GeneratedClient
         "AuthnService/SendLoginOtp" => "/v1/auth/sessions:sendLoginOtp",
         "AuthnService/SendOTP" => "/v1/auth/otps:send",
         "AuthnService/SendPhoneVerification" => "/v1/auth/users/{user_id}/phones:verify",
+        "AuthnService/SetServiceAccountPassword" => "/v1/auth/service-accounts/{user_id}/password",
         "AuthnService/StartInvitationAcceptance" => "/v1/auth/invitations/{invitation_id}:startAcceptance",
         "AuthnService/StartOidcLogin" => "/v1/auth/oidc-logins:start",
         "AuthnService/StartWebAuthnAuthentication" => "/v1/auth/webauthn/authentication:start",
@@ -2827,6 +2839,7 @@ final class GeneratedClient
         "list_devices" => "listDevices",
         "list_invitations" => "listInvitations",
         "list_mfa_factors" => "listMfaFactors",
+        "list_own_tenant_memberships" => "listOwnTenantMemberships",
         "list_service_account_grants" => "listServiceAccountGrants",
         "list_service_account_tenant_memberships" => "listServiceAccountTenantMemberships",
         "list_sessions" => "listSessions",
@@ -2858,6 +2871,7 @@ final class GeneratedClient
         "send_otp" => "sendOtp",
         "send_o_t_p" => "sendOtp",
         "send_phone_verification" => "sendPhoneVerification",
+        "set_service_account_password" => "setServiceAccountPassword",
         "start_invitation_acceptance" => "startInvitationAcceptance",
         "start_oidc_login" => "startOidcLogin",
         "start_web_authn_authentication" => "startWebAuthnAuthentication",
@@ -3219,12 +3233,20 @@ final class GeneratedClient
     private ?array $channelOptions = null;
 
     /**
+     * The wait between unary retry attempts, in milliseconds. Null means
+     * `usleep`; unit tests replace it to observe the wait without sleeping.
+     *
+     * @var (\Closure(int):void)|null
+     */
+    private ?\Closure $retrySleep = null;
+
+    /**
      * @param  array{
      *   endpoint:string,
      *   tls?: array{enabled?:bool, root_certs?:?string, target?:?string},
      *   channel_options?: array<string,mixed>,
      *   deadline_ms?: int,
-     *   retry?: array{max_attempts?:int, base_delay_ms?:int, max_delay_ms?:int},
+     *   retry?: array{max_attempts?:int, base_delay_ms?:int, max_delay_ms?:int, max_retry_after_ms?:int},
      * }  $config
      */
     public function __construct(private readonly array $config)
@@ -4627,6 +4649,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.authn.services.v1.AuthnService / ListOwnTenantMemberships (unary), public alias list_own_tenant_memberships.
+     *
+     * Forwards to {@see stubFor()}->ListOwnTenantMemberships(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListOwnTenantMembershipsResponse
+     */
+    public function listOwnTenantMemberships($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListOwnTenantMemberships',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListOwnTenantMemberships($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.authn.services.v1.AuthnService / ListServiceAccountGrants (unary), public alias list_service_account_grants.
      *
      * Forwards to {@see stubFor()}->ListServiceAccountGrants(); retries transient codes.
@@ -5232,6 +5275,27 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendPhoneVerification($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / SetServiceAccountPassword (unary), public alias set_service_account_password.
+     *
+     * Forwards to {@see stubFor()}->SetServiceAccountPassword(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SetServiceAccountPasswordResponse
+     */
+    public function setServiceAccountPassword($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SetServiceAccountPassword',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SetServiceAccountPassword($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
             $request,
         );
     }
@@ -12160,7 +12224,7 @@ final class GeneratedClient
         return $this->stubFor('AssetService', 'udb.core.asset.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (79 RPC(s)).
+     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (81 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a AuthnServiceClient
@@ -12570,6 +12634,17 @@ final class GeneratedClient
         $maxAttempts = max(1, (int) ($retry['max_attempts'] ?? 4));
         $baseDelayMs = max(1, (int) ($retry['base_delay_ms'] ?? 50));
         $maxDelayMs = max($baseDelayMs, (int) ($retry['max_delay_ms'] ?? 2_000));
+        // The longest broker-requested delay (ErrorDetail.retry_after_ms) the client
+        // waits for automatically; a longer one is returned to the caller at once.
+        // <= 0 means the default (10s).
+        $maxRetryAfterMs = (int) ($retry['max_retry_after_ms'] ?? self::DEFAULT_MAX_RETRY_AFTER_MS);
+        if ($maxRetryAfterMs <= 0) {
+            $maxRetryAfterMs = self::DEFAULT_MAX_RETRY_AFTER_MS;
+        }
+        // The call's timeout (deadline_ms) bounds the whole call, retries included,
+        // when the broker asks for a delay.
+        $timeoutMs = isset($opts['timeout']) ? intdiv((int) $opts['timeout'], 1000) : 0;
+        $startedNs = hrtime(true);
 
         $lastStatus = null;
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
@@ -12600,7 +12675,20 @@ final class GeneratedClient
             $lastStatus = $status;
             if ($attempt < $maxAttempts
                 && $this->isRetryable($code, $readOnly, $replaySafe, $hasIdempotencyKey)) {
-                $this->sleepBackoff($attempt, $baseDelayMs, $maxDelayMs);
+                $serverMs = UdbRpcException::retryAfterMsFromStatus($status);
+                if ($serverMs > $maxRetryAfterMs) {
+                    // The broker asked for a longer delay than the client waits
+                    // for: surface its error (detail intact) now, the caller decides.
+                    break;
+                }
+                $waitMs = $this->retryDelayMs($attempt, $baseDelayMs, $maxDelayMs, $serverMs);
+                if ($serverMs > 0 && $timeoutMs > 0
+                    && intdiv(hrtime(true) - $startedNs, 1_000_000) + $waitMs > $timeoutMs) {
+                    // The broker's delay would pass the call's timeout: do not
+                    // sleep, surface its error (detail intact) now.
+                    break;
+                }
+                $this->sleepMs($waitMs);
                 continue;
             }
             break;
@@ -13100,17 +13188,39 @@ final class GeneratedClient
     // so REPLAY_SAFE / idempotency-key can be consulted) — never guessed from the name.
 
     /**
-     * Exponential backoff with full jitter, capped at `max_delay_ms`. Sleeps
-     * via `usleep` (microseconds). Honours a broker-supplied `retry_after_ms`
-     * from the typed ErrorDetail when present (set by `mapError`-adjacent
-     * decode in a follow-up; here we use the computed backoff).
+     * Default longest broker-requested delay the client waits for automatically
+     * (`retry.max_retry_after_ms`); a longer one is returned to the caller at once.
      */
-    private function sleepBackoff(int $attempt, int $baseDelayMs, int $maxDelayMs): void
-    {
+    private const DEFAULT_MAX_RETRY_AFTER_MS = 10_000;
+
+    /**
+     * The wait before retry `$attempt` (1-based): exponential backoff with full
+     * jitter capped at `max_delay_ms`, raised to the broker-requested
+     * `retry_after_ms` (from the typed ErrorDetail) when it is larger. The
+     * caller has already refused a delay above `max_retry_after_ms`.
+     */
+    private function retryDelayMs(
+        int $attempt,
+        int $baseDelayMs,
+        int $maxDelayMs,
+        int $serverRetryAfterMs,
+    ): int {
         $ceil = (int) min($maxDelayMs, $baseDelayMs * (2 ** ($attempt - 1)));
-        $jittered = random_int(0, max(0, $ceil));
-        if ($jittered > 0) {
-            usleep($jittered * 1000);
+        $waitMs = random_int(0, max(0, $ceil));
+        if ($serverRetryAfterMs > 0) {
+            $waitMs = max($waitMs, $serverRetryAfterMs);
+        }
+        return $waitMs;
+    }
+
+    private function sleepMs(int $ms): void
+    {
+        if ($this->retrySleep !== null) {
+            ($this->retrySleep)($ms);
+            return;
+        }
+        if ($ms > 0) {
+            usleep($ms * 1000);
         }
     }
 

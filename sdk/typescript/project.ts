@@ -112,6 +112,11 @@ export interface UdbProjectConfig {
   protoRoot?: string;
   /** A pluggable token store for `login` / `refreshIfNeeded`. */
   tokenStore?: TokenStore;
+  /** Called when a bearer renewal fails after its bounded retries, with the
+   *  failure. A session that can re-authenticate keeps trying in the background;
+   *  one that cannot fails its calls with `SessionExpiredError` once the bearer
+   *  expires. Exceptions thrown by the callback are ignored. */
+  onRefreshError?: (err: Error) => void;
   /** HMAC secret for verifying server-issued signed policy bundles. When set,
    *  `authz.getPolicyBundle()` verifies the bundle signature (lowercase-hex
    *  HMAC-SHA256) and throws `UdbPolicyBundleError` on mismatch. */
@@ -1122,6 +1127,73 @@ const BG_REFRESH_IDLE_MS = 5 * 60_000; // cadence when the token carries no expi
 const BG_REFRESH_RETRY_MS = 5_000; // cadence after a load error or while poisoned
 const BG_REFRESH_MAX_BACKOFF_MS = 60_000; // cap of the exponential failure backoff
 const BG_REFRESH_LIFETIME_FRACTION = 0.8; // renew at 80% of a known token lifetime
+const RENEWAL_ATTEMPTS = 3; // attempts per renewal before it is reported as failed
+const RENEWAL_BACKOFF_MS = 1_000; // first jittered wait between renewal attempts
+const RENEWAL_TIMEOUT_MS = 30_000; // bound on one renewal attempt (a lost reply must not hang it)
+
+/** The session can no longer authorize calls: its bearer expired and no renewal
+ *  succeeded, or a renewal verified as a different identity. Calls fail locally
+ *  with this error instead of reaching the broker with no or a dead bearer. `cause`
+ *  is the last renewal failure. Shaped like `UdbError` (`code`, `rpc`, `retryable`). */
+export class SessionExpiredError extends Error {
+  readonly code: grpc.status = grpc.status.UNAUTHENTICATED;
+  readonly rpc: string;
+  constructor(cause?: unknown, rpc = "") {
+    const reason = cause instanceof Error ? cause.message : cause ? String(cause) : "no credential can renew it";
+    super(`udb: session expired, the bearer could not be renewed: ${reason} (code=UNAUTHENTICATED)`, { cause });
+    this.name = "SessionExpiredError";
+    this.rpc = rpc;
+  }
+
+  get retryable(): boolean {
+    return false;
+  }
+}
+
+/** Exponential backoff with jitter: the n-th failure waits a random time in
+ *  [ceiling/2, ceiling], where ceiling = base·2^(n-1) capped at `capMs`. */
+function jitteredBackoffMs(failures: number, baseMs: number, capMs: number): number {
+  const ceiling = Math.min(baseMs * 2 ** Math.max(failures - 1, 0), capMs);
+  return Math.round(ceiling / 2 + (Math.random() * ceiling) / 2);
+}
+
+const TRANSIENT_GRPC_CODES = new Set<number>([
+  grpc.status.DEADLINE_EXCEEDED,
+  grpc.status.RESOURCE_EXHAUSTED,
+  grpc.status.ABORTED,
+  grpc.status.UNAVAILABLE,
+]);
+
+/** Whether a failed renewal attempt may succeed when repeated. A gRPC status
+ *  decides when present; otherwise only a message that names a refused credential
+ *  is final. */
+function isTransientRenewalError(err: unknown): boolean {
+  if (err instanceof CredentialBindingError || err instanceof SessionExpiredError) return false;
+  const marked = (err as { transient?: unknown } | null)?.transient;
+  if (typeof marked === "boolean") return marked;
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code === "number") return TRANSIENT_GRPC_CODES.has(code);
+  const message = err instanceof Error ? err.message : String(err);
+  return !/invalid|revoked|reuse|expired|unauthenticated|permission|denied/i.test(message);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Reject when `work` has not settled within `ms`; the timer never keeps the process alive. */
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      const err = new Error(`udb: renewal attempt timed out after ${ms}ms`) as Error & { code: number };
+      err.code = grpc.status.DEADLINE_EXCEEDED;
+      reject(err);
+    }, ms);
+    (timer as { unref?: () => void }).unref?.();
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+}
 
 /** API keys retained for bearer re-exchange, keyed by project. A WeakMap (not a
  *  field) so the secret never appears in `util.inspect`/JSON dumps of the project. */
@@ -1138,6 +1210,11 @@ export class CredentialBindingError extends Error {
     super(message);
     this.name = "CredentialBindingError";
   }
+}
+
+/** Whether a call carries its own bearer (`asUser`) instead of the connection's. */
+function delegatesBearer(call?: CallOptions): boolean {
+  return Object.keys(call?.headers ?? {}).some((name) => name.toLowerCase() === "authorization");
 }
 
 /** The verified identity a connection is pinned to when it connects. A service's user
@@ -1195,13 +1272,15 @@ function checkCredentialPin(pin: CredentialPin, principal: any): void {
   }
 }
 
-/** How long before expiry a token should be renewed: 60s, or 20% of its known
- *  lifetime when that is earlier — never more than half the lifetime. */
+/** How long before expiry a token should be renewed: the larger of 60s and 20% of
+ *  its known lifetime. A token too short for the 60s floor (more than half its life)
+ *  renews at 80% of its lifetime instead. Same rule as the Go SDK. */
 function refreshSkewMs(tok: StoredToken | null | undefined): number {
   if (tok && tok.issuedAt && tok.expiresAt > tok.issuedAt) {
     const lifetime = tok.expiresAt - tok.issuedAt;
-    const skew = Math.max(BG_REFRESH_SKEW_MS, Math.round(lifetime * (1 - BG_REFRESH_LIFETIME_FRACTION)));
-    return Math.min(skew, Math.floor(lifetime / 2));
+    const fraction = Math.round(lifetime * (1 - BG_REFRESH_LIFETIME_FRACTION));
+    const skew = Math.max(BG_REFRESH_SKEW_MS, fraction);
+    return skew > lifetime / 2 ? fraction : skew;
   }
   return BG_REFRESH_SKEW_MS;
 }
@@ -1272,6 +1351,17 @@ export class UdbProject {
   private credentialTerminal: Error | null = null;
   /** A failed renewal may have spent the refresh token, so the next one logs in. */
   private credentialNeedsLogin = false;
+  /** The broker refused the stored refresh token and no credential can replace it:
+   *  it is never resubmitted. Cleared by a new login or API-key adoption. */
+  private refreshRejected: Error | null = null;
+  /** Epoch ms before which a call does not start another renewal after a failed one. */
+  private renewalRetryAt = 0;
+  /** The last error passed to `onRefreshError` (the same failure is reported once). */
+  private notifiedRefreshError: Error | null = null;
+  /** Wait between renewal attempts; a field so tests can shorten it. */
+  private renewalBackoffMs = RENEWAL_BACKOFF_MS;
+  /** Bound on one renewal attempt. */
+  private renewalTimeoutMs = RENEWAL_TIMEOUT_MS;
   /** Lazily built channel for the gRPC health check; closed by `close()`. */
   private healthClient: grpc.Client | null = null;
   /** Dedicated generated client for the auth/control-plane target when
@@ -1376,7 +1466,7 @@ export class UdbProject {
       udb.sharedMeta.serviceIdentity = principal.service_identity ?? "";
       udb.sharedMeta.scopes = [...(principal.scopes ?? [])];
       udb.credentialPin = credentialPin(principal);
-      RETAINED_LOGINS.set(udb, { username, password, tenant_hint: code, project_hint: rest.projectId ?? "" });
+      udb.retainLogin({ username, password, tenant_hint: code, project_hint: rest.projectId ?? "" });
     } catch (err) {
       udb.close();
       throw err;
@@ -1477,6 +1567,13 @@ export class UdbProject {
     this.tenantState = new TenantState(config.tenantId);
 
     this.tokenStore = config.tokenStore ?? new MemoryTokenStore();
+
+    // Every call on the connection's own credential first renews a bearer past its
+    // renewal point, and fails locally once the session can no longer be renewed.
+    this.installCredentialGate(this.core);
+    if (this.authGenerated) this.installCredentialGate(this.authGenerated.core);
+    if (this.webrtcGenerated) this.installCredentialGate(this.webrtcGenerated.core);
+    this.auth.setCallGate(() => this.ensureCallCredential());
   }
 
   /** The core native-service calls ride: the control-plane target when it differs
@@ -1609,6 +1706,7 @@ export class UdbProject {
       RETAINED_API_KEYS.delete(this);
       this.exchangedBearerExpiresAt = 0;
       this.forgetCredentialPin();
+      this.resetRenewalState();
       this.applyCredentials(resp.access_token || resp.session_token || "");
     }
     return resp;
@@ -1699,6 +1797,7 @@ export class UdbProject {
     if (!apiKey) throw new Error("udb: api key is required");
     // An explicit adoption chooses the identity; re-exchanges must then keep it.
     this.forgetCredentialPin();
+    this.resetRenewalState();
     const { verified } = await this.exchangeApiKey(apiKey);
     if (!this.closed) {
       if (this.refreshTimer) this.scheduleRefresh();
@@ -1710,7 +1809,8 @@ export class UdbProject {
   /** One API-key → bearer exchange: adopt principal, persist + install the bearer.
    *  Shared by the initial connect and the background re-exchange. */
   private async exchangeApiKey(apiKey: string): Promise<{ verified: any; token: StoredToken | null }> {
-    const verified: any = await this.auth.authenticateApiKey(apiKey);
+    // The key travels in the request; an expired bearer must not ride along.
+    const verified: any = await this.renewalAuth().authenticateApiKey(apiKey);
     // Checked before anything is adopted, so a refused renewal changes no identity.
     if (this.credentialPin) this.checkRenewal(verified?.principal);
     else if (verified?.access_token && !verified?.principal) {
@@ -1779,9 +1879,11 @@ export class UdbProject {
     RETAINED_LOGINS.delete(this);
   }
 
-  /** The auth client renewal calls use: no expired or revoked bearer rides along. */
+  /** The auth client renewal calls use: no expired or revoked bearer rides along,
+   *  no call gate runs, and every call has a deadline. */
   private renewalAuth(): UdbAuthClient {
-    return this.auth.withoutCredentials?.() ?? this.auth;
+    const deadlineMs = this.config?.deadlineMs || RENEWAL_TIMEOUT_MS / 2;
+    return this.auth.withoutCredentials?.({ deadlineMs }) ?? this.auth;
   }
 
   /** Verify a renewed bearer through the broker, check it against the pin, then store
@@ -1831,37 +1933,213 @@ export class UdbProject {
     });
   }
 
-  /** Renew an enterprise session: refresh, and on any failure log in again. A token
-   *  whose refresh failed may be spent, so it is never submitted twice. A changed
-   *  principal is not retried at all. */
-  private async renewEnterpriseSession(
-    credentials: Record<string, string>,
-    skewMs: number,
-  ): Promise<StoredToken | null> {
-    // Another caller may have finished a renewal since this one read the store.
-    const current = await this.tokenStore.load();
-    if (!current) return null;
-    if (current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt) return current;
-    let failure: unknown = new Error("udb: prior refresh outcome requires re-login");
-    if (!this.credentialNeedsLogin) {
+  /** Refresh a session that holds no other credential (a plain `login`). */
+  private async refreshPlain(current: StoredToken): Promise<StoredToken> {
+    const resp: any = await this.renewalAuth().refreshToken({
+      refresh_token: current.refreshToken ?? "",
+      session_id: current.sessionId ?? "",
+    });
+    const expiresIn = Number(resp?.access_token_expires_in ?? 0);
+    const now = Date.now();
+    const next: StoredToken = {
+      accessToken: resp?.access_token || current.accessToken,
+      // The broker rotates the refresh token on every refresh: the one
+      // presented is single-use, so keeping it fails the NEXT refresh with
+      // "invalid credential". The reply omits it only for a legacy
+      // session-id refresh, where the stored credential stays valid.
+      refreshToken: resp?.refresh_token || current.refreshToken,
+      // session_public_id is the display id, not the legacy refresh
+      // session id this field holds, so the stored one is kept.
+      sessionId: current.sessionId,
+      issuedAt: expiresIn > 0 ? now : current.issuedAt,
+      expiresAt: expiresIn > 0 ? now + expiresIn * 1000 : 0,
+    };
+    await this.tokenStore.save(next);
+    this.applyCredentials(next.accessToken);
+    return next;
+  }
+
+  /** One renewal attempt. The refresh token is tried first unless an earlier
+   *  failure may have spent it; when it fails, a session that holds a durable
+   *  credential (API key, or the username/password it connected with)
+   *  re-authenticates with it in the same attempt. A refresh token whose refresh
+   *  failed is never submitted again by such a session: the broker may have
+   *  consumed it before the reply was lost. A session with no other credential
+   *  retries the refresh only after a transient failure; a refused refresh token
+   *  is final for it. */
+  private async renewOnce(current: StoredToken): Promise<StoredToken | null> {
+    const login = RETAINED_LOGINS.get(this);
+    const apiKey = RETAINED_API_KEYS.get(this);
+    const durable = Boolean(login || apiKey);
+    const hasRefresh = Boolean(current.refreshToken || current.sessionId);
+    if (!durable && this.refreshRejected) throw this.refreshRejected;
+    let refreshFailure: unknown = null;
+    if (hasRefresh && !this.credentialNeedsLogin) {
       try {
-        return await this.refreshVerified(current);
+        return login ? await this.refreshVerified(current) : await this.refreshPlain(current);
       } catch (err) {
         if (err instanceof CredentialBindingError) throw err;
-        failure = err;
+        if (!durable) {
+          if (!isTransientRenewalError(err)) {
+            this.refreshRejected = err instanceof Error ? err : new Error(String(err));
+          }
+          throw err;
+        }
+        refreshFailure = err;
         this.credentialNeedsLogin = true;
       }
+    } else if (this.credentialNeedsLogin) {
+      refreshFailure = new Error("udb: prior refresh outcome requires re-login");
     }
+    if (!durable) return current; // Nothing can renew this token; callers see it expire.
     try {
-      const fresh = await this.reloginVerified(credentials);
+      const fresh = apiKey ? (await this.exchangeApiKey(apiKey)).token : await this.reloginVerified(login!);
       this.credentialNeedsLogin = false;
       return fresh;
     } catch (err) {
-      if (err instanceof CredentialBindingError) throw err;
-      const first = failure instanceof Error ? failure.message : String(failure);
+      if (err instanceof CredentialBindingError || refreshFailure === null) throw err;
+      const first = refreshFailure instanceof Error ? refreshFailure.message : String(refreshFailure);
       const second = err instanceof Error ? err.message : String(err);
-      throw new Error(`udb: renewal and re-login failed: ${first}; ${second}`, { cause: err });
+      const combined = new Error(`udb: renewal and re-login failed: ${first}; ${second}`, { cause: err });
+      // Whether another attempt can help depends on the re-authentication, not the refresh.
+      (combined as Error & { transient?: boolean }).transient = isTransientRenewalError(err);
+      throw combined;
     }
+  }
+
+  /** Renew with up to RENEWAL_ATTEMPTS attempts, waiting a jittered, doubling
+   *  interval between them. Only a transient failure is retried; a changed
+   *  identity or a refused credential ends the renewal at once. */
+  private async renewWithRetry(skewMs: number): Promise<StoredToken | null> {
+    let lastErr: unknown = new Error("udb: renewal did not run");
+    for (let attempt = 0; attempt < RENEWAL_ATTEMPTS; attempt += 1) {
+      if (attempt > 0) {
+        await sleep(jitteredBackoffMs(attempt, this.renewalBackoffMs ?? RENEWAL_BACKOFF_MS, BG_REFRESH_MAX_BACKOFF_MS));
+      }
+      // Another caller may have finished a renewal since this one read the store.
+      const current = await this.tokenStore.load();
+      if (!current) return null;
+      if (current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt) return current;
+      try {
+        return await withTimeout(this.renewOnce(current), this.renewalTimeoutMs ?? RENEWAL_TIMEOUT_MS);
+      } catch (err) {
+        lastErr = err;
+        if (!isTransientRenewalError(err)) break;
+      }
+    }
+    throw lastErr;
+  }
+
+  /** Run one renewal and record its outcome once for every caller sharing it:
+   *  success clears the failure state; failure records the error, sets the backoff
+   *  before the next call-driven attempt, fails closed when the bearer has expired,
+   *  and reports the error to `onRefreshError`. */
+  private async trackRenewal(skewMs: number): Promise<StoredToken | null> {
+    try {
+      const tok = await this.renewWithRetry(skewMs);
+      this.refreshFailures = 0;
+      this.renewalRetryAt = 0;
+      if (tok && (tok.expiresAt === 0 || Date.now() < tok.expiresAt)) {
+        this.poisoned = false;
+        this.lastRefreshError = null;
+        this.notifiedRefreshError = null;
+      }
+      return tok;
+    } catch (err) {
+      const failure = err instanceof Error ? err : new Error(String(err));
+      this.lastRefreshError = failure;
+      this.refreshFailures = (this.refreshFailures ?? 0) + 1;
+      this.renewalRetryAt = Date.now() + jitteredBackoffMs(this.refreshFailures, BG_REFRESH_MIN_MS, BG_REFRESH_MAX_BACKOFF_MS);
+      const tok = await Promise.resolve(this.tokenStore.load()).catch(() => null);
+      if (!tok || (tok.expiresAt > 0 && Date.now() >= tok.expiresAt)) {
+        // Fail closed: drop the dead bearer so no call goes out with it.
+        this.poisoned = true;
+        this.clearBearerCredentials();
+      }
+      this.notifyRefreshError(failure);
+      throw failure;
+    }
+  }
+
+  private notifyRefreshError(err: Error): void {
+    if (err === this.notifiedRefreshError) return;
+    this.notifiedRefreshError = err;
+    try {
+      this.config?.onRefreshError?.(err);
+    } catch {
+      /* a reporting callback must not change the session */
+    }
+  }
+
+  /** Clear the renewal failure state when a new credential is adopted. */
+  private resetRenewalState(): void {
+    this.refreshRejected = null;
+    this.renewalRetryAt = 0;
+    this.refreshFailures = 0;
+    this.poisoned = false;
+    this.lastRefreshError = null;
+    this.notifiedRefreshError = null;
+  }
+
+  /** Before a call on the connection's own credential: renew a bearer that is past
+   *  its renewal point (sharing the single in-flight renewal with every concurrent
+   *  caller), and fail locally with `SessionExpiredError` when the bearer has
+   *  expired and cannot be renewed, instead of sending no or a dead bearer. */
+  private async ensureCallCredential(call?: CallOptions): Promise<void> {
+    if (this.closed) return;
+    if (this.credentialTerminal) throw new SessionExpiredError(this.credentialTerminal);
+    if (delegatesBearer(call)) {
+      // asUser: the caller's bearer is sent; the owner's refusal still applies.
+      if (this.poisoned) throw new SessionExpiredError(this.lastRefreshError ?? undefined);
+      return;
+    }
+    const tok = await this.tokenStore.load();
+    if (!tok || !tok.expiresAt) return;
+    const skew = refreshSkewMs(tok);
+    if (Date.now() + skew < tok.expiresAt) return;
+    if (!this.refreshInFlight && (this.renewalRetryAt ?? 0) > Date.now()) {
+      // A renewal just failed; the background refresher owns the next attempt.
+      if (Date.now() < tok.expiresAt) return;
+      throw new SessionExpiredError(this.lastRefreshError ?? undefined);
+    }
+    let renewed: StoredToken | null;
+    try {
+      renewed = await this.refreshIfNeeded(skew);
+    } catch (err) {
+      if (!(err instanceof CredentialBindingError) && Date.now() < tok.expiresAt) return;
+      throw new SessionExpiredError(err);
+    }
+    if (!renewed || (renewed.expiresAt > 0 && Date.now() >= renewed.expiresAt)) {
+      throw new SessionExpiredError(this.lastRefreshError ?? undefined);
+    }
+  }
+
+  /** The synchronous check streaming calls get: refuse a session already known dead. */
+  private assertCallCredential(): void {
+    if (this.closed) return;
+    if (this.credentialTerminal) throw new SessionExpiredError(this.credentialTerminal);
+    if (this.poisoned) throw new SessionExpiredError(this.lastRefreshError ?? undefined);
+  }
+
+  /** Gate every call a core makes on the connection's credential. */
+  private installCredentialGate(core: UdbCore): void {
+    const unary = core.unary.bind(core);
+    core.unary = (async (fullName: string, method: string, request: any, call?: CallOptions) => {
+      await this.ensureCallCredential(call);
+      return unary(fullName, method, request, call);
+    }) as UdbCore["unary"];
+    for (const name of ["serverStream", "clientStream", "bidiStream"] as const) {
+      const original = (core as any)[name].bind(core);
+      (core as any)[name] = (...args: any[]) => {
+        this.assertCallCredential();
+        return original(...args);
+      };
+    }
+  }
+
+  /** Keep the username/password a session connected with, for re-login. */
+  private retainLogin(credentials: Record<string, string>): void {
+    RETAINED_LOGINS.set(this, credentials);
   }
 
   /**
@@ -1930,7 +2208,11 @@ export class UdbProject {
    * is no stored token / refresh token.
    *
    * A bearer obtained from an API key carries no refresh token; it is renewed by
-   * re-exchanging the retained API key (same single-flight).
+   * re-exchanging the retained API key (same single-flight). A session that holds
+   * an API key or the username/password it connected with re-authenticates with
+   * it when a refresh fails, and never resubmits that refresh token. A renewal
+   * makes up to three attempts with jittered backoff before it fails; the failure
+   * is reported to `onRefreshError`.
    */
   async refreshIfNeeded(skewMs = 60_000): Promise<StoredToken | null> {
     if (this.credentialTerminal) throw this.credentialTerminal;
@@ -1938,57 +2220,10 @@ export class UdbProject {
     if (!current) return null;
     const fresh = current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt;
     if (fresh) return current;
-    const credentials = RETAINED_LOGINS.get(this);
-    if (credentials) {
-      if (!this.refreshInFlight) {
-        this.refreshInFlight = (async () => {
-          try {
-            return await this.renewEnterpriseSession(credentials, skewMs);
-          } finally {
-            this.refreshInFlight = null;
-          }
-        })();
-      }
-      return this.refreshInFlight;
-    }
-    if (!current.refreshToken && !current.sessionId) {
-      const retainedKey = RETAINED_API_KEYS.get(this);
-      if (!retainedKey) return current;
-      if (!this.refreshInFlight) {
-        this.refreshInFlight = (async () => {
-          try {
-            return (await this.exchangeApiKey(retainedKey)).token;
-          } finally {
-            this.refreshInFlight = null;
-          }
-        })();
-      }
-      return this.refreshInFlight;
-    }
-
     if (!this.refreshInFlight) {
       this.refreshInFlight = (async () => {
         try {
-          const resp: any = await this.auth.refreshToken({
-            refresh_token: current.refreshToken ?? "",
-            session_id: current.sessionId ?? "",
-          });
-          const expiresIn = Number(resp?.access_token_expires_in ?? 0);
-          const next: StoredToken = {
-            accessToken: resp?.access_token || current.accessToken,
-            // The broker rotates the refresh token on every refresh: the one
-            // presented is single-use, so keeping it fails the NEXT refresh with
-            // "invalid credential". The reply omits it only for a legacy
-            // session-id refresh, where the stored credential stays valid.
-            refreshToken: resp?.refresh_token || current.refreshToken,
-            // session_public_id is the display id, not the legacy refresh
-            // session id this field holds, so the stored one is kept.
-            sessionId: current.sessionId,
-            expiresAt: expiresIn > 0 ? Date.now() + expiresIn * 1000 : 0,
-          };
-          await this.tokenStore.save(next);
-          this.applyCredentials(next.accessToken);
-          return next;
+          return await this.trackRenewal(skewMs);
         } finally {
           this.refreshInFlight = null;
         }
@@ -2030,11 +2265,15 @@ export class UdbProject {
           delay = tok.expiresAt - refreshSkewMs(tok) - Date.now();
           if (delay < BG_REFRESH_MIN_MS) delay = BG_REFRESH_MIN_MS;
         }
-        // Exponential backoff across consecutive failures (1s, 2s, 4s … 60s) so a
-        // failing refresh/re-exchange is retried without hot-looping.
+        // Jittered exponential backoff across consecutive failures (1s, 2s, 4s …
+        // 60s), recorded by the failed renewal, so a failing refresh/re-exchange is
+        // retried without hot-looping and many clients do not retry in lockstep.
         const failures = this.refreshFailures ?? 0;
         if (failures > 0) {
-          const backoff = Math.min(BG_REFRESH_MIN_MS * 2 ** (failures - 1), BG_REFRESH_MAX_BACKOFF_MS);
+          const backoff = Math.max(
+            (this.renewalRetryAt ?? 0) - Date.now(),
+            jitteredBackoffMs(failures, BG_REFRESH_MIN_MS, BG_REFRESH_MAX_BACKOFF_MS) / 2,
+          );
           if (delay < backoff) delay = backoff;
         }
         // While poisoned, back off from the 1s floor so a permanently-dead token
@@ -2059,25 +2298,19 @@ export class UdbProject {
   private async backgroundRefreshTick(): Promise<void> {
     try {
       const before = await this.tokenStore.load();
+      // The renewal records its own outcome (failure count, poison, callback).
       await this.refreshIfNeeded(refreshSkewMs(before));
-      this.refreshFailures = 0;
       const tok = await this.tokenStore.load();
-      if (tok && (tok.expiresAt === 0 || Date.now() < tok.expiresAt)) {
+      if (tok && (tok.expiresAt === 0 || Date.now() < tok.expiresAt) && !this.refreshRejected) {
+        this.refreshFailures = 0;
         this.poisoned = false;
         this.lastRefreshError = null;
       }
     } catch (err) {
-      this.lastRefreshError = err instanceof Error ? err : new Error(String(err));
-      this.refreshFailures = (this.refreshFailures ?? 0) + 1;
-      const tok = await Promise.resolve(this.tokenStore.load()).catch(() => null);
-      // An API-key bearer whose re-exchange keeps failing is treated like any
-      // other bearer: it fails closed at expiry and the refresher keeps retrying.
-      const expired = !tok || (tok.expiresAt > 0 && Date.now() >= tok.expiresAt);
-      if (expired) {
-        // Fail closed: drop the dead bearer so no call goes out with a stale
-        // credential — the broker rejects (Unauthenticated) until a fresh login.
-        this.poisoned = true;
-        this.clearBearerCredentials();
+      if (err !== this.lastRefreshError) {
+        // A failure outside the renewal itself (e.g. the token store).
+        this.lastRefreshError = err instanceof Error ? err : new Error(String(err));
+        this.refreshFailures = (this.refreshFailures ?? 0) + 1;
       }
     } finally {
       this.scheduleRefresh();
@@ -2091,6 +2324,7 @@ export class UdbProject {
     this.verifiedPrincipal = null;
     this.exchangedBearerExpiresAt = 0;
     this.forgetCredentialPin();
+    this.resetRenewalState();
     this.clearBearerCredentials();
   }
 

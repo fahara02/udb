@@ -252,6 +252,26 @@ async fn live_postgres_service_tenant_token_exchange() {
         authenticated: true,
     };
 
+    // A service account learns the tenants it can reach from its own memberships.
+    let own = async |ctx: VerifiedClaimContext| {
+        scope_claim_context_for_test(
+            ctx,
+            authn.list_own_tenant_memberships(Request::new(
+                authn_pb::ListOwnTenantMembershipsRequest::default(),
+            )),
+        )
+        .await
+    };
+    assert!(
+        own(home_ctx.clone())
+            .await
+            .expect("list own memberships")
+            .into_inner()
+            .memberships
+            .is_empty(),
+        "no membership approved yet"
+    );
+
     // No membership yet: refused.
     let denied = scope_claim_context_for_test(
         home_ctx.clone(),
@@ -319,6 +339,30 @@ async fn live_postgres_service_tenant_token_exchange() {
             .iter()
             .any(|listed| listed.membership_id == membership.membership_id)
     );
+
+    // The account now sees the tenant it was approved into, each time it asks.
+    for _ in 0..3 {
+        let mine = own(home_ctx.clone())
+            .await
+            .expect("list own memberships")
+            .into_inner()
+            .memberships;
+        assert_eq!(mine.len(), 1, "{mine:?}");
+        assert_eq!(mine[0].membership_id, membership.membership_id);
+        assert_eq!(mine[0].target_tenant_id, target);
+        assert_eq!(mine[0].home_tenant_id, "acme");
+    }
+    // A person's bearer is not a service account: refused, nothing listed.
+    let person = own(test_claim_context(
+        "someone",
+        "acme",
+        "",
+        &["udb:authn:exchange-tenant-token"],
+        &[],
+    ))
+    .await
+    .expect_err("a person cannot list service-account memberships");
+    assert_eq!(person.code(), tonic::Code::PermissionDenied);
 
     // Exchange: a target-tenant token pinned to the membership.
     let exchanged = scope_claim_context_for_test(

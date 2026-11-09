@@ -78,7 +78,7 @@ that defines it, down to the backend that executes it:
 | Protobuf contract | App schemas, UDB annotations, native service descriptors |
 | Catalog manifest | Normalized tables, fields, stores, security metadata, checksums |
 | DataBroker | Public data-plane API for records, objects, vectors, cache, CDC, transactions, admin, and health |
-| Native control plane | Internal API for authn, authz, API keys, IdP, tenants, notifications, analytics, storage, assets, WebRTC, and policy distribution |
+| Native control plane | Internal API on its own listener (loopback `:50061`, the data port + 10, by default): authn, authz, API keys, IdP, tenants, storage, WebRTC, vault, messaging, cache and the rest — every service in [generated/native-services.md](generated/native-services.md) |
 | Runtime routing | Project/tenant context, backend target selection, admission control, authorization, and execution |
 | Backends | SQL, cache, vector, object, document, graph, and column systems |
 | Events | Outbox, CDC envelopes, domain events, DLQ, and replay controls |
@@ -197,7 +197,9 @@ descriptor-rendered service catalog covers identity, access control, storage,
 assets, WebRTC, tenancy, notifications, analytics, and policy distribution.
 
 For the full service-by-service breakdown, see
-[native-services.md](native-services.md).
+[native-services.md](native-services.md); the generated per-RPC reference (scopes,
+accepted credentials, tenant rules) is
+[generated/native-services.md](generated/native-services.md).
 
 ## Backend Kinds
 

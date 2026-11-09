@@ -8,7 +8,8 @@ allowed-tools: Read, Grep, Glob, Bash
 
 UDB is a **proto-driven multi-database broker** (Rust, tonic/prost, sqlx): one
 annotated proto contract derives DB schema, per-RPC security enforcement, the
-generated DataBroker/native-service inventory across 18 backends, six SDKs, CLI
+generated DataBroker/native-service inventory across 18 backends, seven SDKs
+(TS/Python/Go/Java/C#/PHP/Rust), CLI
 and docs. This skill carries the codebase map AND the house
 doctrine for changing it safely. Current code/SDK baseline is **0.6.13** (wire protocol `1.0.0`).
 
@@ -48,11 +49,14 @@ generic Rust/SQL/engine knowledge for everything else.
    `descriptor_manifest.rs` (OnceLock, fail-closed panic on bad decode) → drives
    method_security, native routing, DDL generation, SDK manifest, docs. Never
    hand-add a Rust id list — derive from the descriptor.
-2. **Two listeners:** public broker (health/reflection/DataBroker only) and the
-   native control-plane listener (loopback, port+10) hosting all native services.
+2. **Three listeners:** public broker (health/reflection/DataBroker only); the
+   native control-plane listener hosting every native gRPC service (data port
+   +10, default `127.0.0.1:50061` unless `UDB_AUTH_GRPC_ADDR`); and the WebRTC
+   peer listener (data port +20, `UDB_WEBRTC_GRPC_ADDR`).
 3. **Every request:** tower `MethodSecurityLayer` (headers only → installs
    `VerifiedClaimContext`) → handler (MUST bind body tenant/owner to the claim —
-   reads included) → fair admission (`channels.rs` / `admit_on`) → dispatch.
+   reads included) → fair admission (`channels.rs` /
+   `runtime/service/native_helpers.rs::admit_on`) → dispatch.
 4. **Every mutation event:** transactional outbox → CDC tailer → Kafka, with
    journal (replay source), DLQ-insert-before-mark, fail-closed tenant-scoped
    subscriber streams.
@@ -73,7 +77,7 @@ generic Rust/SQL/engine knowledge for everything else.
   …)` (default 8) so a configured-but-unreachable backend (e.g. MongoDB's ~30s
   server-selection) degrades to "unavailable" instead of stalling boot. A backend
   only registers if it has an explicit DSN — but the binary **`load_project_dotenv()`
-  walks UP from CWD** (`cli/mod.rs`), so a stray repo `.env` silently injects
+  walks UP from CWD** (`cli/env_setup.rs`), so a stray repo `.env` silently injects
   backend DSNs and slows startup; don't add default-localhost DSNs.
 - **Fast restart:** `UDB_STARTUP_SKIP_IF_UNCHANGED=true` (`control/lifecycle.rs`)
   skips generate/apply/provision/verify when the persisted manifest checksum is
@@ -88,9 +92,14 @@ generic Rust/SQL/engine knowledge for everything else.
   TLS+mTLS in `ServiceSettings::apply_security_posture`
   (warns when it overrides an explicit `=false`); TLS env = `UDB_TLS_CERT_PEM|PATH`,
   `UDB_TLS_KEY_PEM|PATH`, `UDB_MTLS_CLIENT_CA_PEM|PATH`.
-- **0.3.7 auth/crypto fixes:** DataBroker bearer auth now returns a clearer
-  `UNAUTHENTICATED` when a caller sends only `x-api-key`; the data plane still
-  requires JWT bearer or mTLS. `runtime/encryption.rs` accepts 32-byte base64,
+- **Data-plane credentials:** DataBroker accepts a JWT bearer, mTLS, OR a scoped
+  service `x-api-key` (also `x-udb-api-key`) — the key is validated by the
+  async credential layer against the durable key + grant stores before
+  `runtime/security.rs::claims_from_verified_principal` projects it into claims;
+  invalid/revoked → `UNAUTHENTICATED`, key store down → retryable error. SDKs
+  never send the raw key (they exchange it via `Authenticate{api_key}`). The
+  planner also demands the coarse scopes `udb:read`/`udb:write`/`udb:stream`
+  (`planning/broker/helpers.rs`). `runtime/encryption.rs` accepts 32-byte base64,
   64-char hex/`0x` hex, or raw 32-byte keys and names the configured key source
   in decode errors; reuse that decoder rather than adding a parallel one.
 

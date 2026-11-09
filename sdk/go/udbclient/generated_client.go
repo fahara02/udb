@@ -25,7 +25,7 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 424 RPCs across 29 services
+// Covers 426 RPCs across 29 services
 // (UDB v0.6.13, wire protocol 1.0.0).
 
 import (
@@ -123,17 +123,27 @@ type RetryConfig struct {
 	MaxBackoff   time.Duration // backoff ceiling
 	Jitter       float64       // 0..1 fraction of randomized jitter added to each backoff
 	RetryOnCodes []codes.Code  // transient codes retried only for read-only unary RPCs
+	// MaxRetryAfter is the longest broker-requested delay
+	// (ErrorDetail.retry_after_ms) the client waits for automatically; a longer
+	// one is returned to the caller at once. Zero means the default (10s).
+	MaxRetryAfter time.Duration
 }
+
+// defaultMaxRetryAfter is the longest broker-requested retry delay the client
+// waits for automatically when RetryConfig.MaxRetryAfter is zero.
+const defaultMaxRetryAfter = 10 * time.Second
 
 // DefaultRetryConfig returns the proven UDB defaults: 4 attempts, 100ms base,
 // 5s ceiling, full jitter, retrying only read-only unary RPCs on transient codes.
-// Mutating RPCs are never retried automatically.
+// Mutating RPCs are never retried automatically. A broker-requested delay
+// (retry_after_ms) up to 10s is waited for; a longer one is returned at once.
 func DefaultRetryConfig() RetryConfig {
 	return RetryConfig{
-		MaxAttempts: 4,
-		BaseBackoff: 100 * time.Millisecond,
-		MaxBackoff:  5 * time.Second,
-		Jitter:      1.0,
+		MaxAttempts:   4,
+		BaseBackoff:   100 * time.Millisecond,
+		MaxBackoff:    5 * time.Second,
+		Jitter:        1.0,
+		MaxRetryAfter: defaultMaxRetryAfter,
 		RetryOnCodes: []codes.Code{
 			codes.Unavailable,
 			codes.ResourceExhausted,
@@ -194,6 +204,68 @@ func (rc RetryConfig) backoff(attempt int) time.Duration {
 		}
 	}
 	return time.Duration(d)
+}
+
+// retryAfterOf returns the broker-requested delay (ErrorDetail.retry_after_ms)
+// carried by a failed attempt's error, or 0 when the error carries none.
+func retryAfterOf(err error) time.Duration {
+	e, ok := AsError(err)
+	if !ok {
+		return 0
+	}
+	d := e.RetryAfter()
+	if d <= 0 {
+		return 0
+	}
+	return d
+}
+
+// maxRetryAfter is the longest broker-requested delay the client waits for
+// automatically (MaxRetryAfter, 10s when zero).
+func (rc RetryConfig) maxRetryAfter() time.Duration {
+	if rc.MaxRetryAfter <= 0 {
+		return defaultMaxRetryAfter
+	}
+	return rc.MaxRetryAfter
+}
+
+// retrySleep is the wait between retry attempts. It returns ctx.Err() when ctx
+// ends first. Only the unary retry loop uses it; tests replace it.
+var retrySleep = func(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// waitBeforeRetry waits before retry number attempt (0-based) after the failed
+// attempt that produced lastErr. When the broker asked for a delay
+// (retry_after_ms), the wait is the larger of the jittered backoff and that
+// delay; it does not sleep and reports proceed=false, so the caller returns
+// lastErr with its detail intact, when the delay is longer than MaxRetryAfter
+// or ctx's deadline would pass before the wait ends. ctxDone=true means ctx
+// ended during the wait.
+func (rc RetryConfig) waitBeforeRetry(ctx context.Context, attempt int, lastErr error) (proceed, ctxDone bool) {
+	wait := rc.backoff(attempt)
+	if server := retryAfterOf(lastErr); server > 0 {
+		if server > rc.maxRetryAfter() {
+			return false, false
+		}
+		if server > wait {
+			wait = server
+		}
+		if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < wait {
+			return false, false
+		}
+	}
+	if err := retrySleep(ctx, wait); err != nil {
+		return false, true
+	}
+	return true, false
 }
 
 // Error is the typed error the generated layer maps gRPC failures to. It always
@@ -572,10 +644,12 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 	var lastErr error
 	for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
 		if attempt > 0 {
-			select {
-			case <-time.After(rc.backoff(attempt - 1)):
-			case <-ctx.Done():
+			proceed, ctxDone := rc.waitBeforeRetry(ctx, attempt-1, lastErr)
+			if ctxDone {
 				return mapError(fullMethod, credentialContextError(ctx), nil)
+			}
+			if !proceed {
+				return lastErr
 			}
 		}
 		callCtx, cancel := g.withDeadline(ctx)
@@ -778,10 +852,12 @@ func (g *GeneratedClient) unaryInterceptor() grpc.UnaryClientInterceptor {
 		var lastErr error
 		for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
 			if attempt > 0 {
-				select {
-				case <-time.After(rc.backoff(attempt - 1)):
-				case <-ctx.Done():
+				proceed, ctxDone := rc.waitBeforeRetry(ctx, attempt-1, lastErr)
+				if ctxDone {
 					return mapError(method, credentialContextError(ctx), nil)
+				}
+				if !proceed {
+					return lastErr
 				}
 			}
 			attemptCtx := ctx
@@ -1018,6 +1094,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListDevices", Name: "ListDevices", APIAlias: "list_devices", OperationID: "listDevices", HTTPMethod: "get", HTTPPath: "/v1/auth/users/{user_id}/devices", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:list-devices"}, CredentialTypes: []string{"bearer_jwt", "session"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListInvitations", Name: "ListInvitations", APIAlias: "list_invitations", OperationID: "listInvitations", HTTPMethod: "get", HTTPPath: "/v1/auth/invitations", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:manage-invitations"}, CredentialTypes: []string{"bearer_jwt", "session"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListMfaFactors", Name: "ListMfaFactors", APIAlias: "list_mfa_factors", OperationID: "listMfaFactors", HTTPMethod: "get", HTTPPath: "/v1/auth/users/{user_id}/mfa/factors", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:list-mfa-factors"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships", Name: "ListOwnTenantMemberships", APIAlias: "list_own_tenant_memberships", OperationID: "listOwnTenantMemberships", HTTPMethod: "get", HTTPPath: "/v1/auth/own-tenant-memberships", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:exchange-tenant-token"}, CredentialTypes: []string{"service_account"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants", Name: "ListServiceAccountGrants", APIAlias: "list_service_account_grants", OperationID: "listServiceAccountGrants", HTTPMethod: "get", HTTPPath: "/v1/auth/service-account-grants", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:read-grants"}, CredentialTypes: []string{"bearer_jwt", "session"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships", Name: "ListServiceAccountTenantMemberships", APIAlias: "list_service_account_tenant_memberships", OperationID: "listServiceAccountTenantMemberships", HTTPMethod: "get", HTTPPath: "/v1/auth/tenants/{target_tenant_id}/service-account-memberships", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:read-grants"}, CredentialTypes: []string{"bearer_jwt", "session"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ListSessions", Name: "ListSessions", APIAlias: "list_sessions", OperationID: "listSessions", HTTPMethod: "get", HTTPPath: "/v1/auth/users/{user_id}/sessions", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:list-sessions"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
@@ -1047,6 +1124,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/SendLoginOtp", Name: "SendLoginOtp", APIAlias: "send_login_otp", OperationID: "sendLoginOtp", HTTPMethod: "post", HTTPPath: "/v1/auth/sessions:sendLoginOtp", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "public", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/SendOTP", Name: "SendOTP", APIAlias: "send_otp", OperationID: "sendOtp", HTTPMethod: "post", HTTPPath: "/v1/auth/otps:send", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:send-otp"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/SendPhoneVerification", Name: "SendPhoneVerification", APIAlias: "send_phone_verification", OperationID: "sendPhoneVerification", HTTPMethod: "post", HTTPPath: "/v1/auth/users/{user_id}/phones:verify", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:send-phone-verification"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword", Name: "SetServiceAccountPassword", APIAlias: "set_service_account_password", OperationID: "setServiceAccountPassword", HTTPMethod: "post", HTTPPath: "/v1/auth/service-accounts/{user_id}/password", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:admin-reset-password"}, CredentialTypes: []string{"bearer_jwt", "session"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/StartInvitationAcceptance", Name: "StartInvitationAcceptance", APIAlias: "start_invitation_acceptance", OperationID: "startInvitationAcceptance", HTTPMethod: "post", HTTPPath: "/v1/auth/invitations/{invitation_id}:startAcceptance", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "public", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/StartOidcLogin", Name: "StartOidcLogin", APIAlias: "start_oidc_login", OperationID: "startOidcLogin", HTTPMethod: "post", HTTPPath: "/v1/auth/oidc-logins:start", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "public", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication", Name: "StartWebAuthnAuthentication", APIAlias: "start_web_authn_authentication", OperationID: "startWebAuthnAuthentication", HTTPMethod: "post", HTTPPath: "/v1/auth/webauthn/authentication:start", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "public", Scopes: []string{}, CredentialTypes: []string{}},
@@ -1385,7 +1463,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.analytics.services.v1.AnalyticsService": 7,
 	"udb.core.apikey.services.v1.ApiKeyService": 9,
 	"udb.core.asset.services.v1.AssetService": 8,
-	"udb.core.authn.services.v1.AuthnService": 79,
+	"udb.core.authn.services.v1.AuthnService": 81,
 	"udb.core.authz.services.v1.AuthzService": 41,
 	"udb.core.backup.services.v1.BackupService": 8,
 	"udb.core.cache.services.v1.CacheService": 8,

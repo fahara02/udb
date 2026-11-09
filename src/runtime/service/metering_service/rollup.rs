@@ -41,14 +41,10 @@ pub(crate) fn rollup_id(
     format!("{tenant_id}:{method}:{unit}:{window_start_unix}:{window_end_unix}")
 }
 
-async fn load_usage_rollups(
-    pool: &PgPool,
-    outbox_relation: &str,
-    journal_relation: &str,
-    batch: i64,
-    window_seconds: i64,
-    lookback_seconds: i64,
-) -> Result<Vec<UsageRollup>, String> {
+/// The rollup query: closed tenant/method/unit/window buckets in `$2..$3` that
+/// have no rollup event yet. `$1` window seconds, `$4` rollup topic, `$5` limit,
+/// `$6` default unit. One function so a live test can EXPLAIN exactly this SQL.
+pub(crate) fn usage_rollups_sql(outbox_relation: &str, journal_relation: &str) -> String {
     let usage = usage_event_model();
     let rel = usage.relation.clone();
     let tenant = usage.q("tenant_id");
@@ -56,16 +52,9 @@ async fn load_usage_rollups(
     let unit = usage.q("unit");
     let quantity = usage.q("quantity");
     let ts = usage.q("occurred_at_unix");
-    let window = window_seconds.max(1);
-    let upper = closed_rollup_upper_bound(now_unix(), window);
-    if upper <= 0 {
-        return Ok(Vec::new());
-    }
-    let lower = upper.saturating_sub(lookback_seconds.max(window));
-    let limit = batch.max(1);
     let window_expr = format!("(({ts} / $1::BIGINT) * $1::BIGINT)");
     let rollup_id_expr = "CONCAT(r.tenant_id, ':', r.method, ':', r.unit, ':', r.window_start_unix::TEXT, ':', r.window_end_unix::TEXT)";
-    let rows = sqlx::query(&format!(
+    format!(
         "WITH rollups AS ( \
              SELECT \
                {tenant}::TEXT AS tenant_id, \
@@ -96,16 +85,34 @@ async fn load_usage_rollups(
          ) \
          ORDER BY r.window_start_unix ASC, r.tenant_id ASC, r.method ASC, r.unit ASC \
          LIMIT $5"
-    ))
-    .bind(window)
-    .bind(lower)
-    .bind(upper)
-    .bind(TOPIC_USAGE_ROLLUP)
-    .bind(limit)
-    .bind(DEFAULT_UNIT)
-    .fetch_all(pool)
-    .await
-    .map_err(|err| format!("load metering usage rollups failed: {err}"))?;
+    )
+}
+
+async fn load_usage_rollups(
+    pool: &PgPool,
+    outbox_relation: &str,
+    journal_relation: &str,
+    batch: i64,
+    window_seconds: i64,
+    lookback_seconds: i64,
+) -> Result<Vec<UsageRollup>, String> {
+    let window = window_seconds.max(1);
+    let upper = closed_rollup_upper_bound(now_unix(), window);
+    if upper <= 0 {
+        return Ok(Vec::new());
+    }
+    let lower = upper.saturating_sub(lookback_seconds.max(window));
+    let limit = batch.max(1);
+    let rows = sqlx::query(&usage_rollups_sql(outbox_relation, journal_relation))
+        .bind(window)
+        .bind(lower)
+        .bind(upper)
+        .bind(TOPIC_USAGE_ROLLUP)
+        .bind(limit)
+        .bind(DEFAULT_UNIT)
+        .fetch_all(pool)
+        .await
+        .map_err(|err| format!("load metering usage rollups failed: {err}"))?;
 
     rows.into_iter()
         .map(|row| {

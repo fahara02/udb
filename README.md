@@ -13,7 +13,7 @@
   <a href="Cargo.toml"><img alt="Rust 2024" src="https://img.shields.io/badge/Rust-2024-b7410e?logo=rust&logoColor=white"></a>
   <a href="proto/README.md"><img alt="gRPC + Protobuf" src="https://img.shields.io/badge/API-gRPC%20%2B%20Protobuf-2563eb?logo=grpc&logoColor=white"></a>
   <a href="sdk/UDB_PROTOCOL_VERSION"><img alt="Protocol 1.0.0" src="https://img.shields.io/badge/protocol-1.0.0-059669"></a>
-  <a href="#sdks"><img alt="SDKs" src="https://img.shields.io/badge/SDKs-Go%20%C2%B7%20Python%20%C2%B7%20TypeScript%20%C2%B7%20Java%20%C2%B7%20C%23%20%C2%B7%20PHP-334155"></a>
+  <a href="#sdks"><img alt="SDKs" src="https://img.shields.io/badge/SDKs-Go%20%C2%B7%20Python%20%C2%B7%20TypeScript%20%C2%B7%20Java%20%C2%B7%20C%23%20%C2%B7%20PHP%20%C2%B7%20Rust-334155"></a>
   <a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/license-MIT-555"></a>
 </p>
 
@@ -43,7 +43,7 @@ CDC, and backend-specific execution.
   endpoint security, SDK surfaces, event contracts, and generated docs.
 - Multi-tenant request context on every call: tenant, project, user, purpose,
   service identity, scopes, correlation id, and client catalog version.
-- SDKs for Go, Python, TypeScript/Node, Java, C#, and PHP/Laravel.
+- SDKs for Go, Python, TypeScript/Node, Java, C#, PHP/Laravel, and Rust.
 - A single CLI named `udb` for proto export, formatting, SDK generation, native
   service setup, app integration, local dev, broker serving, and diagnostics.
 
@@ -99,7 +99,7 @@ Per-service RPC counts (native control plane):
 |---|---|
 | Contract manifest | 733 messages, 49 table-backed models, 192 event contracts |
 | Backends | 18 backend kinds across SQL, cache, vector, object, document, graph, and column stores |
-| SDKs | Go, Python, TypeScript/Node, Java, C#, PHP/Laravel |
+| SDKs | Go, Python, TypeScript/Node, Java, C#, PHP/Laravel, Rust |
 | Release | crate/SDK version `0.6.13`, wire protocol `1.0.0` |
 
 ## Why UDB
@@ -112,9 +112,11 @@ product, not the seams between systems.
 
 - **Tenant isolation you can't forget to add.** Every row is scoped by a
   canonical tenant UUID, enforced in the database — not by a `WHERE tenant = …`
-  you might leave off one query. Pass your human tenant code (`"acme"`) and the
-  SDK resolves it to the UUID, so the classic first-week bug — a code/UUID
-  mismatch that silently returns zero rows — simply can't happen.
+  you might leave off one query. Connect with an API key, or log in with
+  `connectEnterprise` / `loginAndAdoptTenant` and your human tenant code
+  (`"acme"`), and the SDK adopts the canonical UUID from the verified principal,
+  so the classic first-week bug — a code/UUID mismatch that silently returns zero
+  rows — can't happen on those paths. A tenant id you set by hand is sent as-is.
 - **Writes that behave, so you delete code.** Read-after-write consistency,
   idempotent `Upsert`/`Delete` (a retried mutation replays safely and reports
   `was_duplicate`), and typed errors on a stable wire contract are built in —
@@ -129,8 +131,8 @@ product, not the seams between systems.
   cache, graph, wide-column, analytics, and search — so choosing or changing a
   store is a config decision, not a rewrite of your app.
 - **Identical behavior in every language.** The Go, Python, TypeScript, Java, C#,
-  and PHP SDKs are generated from one proto contract, so an `Invoice` behaves the
-  same in all six.
+  PHP and Rust SDKs are generated from one proto contract, so an `Invoice` behaves
+  the same in all seven.
 
 None of this is aspirational: every backend and RPC is exercised by live
 conformance tests against a running broker in each language — the surface is
@@ -166,23 +168,24 @@ message Invoice {
 Application code calls the broker through an SDK:
 
 ```python
-from udb_client import Metadata, UdbClient, decode_records
+import os
+from udb_client import UdbProject
 
-meta = Metadata(
-    tenant_id="acme",   # your human tenant code; the SDK login flow resolves it to
-                        # the canonical UUID that RLS checks — see examples/python_enterprise
-                        # (passing a raw code is the #1 "why are my reads empty?" bug).
-    user_id="user-1",
+# A service authenticates with its API key. The SDK exchanges the key for a
+# self-refreshing bearer, and tenant and project come from the key itself.
+with UdbProject.connect(
+    target="127.0.0.1:50051",       # data plane (DataBroker)
+    auth_target="127.0.0.1:50061",  # control plane: data port + 10
+    api_key=os.environ["UDB_API_KEY"],
     purpose="billing.api",
-    scopes=("udb:read", "udb:write"),
-    service_identity="billing-service",
-    project_id="billing",
-)
-
-with UdbClient("127.0.0.1:50051", meta) as udb:
-    rows = udb.select(message_type="acme.billing.v1.Invoice", limit=50)
-    print(decode_records(rows))
+) as udb:
+    rows = udb.data.table("acme.billing.v1.Invoice").select(limit=50)
 ```
+
+A person signs in with `connect_enterprise(target=..., auth_target=...,
+tenant_code="acme", username=..., password=...)` instead; the SDK swaps the human
+tenant code for the canonical tenant UUID that row-level security checks. See
+[`examples/python_enterprise`](examples/python_enterprise).
 
 ## Quick Start
 
@@ -191,7 +194,7 @@ a running, multi-tenant, RLS-protected API over your database — no ORM, no
 hand-written SQL, and no migration files to write by hand.** Here's the path from
 an empty folder to querying your own tables.
 
-Steps 1–7 are the first run against an empty database. **Step 8 is the one you
+Steps 1–10 are the first run against an empty database. **Step 11 is the one you
 will repeat for the rest of the project** — changing a model that already holds
 data is a different job, and UDB gives you commands for it rather than leaving
 you to guess.
@@ -225,28 +228,60 @@ udb sql proto                # the DDL it will run
 udb lint proto --human       # plain-English warnings (missing tenant column, etc.)
 ```
 
-**5. Start the broker.** It generates the schema and serves your model over gRPC:
+**5. Write a working `.env`** with freshly generated secrets, then check which
+backends your protos need (the CLI and the broker read `./.env`):
+
+```bash
+udb env --profile dev --out .env --dsn "postgresql://user:pass@localhost:5432/app"
+udb requirements             # each backend your manifest declares, and whether it is configured
+```
+
+**6. Start the broker.** It generates the schema and serves your model over gRPC.
+The data plane listens on `50051`; the native control plane (auth, API keys,
+storage, …) on loopback `127.0.0.1:50061`:
 
 ```bash
 udb serve proto "" 0.0.0.0:50051
 ```
 
-**6. Confirm it's healthy:**
+**7. Mint the first admin** (offline, straight into Postgres). Keep the printed
+`tenant_id` — the canonical tenant UUID — for the next steps:
+
+```bash
+udb auth bootstrap user --username admin --email admin@example.com \
+  --password "$ADMIN_PASSWORD" --tenant acme --project billing
+```
+
+**8. Give the project its catalog and policies.** Authorization is default-deny,
+so nothing reads data until policies exist. `udb up` does both and is safe to
+re-run; it reads `udb.yaml` (`tenant`, `project`, `policies`, `service_accounts`,
+…) when present:
+
+```bash
+udb up --project billing --tenant "$TENANT_UUID"
+# or step by step:
+udb catalog bootstrap --project billing
+udb policy apply -f policies.yaml --tenant "$TENANT_UUID"
+```
+
+**9. Confirm it's healthy:**
 
 ```bash
 udb doctor --human           # readiness in plain English
 udb compat-matrix            # which backends/features are live
 ```
 
-**7. Connect your application.** Now point an SDK at the broker, authenticate, and
-do tenant-scoped CRUD. The shortest correct path — including the tenant-code →
-canonical-UUID handling that trips up most first integrations — is in
+**10. Connect your application.** Point an SDK at the broker (`target` = data
+plane, `authTarget` = control plane), authenticate, and do tenant-scoped CRUD.
+Services use an API key (`udb auth api-key create`, or a service account — see
+[docs/service-accounts.md](docs/service-accounts.md)); people log in with
+`connectEnterprise`. The shortest correct path is in
 [`examples/go_enterprise`](examples/go_enterprise) (Go), with equivalents in
 [`examples/python_enterprise`](examples/python_enterprise) and
 [`examples/ts_enterprise`](examples/ts_enterprise). Start there rather than
 wiring the raw gRPC clients yourself.
 
-**8. Change your model — the day-2 loop.** Editing a proto once the table holds
+**11. Change your model — the day-2 loop.** Editing a proto once the table holds
 rows is where care is needed, so it has its own commands. Never point a broker at
 a changed model and hope:
 
@@ -275,18 +310,29 @@ All public commands use the short binary name `udb`.
 | `udb proto fmt --check` | Check annotation formatting |
 | `udb catalog`, `udb sql` | Inspect the schema and DDL UDB derives from your protos |
 | `udb drift`, `udb plan` | **Changing a live model:** what a change does, and the approval plan `serve` accepts |
-| `udb verify --live` | Compare protos against a LIVE database, read-only, before applying anything |
+| `udb verify --live` | Compare protos against a LIVE database, read-only, before applying anything; also checks delivery health and exits 1 on a finding or an undelivered outbox |
 | `udb up` | Take a project from its protos to a served catalog (bootstrap, or the reviewed transition when the ACTIVE catalog differs), then apply its declared policies, identities and seed data; safe to re-run |
 | `udb catalog bootstrap` | Give a project its first ACTIVE catalog; exits 3 when an ACTIVE catalog already differs from the protos |
-| `udb env` | Generate a working `.env` for dev or enterprise, with real secrets |
+| `udb catalog stage`, `udb catalog activate`, `udb catalog status` | Stage a catalog built from the protos, make it ACTIVE (running brokers reload it), show the ACTIVE one |
+| `udb catalog transition plan\|approve\|apply\|stage\|activate\|status` | Review and apply a catalog change that needs review, through authorized broker RPCs |
+| `udb catalog restore-receipts --run <id>` | Rebuild a reviewed transition's cleared receipts so the broker starts again |
+| `udb catalog rebind-target --run <id> --actor <who> --reason <why>` | Move a reviewed transition to a restored or relocated database |
+| `udb env`, `udb env fill` | Generate a working `.env` for dev or enterprise, with real secrets, or complete an existing one |
+| `udb requirements` | Print the backends this project's manifest needs and whether each is configured |
 | `udb sdk generate` | Generate descriptor-aware SDK surfaces from templates |
 | `udb native list`, `udb native manifest`, `udb native docs` | Inspect native-service contracts |
 | `udb app init` | Add a language/framework integration scaffold |
 | `udb dev up`, `udb dev smoke` | Run and test the local playground |
 | `udb serve` | Start the gRPC broker |
 | `udb doctor`, `udb health-check` | Check runtime and dependency readiness |
-| `udb auth ...` | Use control-plane helpers for principals, sessions, API keys, roles, relations, and policies |
-| `udb dbops sync` | Sync generated database-operation artifacts |
+| `udb auth bootstrap user` | Mint the first admin offline and print the canonical tenant UUID |
+| `udb auth service-account create\|activate\|set-password` | Manage service accounts |
+| `udb auth grant create\|get\|list\|replace\|rotate-identity\|transfer\|revoke` | Manage service grants |
+| `udb auth api-key create\|list\|revoke` | Mint, list and revoke API keys |
+| `udb auth ...` | Other control-plane helpers: roles, relations, policies, certificate bindings |
+| `udb policy diff\|apply -f <file> --tenant <uuid>` | Compare or apply a declared policy file |
+| `udb identity diff\|apply -f <identities.yaml>` | Compare or apply declared service identities |
+| `udb sync-migrations` (alias `udb dbops sync`) | Sync generated database-operation artifacts |
 
 ## Backends
 
@@ -305,8 +351,11 @@ udb compat-matrix
 
 ## Native Control Plane
 
-UDB ships a separate internal control-plane listener for native services. Bind
-it to an internal interface or place it behind a trusted gateway.
+UDB ships a separate internal control-plane listener for native services:
+loopback `127.0.0.1:50061` (the data port + 10) by default, moved with
+`UDB_AUTH_GRPC_ADDR`. Bind it to an internal interface or place it behind a
+trusted gateway. The data-plane port answers `UNIMPLEMENTED` for native RPCs, so
+SDKs set `authTarget` to this listener.
 
 | Service family | What it covers |
 |---|---|
@@ -323,10 +372,14 @@ it to an internal interface or place it behind a trusted gateway.
 | Scheduler, workflow, lock | Cron/one-shot jobs, durable sagas, distributed locks with fencing tokens |
 | Search, embedding | Managed search indexes, vector retrieval, and backfill enumeration |
 | Webhook | SSRF-guarded outbound webhook endpoints and delivery tracking |
+| Messaging | End-to-end-encrypted (MLS) messaging: devices, key packages, groups, inbox streaming, encrypted backups |
+| Cache | Tenant-scoped namespaces with get/set/increment/delete/scan and namespace stats |
 | Config, live query | Feature flags and server-streaming live-query subscriptions |
 | Backup | Tenant-scoped backup and restore |
 
-Details, including the read-your-writes consistency contract (write receipts,
+Every service, RPC, required scope, credential kind and tenant rule is listed in
+the generated [docs/generated/native-services.md](docs/generated/native-services.md)
+(`udb native docs`). Details, including the read-your-writes consistency contract (write receipts,
 read fences, consistency modes) and idempotency `was_duplicate` replay:
 [docs/native-services.md](docs/native-services.md).
 
@@ -339,6 +392,7 @@ read fences, consistency modes) and idempotency `was_duplicate` replay:
 | TypeScript / Node | `npm i @udb_plus/sdk@0.6.13` |
 | PHP / Laravel | `composer require fahara02/udb-laravel:^0.6.13` |
 | C# | `dotnet add package Udb.Client --version 0.6.13` |
+| Rust | `cargo add udb-client@0.6.13` |
 | Java | `io.github.fahara02:udb-java-client` (`0.6.13` target; build from checkout until publishing lands) |
 
 Start here: [sdk/README.md](sdk/README.md).

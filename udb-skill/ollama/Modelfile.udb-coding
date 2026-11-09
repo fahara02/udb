@@ -37,7 +37,8 @@ packages wrap this content verbatim.
 UDB is a **proto-driven multi-database broker** in Rust (tonic/prost gRPC, sqlx).
 Developers declare entities as annotated protobuf messages; from that ONE
 contract UDB derives DB schema (DDL), runtime security enforcement, the
-descriptor-declared service/RPC surface, six language SDKs, CLI
+descriptor-declared service/RPC surface, seven language SDKs
+(TypeScript, Python, Go, Java, C#, PHP, Rust), CLI
 scaffolds and docs. Three planes:
 Current product/SDK baseline is **0.6.13** with wire protocol **1.0.0**.
 Version strings must continue to derive from
@@ -51,8 +52,10 @@ manifests/`env!("CARGO_PKG_VERSION")`, not hand-coded literals.
 2. **Native control plane** — first-class services (authn, authz, apikey, idp,
    tenant, notification, analytics, storage, asset, webrtc room/peer/track/turn/
    signaling, control-plane, plus the platform wave: vault, metering, scheduler,
-   search, webhook, workflow, lock, livequery, config, backup, embedding, cache)
-   mounted on a SEPARATE listener (default loopback, broker port+10) — the
+   search, webhook, workflow, lock, livequery, config, backup, embedding, cache,
+   messaging — 28 gRPC services in all, see `docs/generated/native-services.md`)
+   mounted on a SEPARATE listener (default `127.0.0.1`, broker port+10, i.e.
+   `:50061`; override `UDB_AUTH_GRPC_ADDR`) — the
    public broker listener serves only health/reflection/DataBroker. A third
    listener (port+20) serves the WebRTC peer plane.
 3. **Event plane** — transactional outbox → CDC tailer → Kafka, with journal,
@@ -183,7 +186,10 @@ Rust array, you are probably violating the pipeline (derive it instead).
    pre-check fails CLOSED when the dedup store is down. SDK retry gating: a
    mutation is auto-retried ONLY when proto `replay_safe` AND a caller key is
    present — keyless replay-safe mutations are deliberately NOT retried (a
-   tested contract in all six SDK retry suites; do not "fix" it with auto-keys).
+   tested contract in all seven SDK retry suites; do not "fix" it with auto-keys).
+   A retried attempt waits at least the broker's `ErrorDetail.retry_after_ms`
+   (capped, default 30 s: Go `RetryConfig.MaxRetryAfter`, TS `maxRetryAfterMs`,
+   Python `max_retry_after_ms`).
 
 **0.3.7 operator-facing guardrails:** `src/cli/help.rs` answers `udb --help`,
 `udb help <cmd>`, command `--help`, and `udb --version` before expensive startup
@@ -194,10 +200,14 @@ loading path and reports missing Qdrant/object-store/Redis style requirements
 before `serve()` would fail. Keep these paths aligned with runtime prerequisite
 logic; do not add a separate, weaker readiness story.
 
-**0.3.7 auth/crypto behavior:** `security_from_request` still requires a JWT
-bearer or mTLS on the DataBroker data plane; if only `x-api-key` is present it
-returns an explicit `UNAUTHENTICATED` explaining that API keys are not accepted
-there. `runtime/encryption.rs::decode_encryption_key` accepts 32-byte base64,
+**Data-plane auth/crypto behavior:** the DataBroker accepts a JWT bearer, mTLS,
+or a scoped service `x-api-key` (`x-udb-api-key` alias); the key is validated by
+the async credential layer against the durable key + live grant stores and
+projected by `security.rs::claims_from_verified_principal` (invalid/revoked ⇒
+`UNAUTHENTICATED`; key store unavailable ⇒ retry). The planner then requires the
+coarse scopes `udb:read` (Select), `udb:write` (writes, `validate_write_context`)
+and `udb:stream` (streams) in `planning/broker/helpers.rs` / `mod.rs`, before
+Casbin. `runtime/encryption.rs::decode_encryption_key` accepts 32-byte base64,
 64-character hex/`0x` hex, or raw 32-byte keys, and decode errors name the key
 source (`UDB_ENCRYPTION_KEY`, versioned env, or Vault key). Reuse this path.
 
@@ -221,7 +231,7 @@ data plane or grants):**
 - **Page-token bound to query shape** — tokens fold a hash of filter+sort+fields; reusing a token under a different query shape ⇒ `FAILED_PRECONDITION` (`pagination.rs`).
 - **Lock-fencing at commit** — DataBroker mutations carry optional `lock_name`+`fencing_token`, validated against LockService in the same tx (`enforce_fencing_token_in_tx`).
 - **`AuthnService.TransferServiceAccountGrant`** (`auth_service/grants.rs::transfer_service_account_grant`) — atomic service-account identity cutover: re-points an ACTIVE grant's `user_id` under `expected_revision` CAS, both accounts `FOR UPDATE`, dest must be grantless, no cross-project, no window where nobody owns the identity; response returns `previous_user_id` for a deterministic reverse. DESTRUCTIVE, scope `udb:authn:manage-grants`.
-- **`udb deploy`** (D-1..D-4) — declarative `udb.deploy.yaml` + `udb deploy plan|apply|render {env,compose,helm,kube}`; from minimum args derives the full production env (UDB_ENV, 3 mTLS flags, JWT/JWKS, listeners, RLS, audit) and idempotently reconciles project/auth-bootstrap/grants/api-keys/policies + `udb secrets init`. Plus `udb doctor --json` compat manifest (descriptor hash / versions / capabilities) and a BrokenPipe-safe `cli::emit()` sink.
+- **Declarative bring-up is `udb up`** (`src/cli/up.rs`, `OpsCommand::Up`) — there is NO `udb deploy` command and no `udb.deploy.yaml`. `udb up [-f udb.yaml] [--project] [--tenant] [--dsn] [--proto] [--dry-run] [--yes] [--approve <run-id>] [--allow-transfer] [--allow-policy-removal] [--json]` takes a project from protos to a served catalog (bootstrap, or the reviewed transition), then reconciles policies (`udb policy diff|apply`), service-account grants (`udb identity diff|apply`), embedding sources and seed data (`udb data seed`). Production env comes from `udb env [--profile enterprise]` / `udb env fill`. Plus `udb doctor --json` compat manifest (descriptor hash / versions / capabilities) and a BrokenPipe-safe `cli::emit()` sink.
 
 | Service (dir under `src/runtime/service/`) | Notables |
 |---|---|
@@ -234,7 +244,7 @@ data plane or grants):**
 | `tenant_service/` | CRUD + events; **`AdminPurgeTenant`** (0.5.0, `tenant_purge.rs`) = privileged CROSS-tenant hard/soft purge — self-purge `PurgeTenant` forbids other tenants, this one reaches them: scope `udb:tenant:admin-purge`, `confirmation_token`==`target_tenant_id`, `idempotency_key`, HARD physically deletes every tenant-columned row (control-plane/tenant-less tables reported-excluded) / SOFT deactivates the control record + revokes tokens. The **handler** authorizes the cross-tenant reach (`authorize_action(ACTION_TENANT_ADMIN_PURGE)` default-deny + VERIFIED delegated actor + `validate_tenant_movement_scope{privileged_cross_tenant:true}`), NOT the transport gate; UNSPECIFIED mode fails closed |
 | `analytics_service/` | straightforward CRUD + events |
 | `notification_service/` | preferences (`is_opted_out` → SUPPRESSED rows excluded from emit; `channel_send_decision`), tenant-bound template selection (`template_selection_sql`), `retry_notification` re-emits with retry flag |
-| `storage_service/` | register/finalize/update (presence-guarded `is_public` binds — proto3 `optional` + COALESCE); **0.5.0:** register-established fields (`is_public`, size) are IMMUTABLE at finalize — a differing value ⇒ typed `FAILED_PRECONDITION` (`FINALIZE_IMMUTABLE_MISMATCH`), finalize trusts the store HEAD size; **`DeleteMode HARD`** = durable object-GC intent + convergent byte removal (`SOFT` tombstones) with `reason`/`expected_version`/`idempotency_key`. Presigned URLs, quota, GC + `WORKER_STORAGE_ORPHAN_REAPER`. NOTE: the scan/quarantine VERDICT lifecycle (RecordScanVerdict / QUARANTINED FileStatus) did NOT ship — do not assume a clean-only download gate |
+| `storage_service/` | register/finalize/update (presence-guarded `is_public` binds — proto3 `optional` + COALESCE); **0.5.0:** register-established fields (`is_public`, size) are IMMUTABLE at finalize — a differing value ⇒ typed `FAILED_PRECONDITION` (`FINALIZE_IMMUTABLE_MISMATCH`), finalize trusts the store HEAD size; **`DeleteMode HARD`** = durable object-GC intent + convergent byte removal (`SOFT` tombstones) with `reason`/`expected_version`/`idempotency_key`. Presigned URLs, quota, GC + `WORKER_STORAGE_ORPHAN_REAPER`. **`SetScanVerdict`** (`handlers.rs::set_scan_verdict`) records a content-scan verdict under the privileged scope `udb:storage:set-scan-verdict` (never bundled with ordinary storage scopes; `scanned_by` from the verified principal; same verdict twice = no-op, no second event); `GetDownloadUrl`/`DownloadFile` go through `scan::enforce_scan_gate` |
 | `asset_service/` | pipelines + `AssetStepExecutor` (EMBED→Qdrant), `spawn_storage_finalized_consumer` (Kafka earliest + manual commit AFTER success — the at-least-once consumer template) |
 | `webrtc_service/` | rooms/peers/tracks/TURN(fail-closed); `SignalingHub` broadcast: `HubFrame::{Signal,RoomClosed,PeerClosed}`, `dispose_hub_frame` (PeerClosed ends only that peer), `disconnect_bound_peer` on stream death, periodic membership recheck, stale-peer reaper; egress via `SfuBridge` seam (LiveKit token backend binds {tenant,room,peer}; disabled ⇒ `failed_precondition`) |
 | `vault_service/` | 3 engines, 1 crypto stack (AES-256-GCM-SIV envelope reused from `runtime/encryption.rs`): versioned KV (CAS, soft-delete, crypto-shred destroy), transit (encrypt/decrypt/sign/verify/hmac by key NAME; material never exported), seal — `check_seal` gates EVERY handler `failed_precondition` when the master key is unavailable; destroyed-version reaper worker |
@@ -249,6 +259,7 @@ data plane or grants):**
 | `backup_service/` | tenant-scoped backup/restore; `validate_tenant_movement_scope` + restore only into a FRESH target |
 | `embedding_service/` | sources + `ReportEmbedding` + vector `Retrieve`; leader backfill work-emitter — its served select MUST carry the project column (`resolve_project_column`) and any `udb_cdc_event_journal` reader MUST `COALESCE(top, payload->'payload')` because the CDC tailer envelope-nests emit fields (three real bugs shipped here) |
 | `workflow_service/` | workflows/sagas (`SagaKind::Workflow`), signal/cancel + compensation, `FOR UPDATE SKIP LOCKED` claim, tick worker |
+| `messaging_service/` | MLS (RFC 9420) end-to-end-encrypted messaging delivery service + key directory (15 RPCs): device registry, one-time KeyPackages (claimed exactly once), PUBLIC group state (OpenMLS `PublicGroup`, commits validated + epoch-linearized in `mls.rs`), per-device inbox (`StreamInbox`/`AckInbox`), opt-in client-encrypted history backup. Broker never holds group secrets or plaintext. Postgres-only (one tx across group/roster/inbox/outbox); every inbox row co-commits `udb.messaging.inbox.appended.v1`; leader-elected inbox retention worker |
 | `native_helpers.rs` | THE shared kit: `admit_on`, `emit_event`, `enqueue_outbox_event`, `validate_request_scope`, `MAX_LIST_ROWS`, `DEFAULT_OBJECT_BUCKET`, `execute_stream_batch_item`, pagination |
 
 **Background workers** are leader-elected: consts `WORKER_*` +
@@ -705,16 +716,16 @@ Each is a proto-driven gRPC service, no in-memory store. Read the per-service
 |---|---|---|---|
 | TenantService | `udb_tenant.*` CRUD | `CreateTenant`/`ListTenants`/`GetTenant` | tenant from verified claim, never body |
 | VaultService (flagship) | KV + Transit + Seal secrets | `VaultService` KV/Transit/Seal RPCs | seal fails closed if master key unavailable |
-| StorageService | object metadata + presigned writes | `RegisterFile`/`GeneratePresignedUrl`/`DeleteFile` | v1 is metadata only; bytes via presigned URL |
+| StorageService | object metadata + presigned writes | `RegisterUpload`/`FinalizeUpload`/`GetDownloadUrl`/`DeleteFile`/`SetScanVerdict` | metadata only; bytes via presigned URL; downloads pass the scan gate |
 | AssetService | asset CRUD + processing pipelines | 8 RPCs + `consumer`/`execution` submodules | auto-trigger orchestration |
 | WebRTC | rooms/peers/tracks, TURN, signaling | `WebRTC`, `SignalingService` | only transient signaling is in-memory |
 | LockService | distributed locks + fencing | `AcquireLock`/`ReleaseLock` | lock name from verified claim tenant |
-| CacheService | self-invalidating cache | `cache_get/set/delete/scan` | Redis `SCAN` not `KEYS` |
-| ConfigService | feature flags | `EvaluateFlag`/`eval::evaluate_flag` | resolve-once TTL, no worker |
+| CacheService | self-invalidating cache | `Get`/`Set`/`Increment`/`Delete`/`Scan` + namespace RPCs | Redis `SCAN` not `KEYS` |
+| ConfigService | feature flags | `EvaluateFlags`/`eval::evaluate_flag` | resolve-once TTL, no worker |
 | MeteringService | usage + quotas | `CheckQuota`/`record_usage` | metering NEVER fails the metered request |
 | EmbeddingService | vectors (sidecar-only inference) | `RegisterSource`/`Backfill`/`Retrieve` | inference in sidecars only |
 | LiveQueryService | snapshot + CDC delta streaming | `Subscribe` | tenant isolation enforced twice |
-| SearchService | one search box (FT/vector/hybrid, RRF) | `Search`/`HybridSearch` | mediated dispatch only |
+| SearchService | one search box (FT/vector/hybrid, RRF) | `Search` (+ `CreateIndex`/`ListIndexes`/`Reindex`/`DeleteIndex`) | mediated dispatch only |
 | SchedulerService | durable cron/one-shot | `SchedulerService` RPCs | uses `WORKER_SCHEDULER_TICK` lease |
 | NotificationService | multi-channel notifications | `NotificationService` RPCs | templates/tenant hybrid |
 | AnalyticsService | pipeline metrics/throughput | `GetThroughput` etc. | |
@@ -723,7 +734,8 @@ Each is a proto-driven gRPC service, no in-memory store. Read the per-service
 | WorkflowService | long-running workflows/sagas | `WorkflowService` RPCs | `WORKER_*` leases |
 | ControlPlaneService | xDS-style policy/config push | `StreamResources` | backends pushed before their policies |
 | IdentityProviderService | SAML/SCIM/OIDC federation | `IdentityProviderService` RPCs | SCIM HTTP off by default |
-| Analytics / Cache / … | (19 services total beyond Authn/Authz/ApiKey) | per `runtime/service/<svc>/mod.rs` | |
+| MessagingService | MLS (RFC 9420) E2EE delivery service + key directory | `RegisterMessagingDevice`/`ClaimKeyPackages`/`SubmitCommit`/`SendMessage`/`StreamInbox` | broker holds only public group state + opaque ciphertext; Postgres-only |
+| Analytics / Cache / … | (28 gRPC services in total — `docs/generated/native-services.md`) | per `runtime/service/<svc>/mod.rs` | |
 
 ---
 

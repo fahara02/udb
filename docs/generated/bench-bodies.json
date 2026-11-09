@@ -769,6 +769,18 @@
   },
   {
     "file": "authn.md",
+    "rpc": "ListOwnTenantMemberships",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/ListOwnTenantMemberships",
+    "api_alias": "list_own_tenant_memberships",
+    "operation_id": "listOwnTenantMemberships",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListOwnTenantMembershipsRequest",
+    "body": "`{ \"page_size\": 10 }`",
+    "notes": "Caller must be the `membership_user_id` service account presenting its HOME bearer with scope `udb:authn:exchange-tenant-token`, the same identity as ExchangeServiceTokenForTenant (human and API-key callers get PERMISSION_DENIED). Lists its ACTIVE, unexpired memberships whose home is the caller's tenant; run after CreateServiceAccountTenantMembership."
+  },
+  {
+    "file": "authn.md",
     "rpc": "ListServiceAccountGrants",
     "service": "AuthnService",
     "wire_rpc": "AuthnService/ListServiceAccountGrants",
@@ -1114,6 +1126,18 @@
     "request_msg": "SendPhoneVerificationRequest",
     "body": "`{ \"user_id\": \"<seed:user_id>\", \"phone\": \"+15551234567\" }`",
     "notes": "`phone` = E.164. Complete with VerifyOTP. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "SetServiceAccountPassword",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/SetServiceAccountPassword",
+    "api_alias": "set_service_account_password",
+    "operation_id": "setServiceAccountPassword",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "SetServiceAccountPasswordRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:grant_create_user_id>\", \"new_password\": \"Bench-Passw0rd!2026\", \"reason\": \"bench password set\" }`",
+    "notes": "Bench tenant admin with `udb:authn:admin-reset-password` (or `udb:admin`). `user_id` must be a SERVICE_ACCOUNT (a person is refused FAILED_PRECONDITION); its sessions are revoked. Runs in the last auth phase, after the grant RPCs that use the same account."
   },
   {
     "file": "authn.md",

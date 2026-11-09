@@ -27,6 +27,15 @@ PAIRS = {
     REPO_ROOT / "docs" / "service-accounts.md": (
         SKILL_ROOT / "plugins" / "udb" / "skills" / "using-udb" / "references" / "service-accounts.md"
     ),
+    REPO_ROOT / "docs" / "generated" / "native-services.md": (
+        SKILL_ROOT / "plugins" / "udb" / "skills" / "using-udb" / "references" / "native-services.md"
+    ),
+    SKILL_ROOT / "shared" / "udb-coding-backends.md": (
+        SKILL_ROOT / "plugins" / "udb" / "skills" / "udb-coding" / "references" / "backends.md"
+    ),
+    SKILL_ROOT / "shared" / "udb-coding-rust-stack.md": (
+        SKILL_ROOT / "plugins" / "udb" / "skills" / "udb-coding" / "references" / "rust-stack.md"
+    ),
     SKILL_ROOT / "shared" / "udb-coding-subsystem-checklist.md": (
         SKILL_ROOT
         / "plugins"

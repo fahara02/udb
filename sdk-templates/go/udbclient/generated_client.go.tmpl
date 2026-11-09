@@ -123,17 +123,27 @@ type RetryConfig struct {
 	MaxBackoff   time.Duration // backoff ceiling
 	Jitter       float64       // 0..1 fraction of randomized jitter added to each backoff
 	RetryOnCodes []codes.Code  // transient codes retried only for read-only unary RPCs
+	// MaxRetryAfter is the longest broker-requested delay
+	// (ErrorDetail.retry_after_ms) the client waits for automatically; a longer
+	// one is returned to the caller at once. Zero means the default (10s).
+	MaxRetryAfter time.Duration
 }
+
+// defaultMaxRetryAfter is the longest broker-requested retry delay the client
+// waits for automatically when RetryConfig.MaxRetryAfter is zero.
+const defaultMaxRetryAfter = 10 * time.Second
 
 // DefaultRetryConfig returns the proven UDB defaults: 4 attempts, 100ms base,
 // 5s ceiling, full jitter, retrying only read-only unary RPCs on transient codes.
-// Mutating RPCs are never retried automatically.
+// Mutating RPCs are never retried automatically. A broker-requested delay
+// (retry_after_ms) up to 10s is waited for; a longer one is returned at once.
 func DefaultRetryConfig() RetryConfig {
 	return RetryConfig{
-		MaxAttempts: 4,
-		BaseBackoff: 100 * time.Millisecond,
-		MaxBackoff:  5 * time.Second,
-		Jitter:      1.0,
+		MaxAttempts:   4,
+		BaseBackoff:   100 * time.Millisecond,
+		MaxBackoff:    5 * time.Second,
+		Jitter:        1.0,
+		MaxRetryAfter: defaultMaxRetryAfter,
 		RetryOnCodes: []codes.Code{
 			codes.Unavailable,
 			codes.ResourceExhausted,
@@ -194,6 +204,68 @@ func (rc RetryConfig) backoff(attempt int) time.Duration {
 		}
 	}
 	return time.Duration(d)
+}
+
+// retryAfterOf returns the broker-requested delay (ErrorDetail.retry_after_ms)
+// carried by a failed attempt's error, or 0 when the error carries none.
+func retryAfterOf(err error) time.Duration {
+	e, ok := AsError(err)
+	if !ok {
+		return 0
+	}
+	d := e.RetryAfter()
+	if d <= 0 {
+		return 0
+	}
+	return d
+}
+
+// maxRetryAfter is the longest broker-requested delay the client waits for
+// automatically (MaxRetryAfter, 10s when zero).
+func (rc RetryConfig) maxRetryAfter() time.Duration {
+	if rc.MaxRetryAfter <= 0 {
+		return defaultMaxRetryAfter
+	}
+	return rc.MaxRetryAfter
+}
+
+// retrySleep is the wait between retry attempts. It returns ctx.Err() when ctx
+// ends first. Only the unary retry loop uses it; tests replace it.
+var retrySleep = func(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// waitBeforeRetry waits before retry number attempt (0-based) after the failed
+// attempt that produced lastErr. When the broker asked for a delay
+// (retry_after_ms), the wait is the larger of the jittered backoff and that
+// delay; it does not sleep and reports proceed=false, so the caller returns
+// lastErr with its detail intact, when the delay is longer than MaxRetryAfter
+// or ctx's deadline would pass before the wait ends. ctxDone=true means ctx
+// ended during the wait.
+func (rc RetryConfig) waitBeforeRetry(ctx context.Context, attempt int, lastErr error) (proceed, ctxDone bool) {
+	wait := rc.backoff(attempt)
+	if server := retryAfterOf(lastErr); server > 0 {
+		if server > rc.maxRetryAfter() {
+			return false, false
+		}
+		if server > wait {
+			wait = server
+		}
+		if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < wait {
+			return false, false
+		}
+	}
+	if err := retrySleep(ctx, wait); err != nil {
+		return false, true
+	}
+	return true, false
 }
 
 // Error is the typed error the generated layer maps gRPC failures to. It always
@@ -572,10 +644,12 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 	var lastErr error
 	for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
 		if attempt > 0 {
-			select {
-			case <-time.After(rc.backoff(attempt - 1)):
-			case <-ctx.Done():
+			proceed, ctxDone := rc.waitBeforeRetry(ctx, attempt-1, lastErr)
+			if ctxDone {
 				return mapError(fullMethod, credentialContextError(ctx), nil)
+			}
+			if !proceed {
+				return lastErr
 			}
 		}
 		callCtx, cancel := g.withDeadline(ctx)
@@ -778,10 +852,12 @@ func (g *GeneratedClient) unaryInterceptor() grpc.UnaryClientInterceptor {
 		var lastErr error
 		for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
 			if attempt > 0 {
-				select {
-				case <-time.After(rc.backoff(attempt - 1)):
-				case <-ctx.Done():
+				proceed, ctxDone := rc.waitBeforeRetry(ctx, attempt-1, lastErr)
+				if ctxDone {
 					return mapError(method, credentialContextError(ctx), nil)
+				}
+				if !proceed {
+					return lastErr
 				}
 			}
 			attemptCtx := ctx

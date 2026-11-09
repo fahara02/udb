@@ -421,6 +421,14 @@ final class UdbProject
         $maxAttempts = max(1, (int) ($retry['max_attempts'] ?? 4));
         $baseDelayMs = max(1, (int) ($retry['base_delay_ms'] ?? 50));
         $maxDelayMs = max($baseDelayMs, (int) ($retry['max_delay_ms'] ?? 2_000));
+        // The longest broker-requested delay (ErrorDetail.retry_after_ms) the client
+        // waits for automatically; a longer one is returned to the caller at once.
+        // <= 0 means the default (10s).
+        $maxRetryAfterMs = (int) ($retry['max_retry_after_ms'] ?? 10_000);
+        if ($maxRetryAfterMs <= 0) {
+            $maxRetryAfterMs = 10_000;
+        }
+        $startedNs = hrtime(true);
 
         $status = null;
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
@@ -436,7 +444,24 @@ final class UdbProject
                 return $response;
             }
             if ($attempt < $maxAttempts && $this->isRetryableStatus($code, $readOnly)) {
-                $this->sleepBackoff($attempt, $baseDelayMs, $maxDelayMs);
+                $serverMs = UdbRpcException::retryAfterMsFromStatus($status);
+                $waitMs = $this->backoffMs($attempt, $baseDelayMs, $maxDelayMs);
+                if ($serverMs > 0) {
+                    if ($serverMs > $maxRetryAfterMs) {
+                        // The broker asked for a longer delay than the client waits
+                        // for: surface its error (detail intact) now, the caller decides.
+                        break;
+                    }
+                    $waitMs = max($waitMs, $serverMs);
+                    if ($deadlineMs > 0 && intdiv(hrtime(true) - $startedNs, 1_000_000) + $waitMs > $deadlineMs) {
+                        // The broker's delay would pass the call's timeout: stop
+                        // and surface its error (detail intact) now.
+                        break;
+                    }
+                }
+                if ($waitMs > 0) {
+                    usleep($waitMs * 1000);
+                }
 
                 continue;
             }
@@ -457,13 +482,11 @@ final class UdbProject
     }
 
     /** Exponential backoff with full jitter, capped at max_delay_ms. */
-    private function sleepBackoff(int $attempt, int $baseDelayMs, int $maxDelayMs): void
+    private function backoffMs(int $attempt, int $baseDelayMs, int $maxDelayMs): int
     {
         $ceil = (int) min($maxDelayMs, $baseDelayMs * (2 ** ($attempt - 1)));
-        $jittered = random_int(0, max(0, $ceil));
-        if ($jittered > 0) {
-            usleep($jittered * 1000);
-        }
+
+        return random_int(0, max(0, $ceil));
     }
 
     // ── Internals ─────────────────────────────────────────────────────────────

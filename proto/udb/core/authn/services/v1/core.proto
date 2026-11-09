@@ -235,6 +235,41 @@ message AdminResetPasswordResponse {
   string otp_id = 1; // OTP to complete the reset flow
 }
 
+message SetServiceAccountPasswordRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 1
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // The service account's tenant; it must be the caller's tenant.
+  string tenant_id = 1;
+  string user_id = 2;
+  // Must satisfy the configured password policy.
+  string new_password = 3;
+  // Why the password is being set; recorded in the audit event.
+  string reason = 4;
+}
+
+message SetServiceAccountPasswordResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 1
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  string user_id = 1;
+  google.protobuf.Timestamp changed_at = 2;
+  // Sessions of the account that were revoked.
+  int64 revoked_sessions = 3;
+}
+
 // ============================================================
 // OTP
 // ============================================================

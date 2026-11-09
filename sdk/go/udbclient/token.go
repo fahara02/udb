@@ -4,11 +4,109 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+// ErrSessionExpired reports that a session can no longer authorize calls: its
+// bearer could not be renewed (and, for a session with no credential to log in
+// again, has expired), or a renewal verified as a different identity. Calls fail
+// locally with an error that wraps it and the last renewal failure, instead of
+// reaching the broker with no or a dead bearer:
+//
+//	if errors.Is(err, udbclient.ErrSessionExpired) { /* reconnect or log in again */ }
+//
+// The error carries gRPC status Unauthenticated.
+var ErrSessionExpired = errors.New("udb: session expired")
+
+// sessionExpiredError wraps ErrSessionExpired and the renewal failure behind it.
+type sessionExpiredError struct{ cause error }
+
+func (e *sessionExpiredError) Error() string {
+	return "udb: session expired, the bearer could not be renewed: " + e.cause.Error()
+}
+
+func (e *sessionExpiredError) Unwrap() []error { return []error{ErrSessionExpired, e.cause} }
+
+// GRPCStatus makes status.Code report Unauthenticated, like the broker would.
+func (e *sessionExpiredError) GRPCStatus() *status.Status {
+	return status.New(codes.Unauthenticated, e.Error())
+}
+
+// sessionExpired wraps a renewal failure for a caller whose context is still
+// live. A context error inside the cause is kept as text only, so the refusal is
+// not mistaken for the caller's own cancellation.
+func sessionExpired(cause error) error {
+	if cause == nil {
+		cause = errors.New("no credential can renew it")
+	}
+	var already *sessionExpiredError
+	if errors.As(cause, &already) {
+		return cause
+	}
+	if errors.Is(cause, context.Canceled) || errors.Is(cause, context.DeadlineExceeded) {
+		cause = errors.New(cause.Error())
+	}
+	return &sessionExpiredError{cause: cause}
+}
+
+// Renewal tuning shared by the token manager and the API-key session.
+const (
+	renewalAttempts    = 3                // attempts per renewal before it fails
+	renewalBackoffBase = 1 * time.Second  // first wait; doubles per failure
+	renewalBackoffCap  = 60 * time.Second // longest wait
+	defaultRefreshSkew = 60 * time.Second
+)
+
+// jitteredBackoff is the wait after the n-th consecutive failure: a random time
+// in [ceiling/2, ceiling], where ceiling = base * 2^(n-1), capped at limit.
+func jitteredBackoff(failures int, base, limit time.Duration) time.Duration {
+	if base <= 0 {
+		base = renewalBackoffBase
+	}
+	ceiling := base
+	for i := 1; i < failures && ceiling < limit; i++ {
+		ceiling *= 2
+	}
+	ceiling = min(ceiling, limit)
+	half := ceiling / 2
+	return half + time.Duration(rand.Int63n(int64(ceiling-half)+1))
+}
+
+// transientRenewalError reports whether repeating a failed renewal step can
+// help: the broker was unreachable, overloaded, or the reply was lost. A refused
+// credential or a changed identity is final; so is the caller's own cancellation.
+func transientRenewalError(ctx context.Context, err error) bool {
+	if err == nil || ctx.Err() != nil {
+		return false
+	}
+	var binding *credentialBindingError
+	if errors.As(err, &binding) {
+		return false
+	}
+	switch status.Code(err) {
+	case codes.Unavailable, codes.DeadlineExceeded, codes.ResourceExhausted, codes.Aborted:
+		return true
+	}
+	return false
+}
+
+// sleepContext waits d, or returns the context's error if it ends first.
+func sleepContext(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
 
 // ── Phase 7: token / session lifecycle ───────────────────────────────────────
 //
@@ -52,12 +150,21 @@ func (t Token) Valid(now time.Time, skew time.Duration) bool {
 }
 
 // refreshSkew shares the same renewal boundary with demand and background
-// refresh. A configured margin must not consume a short token's entire life.
+// refresh: the larger of the configured margin and 20% of a known lifetime, so a
+// renewal has room for retries before expiry. A token too short for the margin
+// (more than half its life) renews at 80% of its lifetime instead. A zero margin
+// stays zero: Valid(now, 0) asks only whether the token has expired.
 func (t Token) refreshSkew(skew time.Duration) time.Duration {
-	skew = max(skew, 0)
+	if skew <= 0 {
+		return 0
+	}
 	if !t.IssuedAt.IsZero() && !t.ExpiresAt.IsZero() {
 		if lifetime := t.ExpiresAt.Sub(t.IssuedAt); lifetime > 0 {
-			skew = min(skew, lifetime/5)
+			fraction := lifetime / 5
+			skew = max(skew, fraction)
+			if skew > lifetime/2 {
+				skew = fraction
+			}
 		}
 	}
 	return skew
@@ -96,11 +203,16 @@ type TokenManager struct {
 	auth  *AuthClient
 	store TokenStore
 
-	// RefreshSkew is the maximum margin before expiry. Default 30s; tokens with
-	// known issuance time cap it at one fifth of their lifetime.
+	// RefreshSkew is the minimum margin before expiry at which a token is
+	// renewed. Default 60s; a token with a known issuance time renews at the larger
+	// of this and 20% of its lifetime (80% of its lifetime when this margin would
+	// exceed half of it).
 	RefreshSkew time.Duration
 	// now is injectable for tests.
 	now func() time.Time
+	// backoff is the first wait between renewal attempts (default 1s); tests
+	// shorten it.
+	backoff time.Duration
 
 	mu       sync.Mutex
 	inflight *tokenRefreshFlight // non-nil while a refresh is running
@@ -130,7 +242,7 @@ func NewTokenManager(auth *AuthClient, store TokenStore) *TokenManager {
 	return &TokenManager{
 		auth:        auth,
 		store:       store,
-		RefreshSkew: 30 * time.Second,
+		RefreshSkew: defaultRefreshSkew,
 		now:         time.Now,
 	}
 }
@@ -288,34 +400,12 @@ func (m *TokenManager) RefreshIfNeeded(ctx context.Context) error {
 	needsRecovery := m.needsRecovery
 	m.mu.Unlock()
 
-	var rerr error
-	if needsRecovery && m.recover != nil {
-		rerr = fmt.Errorf("udb: prior refresh outcome requires re-login")
-	} else {
-		rerr = m.doRefresh(ctx, tok)
-	}
-	var binding *credentialBindingError
-	if rerr != nil && !errors.As(rerr, &binding) && ctx.Err() == nil && m.recover != nil {
-		fresh, err := m.recover(ctx)
-		if err == nil && !fresh.Valid(m.now(), 0) {
-			err = fmt.Errorf("udb: recovery returned an empty or expired bearer")
-		}
-		if err == nil {
-			err = ctx.Err()
-		}
-		if err == nil {
-			err = m.store.Save(ctx, fresh)
-		}
-		if err == nil {
-			rerr = nil
-		} else {
-			rerr = fmt.Errorf("udb: renewal and re-login failed: %w", errors.Join(rerr, err))
-		}
-	}
+	rerr := m.renew(ctx, tok, needsRecovery)
 	if rerr == nil && m.publish != nil {
 		rerr = m.publish(ctx)
 	}
 
+	var binding *credentialBindingError
 	m.mu.Lock()
 	if errors.As(rerr, &binding) {
 		m.terminalErr = rerr
@@ -330,6 +420,74 @@ func (m *TokenManager) RefreshIfNeeded(ctx context.Context) error {
 	close(flight.done)
 	m.mu.Unlock()
 	return rerr
+}
+
+// renew makes up to renewalAttempts attempts, waiting a jittered, doubling
+// interval between them. Only a transient failure is retried.
+func (m *TokenManager) renew(ctx context.Context, tok Token, needsRecovery bool) error {
+	var lastErr error
+	for attempt := 0; attempt < renewalAttempts; attempt++ {
+		if attempt > 0 {
+			if sleepContext(ctx, jitteredBackoff(attempt, m.backoff, renewalBackoffCap)) != nil {
+				return lastErr
+			}
+			cur, err := m.store.Load(ctx)
+			if err != nil {
+				return err
+			}
+			if cur.Valid(m.now(), m.RefreshSkew) {
+				return nil
+			}
+			tok = cur
+		}
+		err, decisive := m.renewOnce(ctx, tok, &needsRecovery)
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		if !transientRenewalError(ctx, decisive) {
+			return err
+		}
+	}
+	return lastErr
+}
+
+// renewOnce refreshes, and when a session that can log in again (recover) fails
+// to refresh, logs in again in the same attempt. A refresh that failed may have
+// been consumed by the broker before its reply was lost, so such a session never
+// submits that refresh token again. A manager with no recovery has nothing else
+// to try: it repeats the refresh only after a transient failure. decisive is the
+// failure that decides whether another attempt can help.
+func (m *TokenManager) renewOnce(ctx context.Context, tok Token, needsRecovery *bool) (err, decisive error) {
+	var rerr error
+	if *needsRecovery && m.recover != nil {
+		rerr = fmt.Errorf("udb: prior refresh outcome requires re-login")
+	} else {
+		rerr = m.doRefresh(ctx, tok)
+		if rerr == nil {
+			return nil, nil
+		}
+	}
+	var binding *credentialBindingError
+	if errors.As(rerr, &binding) || ctx.Err() != nil || m.recover == nil {
+		return rerr, rerr
+	}
+	*needsRecovery = true
+	fresh, err := m.recover(ctx)
+	if err == nil && !fresh.Valid(m.now(), 0) {
+		err = fmt.Errorf("udb: recovery returned an empty or expired bearer")
+	}
+	if err == nil {
+		err = ctx.Err()
+	}
+	if err == nil {
+		err = m.store.Save(ctx, fresh)
+	}
+	if err == nil {
+		*needsRecovery = false
+		return nil, nil
+	}
+	return fmt.Errorf("udb: renewal and re-login failed: %w", errors.Join(rerr, err)), err
 }
 
 // doRefresh performs the actual RefreshToken RPC and persists the new token.

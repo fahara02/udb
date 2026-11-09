@@ -1,7 +1,9 @@
 using System.Reflection;
+using Google.Protobuf;
 using Grpc.Core;
 using Udb.Client.Generated;
 using Xunit;
+using EntityV1 = Udb.Entity.V1;
 
 namespace Udb.Client.Tests;
 
@@ -57,6 +59,136 @@ public sealed class UdbGeneratedRetryTests
 
         Assert.False(hasKey);
         Assert.False(_probe.IsRetryable(StatusCode.Unavailable, readOnly: false, replaySafe: true, hasIdempotencyKey: hasKey));
+    }
+
+    [Fact]
+    public async Task ServerRetryAfterIsHonouredBeforeTheNextAttempt()
+    {
+        // Repeated: one lucky jitter draw must not be what makes this pass.
+        for (var run = 0; run < 3; run++)
+        {
+            var probe = new ScriptedUnaryProbe(new UdbCallOptions(), Throttled(1200), null);
+
+            var response = await probe.CallAsync(deadline: null);
+
+            Assert.Equal("ok", response.Backend);
+            Assert.Equal(2, probe.Calls);
+            var wait = Assert.Single(probe.Waits);
+            Assert.True(
+                wait >= TimeSpan.FromMilliseconds(1200),
+                $"run {run}: waited {wait.TotalMilliseconds}ms, broker asked for 1200ms");
+        }
+    }
+
+    [Fact]
+    public async Task ServerRetryAfterPastTheDeadlineThrowsWithoutSleeping()
+    {
+        var probe = new ScriptedUnaryProbe(new UdbCallOptions(), Throttled(1200), null);
+
+        var ex = await Assert.ThrowsAsync<UdbRpcException>(
+            () => probe.CallAsync(deadline: TimeSpan.FromMilliseconds(500)));
+
+        Assert.Equal(StatusCode.ResourceExhausted, ex.Code);
+        Assert.Equal(1200, ex.RetryAfterMs);
+        Assert.Equal(1, probe.Calls);
+        Assert.Empty(probe.Waits);
+    }
+
+    [Theory]
+    [InlineData(1500, 5000)]
+    [InlineData(-1, 60000)] // -1: the default MaxRetryAfter (10 s)
+    public async Task ServerRetryAfterAboveTheCapThrowsWithoutSleeping(int maxRetryAfterMs, long retryAfterMs)
+    {
+        var options = maxRetryAfterMs < 0
+            ? new UdbCallOptions { InitialBackoff = TimeSpan.FromMilliseconds(1) }
+            : new UdbCallOptions
+            {
+                InitialBackoff = TimeSpan.FromMilliseconds(1),
+                MaxRetryAfter = TimeSpan.FromMilliseconds(maxRetryAfterMs),
+            };
+        var probe = new ScriptedUnaryProbe(options, Throttled(retryAfterMs), null);
+
+        var ex = await Assert.ThrowsAsync<UdbRpcException>(() => probe.CallAsync(deadline: null));
+
+        Assert.Equal(StatusCode.ResourceExhausted, ex.Code);
+        Assert.Equal(retryAfterMs, ex.RetryAfterMs);
+        Assert.Equal(1, probe.Calls);
+        Assert.Empty(probe.Waits);
+    }
+
+    [Fact]
+    public void MaxRetryAfterDefaultsToTenSeconds()
+    {
+        Assert.Equal(TimeSpan.FromSeconds(10), new UdbCallOptions().MaxRetryAfter);
+    }
+
+    private static RpcException Throttled(long retryAfterMs)
+    {
+        var detail = new EntityV1.ErrorDetail
+        {
+            Backend = "admission",
+            Operation = "rate limit",
+            Retryable = true,
+            RetryAfterMs = retryAfterMs,
+            Kind = EntityV1.ErrorKind.Quota,
+        };
+        var trailers = new Metadata
+        {
+            { "udb-error-detail-bin", detail.ToByteArray() },
+        };
+        return new RpcException(new Status(StatusCode.ResourceExhausted, "slow down"), trailers);
+    }
+
+    /// <summary>
+    /// Drives the real unary retry loop against a scripted sequence of outcomes
+    /// (a null entry answers OK) and records every requested wait instead of sleeping.
+    /// </summary>
+    private sealed class ScriptedUnaryProbe : GeneratedServiceBase
+    {
+        private readonly Queue<RpcException?> _script;
+
+        public ScriptedUnaryProbe(UdbCallOptions options, params RpcException?[] script)
+            : base(() => new Metadata(), options)
+        {
+            _script = new Queue<RpcException?>(script);
+            RetryDelay = (wait, _) =>
+            {
+                Waits.Add(wait);
+                return Task.CompletedTask;
+            };
+        }
+
+        public List<TimeSpan> Waits { get; } = new();
+
+        public int Calls { get; private set; }
+
+        public async Task<EntityV1.ErrorDetail> CallAsync(TimeSpan? deadline)
+        {
+            dynamic result = await InvokeUnaryAsync(
+                "/udb.test.v1.Probe/Read",
+                _ => Next(),
+                deadline,
+                CancellationToken.None,
+                readOnly: true,
+                replaySafe: false,
+                request: null);
+            return (EntityV1.ErrorDetail)result;
+        }
+
+        private object Next()
+        {
+            Calls++;
+            var failure = _script.Dequeue();
+            var response = failure is null
+                ? Task.FromResult(new EntityV1.ErrorDetail { Backend = "ok" })
+                : Task.FromException<EntityV1.ErrorDetail>(failure);
+            return new AsyncUnaryCall<EntityV1.ErrorDetail>(
+                response,
+                Task.FromResult(new Metadata()),
+                () => Status.DefaultSuccess,
+                () => new Metadata(),
+                () => { });
+        }
     }
 
     private sealed class RetryProbe : GeneratedServiceBase

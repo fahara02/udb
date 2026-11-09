@@ -38,6 +38,15 @@ public sealed record UdbCallOptions
     /// <summary>Exponential growth multiplier between attempts.</summary>
     public double BackoffMultiplier { get; init; } = 2.0;
 
+    /// <summary>
+    /// The longest broker-requested delay (<c>ErrorDetail.retry_after_ms</c>) the
+    /// client waits for automatically; a longer one is returned to the caller at
+    /// once (the thrown <see cref="UdbRpcException"/> keeps <c>RetryAfterMs</c>).
+    /// Within it the wait before a retry is the larger of the jittered backoff
+    /// and the broker's delay. Default 10 seconds.
+    /// </summary>
+    public TimeSpan MaxRetryAfter { get; init; } = TimeSpan.FromSeconds(10);
+
     /// <summary>gRPC status codes retried only for read-only unary calls.</summary>
     public IReadOnlySet<StatusCode> RetryableCodes { get; init; } = new HashSet<StatusCode>
     {
@@ -225,6 +234,12 @@ public abstract class GeneratedServiceBase
     /// <summary>Default call options for this wrapper.</summary>
     protected UdbCallOptions Options { get; }
 
+    /// <summary>
+    /// Sleeps between unary retry attempts. Test seam: replace to observe the
+    /// computed wait without spending wall-clock time.
+    /// </summary>
+    internal Func<TimeSpan, CancellationToken, Task> RetryDelay { get; set; } = Task.Delay;
+
     protected GeneratedServiceBase(Func<Metadata> headersFactory, UdbCallOptions? options)
     {
         HeadersFactory = headersFactory ?? throw new ArgumentNullException(nameof(headersFactory));
@@ -250,6 +265,11 @@ public abstract class GeneratedServiceBase
     /// and returns the boxed <c>AsyncUnaryCall&lt;TResp&gt;</c> as <see cref="object"/>,
     /// so the closed generic stays concrete at runtime (no dynamic-to-generic
     /// cast). The strongly-typed protobuf response is returned as <c>dynamic</c>.
+    /// The wait before a retry is the larger of the jittered backoff and the
+    /// broker's <c>retry_after_ms</c>. When the broker asked for a delay longer
+    /// than <see cref="UdbCallOptions.MaxRetryAfter"/>, or the caller passed a
+    /// <paramref name="deadline"/> (measured from the first attempt) and the wait
+    /// would pass it, no sleep happens: the last error is thrown, detail intact.
     /// </summary>
     protected async Task<dynamic> InvokeUnaryAsync(
         string rpcPath,
@@ -262,8 +282,12 @@ public abstract class GeneratedServiceBase
     {
         var backoff = Options.InitialBackoff;
         var hasIdempotencyKey = HasIdempotencyKey(request);
+        // The caller's explicit deadline, measured from the first attempt. The
+        // default Options.Timeout bounds each attempt only, so it is not a budget.
+        DateTime? callDeadline = deadline.HasValue ? DateTime.UtcNow.Add(deadline.Value) : null;
         for (var attempt = 1; ; attempt++)
         {
+            UdbRpcException failure;
             try
             {
                 var co = MakeCallOptions(deadline, ct);
@@ -278,13 +302,42 @@ public abstract class GeneratedServiceBase
                 IsRetryable(ex.StatusCode, readOnly, replaySafe, hasIdempotencyKey) &&
                 !ct.IsCancellationRequested)
             {
-                await Task.Delay(NextBackoff(ref backoff), ct).ConfigureAwait(false);
+                failure = new UdbRpcException(rpcPath, ex);
             }
             catch (RpcException ex)
             {
                 throw new UdbRpcException(rpcPath, ex);
             }
+
+            if (failure.RetryAfterMs > 0 &&
+                TimeSpan.FromMilliseconds(failure.RetryAfterMs) > Options.MaxRetryAfter)
+            {
+                throw failure;
+            }
+            var wait = RetryWait(NextBackoff(ref backoff), failure.RetryAfterMs);
+            if (failure.RetryAfterMs > 0 &&
+                callDeadline.HasValue &&
+                DateTime.UtcNow.Add(wait) > callDeadline.Value)
+            {
+                throw failure;
+            }
+            await RetryDelay(wait, ct).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// The wait before the next attempt: the larger of the jittered backoff and the
+    /// server-requested delay. A delay above <see cref="UdbCallOptions.MaxRetryAfter"/>
+    /// never gets here; the caller throws it instead.
+    /// </summary>
+    private static TimeSpan RetryWait(TimeSpan jitteredBackoff, long retryAfterMs)
+    {
+        if (retryAfterMs <= 0)
+        {
+            return jitteredBackoff;
+        }
+        var server = TimeSpan.FromMilliseconds(retryAfterMs);
+        return server > jitteredBackoff ? server : jitteredBackoff;
     }
 
     // Retry safety is read from proto-derived operation_kind and replay_safe per RPC

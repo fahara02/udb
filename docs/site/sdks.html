@@ -33,10 +33,11 @@
 <main>
   <div class="wrap page-head">
     <div class="eyebrow">SDKs · one descriptor contract</div>
-    <h1>First-class clients in <span class="g">six languages</span></h1>
-    <p class="lead">Every SDK is generated from the same proto descriptor and held to one cross-language
-      conformance contract: identical metadata headers, credential handling, authz-cache semantics, and
-      refresh single-flight behavior. <code>udb sdk generate</code> regenerates all six from the embedded
+    <h1>First-class clients in <span class="g">seven languages</span></h1>
+    <p class="lead">Every SDK is generated from the same proto descriptor. Go, Python, TypeScript, Java, C# and
+      PHP are held to one cross-language conformance contract: identical metadata headers, credential handling,
+      authz-cache semantics, and refresh single-flight behavior; the Rust client ships typed tonic clients over
+      the same descriptor. <code>udb sdk generate</code> regenerates all seven from the embedded
       descriptor set.</p>
   </div>
 
@@ -49,6 +50,7 @@
         <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/java">Java<small>grpc-java</small></a>
         <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/csharp">C#<small>Grpc.Net</small></a>
         <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/php">PHP<small>ext-grpc</small></a>
+        <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/rust">Rust<small>tonic</small></a>
       </div>
     </div>
   </section>
@@ -69,38 +71,38 @@
 <span class="k">from</span> udb_client.project <span class="k">import</span> UdbProject
 
 <span class="k">with</span> <span class="t">UdbProject</span>.<span class="fn">connect</span>(
-    target=<span class="s">"127.0.0.1:50051"</span>,
-    tenant_id=<span class="s">"acme"</span>,
-    project_id=<span class="s">"billing"</span>,
-    bearer_token=os.environ[<span class="s">"UDB_TOKEN"</span>],
+    target=<span class="s">"127.0.0.1:50051"</span>,       <span class="c"># data plane</span>
+    auth_target=<span class="s">"127.0.0.1:50061"</span>,  <span class="c"># control plane: data port + 10</span>
+    api_key=os.environ[<span class="s">"UDB_API_KEY"</span>],  <span class="c"># tenant + project come from the key</span>
 ) <span class="k">as</span> udb:
     pdf = open(<span class="s">"invoice.pdf"</span>, <span class="s">"rb"</span>).read()
     udb.storage.upload_file(<span class="s">"invoice.pdf"</span>, pdf, {<span class="s">"content_type"</span>: <span class="s">"application/pdf"</span>})
     udb.authz.allow_role(<span class="s">"reader"</span>, <span class="s">"invoice"</span>, <span class="s">"Select"</span>)
-    rows = udb.data.table(<span class="s">"invoice"</span>).select(where={<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
+    rows = udb.data.table(<span class="s">"acme.billing.v1.Invoice"</span>).select(where={<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
           <div class="panel" id="p2"><pre><span class="k">import</span> (
     <span class="s">"os"</span>
     udb <span class="s">"github.com/fahara02/udb/sdk/go/udbclient"</span>
 )
 
-project, _ := udb.<span class="fn">Connect</span>(ctx, udb.Config{
-    Target:    <span class="s">"127.0.0.1:50051"</span>,
-    TenantID:  <span class="s">"acme"</span>,
-    ProjectID: <span class="s">"billing"</span>,
-    Credentials: udb.Credentials{Bearer: os.Getenv(<span class="s">"UDB_TOKEN"</span>)},
+project, err := udb.<span class="fn">Connect</span>(ctx, udb.Config{
+    Target:      <span class="s">"127.0.0.1:50051"</span>, <span class="c">// data plane</span>
+    AuthTarget:  <span class="s">"127.0.0.1:50061"</span>, <span class="c">// control plane: data port + 10</span>
+    Credentials: udb.Credentials{APIKey: os.Getenv(<span class="s">"UDB_API_KEY"</span>)},
 })
+<span class="k">if</span> err != nil { <span class="k">return</span> err }
 <span class="k">defer</span> project.<span class="fn">Close</span>()
 pdf, _ := os.<span class="fn">ReadFile</span>(<span class="s">"invoice.pdf"</span>)
 _, _ = project.Storage.<span class="fn">UploadFile</span>(ctx, <span class="s">"invoice.pdf"</span>, pdf, udb.<span class="fn">WithContentType</span>(<span class="s">"application/pdf"</span>))
-invoices := project.<span class="fn">Entity</span>(<span class="s">"invoice"</span>, udb.<span class="fn">Key</span>(<span class="s">"invoice_id"</span>))
+invoices := project.<span class="fn">Entity</span>(<span class="s">"acme.billing.v1.Invoice"</span>, udb.<span class="fn">Key</span>(<span class="s">"invoice_id"</span>))
 rows, _ := invoices.<span class="fn">Select</span>(ctx, map[string]any{<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
           <div class="panel" id="p3"><pre><span class="k">import</span> { readFile } <span class="k">from</span> <span class="s">"node:fs/promises"</span>;
 <span class="k">import</span> { UdbProject } <span class="k">from</span> <span class="s">"@udb_plus/sdk"</span>;
 
 <span class="k">const</span> udb = <span class="k">await</span> UdbProject.<span class="fn">connect</span>({
-  target: <span class="s">"127.0.0.1:50051"</span>,
-  tenantId: <span class="s">"acme"</span>, projectId: <span class="s">"billing"</span>,
-  credentials: { bearerToken: process.env.UDB_TOKEN },
+  target: <span class="s">"127.0.0.1:50051"</span>,     <span class="c">// data plane</span>
+  authTarget: <span class="s">"127.0.0.1:50061"</span>, <span class="c">// control plane: data port + 10</span>
+  tenantId: process.env.UDB_TENANT_ID!, <span class="c">// the key's own tenant UUID</span>
+  credentials: { apiKey: process.env.UDB_API_KEY },
 });
 <span class="k">const</span> pdf = <span class="k">await</span> readFile(<span class="s">"invoice.pdf"</span>);
 <span class="k">await</span> udb.storage.<span class="fn">uploadFile</span>(<span class="s">"invoice.pdf"</span>, pdf, { contentType: <span class="s">"application/pdf"</span> });
@@ -108,10 +110,9 @@ rows, _ := invoices.<span class="fn">Select</span>(ctx, map[string]any{<span cla
           <div class="panel" id="p4"><pre><span class="k">use</span> Fahara02\UdbLaravel\UdbProject;
 
 $udb = UdbProject::<span class="fn">connect</span>([
-    <span class="s">'target'</span> => <span class="s">'127.0.0.1:50051'</span>,
-    <span class="s">'tenantId'</span> => <span class="s">'acme'</span>,
-    <span class="s">'projectId'</span> => <span class="s">'billing'</span>,
-    <span class="s">'credentials'</span> => [<span class="s">'bearerToken'</span> => getenv(<span class="s">'UDB_TOKEN'</span>)],
+    <span class="s">'target'</span> => <span class="s">'127.0.0.1:50051'</span>,     <span class="c">// data plane</span>
+    <span class="s">'authTarget'</span> => <span class="s">'127.0.0.1:50061'</span>, <span class="c">// control plane: data port + 10</span>
+    <span class="s">'credentials'</span> => [<span class="s">'apiKey'</span> => getenv(<span class="s">'UDB_API_KEY'</span>)],
 ]);
 $pdf = file_get_contents(<span class="s">'invoice.pdf'</span>);
 $udb->storage()-><span class="fn">uploadFile</span>(<span class="s">'invoice.pdf'</span>, $pdf, [<span class="s">'contentType'</span> => <span class="s">'application/pdf'</span>]);
@@ -119,6 +120,45 @@ $udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>
     <span class="s">'resource'</span> => <span class="s">'invoice'</span>, <span class="s">'action'</span> => <span class="s">'Select'</span>,
 ]);</pre></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Authenticate</div>
+      <h2 class="reveal">Services use an API key, <span class="accent">people sign in</span></h2>
+      <p class="lead reveal d1">Either way the SDK takes the tenant from the verified principal, not from a header you
+        set. An API key always acts as its own tenant; from 0.6.14 a tenant hint naming a different tenant is refused.</p>
+      <div class="grid c2 mt28">
+        <div class="code reveal d2">
+          <div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="f">service.ts</span></div>
+          <pre><span class="c">// Exchanged once via Authenticate{api_key} for a bearer the SDK</span>
+<span class="c">// keeps fresh; the raw key is never sent on a call.</span>
+<span class="k">const</span> udb = <span class="k">await</span> UdbProject.<span class="fn">connect</span>({
+  target: <span class="s">"127.0.0.1:50051"</span>,
+  authTarget: <span class="s">"127.0.0.1:50061"</span>,
+  tenantId: process.env.UDB_TENANT_ID!, <span class="c">// the key's own tenant UUID</span>
+  credentials: { apiKey: process.env.UDB_API_KEY },
+});</pre>
+        </div>
+        <div class="code reveal d3">
+          <div class="bar"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="f">person.ts</span></div>
+          <pre><span class="c">// Login, verify, adopt the canonical tenant UUID, keep the bearer fresh.</span>
+<span class="k">const</span> udb = <span class="k">await</span> UdbProject.<span class="fn">connectEnterprise</span>({
+  target: <span class="s">"127.0.0.1:50051"</span>,
+  authTarget: <span class="s">"127.0.0.1:50061"</span>,
+  tenantCode: <span class="s">"acme"</span>, <span class="c">// replaced by the tenant UUID after login</span>
+  username: <span class="s">"alice"</span>,
+  password: process.env.UDB_PASSWORD!,
+});</pre>
+        </div>
+      </div>
+      <div class="callout cool mt28 reveal d4">
+        <p><b>Acting in a child tenant:</b> policies of a parent tenant do not apply to its child tenants. A service
+          account that must work in another tenant gets a membership approved by that tenant, then exchanges its
+          home bearer with <code>ExchangeServiceTokenForTenant</code> for a token of at most 15 minutes, with no
+          refresh token. See <a href="https://github.com/fahara02/udb/blob/main/docs/service-accounts.md">service accounts</a>.</p>
       </div>
     </div>
   </section>
@@ -148,7 +188,7 @@ $udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>
         </article>
       </div>
       <div class="callout cool mt28 reveal d4">
-        <p><b>Advanced deployments:</b> add <code>authTarget</code>/<code>auth_target</code> when the native control-plane listener is separate from the data-plane target. Add explicit scopes, purpose, deadlines, and raw generated RPC calls when building admin tools, benchmarks, or integrations that need exact protocol access.</p>
+        <p><b>Two endpoints, always:</b> the native control plane (auth, API keys, storage, authz, …) listens on its own port — loopback <code>127.0.0.1:50061</code>, the data port + 10, unless the broker sets <code>UDB_AUTH_GRPC_ADDR</code>. The data-plane port answers <code>UNIMPLEMENTED</code> for native RPCs, so set <code>authTarget</code> / <code>auth_target</code> / <code>AuthTarget</code> to that listener. Add explicit scopes, purpose, deadlines, and raw generated RPC calls when building admin tools, benchmarks, or integrations that need exact protocol access.</p>
       </div>
     </div>
   </section>
@@ -208,7 +248,7 @@ $udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>
     <div class="wrap">
       <div class="eyebrow reveal">Release status</div>
       <h2 class="reveal">Generated surface vs package maturity</h2>
-      <p class="lead reveal d1">All six SDKs are generated from the same descriptor and participate in conformance.
+      <p class="lead reveal d1">All seven SDKs are generated from the same descriptor; the six application SDKs run the cross-language conformance suite.
         Publishing maturity differs by ecosystem, so the docs separate generated parity from package availability.</p>
       <div class="tablewrap mt28 reveal d2">
         <table>
@@ -221,6 +261,7 @@ $udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>
             <tr><td><b>TypeScript</b></td><td>DataBroker + native services</td><td><code>npm i @udb_plus/sdk@0.6.13</code></td><td><code>UdbProject.connect</code></td></tr>
             <tr><td><b>PHP</b></td><td>DataBroker + native services</td><td><code>composer require fahara02/udb-laravel:^0.6.13</code></td><td><code>UdbProject::connect</code></td></tr>
             <tr><td><b>C#</b></td><td>Generated client surface</td><td><code>dotnet add package Udb.Client --version 0.6.13</code></td><td>generated client + metadata helpers</td></tr>
+            <tr><td><b>Rust</b></td><td>Typed tonic clients for DataBroker + native services</td><td><code>cargo add udb-client@0.6.13</code></td><td><code>UdbClient</code> + <code>Metadata</code></td></tr>
             <tr><td><b>Java</b></td><td>Generated client surface</td><td>build from checkout until Maven Central publishing lands</td><td>generated client + Spring-oriented helpers</td></tr>
           </tbody>
         </table>
@@ -233,7 +274,7 @@ $udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>
       <div class="eyebrow reveal">One contract, enforced</div>
       <h2 class="reveal">Conformance, not <span class="accent">coincidence</span></h2>
       <div class="grid c3 mt28">
-        <div class="card reveal"><div class="ic">🧾</div><h3>Identical metadata</h3><p>The same <code>x-tenant-id</code>, <code>x-purpose</code>, <code>x-correlation-id</code>, scopes, and project headers across all six languages — bearer as <code>authorization</code>, API key as <code>x-api-key</code>.</p></div>
+        <div class="card reveal"><div class="ic">🧾</div><h3>Identical metadata</h3><p>The same <code>x-tenant-id</code>, <code>x-purpose</code>, <code>x-correlation-id</code>, scopes, and project headers across the conformance SDKs. Credentials travel as <code>authorization: Bearer</code>: an API key is exchanged once through <code>Authenticate{api_key}</code> for a self-refreshing bearer and never sent raw.</p></div>
         <div class="card reveal d1"><div class="ic">🔄</div><h3>Refresh single-flight</h3><p>Concurrent token refreshes collapse to one <code>RefreshToken</code> RPC, and the refreshed credential is hot-swapped into every outbound channel — verified per language.</p></div>
         <div class="card warm reveal d2"><div class="ic">✅</div><h3>CI-gated parity</h3><p>A cross-language conformance runner asserts metadata, credential, authz-cache TTL, and policy-bundle-signature behavior; missing tooling or a failing suite is a release failure.</p></div>
       </div>
@@ -245,7 +286,7 @@ $udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>
       <div class="ctaband reveal">
         <h2 class="mt0">Generate, scaffold, <span class="accent">ship</span></h2>
         <p class="lead" style="margin:10px auto 0"><code>udb scaffold</code> emits a starter project; <code>udb sdk generate</code>
-          regenerates all six clients from the descriptor; <code>udb proto export</code> hands you the full proto tree.</p>
+          regenerates all seven clients from the descriptor; <code>udb proto export</code> hands you the full proto tree.</p>
         <div class="cta">
           <a class="btn primary" href="./playground.html">Try the playground</a>
           <a class="btn ghost" href="https://github.com/fahara02/udb/tree/main/sdk">Browse the SDKs</a>

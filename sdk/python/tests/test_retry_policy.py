@@ -271,3 +271,122 @@ def test_invoke_read_only_unchanged() -> None:
         assert fake.calls == 2  # one retry then success
     finally:
         client.close()
+
+
+# ── Broker retry_after_ms (rate limit / fair admission / overload) ──────────
+#
+# A RESOURCE_EXHAUSTED refusal carries ``retry_after_ms`` in the
+# ``udb-error-detail-bin`` trailer. The retry waits at least that long and never
+# sleeps past the call's deadline; a delay longer than ``max_retry_after_ms``
+# (default 10 s) is raised to the caller at once.
+
+from udb_client import generated_client as _gc  # noqa: E402
+from udb_client.generated_client import UdbDetailedRpcError, invoke_unary  # noqa: E402
+
+
+class _RateLimitedError(grpc.RpcError):
+    def __init__(self, retry_after_ms: int) -> None:
+        error_pb2 = pytest.importorskip("udb.entity.v1.error_pb2")
+        self._trailer = error_pb2.ErrorDetail(
+            retryable=True, retry_after_ms=retry_after_ms
+        ).SerializeToString()
+
+    def code(self):
+        return grpc.StatusCode.RESOURCE_EXHAUSTED
+
+    def details(self):
+        return "rate limited"
+
+    def trailing_metadata(self):
+        return (("udb-error-detail-bin", self._trailer),)
+
+
+class _RateLimitedUnary:
+    def __init__(self, failures: int, retry_after_ms: int) -> None:
+        self.calls = 0
+        self._failures = failures
+        self._retry_after_ms = retry_after_ms
+
+    def __call__(self, request, *, metadata=None, timeout=None):
+        self.calls += 1
+        if self.calls <= self._failures:
+            raise _RateLimitedError(self._retry_after_ms)
+        return "ok"
+
+
+def _record_sleeps(monkeypatch) -> list[float]:
+    sleeps: list[float] = []
+    monkeypatch.setattr(_gc.time, "sleep", sleeps.append)
+    return sleeps
+
+
+def _jittered_client(**retry) -> DataBrokerClient:
+    policy = RetryPolicy(max_attempts=4, initial_backoff=0.1, max_backoff=0.8, **retry)
+    return DataBrokerClient(target="unused:1", retry=policy)
+
+
+@pytest.mark.parametrize("run", range(3))
+def test_retry_waits_at_least_server_retry_after(monkeypatch, run) -> None:
+    sleeps = _record_sleeps(monkeypatch)
+    types = pytest.importorskip("udb.entity.v1.types_pb2")
+    client = _jittered_client()
+    try:
+        fake = _RateLimitedUnary(1, 1200)
+        client._stub.Select = fake
+        assert client.select(types.SelectRequest(message_type="Order")) == "ok"
+        assert fake.calls == 2
+        assert len(sleeps) == 1 and sleeps[0] >= 1.2, sleeps
+    finally:
+        client.close()
+
+
+def test_invoke_unary_waits_at_least_server_retry_after(monkeypatch) -> None:
+    sleeps = _record_sleeps(monkeypatch)
+    fake = _RateLimitedUnary(1, 1200)
+    policy = RetryPolicy(initial_backoff=0.1, max_backoff=0.8)
+    result = invoke_unary(
+        fake, "Select", object(), call_metadata=(), timeout=None, read_only=True, retry=policy
+    )
+    assert result == "ok" and fake.calls == 2
+    assert len(sleeps) == 1 and sleeps[0] >= 1.2, sleeps
+
+
+def test_retry_after_past_deadline_raises_without_sleep(monkeypatch) -> None:
+    sleeps = _record_sleeps(monkeypatch)
+    types = pytest.importorskip("udb.entity.v1.types_pb2")
+    client = _jittered_client()
+    try:
+        fake = _RateLimitedUnary(1, 5000)
+        client._stub.Select = fake
+        with pytest.raises(UdbDetailedRpcError) as excinfo:
+            client.select(types.SelectRequest(message_type="Order"), timeout=1.0)
+        assert fake.calls == 1
+        assert sleeps == []
+        assert excinfo.value.code == grpc.StatusCode.RESOURCE_EXHAUSTED
+        assert excinfo.value.retry_after_ms == 5000
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize(
+    ("retry_after_ms", "retry"), [(90_000, {"max_retry_after_ms": 2500}), (60_000, {})]
+)
+def test_retry_after_above_cap_raises_without_sleep(monkeypatch, retry_after_ms, retry) -> None:
+    sleeps = _record_sleeps(monkeypatch)
+    types = pytest.importorskip("udb.entity.v1.types_pb2")
+    client = _jittered_client(**retry)
+    try:
+        fake = _RateLimitedUnary(1, retry_after_ms)
+        client._stub.Select = fake
+        with pytest.raises(UdbDetailedRpcError) as excinfo:
+            client.select(types.SelectRequest(message_type="Order"), timeout=None)
+        assert fake.calls == 1
+        assert sleeps == []
+        assert excinfo.value.code == grpc.StatusCode.RESOURCE_EXHAUSTED
+        assert excinfo.value.retry_after_ms == retry_after_ms
+    finally:
+        client.close()
+
+
+def test_retry_policy_default_retry_after_cap() -> None:
+    assert RetryPolicy().max_retry_after_ms == 10000

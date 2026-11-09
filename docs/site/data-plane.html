@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Data Plane — UDB</title>
-<meta name="description" content="The DataBroker data plane: 79 RPCs across relational, vector, object, cache, document, graph, time-series, and analytical backends — with 2PC/XA, sagas, and CDC.">
+<meta name="description" content="The DataBroker data plane: 84 RPCs across relational, vector, object, cache, document, graph, time-series, and analytical backends — with 2PC/XA, sagas, and CDC.">
 <meta name="theme-color" content="#f8fafc">
 <link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
 <link rel="stylesheet" href="./styles.css">
@@ -32,7 +32,7 @@
 
 <main>
   <div class="wrap page-head">
-    <div class="eyebrow">Data plane · DataBroker · 79 RPCs</div>
+    <div class="eyebrow">Data plane · DataBroker · 84 RPCs</div>
     <h1>Every backend behind <span class="g">one typed API</span></h1>
     <p class="lead">The <code>DataBroker</code> contract covers relational, vector, object, cache,
       document, graph, time-series, and analytical operations — plus transactions, CDC, catalog,
@@ -78,6 +78,8 @@
         </ul>
         <div class="callout cool">
           <p style="margin-top:0"><b>Non-Postgres sources too.</b> External CDC sources route through the same pipeline as the Postgres outbox: validation, redaction, topic policy, DLQ, a durable delivery journal, deterministic source event ids, and transactional publish where configured.</p>
+          <p><b>Turning it off, or running without Kafka.</b> <code>UDB_CDC_ENABLED=false</code> stops UDB's own side-effect events — data mutations, auth and native-service events are not written to the outbox and no tailer runs. An event a caller enqueues explicitly (<code>EnqueueOutboxEvent</code>) is still stored and delivered once CDC runs; a mutation that requires CDC is refused. <code>UDB_CDC_JOURNAL_ONLY=true</code> delivers through the durable PostgreSQL journal and local streams instead of Kafka — an explicit transport, never a fallback for failed Kafka delivery.</p>
+          <p><code>udb verify --live</code> checks delivery health and exits 1 when an outbox is not being drained.</p>
         </div>
       </div>
     </div>

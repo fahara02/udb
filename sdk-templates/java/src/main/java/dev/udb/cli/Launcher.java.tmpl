@@ -7,7 +7,10 @@
 // generator adds to sdk/java/pom.xml. It:
 //   1. honours $UDB_BIN if it points at an executable;
 //   2. else uses an already-installed `udb` on $PATH IF its `--version` matches
-//      v{{UDB_VERSION}} (so the CLI stays version-matched to this SDK);
+//      v{{UDB_VERSION}} (so the CLI stays version-matched to this SDK); every
+//      PATH match is tried, launcher wrapper scripts are skipped, each probe
+//      has a 5 s timeout, and a launcher started by another launcher
+//      (UDB_LAUNCHER_ACTIVE set) skips PATH entirely so it cannot recurse;
 //   3. else downloads the matching release asset from
 //      github.com/fahara02/udb (tag v{{UDB_VERSION}}) into a per-user cache dir
 //      and execs it.
@@ -26,8 +29,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /** Locates (or downloads) the version-matched udb binary and execs it. */
 public final class Launcher {
@@ -53,9 +60,17 @@ public final class Launcher {
       }
     }
 
-    Path onPath = findOnPath();
-    if (onPath != null && versionMatches(onPath)) {
-      return onPath;
+    // A nested launcher (one started by another launcher) never probes PATH:
+    // that bounds the recursion.
+    if (!isNestedLauncher()) {
+      for (Path candidate : pathCandidates()) {
+        if (isLauncherCandidate(candidate)) {
+          continue;
+        }
+        if (versionMatches(candidate)) {
+          return candidate;
+        }
+      }
     }
 
     Path cached = cachedBinaryPath();
@@ -73,37 +88,112 @@ public final class Launcher {
     return isWindows() ? "udb.exe" : "udb";
   }
 
-  /** First `udb` found on $PATH, or null. */
-  private static Path findOnPath() {
+  // Recursion guard. Every child this launcher starts (a `--version` probe or the
+  // final exec) gets UDB_LAUNCHER_ACTIVE=1. A launcher that starts with it already
+  // set is nested (a PATH candidate was itself a launcher) and never probes PATH,
+  // so one invocation can start only a bounded number of processes.
+  static final String LAUNCHER_ENV = "UDB_LAUNCHER_ACTIVE";
+  private static final long PROBE_TIMEOUT_SECONDS = 5;
+  // A launcher script (appassembler / wrapper) is small; the real binary is tens of MB.
+  private static final long SHIM_SNIFF_MAX_BYTES = 2L * 1024 * 1024;
+
+  private static boolean isNestedLauncher() {
+    String v = System.getenv(LAUNCHER_ENV);
+    return v != null && !v.isEmpty();
+  }
+
+  /** Every `udb` on $PATH, in PATH order (all matches, not only the first). */
+  private static List<Path> pathCandidates() {
+    List<Path> found = new ArrayList<>();
     String path = System.getenv("PATH");
     if (path == null) {
-      return null;
+      return found;
     }
+    Set<Path> seen = new HashSet<>();
     for (String dir : path.split(java.io.File.pathSeparator)) {
       if (dir.isBlank()) {
         continue;
       }
-      Path candidate = Path.of(dir, exeName());
-      if (Files.isExecutable(candidate)) {
-        return candidate;
+      Path candidate;
+      try {
+        candidate = Path.of(dir.trim(), exeName());
+      } catch (java.nio.file.InvalidPathException e) {
+        continue;
       }
+      if (!Files.isExecutable(candidate) || Files.isDirectory(candidate)) {
+        continue;
+      }
+      Path key = canonical(candidate);
+      if (key == null || !seen.add(key)) {
+        continue;
+      }
+      found.add(candidate);
     }
-    return null;
+    return found;
+  }
+
+  private static Path canonical(Path p) {
+    try {
+      return p.toRealPath();
+    } catch (IOException | SecurityException e) {
+      return null;
+    }
+  }
+
+  /**
+   * True when probing {@code candidate} would run a udb launcher again: a small
+   * script (the appassembler {@code bin/udb} wrapper or a copy) that names this
+   * launcher's main class or the guard variable.
+   */
+  static boolean isLauncherCandidate(Path candidate) {
+    Path real = canonical(candidate);
+    if (real == null) {
+      return true;
+    }
+    try {
+      long size = Files.size(real);
+      if (size <= SHIM_SNIFF_MAX_BYTES) {
+        String text = new String(Files.readAllBytes(real), java.nio.charset.StandardCharsets.ISO_8859_1);
+        if (text.contains(LAUNCHER_ENV) || text.contains("dev.udb.cli.Launcher")) {
+          return true;
+        }
+      }
+    } catch (IOException | SecurityException e) {
+      return true;
+    }
+    return false;
   }
 
   private static boolean versionMatches(Path bin) {
+    Process p = null;
     try {
-      Process p = new ProcessBuilder(bin.toString(), "--version").redirectErrorStream(true).start();
+      ProcessBuilder pb = new ProcessBuilder(bin.toString(), "--version").redirectErrorStream(true);
+      pb.environment().put(LAUNCHER_ENV, "1");
+      pb.redirectInput(ProcessBuilder.Redirect.from(nullDevice()));
+      p = pb.start();
+      if (!p.waitFor(PROBE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        p.descendants().forEach(ProcessHandle::destroyForcibly);
+        p.destroyForcibly();
+        return false;
+      }
+      // `--version` output is a single short line; it fits the pipe buffer, so
+      // reading after exit cannot deadlock.
       String out = new String(p.getInputStream().readAllBytes()).trim();
-      p.waitFor();
       // `udb --version` prints e.g. "udb 0.6.13"; accept any line containing the tag.
       return out.contains(UDB_VERSION);
     } catch (IOException | InterruptedException e) {
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
+      if (p != null) {
+        p.destroyForcibly();
+      }
       return false;
     }
+  }
+
+  private static java.io.File nullDevice() {
+    return new java.io.File(isWindows() ? "NUL" : "/dev/null");
   }
 
   /** Per-user cache path for the pinned binary. */
@@ -259,7 +349,9 @@ public final class Launcher {
     String[] cmd = new String[args.length + 1];
     cmd[0] = bin.toString();
     System.arraycopy(args, 0, cmd, 1, args.length);
-    Process p = new ProcessBuilder(cmd).inheritIO().start();
+    ProcessBuilder pb = new ProcessBuilder(cmd).inheritIO();
+    pb.environment().put(LAUNCHER_ENV, "1");
+    Process p = pb.start();
     return p.waitFor();
   }
 }

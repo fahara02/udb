@@ -156,7 +156,7 @@ var File_udb_core_metering_entity_v1_usage_event_proto protoreflect.FileDescript
 
 const file_udb_core_metering_entity_v1_usage_event_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/metering/entity/v1/usage_event.proto\x12\x1budb.core.metering.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xad\n" +
+	"-udb/core/metering/entity/v1/usage_event.proto\x12\x1budb.core.metering.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xde\n" +
 	"\n" +
 	"\n" +
 	"UsageEvent\x12F\n" +
@@ -179,11 +179,12 @@ const file_udb_core_metering_entity_v1_usage_event_proto_rawDesc = "" +
 	"\x10occurred_at_unix\x18\b \x01(\x03B#\x82\xb7\x18\x1f\n" +
 	"\x10occurred_at_unix\x12\x06BIGINT\x18\x01:\x010R\x0eoccurredAtUnix\x12\x8c\x01\n" +
 	"\rmetadata_json\x18\t \x01(\tBg\x82\xb7\x18c\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ:Non-secret usage metadata for cost attribution and routingx\x01R\fmetadataJson:\x9d\x04\xfa\xb6\x18\xfe\x02\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ:Non-secret usage metadata for cost attribution and routingx\x01R\fmetadataJson:\xce\x04\xfa\xb6\x18\xaf\x03\n" +
 	"\fusage_events\x12\fudb_metering\x18\x01 \x01*3Append-only usage metering events (master-plan 9.9)8\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01O\n" +
 	"!idx_usage_events_tenant_method_ts\x12\x05BTREEZ\ttenant_idZ\x06methodZ\x10occurred_at_unix\x8a\x01@\n" +
-	"\x1aidx_usage_events_tenant_ts\x12\x05BTREEZ\ttenant_idZ\x10occurred_at_unix\xf2\x01\x1dudb.metering.usage_events.cdc\xfa\x01\rmetering:read\x8a\xb2\x19\x95\x01\n" +
+	"\x1aidx_usage_events_tenant_ts\x12\x05BTREEZ\ttenant_idZ\x10occurred_at_unix\x8a\x01.\n" +
+	"\x13idx_usage_events_ts\x12\x05BTREEZ\x10occurred_at_unix\xf2\x01\x1dudb.metering.usage_events.cdc\xfa\x01\rmetering:read\x8a\xb2\x19\x95\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x14metering.operational@\x90\x03H\x01R\x06tenantZ\bstandardh\x01r\x15tenant.data_residencyB\x8c\x02\n" +
 	"\x1fcom.udb.core.metering.entity.v1B\x0fUsageEventProtoP\x01ZGgithub.com/fahara02/udb/sdk/go/gen/udb/core/metering/entity/v1;entityv1\xa2\x02\x04UCME\xaa\x02\x1bUdb.Core.Metering.Entity.V1\xca\x02\x1bUdb\\Core\\Metering\\Entity\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Metering\\Entity\\V1\xea\x02\x1fUdb::Core::Metering::Entity::V1b\x06proto3"
 

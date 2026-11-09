@@ -66,7 +66,52 @@ binary and runtime configuration line up, run `udb compat-matrix`.
 udb serve proto "" 0.0.0.0:50051
 ```
 
-## 6. Send Metadata
+The data plane listens on `50051`. The native services (auth, API keys, storage,
+authz, …) listen on a separate control-plane port, loopback `127.0.0.1:50061` (the
+data port + 10) by default; set `UDB_AUTH_GRPC_ADDR=<internal-ip>:50061` when
+callers run on other hosts. The data-plane port answers `UNIMPLEMENTED` for native
+RPCs.
+
+## 6. Give The Project A Catalog, Policies And A Credential
+
+Authorization is default-deny, and a project with no ACTIVE catalog is refused:
+
+```bash
+udb auth bootstrap user --username admin --email admin@example.com \
+  --password "$ADMIN_PASSWORD" --tenant acme --project billing   # prints the tenant UUID
+udb up --project billing --tenant "$TENANT_UUID"                 # catalog + udb.yaml policies
+# or: udb catalog bootstrap --project billing
+#     udb policy apply -f policies.yaml --tenant "$TENANT_UUID"
+udb auth api-key create --owner <service-account-id> --name billing-api --scope <scope>
+```
+
+See [security.md](security.md#seeding-data-plane-authorization-the-standard-path)
+for the policy file and [service-accounts.md](service-accounts.md) for service
+accounts and API keys.
+
+## 7. Authenticate And Connect
+
+Point the SDK at both listeners and give it a credential: an API key for a
+service (the SDK exchanges it through `Authenticate{api_key}` for a
+self-refreshing bearer), or a username and password through `connectEnterprise`
+for a person:
+
+```ts
+const udb = await UdbProject.connect({
+  target: "127.0.0.1:50051",
+  authTarget: "127.0.0.1:50061",
+  tenantId: process.env.UDB_TENANT_ID!, // the key's own tenant UUID
+  credentials: { apiKey: process.env.UDB_API_KEY },
+});
+```
+
+With a verified credential the broker derives the identity — tenant, project,
+user, service identity and scopes — from the credential itself. A tenant or
+project header may only repeat it; one that disagrees is refused. `x-scopes` and
+`x-service-identity` are ignored for API keys and bearers, and header-supplied
+scopes (`UDB_ALLOW_HEADER_SCOPES`) are refused in production.
+
+## 8. Send Metadata
 
 Every request should carry a set of context fields:
 
@@ -84,7 +129,7 @@ Every request should carry a set of context fields:
 
 You rarely set these by hand: the SDKs attach these fields for you.
 
-## 7. Call UDB
+## 9. Call UDB
 
 For everyday operations, reach for the SDK helpers. For advanced RPCs, use the
 generated request and response types.

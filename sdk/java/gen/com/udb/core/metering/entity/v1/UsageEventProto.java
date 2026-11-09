@@ -44,7 +44,7 @@ public final class UsageEventProto {
       "t.proto\022\033udb.core.metering.entity.v1\032\037go" +
       "ogle/protobuf/timestamp.proto\032\033udb/core/" +
       "common/v1/db.proto\032!udb/core/common/v1/s" +
-      "ecurity.proto\"\255\n\n\nUsageEvent\022F\n\010usage_id" +
+      "ecurity.proto\"\336\n\n\nUsageEvent\022F\n\010usage_id" +
       "\030\001 \001(\tB+\202\267\030\'\n\010usage_id\022\004UUID\030\001(\001:\021gen_ra" +
       "ndom_uuid()R\007usageId\022`\n\ttenant_id\030\002 \001(\tB" +
       "C\202\267\030?\n\ttenant_id\022\013VARCHAR(64)\030\001R \n\027idx_u" +
@@ -63,8 +63,8 @@ public final class UsageEventProto {
       "occurredAtUnix\022\214\001\n\rmetadata_json\030\t \001(\tBg" +
       "\202\267\030c\n\rmetadata_json\022\005JSONB\030\001:\013\'{}\'::json" +
       "bZ:Non-secret usage metadata for cost at" +
-      "tribution and routingx\001R\014metadataJson:\235\004" +
-      "\372\266\030\376\002\n\014usage_events\022\014udb_metering\030\001 \001*3A" +
+      "tribution and routingx\001R\014metadataJson:\316\004" +
+      "\372\266\030\257\003\n\014usage_events\022\014udb_metering\030\001 \001*3A" +
       "ppend-only usage metering events (master" +
       "-plan 9.9)8\001@\001b^\n\020tenant_isolation\032H(ten" +
       "ant_id::text = current_setting(\'app.curr" +
@@ -72,19 +72,20 @@ public final class UsageEventProto {
       "sage_events_tenant_method_ts\022\005BTREEZ\tten" +
       "ant_idZ\006methodZ\020occurred_at_unix\212\001@\n\032idx" +
       "_usage_events_tenant_ts\022\005BTREEZ\ttenant_i" +
-      "dZ\020occurred_at_unix\362\001\035udb.metering.usage" +
-      "_events.cdc\372\001\rmetering:read\212\262\031\225\001\n\006tenant" +
-      "\032\ttenant_id*4tenant_id = current_setting" +
-      "(\'app.current_tenant_id\')2\004none:\024meterin" +
-      "g.operational@\220\003H\001R\006tenantZ\010standardh\001r\025" +
-      "tenant.data_residencyB\214\002\n\037com.udb.core.m" +
-      "etering.entity.v1B\017UsageEventProtoP\001ZGgi" +
-      "thub.com/fahara02/udb/sdk/go/gen/udb/cor" +
-      "e/metering/entity/v1;entityv1\242\002\004UCME\252\002\033U" +
-      "db.Core.Metering.Entity.V1\312\002\033Udb\\Core\\Me" +
-      "tering\\Entity\\V1\342\002\'Udb\\GPBMetadata\\Core\\" +
-      "Metering\\Entity\\V1\352\002\037Udb::Core::Metering" +
-      "::Entity::V1b\006proto3"
+      "dZ\020occurred_at_unix\212\001.\n\023idx_usage_events" +
+      "_ts\022\005BTREEZ\020occurred_at_unix\362\001\035udb.meter" +
+      "ing.usage_events.cdc\372\001\rmetering:read\212\262\031\225" +
+      "\001\n\006tenant\032\ttenant_id*4tenant_id = curren" +
+      "t_setting(\'app.current_tenant_id\')2\004none" +
+      ":\024metering.operational@\220\003H\001R\006tenantZ\010sta" +
+      "ndardh\001r\025tenant.data_residencyB\214\002\n\037com.u" +
+      "db.core.metering.entity.v1B\017UsageEventPr" +
+      "otoP\001ZGgithub.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/core/metering/entity/v1;entityv1\242\002" +
+      "\004UCME\252\002\033Udb.Core.Metering.Entity.V1\312\002\033Ud" +
+      "b\\Core\\Metering\\Entity\\V1\342\002\'Udb\\GPBMetad" +
+      "ata\\Core\\Metering\\Entity\\V1\352\002\037Udb::Core:" +
+      ":Metering::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

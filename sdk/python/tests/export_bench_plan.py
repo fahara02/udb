@@ -13,7 +13,8 @@ session material hold a sentinel instead (`__UDB_BENCH_*__`), which the
 measuring SDK replaces with credentials it minted itself.
 
 RPCs flagged ``"service_account": true`` (only
-AuthnService/ExchangeServiceTokenForTenant) must be measured as the service
+AuthnService/ExchangeServiceTokenForTenant and
+AuthnService/ListOwnTenantMemberships) must be measured as the service
 account named by the top-level ``service_account_caller`` object
 (``username``, home ``tenant_id``, home ``project_id``): the measuring SDK logs
 it in with the password from env ``UDB_LIVE_PASSWORD`` (the plan never carries

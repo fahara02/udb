@@ -14,6 +14,8 @@ const AUTHN_CHANGE_USER_STATUS_PATH: &str =
     "/udb.core.authn.services.v1.AuthnService/ChangeUserStatus";
 const AUTHN_ADMIN_RESET_PASSWORD_PATH: &str =
     "/udb.core.authn.services.v1.AuthnService/AdminResetPassword";
+const AUTHN_SET_SERVICE_ACCOUNT_PASSWORD_PATH: &str =
+    "/udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword";
 
 fn authn_core_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
 where
@@ -1767,6 +1769,125 @@ impl AuthnServiceImpl {
             .await?;
         Ok(Response::new(authn_pb::AdminResetPasswordResponse {
             otp_id,
+        }))
+    }
+    /// Set a service account's password as an admin of its tenant. A service account
+    /// has no mailbox for AdminResetPassword's code and ChangePassword needs the current
+    /// password, so a lost password left the account unable to sign in again. Never for
+    /// a person: a person resets through their own verified channel.
+    pub(super) async fn set_service_account_password_impl(
+        &self,
+        request: Request<authn_pb::SetServiceAccountPasswordRequest>,
+    ) -> Result<Response<authn_pb::SetServiceAccountPasswordResponse>, Status> {
+        let req = request.into_inner();
+        let claim_ctx = crate::runtime::service::method_security::current_claim_context();
+        crate::runtime::service::method_security::authorize_action(
+            &claim_ctx,
+            "authn.user.password.reset",
+            &[
+                "authn.user.password.reset",
+                "authn.user.write",
+                "udb:authn:admin-reset-password",
+                "udb:authn:admin",
+            ],
+        )?;
+        let _decision_id = self
+            .decide_action_native(
+                &claim_ctx,
+                AUTHN_SET_SERVICE_ACCOUNT_PASSWORD_PATH,
+                "authn.user.password.reset",
+            )
+            .await?;
+        if req.reason.trim().is_empty() {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "reason is required: it is recorded with the password change",
+                [("reason", "must not be empty")],
+            ));
+        }
+        authn::PasswordPolicy::from_env()
+            .validate(&req.new_password)
+            .map_err(|err| {
+                crate::runtime::executor_utils::invalid_argument_fields(
+                    err,
+                    [(
+                        "new_password",
+                        "must satisfy the configured password policy",
+                    )],
+                )
+            })?;
+        let mut user = self
+            .users
+            .get_user_by_id(&req.user_id)
+            .await
+            .map_err(|err| authn_core_internal_status("set_service_account_password_load", err))?
+            .ok_or_else(super::authn_user_not_found_status)?;
+        // The target must be in the caller's tenant, and the one the request names.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &claim_ctx,
+            &user.tenant_id,
+            &user.project_id,
+        )?;
+        if !req.tenant_id.trim().is_empty() && req.tenant_id.trim() != user.tenant_id.trim() {
+            return Err(super::authn_user_not_found_status());
+        }
+        if user.account_kind != authn::AccountKind::ServiceAccount {
+            return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                "SetServiceAccountPassword sets a service account's password; this user is a \
+                 person, who resets through their own verified channel (ForgotPassword / \
+                 AdminResetPassword)",
+                [("user_id", "must name a service account")],
+            ));
+        }
+        let now = now_unix();
+        user.password_hash =
+            authn::password_cpu::hash(&req.new_password, &self.password_hash_key())
+                .await
+                .map_err(|err| {
+                    authn_core_internal_status("set_service_account_password_hash", err)
+                })?;
+        user.updated_at_unix = now;
+        let tenant_id = user.tenant_id.clone();
+        self.users.put_user(user).await.map_err(|err| {
+            authn_core_internal_status("set_service_account_password_store", err.to_string())
+        })?;
+        // Sessions opened with the old password end with it.
+        let revoked = self
+            .sessions
+            .revoke_all_for_principal(&req.user_id, now)
+            .await
+            .map_err(|err| {
+                authn_core_internal_status("set_service_account_password_revoke", err)
+            })?;
+        let actor = claim_ctx.subject.clone();
+        self.emit_event(
+            AuthEvent::new(
+                topics::PASSWORD_CHANGED,
+                req.user_id.clone(),
+                tenant_id,
+                serde_json::json!({
+                    "user_id": req.user_id.clone(),
+                    "is_reset": true,
+                    "changed_by": actor.clone(),
+                    "reason": req.reason.trim(),
+                    "revoked_sessions": revoked,
+                }),
+            )
+            .with_correlation(format!("service_account_password:{}", req.user_id))
+            .with_compliance(ComplianceEnvelope {
+                actor,
+                target_resource: req.user_id.clone(),
+                operation: "service_account_password_set".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "admin_set".to_string(),
+                auth_method: "bearer".to_string(),
+                ..ComplianceEnvelope::default()
+            }),
+        )
+        .await;
+        Ok(Response::new(authn_pb::SetServiceAccountPasswordResponse {
+            user_id: req.user_id,
+            changed_at: timestamp_from_unix(now),
+            revoked_sessions: revoked as i64,
         }))
     }
 }

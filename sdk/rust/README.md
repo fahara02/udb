@@ -12,7 +12,7 @@ the tenant/project metadata and token lifecycle the broker expects.
 
 ```toml
 [dependencies]
-udb-client = "0.5"
+udb-client = "0.6"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -220,8 +220,10 @@ most read-only RPCs report `false`. Use `RpcSpec::retry_safe()` (or
 `is_retry_safe`), which is `read_only || replay_safe`.
 
 `err.is_retryable()` trusts the broker's own `retryable` flag over any guess made
-from the gRPC code, and backoff honours `retry_after_ms` when the broker sends
-one. Override the contract's choice per client when you have reason to:
+from the gRPC code. When the broker sends `retry_after_ms`, a retry waits at least that
+long; a delay longer than `CallPolicy::max_retry_after` (default 10 s) is not waited
+for, and the error comes back at once with the delay on it so you decide. Override the
+contract's choice per client when you have reason to:
 
 ```rust,no_run
 # use udb_client::{CallPolicy, UdbClient};

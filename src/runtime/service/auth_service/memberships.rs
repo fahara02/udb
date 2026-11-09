@@ -928,6 +928,72 @@ pub(crate) async fn revoke_service_account_tenant_membership(
     ))
 }
 
+/// The caller's own reachable tenants: ACTIVE, unexpired memberships whose home is
+/// the caller's tenant. Same home service bearer and scope as the exchange, so a
+/// service learns exactly the tenants it can exchange into.
+pub(crate) async fn list_own_tenant_memberships(
+    _svc: &AuthnServiceImpl,
+    pool: &PgPool,
+    request: Request<authn_pb::ListOwnTenantMembershipsRequest>,
+) -> Result<Response<authn_pb::ListOwnTenantMembershipsResponse>, Status> {
+    let req = request.into_inner();
+    if !crate::runtime::service::method_security::claim_context_present() {
+        return Err(home_service_bearer_required_status());
+    }
+    let ctx = crate::runtime::service::method_security::current_claim_context();
+    if !ctx.is_service_account_bearer()
+        || !ctx.has_exact_scope(EXCHANGE_TENANT_TOKEN_SCOPE)
+        || ctx.credential_id.starts_with(MEMBERSHIP_TOKEN_JTI_PREFIX)
+        || ctx
+            .auth_method
+            .eq_ignore_ascii_case(MEMBERSHIP_TOKEN_AUTH_METHOD)
+    {
+        return Err(home_service_bearer_required_status());
+    }
+    let Ok(subject) = Uuid::parse_str(ctx.subject.trim()) else {
+        return Err(home_service_bearer_required_status());
+    };
+    let home = ctx.tenant_id.trim().to_string();
+    if home.is_empty() {
+        return Err(home_service_bearer_required_status());
+    }
+    let (limit, offset) = page_window(req.page_size, &req.page_token);
+    let m = native_model(MEMBERSHIP_MSG, &membership_select_columns());
+    let sql = format!(
+        "SELECT {cols} FROM {rel} WHERE {uid} = $1 AND {home} = $2 AND {status} = $3 \
+         ORDER BY {target} ASC, {project} ASC, {mid} ASC LIMIT $4 OFFSET $5",
+        cols = membership_select_clause(),
+        rel = m.relation,
+        uid = m.q("user_id"),
+        home = m.q("home_tenant_id"),
+        status = m.q("status"),
+        target = m.q("target_tenant_id"),
+        project = m.q("target_project_id"),
+        mid = m.q("membership_id"),
+    );
+    let rows = sqlx::query(&sql)
+        .bind(subject)
+        .bind(&home)
+        .bind(STATUS_ACTIVE)
+        .bind(limit.max(1))
+        .bind(offset.max(0))
+        .fetch_all(pool)
+        .await
+        .map_err(map_err("own tenant membership list failed"))?;
+    let fetched = rows.len();
+    let now = now_unix();
+    let memberships = rows
+        .iter()
+        .map(membership_row_from)
+        .filter(|record| record.is_live(now))
+        .map(|record| record.to_pb())
+        .collect();
+    Ok(Response::new(authn_pb::ListOwnTenantMembershipsResponse {
+        memberships,
+        next_page_token: next_page_token(fetched, limit, offset),
+    }))
+}
+
 pub(crate) async fn exchange_service_token_for_tenant(
     svc: &AuthnServiceImpl,
     pool: &PgPool,

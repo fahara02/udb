@@ -854,6 +854,138 @@ func (x *AdminResetPasswordResponse) GetOtpId() string {
 	return ""
 }
 
+type SetServiceAccountPasswordRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The service account's tenant; it must be the caller's tenant.
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	UserId   string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Must satisfy the configured password policy.
+	NewPassword string `protobuf:"bytes,3,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
+	// Why the password is being set; recorded in the audit event.
+	Reason        string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetServiceAccountPasswordRequest) Reset() {
+	*x = SetServiceAccountPasswordRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetServiceAccountPasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetServiceAccountPasswordRequest) ProtoMessage() {}
+
+func (x *SetServiceAccountPasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetServiceAccountPasswordRequest.ProtoReflect.Descriptor instead.
+func (*SetServiceAccountPasswordRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *SetServiceAccountPasswordRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *SetServiceAccountPasswordRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SetServiceAccountPasswordRequest) GetNewPassword() string {
+	if x != nil {
+		return x.NewPassword
+	}
+	return ""
+}
+
+func (x *SetServiceAccountPasswordRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type SetServiceAccountPasswordResponse struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	UserId    string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ChangedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=changed_at,json=changedAt,proto3" json:"changed_at,omitempty"`
+	// Sessions of the account that were revoked.
+	RevokedSessions int64 `protobuf:"varint,3,opt,name=revoked_sessions,json=revokedSessions,proto3" json:"revoked_sessions,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SetServiceAccountPasswordResponse) Reset() {
+	*x = SetServiceAccountPasswordResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetServiceAccountPasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetServiceAccountPasswordResponse) ProtoMessage() {}
+
+func (x *SetServiceAccountPasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetServiceAccountPasswordResponse.ProtoReflect.Descriptor instead.
+func (*SetServiceAccountPasswordResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SetServiceAccountPasswordResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SetServiceAccountPasswordResponse) GetChangedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ChangedAt
+	}
+	return nil
+}
+
+func (x *SetServiceAccountPasswordResponse) GetRevokedSessions() int64 {
+	if x != nil {
+		return x.RevokedSessions
+	}
+	return 0
+}
+
 type SendOTPRequest struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	UserId  string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -867,7 +999,7 @@ type SendOTPRequest struct {
 
 func (x *SendOTPRequest) Reset() {
 	*x = SendOTPRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[12]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -879,7 +1011,7 @@ func (x *SendOTPRequest) String() string {
 func (*SendOTPRequest) ProtoMessage() {}
 
 func (x *SendOTPRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[12]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -892,7 +1024,7 @@ func (x *SendOTPRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendOTPRequest.ProtoReflect.Descriptor instead.
 func (*SendOTPRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{12}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SendOTPRequest) GetUserId() string {
@@ -939,7 +1071,7 @@ type SendOTPResponse struct {
 
 func (x *SendOTPResponse) Reset() {
 	*x = SendOTPResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[13]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -951,7 +1083,7 @@ func (x *SendOTPResponse) String() string {
 func (*SendOTPResponse) ProtoMessage() {}
 
 func (x *SendOTPResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[13]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -964,7 +1096,7 @@ func (x *SendOTPResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendOTPResponse.ProtoReflect.Descriptor instead.
 func (*SendOTPResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{13}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *SendOTPResponse) GetOtpId() string {
@@ -1005,7 +1137,7 @@ type VerifyOTPRequest struct {
 
 func (x *VerifyOTPRequest) Reset() {
 	*x = VerifyOTPRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[14]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1017,7 +1149,7 @@ func (x *VerifyOTPRequest) String() string {
 func (*VerifyOTPRequest) ProtoMessage() {}
 
 func (x *VerifyOTPRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[14]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1030,7 +1162,7 @@ func (x *VerifyOTPRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyOTPRequest.ProtoReflect.Descriptor instead.
 func (*VerifyOTPRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{14}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *VerifyOTPRequest) GetOtpId() string {
@@ -1058,7 +1190,7 @@ type VerifyOTPResponse struct {
 
 func (x *VerifyOTPResponse) Reset() {
 	*x = VerifyOTPResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[15]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1070,7 +1202,7 @@ func (x *VerifyOTPResponse) String() string {
 func (*VerifyOTPResponse) ProtoMessage() {}
 
 func (x *VerifyOTPResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[15]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1083,7 +1215,7 @@ func (x *VerifyOTPResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyOTPResponse.ProtoReflect.Descriptor instead.
 func (*VerifyOTPResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{15}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *VerifyOTPResponse) GetVerified() bool {
@@ -1117,7 +1249,7 @@ type ResendOTPRequest struct {
 
 func (x *ResendOTPRequest) Reset() {
 	*x = ResendOTPRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[16]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1129,7 +1261,7 @@ func (x *ResendOTPRequest) String() string {
 func (*ResendOTPRequest) ProtoMessage() {}
 
 func (x *ResendOTPRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[16]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1142,7 +1274,7 @@ func (x *ResendOTPRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResendOTPRequest.ProtoReflect.Descriptor instead.
 func (*ResendOTPRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{16}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ResendOTPRequest) GetOriginalOtpId() string {
@@ -1171,7 +1303,7 @@ type ResendOTPResponse struct {
 
 func (x *ResendOTPResponse) Reset() {
 	*x = ResendOTPResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[17]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1183,7 +1315,7 @@ func (x *ResendOTPResponse) String() string {
 func (*ResendOTPResponse) ProtoMessage() {}
 
 func (x *ResendOTPResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[17]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1196,7 +1328,7 @@ func (x *ResendOTPResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResendOTPResponse.ProtoReflect.Descriptor instead.
 func (*ResendOTPResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{17}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ResendOTPResponse) GetOtpId() string {
@@ -1256,7 +1388,7 @@ type Principal struct {
 
 func (x *Principal) Reset() {
 	*x = Principal{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[18]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1268,7 +1400,7 @@ func (x *Principal) String() string {
 func (*Principal) ProtoMessage() {}
 
 func (x *Principal) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[18]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1281,7 +1413,7 @@ func (x *Principal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Principal.ProtoReflect.Descriptor instead.
 func (*Principal) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{18}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Principal) GetPrincipalId() string {
@@ -1410,7 +1542,7 @@ type AuthnRequest struct {
 
 func (x *AuthnRequest) Reset() {
 	*x = AuthnRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[19]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1422,7 +1554,7 @@ func (x *AuthnRequest) String() string {
 func (*AuthnRequest) ProtoMessage() {}
 
 func (x *AuthnRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[19]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1435,7 +1567,7 @@ func (x *AuthnRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthnRequest.ProtoReflect.Descriptor instead.
 func (*AuthnRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{19}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AuthnRequest) GetBearerToken() string {
@@ -1543,7 +1675,7 @@ type AuthnResponse struct {
 
 func (x *AuthnResponse) Reset() {
 	*x = AuthnResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[20]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1555,7 +1687,7 @@ func (x *AuthnResponse) String() string {
 func (*AuthnResponse) ProtoMessage() {}
 
 func (x *AuthnResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[20]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1568,7 +1700,7 @@ func (x *AuthnResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthnResponse.ProtoReflect.Descriptor instead.
 func (*AuthnResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{20}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *AuthnResponse) GetPrincipal() *Principal {
@@ -1646,7 +1778,7 @@ type LoginRequest struct {
 
 func (x *LoginRequest) Reset() {
 	*x = LoginRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[21]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1658,7 +1790,7 @@ func (x *LoginRequest) String() string {
 func (*LoginRequest) ProtoMessage() {}
 
 func (x *LoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[21]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1671,7 +1803,7 @@ func (x *LoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
 func (*LoginRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{21}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *LoginRequest) GetUsername() string {
@@ -1808,7 +1940,7 @@ type LoginResponse struct {
 
 func (x *LoginResponse) Reset() {
 	*x = LoginResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[22]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1820,7 +1952,7 @@ func (x *LoginResponse) String() string {
 func (*LoginResponse) ProtoMessage() {}
 
 func (x *LoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[22]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1833,7 +1965,7 @@ func (x *LoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
 func (*LoginResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{22}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *LoginResponse) GetUserId() string {
@@ -1923,7 +2055,7 @@ type RefreshTokenRequest struct {
 
 func (x *RefreshTokenRequest) Reset() {
 	*x = RefreshTokenRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[23]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1935,7 +2067,7 @@ func (x *RefreshTokenRequest) String() string {
 func (*RefreshTokenRequest) ProtoMessage() {}
 
 func (x *RefreshTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[23]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1948,7 +2080,7 @@ func (x *RefreshTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshTokenRequest.ProtoReflect.Descriptor instead.
 func (*RefreshTokenRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{23}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RefreshTokenRequest) GetRefreshToken() string {
@@ -1984,7 +2116,7 @@ type RefreshTokenResponse struct {
 
 func (x *RefreshTokenResponse) Reset() {
 	*x = RefreshTokenResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[24]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1996,7 +2128,7 @@ func (x *RefreshTokenResponse) String() string {
 func (*RefreshTokenResponse) ProtoMessage() {}
 
 func (x *RefreshTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[24]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2009,7 +2141,7 @@ func (x *RefreshTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshTokenResponse.ProtoReflect.Descriptor instead.
 func (*RefreshTokenResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{24}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *RefreshTokenResponse) GetAccessToken() string {
@@ -2059,7 +2191,7 @@ type LogoutRequest struct {
 
 func (x *LogoutRequest) Reset() {
 	*x = LogoutRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[25]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2071,7 +2203,7 @@ func (x *LogoutRequest) String() string {
 func (*LogoutRequest) ProtoMessage() {}
 
 func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[25]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2084,7 +2216,7 @@ func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
 func (*LogoutRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{25}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *LogoutRequest) GetSessionId() string {
@@ -2124,7 +2256,7 @@ type LogoutResponse struct {
 
 func (x *LogoutResponse) Reset() {
 	*x = LogoutResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[26]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2136,7 +2268,7 @@ func (x *LogoutResponse) String() string {
 func (*LogoutResponse) ProtoMessage() {}
 
 func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[26]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2149,7 +2281,7 @@ func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
 func (*LogoutResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{26}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *LogoutResponse) GetSessionsRevoked() int32 {
@@ -2172,7 +2304,7 @@ type ChangePasswordRequest struct {
 
 func (x *ChangePasswordRequest) Reset() {
 	*x = ChangePasswordRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[27]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2184,7 +2316,7 @@ func (x *ChangePasswordRequest) String() string {
 func (*ChangePasswordRequest) ProtoMessage() {}
 
 func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[27]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2197,7 +2329,7 @@ func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePasswordRequest.ProtoReflect.Descriptor instead.
 func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{27}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ChangePasswordRequest) GetUserId() string {
@@ -2246,7 +2378,7 @@ type ChangePasswordResponse struct {
 
 func (x *ChangePasswordResponse) Reset() {
 	*x = ChangePasswordResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[28]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2258,7 +2390,7 @@ func (x *ChangePasswordResponse) String() string {
 func (*ChangePasswordResponse) ProtoMessage() {}
 
 func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[28]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2271,7 +2403,7 @@ func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePasswordResponse.ProtoReflect.Descriptor instead.
 func (*ChangePasswordResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{28}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ChangePasswordResponse) GetUserId() string {
@@ -2305,7 +2437,7 @@ type ValidateTokenRequest struct {
 
 func (x *ValidateTokenRequest) Reset() {
 	*x = ValidateTokenRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[29]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2317,7 +2449,7 @@ func (x *ValidateTokenRequest) String() string {
 func (*ValidateTokenRequest) ProtoMessage() {}
 
 func (x *ValidateTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[29]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2330,7 +2462,7 @@ func (x *ValidateTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateTokenRequest.ProtoReflect.Descriptor instead.
 func (*ValidateTokenRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{29}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ValidateTokenRequest) GetToken() string {
@@ -2395,7 +2527,7 @@ type ValidateTokenResponse struct {
 
 func (x *ValidateTokenResponse) Reset() {
 	*x = ValidateTokenResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[30]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2407,7 +2539,7 @@ func (x *ValidateTokenResponse) String() string {
 func (*ValidateTokenResponse) ProtoMessage() {}
 
 func (x *ValidateTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[30]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2420,7 +2552,7 @@ func (x *ValidateTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateTokenResponse.ProtoReflect.Descriptor instead.
 func (*ValidateTokenResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{30}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ValidateTokenResponse) GetValid() bool {
@@ -2574,7 +2706,7 @@ type CreateSessionRequest struct {
 
 func (x *CreateSessionRequest) Reset() {
 	*x = CreateSessionRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[31]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2586,7 +2718,7 @@ func (x *CreateSessionRequest) String() string {
 func (*CreateSessionRequest) ProtoMessage() {}
 
 func (x *CreateSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[31]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2599,7 +2731,7 @@ func (x *CreateSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSessionRequest.ProtoReflect.Descriptor instead.
 func (*CreateSessionRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{31}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *CreateSessionRequest) GetPrincipal() *Principal {
@@ -2633,7 +2765,7 @@ type CreateSessionResponse struct {
 
 func (x *CreateSessionResponse) Reset() {
 	*x = CreateSessionResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[32]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2645,7 +2777,7 @@ func (x *CreateSessionResponse) String() string {
 func (*CreateSessionResponse) ProtoMessage() {}
 
 func (x *CreateSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[32]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2658,7 +2790,7 @@ func (x *CreateSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSessionResponse.ProtoReflect.Descriptor instead.
 func (*CreateSessionResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{32}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *CreateSessionResponse) GetSessionId() string {
@@ -2685,7 +2817,7 @@ type RefreshSessionRequest struct {
 
 func (x *RefreshSessionRequest) Reset() {
 	*x = RefreshSessionRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[33]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2697,7 +2829,7 @@ func (x *RefreshSessionRequest) String() string {
 func (*RefreshSessionRequest) ProtoMessage() {}
 
 func (x *RefreshSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[33]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2710,7 +2842,7 @@ func (x *RefreshSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshSessionRequest.ProtoReflect.Descriptor instead.
 func (*RefreshSessionRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{33}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *RefreshSessionRequest) GetSessionId() string {
@@ -2737,7 +2869,7 @@ type RefreshSessionResponse struct {
 
 func (x *RefreshSessionResponse) Reset() {
 	*x = RefreshSessionResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[34]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2749,7 +2881,7 @@ func (x *RefreshSessionResponse) String() string {
 func (*RefreshSessionResponse) ProtoMessage() {}
 
 func (x *RefreshSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[34]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2762,7 +2894,7 @@ func (x *RefreshSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshSessionResponse.ProtoReflect.Descriptor instead.
 func (*RefreshSessionResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{34}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RefreshSessionResponse) GetExpiresAtUnix() int64 {
@@ -2788,7 +2920,7 @@ type GetSessionRequest struct {
 
 func (x *GetSessionRequest) Reset() {
 	*x = GetSessionRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[35]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2800,7 +2932,7 @@ func (x *GetSessionRequest) String() string {
 func (*GetSessionRequest) ProtoMessage() {}
 
 func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[35]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2813,7 +2945,7 @@ func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSessionRequest.ProtoReflect.Descriptor instead.
 func (*GetSessionRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{35}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *GetSessionRequest) GetSessionId() string {
@@ -2832,7 +2964,7 @@ type GetSessionResponse struct {
 
 func (x *GetSessionResponse) Reset() {
 	*x = GetSessionResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[36]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2844,7 +2976,7 @@ func (x *GetSessionResponse) String() string {
 func (*GetSessionResponse) ProtoMessage() {}
 
 func (x *GetSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[36]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2857,7 +2989,7 @@ func (x *GetSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSessionResponse.ProtoReflect.Descriptor instead.
 func (*GetSessionResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{36}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *GetSessionResponse) GetSession() *v11.Session {
@@ -2878,7 +3010,7 @@ type ListSessionsRequest struct {
 
 func (x *ListSessionsRequest) Reset() {
 	*x = ListSessionsRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[37]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2890,7 +3022,7 @@ func (x *ListSessionsRequest) String() string {
 func (*ListSessionsRequest) ProtoMessage() {}
 
 func (x *ListSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[37]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2903,7 +3035,7 @@ func (x *ListSessionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionsRequest.ProtoReflect.Descriptor instead.
 func (*ListSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{37}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ListSessionsRequest) GetUserId() string {
@@ -2937,7 +3069,7 @@ type ListSessionsResponse struct {
 
 func (x *ListSessionsResponse) Reset() {
 	*x = ListSessionsResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[38]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2949,7 +3081,7 @@ func (x *ListSessionsResponse) String() string {
 func (*ListSessionsResponse) ProtoMessage() {}
 
 func (x *ListSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[38]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2962,7 +3094,7 @@ func (x *ListSessionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionsResponse.ProtoReflect.Descriptor instead.
 func (*ListSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{38}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ListSessionsResponse) GetSessions() []*v11.Session {
@@ -2992,7 +3124,7 @@ type RevokeSessionRequest struct {
 
 func (x *RevokeSessionRequest) Reset() {
 	*x = RevokeSessionRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[39]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3004,7 +3136,7 @@ func (x *RevokeSessionRequest) String() string {
 func (*RevokeSessionRequest) ProtoMessage() {}
 
 func (x *RevokeSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[39]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3017,7 +3149,7 @@ func (x *RevokeSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeSessionRequest.ProtoReflect.Descriptor instead.
 func (*RevokeSessionRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{39}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *RevokeSessionRequest) GetSessionId() string {
@@ -3067,7 +3199,7 @@ type RevokeSessionResponse struct {
 
 func (x *RevokeSessionResponse) Reset() {
 	*x = RevokeSessionResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[40]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3079,7 +3211,7 @@ func (x *RevokeSessionResponse) String() string {
 func (*RevokeSessionResponse) ProtoMessage() {}
 
 func (x *RevokeSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[40]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3092,7 +3224,7 @@ func (x *RevokeSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeSessionResponse.ProtoReflect.Descriptor instead.
 func (*RevokeSessionResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{40}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *RevokeSessionResponse) GetSessionId() string {
@@ -3133,7 +3265,7 @@ type ValidateCSRFRequest struct {
 
 func (x *ValidateCSRFRequest) Reset() {
 	*x = ValidateCSRFRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[41]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3145,7 +3277,7 @@ func (x *ValidateCSRFRequest) String() string {
 func (*ValidateCSRFRequest) ProtoMessage() {}
 
 func (x *ValidateCSRFRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[41]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3158,7 +3290,7 @@ func (x *ValidateCSRFRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateCSRFRequest.ProtoReflect.Descriptor instead.
 func (*ValidateCSRFRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{41}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ValidateCSRFRequest) GetSessionId() string {
@@ -3184,7 +3316,7 @@ type ValidateCSRFResponse struct {
 
 func (x *ValidateCSRFResponse) Reset() {
 	*x = ValidateCSRFResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[42]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3196,7 +3328,7 @@ func (x *ValidateCSRFResponse) String() string {
 func (*ValidateCSRFResponse) ProtoMessage() {}
 
 func (x *ValidateCSRFResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[42]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3209,7 +3341,7 @@ func (x *ValidateCSRFResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateCSRFResponse.ProtoReflect.Descriptor instead.
 func (*ValidateCSRFResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{42}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ValidateCSRFResponse) GetValid() bool {
@@ -3230,7 +3362,7 @@ type EnrollMFARequest struct {
 
 func (x *EnrollMFARequest) Reset() {
 	*x = EnrollMFARequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[43]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3242,7 +3374,7 @@ func (x *EnrollMFARequest) String() string {
 func (*EnrollMFARequest) ProtoMessage() {}
 
 func (x *EnrollMFARequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[43]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3255,7 +3387,7 @@ func (x *EnrollMFARequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnrollMFARequest.ProtoReflect.Descriptor instead.
 func (*EnrollMFARequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{43}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *EnrollMFARequest) GetUserId() string {
@@ -3291,7 +3423,7 @@ type EnrollMFAResponse struct {
 
 func (x *EnrollMFAResponse) Reset() {
 	*x = EnrollMFAResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[44]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3303,7 +3435,7 @@ func (x *EnrollMFAResponse) String() string {
 func (*EnrollMFAResponse) ProtoMessage() {}
 
 func (x *EnrollMFAResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[44]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3316,7 +3448,7 @@ func (x *EnrollMFAResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnrollMFAResponse.ProtoReflect.Descriptor instead.
 func (*EnrollMFAResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{44}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *EnrollMFAResponse) GetTotpSecret() string {
@@ -3352,7 +3484,7 @@ type ConfirmMFAEnrollmentRequest struct {
 
 func (x *ConfirmMFAEnrollmentRequest) Reset() {
 	*x = ConfirmMFAEnrollmentRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[45]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3364,7 +3496,7 @@ func (x *ConfirmMFAEnrollmentRequest) String() string {
 func (*ConfirmMFAEnrollmentRequest) ProtoMessage() {}
 
 func (x *ConfirmMFAEnrollmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[45]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3377,7 +3509,7 @@ func (x *ConfirmMFAEnrollmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmMFAEnrollmentRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmMFAEnrollmentRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{45}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ConfirmMFAEnrollmentRequest) GetUserId() string {
@@ -3417,7 +3549,7 @@ type ConfirmMFAEnrollmentResponse struct {
 
 func (x *ConfirmMFAEnrollmentResponse) Reset() {
 	*x = ConfirmMFAEnrollmentResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[46]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3429,7 +3561,7 @@ func (x *ConfirmMFAEnrollmentResponse) String() string {
 func (*ConfirmMFAEnrollmentResponse) ProtoMessage() {}
 
 func (x *ConfirmMFAEnrollmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[46]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3442,7 +3574,7 @@ func (x *ConfirmMFAEnrollmentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmMFAEnrollmentResponse.ProtoReflect.Descriptor instead.
 func (*ConfirmMFAEnrollmentResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{46}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ConfirmMFAEnrollmentResponse) GetEnrolled() bool {
@@ -3463,7 +3595,7 @@ type GenerateRecoveryCodesRequest struct {
 
 func (x *GenerateRecoveryCodesRequest) Reset() {
 	*x = GenerateRecoveryCodesRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[47]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3475,7 +3607,7 @@ func (x *GenerateRecoveryCodesRequest) String() string {
 func (*GenerateRecoveryCodesRequest) ProtoMessage() {}
 
 func (x *GenerateRecoveryCodesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[47]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3488,7 +3620,7 @@ func (x *GenerateRecoveryCodesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateRecoveryCodesRequest.ProtoReflect.Descriptor instead.
 func (*GenerateRecoveryCodesRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{47}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *GenerateRecoveryCodesRequest) GetUserId() string {
@@ -3524,7 +3656,7 @@ type GenerateRecoveryCodesResponse struct {
 
 func (x *GenerateRecoveryCodesResponse) Reset() {
 	*x = GenerateRecoveryCodesResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[48]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3536,7 +3668,7 @@ func (x *GenerateRecoveryCodesResponse) String() string {
 func (*GenerateRecoveryCodesResponse) ProtoMessage() {}
 
 func (x *GenerateRecoveryCodesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[48]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3549,7 +3681,7 @@ func (x *GenerateRecoveryCodesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateRecoveryCodesResponse.ProtoReflect.Descriptor instead.
 func (*GenerateRecoveryCodesResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{48}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *GenerateRecoveryCodesResponse) GetCodes() []string {
@@ -3577,7 +3709,7 @@ type PutMfaPolicyRequest struct {
 
 func (x *PutMfaPolicyRequest) Reset() {
 	*x = PutMfaPolicyRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[49]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3589,7 +3721,7 @@ func (x *PutMfaPolicyRequest) String() string {
 func (*PutMfaPolicyRequest) ProtoMessage() {}
 
 func (x *PutMfaPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[49]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3602,7 +3734,7 @@ func (x *PutMfaPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutMfaPolicyRequest.ProtoReflect.Descriptor instead.
 func (*PutMfaPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{49}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *PutMfaPolicyRequest) GetTenantId() string {
@@ -3636,7 +3768,7 @@ type PutMfaPolicyResponse struct {
 
 func (x *PutMfaPolicyResponse) Reset() {
 	*x = PutMfaPolicyResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[50]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3648,7 +3780,7 @@ func (x *PutMfaPolicyResponse) String() string {
 func (*PutMfaPolicyResponse) ProtoMessage() {}
 
 func (x *PutMfaPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[50]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3661,7 +3793,7 @@ func (x *PutMfaPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutMfaPolicyResponse.ProtoReflect.Descriptor instead.
 func (*PutMfaPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{50}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *PutMfaPolicyResponse) GetTenantId() string {
@@ -3688,7 +3820,7 @@ type GetMfaPolicyRequest struct {
 
 func (x *GetMfaPolicyRequest) Reset() {
 	*x = GetMfaPolicyRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[51]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3700,7 +3832,7 @@ func (x *GetMfaPolicyRequest) String() string {
 func (*GetMfaPolicyRequest) ProtoMessage() {}
 
 func (x *GetMfaPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[51]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3713,7 +3845,7 @@ func (x *GetMfaPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMfaPolicyRequest.ProtoReflect.Descriptor instead.
 func (*GetMfaPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{51}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetMfaPolicyRequest) GetTenantId() string {
@@ -3740,7 +3872,7 @@ type GetMfaPolicyResponse struct {
 
 func (x *GetMfaPolicyResponse) Reset() {
 	*x = GetMfaPolicyResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[52]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3752,7 +3884,7 @@ func (x *GetMfaPolicyResponse) String() string {
 func (*GetMfaPolicyResponse) ProtoMessage() {}
 
 func (x *GetMfaPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[52]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3765,7 +3897,7 @@ func (x *GetMfaPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMfaPolicyResponse.ProtoReflect.Descriptor instead.
 func (*GetMfaPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{52}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *GetMfaPolicyResponse) GetTenantId() string {
@@ -3792,7 +3924,7 @@ type ForgotPasswordRequest struct {
 
 func (x *ForgotPasswordRequest) Reset() {
 	*x = ForgotPasswordRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[53]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3804,7 +3936,7 @@ func (x *ForgotPasswordRequest) String() string {
 func (*ForgotPasswordRequest) ProtoMessage() {}
 
 func (x *ForgotPasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[53]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3817,7 +3949,7 @@ func (x *ForgotPasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForgotPasswordRequest.ProtoReflect.Descriptor instead.
 func (*ForgotPasswordRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{53}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *ForgotPasswordRequest) GetIdentifier() string {
@@ -3850,7 +3982,7 @@ type ForgotPasswordResponse struct {
 
 func (x *ForgotPasswordResponse) Reset() {
 	*x = ForgotPasswordResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[54]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3862,7 +3994,7 @@ func (x *ForgotPasswordResponse) String() string {
 func (*ForgotPasswordResponse) ProtoMessage() {}
 
 func (x *ForgotPasswordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[54]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3875,7 +4007,7 @@ func (x *ForgotPasswordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForgotPasswordResponse.ProtoReflect.Descriptor instead.
 func (*ForgotPasswordResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{54}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *ForgotPasswordResponse) GetOtpId() string {
@@ -3904,7 +4036,7 @@ type ResetPasswordRequest struct {
 
 func (x *ResetPasswordRequest) Reset() {
 	*x = ResetPasswordRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[55]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3916,7 +4048,7 @@ func (x *ResetPasswordRequest) String() string {
 func (*ResetPasswordRequest) ProtoMessage() {}
 
 func (x *ResetPasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[55]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3929,7 +4061,7 @@ func (x *ResetPasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetPasswordRequest.ProtoReflect.Descriptor instead.
 func (*ResetPasswordRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{55}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *ResetPasswordRequest) GetOtpId() string {
@@ -3970,7 +4102,7 @@ type ResetPasswordResponse struct {
 
 func (x *ResetPasswordResponse) Reset() {
 	*x = ResetPasswordResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[56]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3982,7 +4114,7 @@ func (x *ResetPasswordResponse) String() string {
 func (*ResetPasswordResponse) ProtoMessage() {}
 
 func (x *ResetPasswordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[56]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3995,7 +4127,7 @@ func (x *ResetPasswordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetPasswordResponse.ProtoReflect.Descriptor instead.
 func (*ResetPasswordResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{56}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ResetPasswordResponse) GetUserId() string {
@@ -4022,7 +4154,7 @@ type IntrospectTokenRequest struct {
 
 func (x *IntrospectTokenRequest) Reset() {
 	*x = IntrospectTokenRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[57]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4034,7 +4166,7 @@ func (x *IntrospectTokenRequest) String() string {
 func (*IntrospectTokenRequest) ProtoMessage() {}
 
 func (x *IntrospectTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[57]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4047,7 +4179,7 @@ func (x *IntrospectTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntrospectTokenRequest.ProtoReflect.Descriptor instead.
 func (*IntrospectTokenRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{57}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *IntrospectTokenRequest) GetToken() string {
@@ -4083,7 +4215,7 @@ type IntrospectTokenResponse struct {
 
 func (x *IntrospectTokenResponse) Reset() {
 	*x = IntrospectTokenResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[58]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4095,7 +4227,7 @@ func (x *IntrospectTokenResponse) String() string {
 func (*IntrospectTokenResponse) ProtoMessage() {}
 
 func (x *IntrospectTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[58]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4108,7 +4240,7 @@ func (x *IntrospectTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IntrospectTokenResponse.ProtoReflect.Descriptor instead.
 func (*IntrospectTokenResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{58}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *IntrospectTokenResponse) GetActive() bool {
@@ -4190,7 +4322,7 @@ type GetJwksRequest struct {
 
 func (x *GetJwksRequest) Reset() {
 	*x = GetJwksRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[59]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4202,7 +4334,7 @@ func (x *GetJwksRequest) String() string {
 func (*GetJwksRequest) ProtoMessage() {}
 
 func (x *GetJwksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[59]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4215,7 +4347,7 @@ func (x *GetJwksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJwksRequest.ProtoReflect.Descriptor instead.
 func (*GetJwksRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{59}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *GetJwksRequest) GetContext() *v1.RequestContext {
@@ -4234,7 +4366,7 @@ type GetJwksResponse struct {
 
 func (x *GetJwksResponse) Reset() {
 	*x = GetJwksResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[60]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4246,7 +4378,7 @@ func (x *GetJwksResponse) String() string {
 func (*GetJwksResponse) ProtoMessage() {}
 
 func (x *GetJwksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[60]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4259,7 +4391,7 @@ func (x *GetJwksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJwksResponse.ProtoReflect.Descriptor instead.
 func (*GetJwksResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{60}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *GetJwksResponse) GetJwksJson() string {
@@ -4280,7 +4412,7 @@ type SendPhoneVerificationRequest struct {
 
 func (x *SendPhoneVerificationRequest) Reset() {
 	*x = SendPhoneVerificationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[61]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4292,7 +4424,7 @@ func (x *SendPhoneVerificationRequest) String() string {
 func (*SendPhoneVerificationRequest) ProtoMessage() {}
 
 func (x *SendPhoneVerificationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[61]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4305,7 +4437,7 @@ func (x *SendPhoneVerificationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendPhoneVerificationRequest.ProtoReflect.Descriptor instead.
 func (*SendPhoneVerificationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{61}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *SendPhoneVerificationRequest) GetUserId() string {
@@ -4343,7 +4475,7 @@ type SendPhoneVerificationResponse struct {
 
 func (x *SendPhoneVerificationResponse) Reset() {
 	*x = SendPhoneVerificationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[62]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4355,7 +4487,7 @@ func (x *SendPhoneVerificationResponse) String() string {
 func (*SendPhoneVerificationResponse) ProtoMessage() {}
 
 func (x *SendPhoneVerificationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[62]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4368,7 +4500,7 @@ func (x *SendPhoneVerificationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendPhoneVerificationResponse.ProtoReflect.Descriptor instead.
 func (*SendPhoneVerificationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{62}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *SendPhoneVerificationResponse) GetOtpId() string {
@@ -4398,7 +4530,7 @@ type StartWebAuthnRegistrationRequest struct {
 
 func (x *StartWebAuthnRegistrationRequest) Reset() {
 	*x = StartWebAuthnRegistrationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[63]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4410,7 +4542,7 @@ func (x *StartWebAuthnRegistrationRequest) String() string {
 func (*StartWebAuthnRegistrationRequest) ProtoMessage() {}
 
 func (x *StartWebAuthnRegistrationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[63]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4423,7 +4555,7 @@ func (x *StartWebAuthnRegistrationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartWebAuthnRegistrationRequest.ProtoReflect.Descriptor instead.
 func (*StartWebAuthnRegistrationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{63}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *StartWebAuthnRegistrationRequest) GetUserId() string {
@@ -4472,7 +4604,7 @@ type StartWebAuthnRegistrationResponse struct {
 
 func (x *StartWebAuthnRegistrationResponse) Reset() {
 	*x = StartWebAuthnRegistrationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[64]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4484,7 +4616,7 @@ func (x *StartWebAuthnRegistrationResponse) String() string {
 func (*StartWebAuthnRegistrationResponse) ProtoMessage() {}
 
 func (x *StartWebAuthnRegistrationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[64]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4497,7 +4629,7 @@ func (x *StartWebAuthnRegistrationResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use StartWebAuthnRegistrationResponse.ProtoReflect.Descriptor instead.
 func (*StartWebAuthnRegistrationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{64}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *StartWebAuthnRegistrationResponse) GetChallengeId() string {
@@ -4533,7 +4665,7 @@ type FinishWebAuthnRegistrationRequest struct {
 
 func (x *FinishWebAuthnRegistrationRequest) Reset() {
 	*x = FinishWebAuthnRegistrationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[65]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4545,7 +4677,7 @@ func (x *FinishWebAuthnRegistrationRequest) String() string {
 func (*FinishWebAuthnRegistrationRequest) ProtoMessage() {}
 
 func (x *FinishWebAuthnRegistrationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[65]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4558,7 +4690,7 @@ func (x *FinishWebAuthnRegistrationRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use FinishWebAuthnRegistrationRequest.ProtoReflect.Descriptor instead.
 func (*FinishWebAuthnRegistrationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{65}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *FinishWebAuthnRegistrationRequest) GetChallengeId() string {
@@ -4600,7 +4732,7 @@ type FinishWebAuthnRegistrationResponse struct {
 
 func (x *FinishWebAuthnRegistrationResponse) Reset() {
 	*x = FinishWebAuthnRegistrationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[66]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4612,7 +4744,7 @@ func (x *FinishWebAuthnRegistrationResponse) String() string {
 func (*FinishWebAuthnRegistrationResponse) ProtoMessage() {}
 
 func (x *FinishWebAuthnRegistrationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[66]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4625,7 +4757,7 @@ func (x *FinishWebAuthnRegistrationResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use FinishWebAuthnRegistrationResponse.ProtoReflect.Descriptor instead.
 func (*FinishWebAuthnRegistrationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{66}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *FinishWebAuthnRegistrationResponse) GetRegistered() bool {
@@ -4668,7 +4800,7 @@ type StartWebAuthnAuthenticationRequest struct {
 
 func (x *StartWebAuthnAuthenticationRequest) Reset() {
 	*x = StartWebAuthnAuthenticationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[67]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4680,7 +4812,7 @@ func (x *StartWebAuthnAuthenticationRequest) String() string {
 func (*StartWebAuthnAuthenticationRequest) ProtoMessage() {}
 
 func (x *StartWebAuthnAuthenticationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[67]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4693,7 +4825,7 @@ func (x *StartWebAuthnAuthenticationRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use StartWebAuthnAuthenticationRequest.ProtoReflect.Descriptor instead.
 func (*StartWebAuthnAuthenticationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{67}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *StartWebAuthnAuthenticationRequest) GetUserId() string {
@@ -4735,7 +4867,7 @@ type StartWebAuthnAuthenticationResponse struct {
 
 func (x *StartWebAuthnAuthenticationResponse) Reset() {
 	*x = StartWebAuthnAuthenticationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[68]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4747,7 +4879,7 @@ func (x *StartWebAuthnAuthenticationResponse) String() string {
 func (*StartWebAuthnAuthenticationResponse) ProtoMessage() {}
 
 func (x *StartWebAuthnAuthenticationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[68]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4760,7 +4892,7 @@ func (x *StartWebAuthnAuthenticationResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use StartWebAuthnAuthenticationResponse.ProtoReflect.Descriptor instead.
 func (*StartWebAuthnAuthenticationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{68}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *StartWebAuthnAuthenticationResponse) GetChallengeId() string {
@@ -4800,7 +4932,7 @@ type FinishWebAuthnAuthenticationRequest struct {
 
 func (x *FinishWebAuthnAuthenticationRequest) Reset() {
 	*x = FinishWebAuthnAuthenticationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[69]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4812,7 +4944,7 @@ func (x *FinishWebAuthnAuthenticationRequest) String() string {
 func (*FinishWebAuthnAuthenticationRequest) ProtoMessage() {}
 
 func (x *FinishWebAuthnAuthenticationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[69]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4825,7 +4957,7 @@ func (x *FinishWebAuthnAuthenticationRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use FinishWebAuthnAuthenticationRequest.ProtoReflect.Descriptor instead.
 func (*FinishWebAuthnAuthenticationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{69}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *FinishWebAuthnAuthenticationRequest) GetChallengeId() string {
@@ -4902,7 +5034,7 @@ type FinishWebAuthnAuthenticationResponse struct {
 
 func (x *FinishWebAuthnAuthenticationResponse) Reset() {
 	*x = FinishWebAuthnAuthenticationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[70]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4914,7 +5046,7 @@ func (x *FinishWebAuthnAuthenticationResponse) String() string {
 func (*FinishWebAuthnAuthenticationResponse) ProtoMessage() {}
 
 func (x *FinishWebAuthnAuthenticationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[70]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4927,7 +5059,7 @@ func (x *FinishWebAuthnAuthenticationResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use FinishWebAuthnAuthenticationResponse.ProtoReflect.Descriptor instead.
 func (*FinishWebAuthnAuthenticationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{70}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *FinishWebAuthnAuthenticationResponse) GetPrincipal() *Principal {
@@ -5025,7 +5157,7 @@ type ListDevicesRequest struct {
 
 func (x *ListDevicesRequest) Reset() {
 	*x = ListDevicesRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[71]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5037,7 +5169,7 @@ func (x *ListDevicesRequest) String() string {
 func (*ListDevicesRequest) ProtoMessage() {}
 
 func (x *ListDevicesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[71]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5050,7 +5182,7 @@ func (x *ListDevicesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDevicesRequest.ProtoReflect.Descriptor instead.
 func (*ListDevicesRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{71}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ListDevicesRequest) GetUserId() string {
@@ -5084,7 +5216,7 @@ type ListDevicesResponse struct {
 
 func (x *ListDevicesResponse) Reset() {
 	*x = ListDevicesResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[72]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5096,7 +5228,7 @@ func (x *ListDevicesResponse) String() string {
 func (*ListDevicesResponse) ProtoMessage() {}
 
 func (x *ListDevicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[72]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5109,7 +5241,7 @@ func (x *ListDevicesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDevicesResponse.ProtoReflect.Descriptor instead.
 func (*ListDevicesResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{72}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ListDevicesResponse) GetDevices() []*v11.Device {
@@ -5137,7 +5269,7 @@ type RevokeDeviceRequest struct {
 
 func (x *RevokeDeviceRequest) Reset() {
 	*x = RevokeDeviceRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[73]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5149,7 +5281,7 @@ func (x *RevokeDeviceRequest) String() string {
 func (*RevokeDeviceRequest) ProtoMessage() {}
 
 func (x *RevokeDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[73]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5162,7 +5294,7 @@ func (x *RevokeDeviceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeDeviceRequest.ProtoReflect.Descriptor instead.
 func (*RevokeDeviceRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{73}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *RevokeDeviceRequest) GetDeviceId() string {
@@ -5197,7 +5329,7 @@ type RevokeDeviceResponse struct {
 
 func (x *RevokeDeviceResponse) Reset() {
 	*x = RevokeDeviceResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[74]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5209,7 +5341,7 @@ func (x *RevokeDeviceResponse) String() string {
 func (*RevokeDeviceResponse) ProtoMessage() {}
 
 func (x *RevokeDeviceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[74]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5222,7 +5354,7 @@ func (x *RevokeDeviceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeDeviceResponse.ProtoReflect.Descriptor instead.
 func (*RevokeDeviceResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{74}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *RevokeDeviceResponse) GetRevoked() bool {
@@ -5258,7 +5390,7 @@ type AdminRevokeSessionRequest struct {
 
 func (x *AdminRevokeSessionRequest) Reset() {
 	*x = AdminRevokeSessionRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[75]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5270,7 +5402,7 @@ func (x *AdminRevokeSessionRequest) String() string {
 func (*AdminRevokeSessionRequest) ProtoMessage() {}
 
 func (x *AdminRevokeSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[75]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5283,7 +5415,7 @@ func (x *AdminRevokeSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminRevokeSessionRequest.ProtoReflect.Descriptor instead.
 func (*AdminRevokeSessionRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{75}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *AdminRevokeSessionRequest) GetUserId() string {
@@ -5324,7 +5456,7 @@ type AdminRevokeSessionResponse struct {
 
 func (x *AdminRevokeSessionResponse) Reset() {
 	*x = AdminRevokeSessionResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[76]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5336,7 +5468,7 @@ func (x *AdminRevokeSessionResponse) String() string {
 func (*AdminRevokeSessionResponse) ProtoMessage() {}
 
 func (x *AdminRevokeSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[76]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5349,7 +5481,7 @@ func (x *AdminRevokeSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminRevokeSessionResponse.ProtoReflect.Descriptor instead.
 func (*AdminRevokeSessionResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{76}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *AdminRevokeSessionResponse) GetRevoked() bool {
@@ -5377,7 +5509,7 @@ type AdminRevokeAllUserSessionsRequest struct {
 
 func (x *AdminRevokeAllUserSessionsRequest) Reset() {
 	*x = AdminRevokeAllUserSessionsRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[77]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5389,7 +5521,7 @@ func (x *AdminRevokeAllUserSessionsRequest) String() string {
 func (*AdminRevokeAllUserSessionsRequest) ProtoMessage() {}
 
 func (x *AdminRevokeAllUserSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[77]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5402,7 +5534,7 @@ func (x *AdminRevokeAllUserSessionsRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AdminRevokeAllUserSessionsRequest.ProtoReflect.Descriptor instead.
 func (*AdminRevokeAllUserSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{77}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *AdminRevokeAllUserSessionsRequest) GetUserId() string {
@@ -5435,7 +5567,7 @@ type AdminRevokeAllUserSessionsResponse struct {
 
 func (x *AdminRevokeAllUserSessionsResponse) Reset() {
 	*x = AdminRevokeAllUserSessionsResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[78]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5447,7 +5579,7 @@ func (x *AdminRevokeAllUserSessionsResponse) String() string {
 func (*AdminRevokeAllUserSessionsResponse) ProtoMessage() {}
 
 func (x *AdminRevokeAllUserSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[78]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5460,7 +5592,7 @@ func (x *AdminRevokeAllUserSessionsResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use AdminRevokeAllUserSessionsResponse.ProtoReflect.Descriptor instead.
 func (*AdminRevokeAllUserSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{78}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *AdminRevokeAllUserSessionsResponse) GetSessionsRevoked() int64 {
@@ -5481,7 +5613,7 @@ type AdminRevokeAllTenantSessionsRequest struct {
 
 func (x *AdminRevokeAllTenantSessionsRequest) Reset() {
 	*x = AdminRevokeAllTenantSessionsRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[79]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5493,7 +5625,7 @@ func (x *AdminRevokeAllTenantSessionsRequest) String() string {
 func (*AdminRevokeAllTenantSessionsRequest) ProtoMessage() {}
 
 func (x *AdminRevokeAllTenantSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[79]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5506,7 +5638,7 @@ func (x *AdminRevokeAllTenantSessionsRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use AdminRevokeAllTenantSessionsRequest.ProtoReflect.Descriptor instead.
 func (*AdminRevokeAllTenantSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{79}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *AdminRevokeAllTenantSessionsRequest) GetTenantId() string {
@@ -5539,7 +5671,7 @@ type AdminRevokeAllTenantSessionsResponse struct {
 
 func (x *AdminRevokeAllTenantSessionsResponse) Reset() {
 	*x = AdminRevokeAllTenantSessionsResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[80]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5551,7 +5683,7 @@ func (x *AdminRevokeAllTenantSessionsResponse) String() string {
 func (*AdminRevokeAllTenantSessionsResponse) ProtoMessage() {}
 
 func (x *AdminRevokeAllTenantSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[80]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5564,7 +5696,7 @@ func (x *AdminRevokeAllTenantSessionsResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use AdminRevokeAllTenantSessionsResponse.ProtoReflect.Descriptor instead.
 func (*AdminRevokeAllTenantSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{80}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *AdminRevokeAllTenantSessionsResponse) GetSessionsRevoked() int64 {
@@ -5589,7 +5721,7 @@ type EmergencyRevokeRequest struct {
 
 func (x *EmergencyRevokeRequest) Reset() {
 	*x = EmergencyRevokeRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[81]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5601,7 +5733,7 @@ func (x *EmergencyRevokeRequest) String() string {
 func (*EmergencyRevokeRequest) ProtoMessage() {}
 
 func (x *EmergencyRevokeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[81]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5614,7 +5746,7 @@ func (x *EmergencyRevokeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmergencyRevokeRequest.ProtoReflect.Descriptor instead.
 func (*EmergencyRevokeRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{81}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *EmergencyRevokeRequest) GetSigningKeyId() string {
@@ -5671,7 +5803,7 @@ type EmergencyRevokeResponse struct {
 
 func (x *EmergencyRevokeResponse) Reset() {
 	*x = EmergencyRevokeResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[82]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5683,7 +5815,7 @@ func (x *EmergencyRevokeResponse) String() string {
 func (*EmergencyRevokeResponse) ProtoMessage() {}
 
 func (x *EmergencyRevokeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[82]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5696,7 +5828,7 @@ func (x *EmergencyRevokeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmergencyRevokeResponse.ProtoReflect.Descriptor instead.
 func (*EmergencyRevokeResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{82}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *EmergencyRevokeResponse) GetFamiliesRevoked() int64 {
@@ -5747,7 +5879,7 @@ type IssueMfaChallengeRequest struct {
 
 func (x *IssueMfaChallengeRequest) Reset() {
 	*x = IssueMfaChallengeRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[83]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5759,7 +5891,7 @@ func (x *IssueMfaChallengeRequest) String() string {
 func (*IssueMfaChallengeRequest) ProtoMessage() {}
 
 func (x *IssueMfaChallengeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[83]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5772,7 +5904,7 @@ func (x *IssueMfaChallengeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueMfaChallengeRequest.ProtoReflect.Descriptor instead.
 func (*IssueMfaChallengeRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{83}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *IssueMfaChallengeRequest) GetUserId() string {
@@ -5842,7 +5974,7 @@ type IssueMfaChallengeResponse struct {
 
 func (x *IssueMfaChallengeResponse) Reset() {
 	*x = IssueMfaChallengeResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[84]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5854,7 +5986,7 @@ func (x *IssueMfaChallengeResponse) String() string {
 func (*IssueMfaChallengeResponse) ProtoMessage() {}
 
 func (x *IssueMfaChallengeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[84]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5867,7 +5999,7 @@ func (x *IssueMfaChallengeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueMfaChallengeResponse.ProtoReflect.Descriptor instead.
 func (*IssueMfaChallengeResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{84}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *IssueMfaChallengeResponse) GetChallengeId() string {
@@ -5920,7 +6052,7 @@ type VerifyMfaChallengeRequest struct {
 
 func (x *VerifyMfaChallengeRequest) Reset() {
 	*x = VerifyMfaChallengeRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[85]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5932,7 +6064,7 @@ func (x *VerifyMfaChallengeRequest) String() string {
 func (*VerifyMfaChallengeRequest) ProtoMessage() {}
 
 func (x *VerifyMfaChallengeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[85]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5945,7 +6077,7 @@ func (x *VerifyMfaChallengeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyMfaChallengeRequest.ProtoReflect.Descriptor instead.
 func (*VerifyMfaChallengeRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{85}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *VerifyMfaChallengeRequest) GetChallengeId() string {
@@ -6007,7 +6139,7 @@ type VerifyMfaChallengeResponse struct {
 
 func (x *VerifyMfaChallengeResponse) Reset() {
 	*x = VerifyMfaChallengeResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[86]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6019,7 +6151,7 @@ func (x *VerifyMfaChallengeResponse) String() string {
 func (*VerifyMfaChallengeResponse) ProtoMessage() {}
 
 func (x *VerifyMfaChallengeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[86]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6032,7 +6164,7 @@ func (x *VerifyMfaChallengeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyMfaChallengeResponse.ProtoReflect.Descriptor instead.
 func (*VerifyMfaChallengeResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{86}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *VerifyMfaChallengeResponse) GetVerified() bool {
@@ -6089,7 +6221,7 @@ type MfaFactorSummary struct {
 
 func (x *MfaFactorSummary) Reset() {
 	*x = MfaFactorSummary{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[87]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6101,7 +6233,7 @@ func (x *MfaFactorSummary) String() string {
 func (*MfaFactorSummary) ProtoMessage() {}
 
 func (x *MfaFactorSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[87]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6114,7 +6246,7 @@ func (x *MfaFactorSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MfaFactorSummary.ProtoReflect.Descriptor instead.
 func (*MfaFactorSummary) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{87}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *MfaFactorSummary) GetFactorKind() v11.AuthFactorKind {
@@ -6152,7 +6284,7 @@ type ListMfaFactorsRequest struct {
 
 func (x *ListMfaFactorsRequest) Reset() {
 	*x = ListMfaFactorsRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[88]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6164,7 +6296,7 @@ func (x *ListMfaFactorsRequest) String() string {
 func (*ListMfaFactorsRequest) ProtoMessage() {}
 
 func (x *ListMfaFactorsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[88]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6177,7 +6309,7 @@ func (x *ListMfaFactorsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMfaFactorsRequest.ProtoReflect.Descriptor instead.
 func (*ListMfaFactorsRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{88}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *ListMfaFactorsRequest) GetUserId() string {
@@ -6219,7 +6351,7 @@ type ListMfaFactorsResponse struct {
 
 func (x *ListMfaFactorsResponse) Reset() {
 	*x = ListMfaFactorsResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[89]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6231,7 +6363,7 @@ func (x *ListMfaFactorsResponse) String() string {
 func (*ListMfaFactorsResponse) ProtoMessage() {}
 
 func (x *ListMfaFactorsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[89]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6244,7 +6376,7 @@ func (x *ListMfaFactorsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMfaFactorsResponse.ProtoReflect.Descriptor instead.
 func (*ListMfaFactorsResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{89}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *ListMfaFactorsResponse) GetFactors() []*MfaFactorSummary {
@@ -6272,7 +6404,7 @@ type DisableMfaFactorRequest struct {
 
 func (x *DisableMfaFactorRequest) Reset() {
 	*x = DisableMfaFactorRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[90]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6284,7 +6416,7 @@ func (x *DisableMfaFactorRequest) String() string {
 func (*DisableMfaFactorRequest) ProtoMessage() {}
 
 func (x *DisableMfaFactorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[90]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6297,7 +6429,7 @@ func (x *DisableMfaFactorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisableMfaFactorRequest.ProtoReflect.Descriptor instead.
 func (*DisableMfaFactorRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{90}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *DisableMfaFactorRequest) GetUserId() string {
@@ -6330,7 +6462,7 @@ type DisableMfaFactorResponse struct {
 
 func (x *DisableMfaFactorResponse) Reset() {
 	*x = DisableMfaFactorResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[91]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6342,7 +6474,7 @@ func (x *DisableMfaFactorResponse) String() string {
 func (*DisableMfaFactorResponse) ProtoMessage() {}
 
 func (x *DisableMfaFactorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[91]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6355,7 +6487,7 @@ func (x *DisableMfaFactorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisableMfaFactorResponse.ProtoReflect.Descriptor instead.
 func (*DisableMfaFactorResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{91}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *DisableMfaFactorResponse) GetDisabled() bool {
@@ -6377,7 +6509,7 @@ type RenamePasskeyRequest struct {
 
 func (x *RenamePasskeyRequest) Reset() {
 	*x = RenamePasskeyRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[92]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6389,7 +6521,7 @@ func (x *RenamePasskeyRequest) String() string {
 func (*RenamePasskeyRequest) ProtoMessage() {}
 
 func (x *RenamePasskeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[92]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6402,7 +6534,7 @@ func (x *RenamePasskeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenamePasskeyRequest.ProtoReflect.Descriptor instead.
 func (*RenamePasskeyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{92}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *RenamePasskeyRequest) GetUserId() string {
@@ -6442,7 +6574,7 @@ type RenamePasskeyResponse struct {
 
 func (x *RenamePasskeyResponse) Reset() {
 	*x = RenamePasskeyResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[93]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6454,7 +6586,7 @@ func (x *RenamePasskeyResponse) String() string {
 func (*RenamePasskeyResponse) ProtoMessage() {}
 
 func (x *RenamePasskeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[93]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6467,7 +6599,7 @@ func (x *RenamePasskeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenamePasskeyResponse.ProtoReflect.Descriptor instead.
 func (*RenamePasskeyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{93}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *RenamePasskeyResponse) GetRenamed() bool {
@@ -6487,7 +6619,7 @@ type RevokeRecoveryCodesRequest struct {
 
 func (x *RevokeRecoveryCodesRequest) Reset() {
 	*x = RevokeRecoveryCodesRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[94]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6499,7 +6631,7 @@ func (x *RevokeRecoveryCodesRequest) String() string {
 func (*RevokeRecoveryCodesRequest) ProtoMessage() {}
 
 func (x *RevokeRecoveryCodesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[94]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6512,7 +6644,7 @@ func (x *RevokeRecoveryCodesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeRecoveryCodesRequest.ProtoReflect.Descriptor instead.
 func (*RevokeRecoveryCodesRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{94}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *RevokeRecoveryCodesRequest) GetUserId() string {
@@ -6538,7 +6670,7 @@ type RevokeRecoveryCodesResponse struct {
 
 func (x *RevokeRecoveryCodesResponse) Reset() {
 	*x = RevokeRecoveryCodesResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[95]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6550,7 +6682,7 @@ func (x *RevokeRecoveryCodesResponse) String() string {
 func (*RevokeRecoveryCodesResponse) ProtoMessage() {}
 
 func (x *RevokeRecoveryCodesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[95]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6563,7 +6695,7 @@ func (x *RevokeRecoveryCodesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeRecoveryCodesResponse.ProtoReflect.Descriptor instead.
 func (*RevokeRecoveryCodesResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{95}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *RevokeRecoveryCodesResponse) GetRevokedCount() int64 {
@@ -6584,7 +6716,7 @@ type AdminResetMfaRequest struct {
 
 func (x *AdminResetMfaRequest) Reset() {
 	*x = AdminResetMfaRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[96]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6596,7 +6728,7 @@ func (x *AdminResetMfaRequest) String() string {
 func (*AdminResetMfaRequest) ProtoMessage() {}
 
 func (x *AdminResetMfaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[96]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6609,7 +6741,7 @@ func (x *AdminResetMfaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminResetMfaRequest.ProtoReflect.Descriptor instead.
 func (*AdminResetMfaRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{96}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *AdminResetMfaRequest) GetUserId() string {
@@ -6642,7 +6774,7 @@ type AdminResetMfaResponse struct {
 
 func (x *AdminResetMfaResponse) Reset() {
 	*x = AdminResetMfaResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[97]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6654,7 +6786,7 @@ func (x *AdminResetMfaResponse) String() string {
 func (*AdminResetMfaResponse) ProtoMessage() {}
 
 func (x *AdminResetMfaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[97]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6667,7 +6799,7 @@ func (x *AdminResetMfaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminResetMfaResponse.ProtoReflect.Descriptor instead.
 func (*AdminResetMfaResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{97}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *AdminResetMfaResponse) GetReset_() bool {
@@ -6689,7 +6821,7 @@ type WebAuthnCredentialSummary struct {
 
 func (x *WebAuthnCredentialSummary) Reset() {
 	*x = WebAuthnCredentialSummary{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[98]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6701,7 +6833,7 @@ func (x *WebAuthnCredentialSummary) String() string {
 func (*WebAuthnCredentialSummary) ProtoMessage() {}
 
 func (x *WebAuthnCredentialSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[98]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6714,7 +6846,7 @@ func (x *WebAuthnCredentialSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WebAuthnCredentialSummary.ProtoReflect.Descriptor instead.
 func (*WebAuthnCredentialSummary) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{98}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *WebAuthnCredentialSummary) GetCredentialId() string {
@@ -6759,7 +6891,7 @@ type ListWebAuthnCredentialsRequest struct {
 
 func (x *ListWebAuthnCredentialsRequest) Reset() {
 	*x = ListWebAuthnCredentialsRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[99]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6771,7 +6903,7 @@ func (x *ListWebAuthnCredentialsRequest) String() string {
 func (*ListWebAuthnCredentialsRequest) ProtoMessage() {}
 
 func (x *ListWebAuthnCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[99]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6784,7 +6916,7 @@ func (x *ListWebAuthnCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWebAuthnCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*ListWebAuthnCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{99}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *ListWebAuthnCredentialsRequest) GetUserId() string {
@@ -6826,7 +6958,7 @@ type ListWebAuthnCredentialsResponse struct {
 
 func (x *ListWebAuthnCredentialsResponse) Reset() {
 	*x = ListWebAuthnCredentialsResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[100]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6838,7 +6970,7 @@ func (x *ListWebAuthnCredentialsResponse) String() string {
 func (*ListWebAuthnCredentialsResponse) ProtoMessage() {}
 
 func (x *ListWebAuthnCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[100]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6851,7 +6983,7 @@ func (x *ListWebAuthnCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWebAuthnCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*ListWebAuthnCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{100}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *ListWebAuthnCredentialsResponse) GetCredentials() []*WebAuthnCredentialSummary {
@@ -6879,7 +7011,7 @@ type DeleteWebAuthnCredentialRequest struct {
 
 func (x *DeleteWebAuthnCredentialRequest) Reset() {
 	*x = DeleteWebAuthnCredentialRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[101]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6891,7 +7023,7 @@ func (x *DeleteWebAuthnCredentialRequest) String() string {
 func (*DeleteWebAuthnCredentialRequest) ProtoMessage() {}
 
 func (x *DeleteWebAuthnCredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[101]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6904,7 +7036,7 @@ func (x *DeleteWebAuthnCredentialRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWebAuthnCredentialRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWebAuthnCredentialRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{101}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *DeleteWebAuthnCredentialRequest) GetUserId() string {
@@ -6937,7 +7069,7 @@ type DeleteWebAuthnCredentialResponse struct {
 
 func (x *DeleteWebAuthnCredentialResponse) Reset() {
 	*x = DeleteWebAuthnCredentialResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[102]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6949,7 +7081,7 @@ func (x *DeleteWebAuthnCredentialResponse) String() string {
 func (*DeleteWebAuthnCredentialResponse) ProtoMessage() {}
 
 func (x *DeleteWebAuthnCredentialResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[102]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6962,7 +7094,7 @@ func (x *DeleteWebAuthnCredentialResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWebAuthnCredentialResponse.ProtoReflect.Descriptor instead.
 func (*DeleteWebAuthnCredentialResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{102}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *DeleteWebAuthnCredentialResponse) GetDeleted() bool {
@@ -7000,7 +7132,7 @@ type PutTenantAuthPolicyRequest struct {
 
 func (x *PutTenantAuthPolicyRequest) Reset() {
 	*x = PutTenantAuthPolicyRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[103]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7012,7 +7144,7 @@ func (x *PutTenantAuthPolicyRequest) String() string {
 func (*PutTenantAuthPolicyRequest) ProtoMessage() {}
 
 func (x *PutTenantAuthPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[103]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7025,7 +7157,7 @@ func (x *PutTenantAuthPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutTenantAuthPolicyRequest.ProtoReflect.Descriptor instead.
 func (*PutTenantAuthPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{103}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *PutTenantAuthPolicyRequest) GetTenantId() string {
@@ -7087,7 +7219,7 @@ type PutTenantAuthPolicyResponse struct {
 
 func (x *PutTenantAuthPolicyResponse) Reset() {
 	*x = PutTenantAuthPolicyResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[104]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7099,7 +7231,7 @@ func (x *PutTenantAuthPolicyResponse) String() string {
 func (*PutTenantAuthPolicyResponse) ProtoMessage() {}
 
 func (x *PutTenantAuthPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[104]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7112,7 +7244,7 @@ func (x *PutTenantAuthPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutTenantAuthPolicyResponse.ProtoReflect.Descriptor instead.
 func (*PutTenantAuthPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{104}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *PutTenantAuthPolicyResponse) GetPolicy() *v11.TenantAuthPolicy {
@@ -7134,7 +7266,7 @@ type GetTenantAuthPolicyRequest struct {
 
 func (x *GetTenantAuthPolicyRequest) Reset() {
 	*x = GetTenantAuthPolicyRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[105]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7146,7 +7278,7 @@ func (x *GetTenantAuthPolicyRequest) String() string {
 func (*GetTenantAuthPolicyRequest) ProtoMessage() {}
 
 func (x *GetTenantAuthPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[105]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7159,7 +7291,7 @@ func (x *GetTenantAuthPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenantAuthPolicyRequest.ProtoReflect.Descriptor instead.
 func (*GetTenantAuthPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{105}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *GetTenantAuthPolicyRequest) GetTenantId() string {
@@ -7188,7 +7320,7 @@ type GetTenantAuthPolicyResponse struct {
 
 func (x *GetTenantAuthPolicyResponse) Reset() {
 	*x = GetTenantAuthPolicyResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[106]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7200,7 +7332,7 @@ func (x *GetTenantAuthPolicyResponse) String() string {
 func (*GetTenantAuthPolicyResponse) ProtoMessage() {}
 
 func (x *GetTenantAuthPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[106]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7213,7 +7345,7 @@ func (x *GetTenantAuthPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenantAuthPolicyResponse.ProtoReflect.Descriptor instead.
 func (*GetTenantAuthPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{106}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *GetTenantAuthPolicyResponse) GetPolicy() *v11.TenantAuthPolicy {
@@ -7250,7 +7382,7 @@ type SendLoginOtpRequest struct {
 
 func (x *SendLoginOtpRequest) Reset() {
 	*x = SendLoginOtpRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[107]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7262,7 +7394,7 @@ func (x *SendLoginOtpRequest) String() string {
 func (*SendLoginOtpRequest) ProtoMessage() {}
 
 func (x *SendLoginOtpRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[107]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7275,7 +7407,7 @@ func (x *SendLoginOtpRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendLoginOtpRequest.ProtoReflect.Descriptor instead.
 func (*SendLoginOtpRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{107}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *SendLoginOtpRequest) GetTenantHint() string {
@@ -7338,7 +7470,7 @@ type SendLoginOtpResponse struct {
 
 func (x *SendLoginOtpResponse) Reset() {
 	*x = SendLoginOtpResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[108]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7350,7 +7482,7 @@ func (x *SendLoginOtpResponse) String() string {
 func (*SendLoginOtpResponse) ProtoMessage() {}
 
 func (x *SendLoginOtpResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[108]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7363,7 +7495,7 @@ func (x *SendLoginOtpResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendLoginOtpResponse.ProtoReflect.Descriptor instead.
 func (*SendLoginOtpResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{108}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *SendLoginOtpResponse) GetOtpId() string {
@@ -7406,7 +7538,7 @@ type LoginWithOtpRequest struct {
 
 func (x *LoginWithOtpRequest) Reset() {
 	*x = LoginWithOtpRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[109]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7418,7 +7550,7 @@ func (x *LoginWithOtpRequest) String() string {
 func (*LoginWithOtpRequest) ProtoMessage() {}
 
 func (x *LoginWithOtpRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[109]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7431,7 +7563,7 @@ func (x *LoginWithOtpRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginWithOtpRequest.ProtoReflect.Descriptor instead.
 func (*LoginWithOtpRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{109}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *LoginWithOtpRequest) GetOtpId() string {
@@ -7514,7 +7646,7 @@ type LoginWithOtpResponse struct {
 
 func (x *LoginWithOtpResponse) Reset() {
 	*x = LoginWithOtpResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[110]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7526,7 +7658,7 @@ func (x *LoginWithOtpResponse) String() string {
 func (*LoginWithOtpResponse) ProtoMessage() {}
 
 func (x *LoginWithOtpResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[110]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7539,7 +7671,7 @@ func (x *LoginWithOtpResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginWithOtpResponse.ProtoReflect.Descriptor instead.
 func (*LoginWithOtpResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{110}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *LoginWithOtpResponse) GetUserId() string {
@@ -7643,7 +7775,7 @@ type StartOidcLoginRequest struct {
 
 func (x *StartOidcLoginRequest) Reset() {
 	*x = StartOidcLoginRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[111]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7655,7 +7787,7 @@ func (x *StartOidcLoginRequest) String() string {
 func (*StartOidcLoginRequest) ProtoMessage() {}
 
 func (x *StartOidcLoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[111]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7668,7 +7800,7 @@ func (x *StartOidcLoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartOidcLoginRequest.ProtoReflect.Descriptor instead.
 func (*StartOidcLoginRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{111}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *StartOidcLoginRequest) GetTenantHint() string {
@@ -7723,7 +7855,7 @@ type StartOidcLoginResponse struct {
 
 func (x *StartOidcLoginResponse) Reset() {
 	*x = StartOidcLoginResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[112]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7735,7 +7867,7 @@ func (x *StartOidcLoginResponse) String() string {
 func (*StartOidcLoginResponse) ProtoMessage() {}
 
 func (x *StartOidcLoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[112]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7748,7 +7880,7 @@ func (x *StartOidcLoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartOidcLoginResponse.ProtoReflect.Descriptor instead.
 func (*StartOidcLoginResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{112}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *StartOidcLoginResponse) GetAuthorizationUrl() string {
@@ -7795,7 +7927,7 @@ type FinishOidcLoginRequest struct {
 
 func (x *FinishOidcLoginRequest) Reset() {
 	*x = FinishOidcLoginRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[113]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[115]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7807,7 +7939,7 @@ func (x *FinishOidcLoginRequest) String() string {
 func (*FinishOidcLoginRequest) ProtoMessage() {}
 
 func (x *FinishOidcLoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[113]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[115]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7820,7 +7952,7 @@ func (x *FinishOidcLoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishOidcLoginRequest.ProtoReflect.Descriptor instead.
 func (*FinishOidcLoginRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{113}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *FinishOidcLoginRequest) GetState() string {
@@ -7901,7 +8033,7 @@ type FinishOidcLoginResponse struct {
 
 func (x *FinishOidcLoginResponse) Reset() {
 	*x = FinishOidcLoginResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[114]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7913,7 +8045,7 @@ func (x *FinishOidcLoginResponse) String() string {
 func (*FinishOidcLoginResponse) ProtoMessage() {}
 
 func (x *FinishOidcLoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[114]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7926,7 +8058,7 @@ func (x *FinishOidcLoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FinishOidcLoginResponse.ProtoReflect.Descriptor instead.
 func (*FinishOidcLoginResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{114}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *FinishOidcLoginResponse) GetUserId() string {
@@ -8040,7 +8172,7 @@ type LoginWithOidcIdTokenRequest struct {
 
 func (x *LoginWithOidcIdTokenRequest) Reset() {
 	*x = LoginWithOidcIdTokenRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[115]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[117]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8052,7 +8184,7 @@ func (x *LoginWithOidcIdTokenRequest) String() string {
 func (*LoginWithOidcIdTokenRequest) ProtoMessage() {}
 
 func (x *LoginWithOidcIdTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[115]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[117]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8065,7 +8197,7 @@ func (x *LoginWithOidcIdTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginWithOidcIdTokenRequest.ProtoReflect.Descriptor instead.
 func (*LoginWithOidcIdTokenRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{115}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *LoginWithOidcIdTokenRequest) GetTenantHint() string {
@@ -8160,7 +8292,7 @@ type LoginWithOidcIdTokenResponse struct {
 
 func (x *LoginWithOidcIdTokenResponse) Reset() {
 	*x = LoginWithOidcIdTokenResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[116]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[118]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8172,7 +8304,7 @@ func (x *LoginWithOidcIdTokenResponse) String() string {
 func (*LoginWithOidcIdTokenResponse) ProtoMessage() {}
 
 func (x *LoginWithOidcIdTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[116]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[118]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8185,7 +8317,7 @@ func (x *LoginWithOidcIdTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginWithOidcIdTokenResponse.ProtoReflect.Descriptor instead.
 func (*LoginWithOidcIdTokenResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{116}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *LoginWithOidcIdTokenResponse) GetUserId() string {
@@ -8304,7 +8436,7 @@ type InvitationInfo struct {
 
 func (x *InvitationInfo) Reset() {
 	*x = InvitationInfo{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[117]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[119]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8316,7 +8448,7 @@ func (x *InvitationInfo) String() string {
 func (*InvitationInfo) ProtoMessage() {}
 
 func (x *InvitationInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[117]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[119]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8329,7 +8461,7 @@ func (x *InvitationInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvitationInfo.ProtoReflect.Descriptor instead.
 func (*InvitationInfo) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{117}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *InvitationInfo) GetInvitationId() string {
@@ -8498,7 +8630,7 @@ type CreateInvitationRequest struct {
 
 func (x *CreateInvitationRequest) Reset() {
 	*x = CreateInvitationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[118]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[120]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8510,7 +8642,7 @@ func (x *CreateInvitationRequest) String() string {
 func (*CreateInvitationRequest) ProtoMessage() {}
 
 func (x *CreateInvitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[118]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[120]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8523,7 +8655,7 @@ func (x *CreateInvitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateInvitationRequest.ProtoReflect.Descriptor instead.
 func (*CreateInvitationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{118}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *CreateInvitationRequest) GetTenantId() string {
@@ -8608,7 +8740,7 @@ type CreateInvitationResponse struct {
 
 func (x *CreateInvitationResponse) Reset() {
 	*x = CreateInvitationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[119]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[121]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8620,7 +8752,7 @@ func (x *CreateInvitationResponse) String() string {
 func (*CreateInvitationResponse) ProtoMessage() {}
 
 func (x *CreateInvitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[119]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[121]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8633,7 +8765,7 @@ func (x *CreateInvitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateInvitationResponse.ProtoReflect.Descriptor instead.
 func (*CreateInvitationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{119}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *CreateInvitationResponse) GetInvitation() *InvitationInfo {
@@ -8679,7 +8811,7 @@ type ListInvitationsRequest struct {
 
 func (x *ListInvitationsRequest) Reset() {
 	*x = ListInvitationsRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[120]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[122]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8691,7 +8823,7 @@ func (x *ListInvitationsRequest) String() string {
 func (*ListInvitationsRequest) ProtoMessage() {}
 
 func (x *ListInvitationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[120]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[122]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8704,7 +8836,7 @@ func (x *ListInvitationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInvitationsRequest.ProtoReflect.Descriptor instead.
 func (*ListInvitationsRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{120}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{122}
 }
 
 func (x *ListInvitationsRequest) GetTenantId() string {
@@ -8745,7 +8877,7 @@ type ListInvitationsResponse struct {
 
 func (x *ListInvitationsResponse) Reset() {
 	*x = ListInvitationsResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[121]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[123]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8757,7 +8889,7 @@ func (x *ListInvitationsResponse) String() string {
 func (*ListInvitationsResponse) ProtoMessage() {}
 
 func (x *ListInvitationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[121]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[123]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8770,7 +8902,7 @@ func (x *ListInvitationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInvitationsResponse.ProtoReflect.Descriptor instead.
 func (*ListInvitationsResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{121}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *ListInvitationsResponse) GetInvitations() []*InvitationInfo {
@@ -8798,7 +8930,7 @@ type RevokeInvitationRequest struct {
 
 func (x *RevokeInvitationRequest) Reset() {
 	*x = RevokeInvitationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[122]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[124]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8810,7 +8942,7 @@ func (x *RevokeInvitationRequest) String() string {
 func (*RevokeInvitationRequest) ProtoMessage() {}
 
 func (x *RevokeInvitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[122]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[124]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8823,7 +8955,7 @@ func (x *RevokeInvitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeInvitationRequest.ProtoReflect.Descriptor instead.
 func (*RevokeInvitationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{122}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *RevokeInvitationRequest) GetInvitationId() string {
@@ -8852,7 +8984,7 @@ type RevokeInvitationResponse struct {
 
 func (x *RevokeInvitationResponse) Reset() {
 	*x = RevokeInvitationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[123]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[125]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8864,7 +8996,7 @@ func (x *RevokeInvitationResponse) String() string {
 func (*RevokeInvitationResponse) ProtoMessage() {}
 
 func (x *RevokeInvitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[123]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[125]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8877,7 +9009,7 @@ func (x *RevokeInvitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeInvitationResponse.ProtoReflect.Descriptor instead.
 func (*RevokeInvitationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{123}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{125}
 }
 
 func (x *RevokeInvitationResponse) GetRevoked() bool {
@@ -8904,7 +9036,7 @@ type ResendInvitationRequest struct {
 
 func (x *ResendInvitationRequest) Reset() {
 	*x = ResendInvitationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[124]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[126]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8916,7 +9048,7 @@ func (x *ResendInvitationRequest) String() string {
 func (*ResendInvitationRequest) ProtoMessage() {}
 
 func (x *ResendInvitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[124]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[126]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8929,7 +9061,7 @@ func (x *ResendInvitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResendInvitationRequest.ProtoReflect.Descriptor instead.
 func (*ResendInvitationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{124}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *ResendInvitationRequest) GetInvitationId() string {
@@ -8953,7 +9085,7 @@ type ResendInvitationResponse struct {
 
 func (x *ResendInvitationResponse) Reset() {
 	*x = ResendInvitationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[125]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[127]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8965,7 +9097,7 @@ func (x *ResendInvitationResponse) String() string {
 func (*ResendInvitationResponse) ProtoMessage() {}
 
 func (x *ResendInvitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[125]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[127]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8978,7 +9110,7 @@ func (x *ResendInvitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResendInvitationResponse.ProtoReflect.Descriptor instead.
 func (*ResendInvitationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{125}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{127}
 }
 
 func (x *ResendInvitationResponse) GetInvitation() *InvitationInfo {
@@ -9020,7 +9152,7 @@ type GetInvitationRequest struct {
 
 func (x *GetInvitationRequest) Reset() {
 	*x = GetInvitationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[126]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[128]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9032,7 +9164,7 @@ func (x *GetInvitationRequest) String() string {
 func (*GetInvitationRequest) ProtoMessage() {}
 
 func (x *GetInvitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[126]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[128]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9045,7 +9177,7 @@ func (x *GetInvitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInvitationRequest.ProtoReflect.Descriptor instead.
 func (*GetInvitationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{126}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{128}
 }
 
 func (x *GetInvitationRequest) GetInvitationId() string {
@@ -9083,7 +9215,7 @@ type GetInvitationResponse struct {
 
 func (x *GetInvitationResponse) Reset() {
 	*x = GetInvitationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[127]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9095,7 +9227,7 @@ func (x *GetInvitationResponse) String() string {
 func (*GetInvitationResponse) ProtoMessage() {}
 
 func (x *GetInvitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[127]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9108,7 +9240,7 @@ func (x *GetInvitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInvitationResponse.ProtoReflect.Descriptor instead.
 func (*GetInvitationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{127}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *GetInvitationResponse) GetInvitationId() string {
@@ -9181,7 +9313,7 @@ type StartInvitationAcceptanceRequest struct {
 
 func (x *StartInvitationAcceptanceRequest) Reset() {
 	*x = StartInvitationAcceptanceRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[128]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[130]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9193,7 +9325,7 @@ func (x *StartInvitationAcceptanceRequest) String() string {
 func (*StartInvitationAcceptanceRequest) ProtoMessage() {}
 
 func (x *StartInvitationAcceptanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[128]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[130]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9206,7 +9338,7 @@ func (x *StartInvitationAcceptanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartInvitationAcceptanceRequest.ProtoReflect.Descriptor instead.
 func (*StartInvitationAcceptanceRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{128}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{130}
 }
 
 func (x *StartInvitationAcceptanceRequest) GetInvitationId() string {
@@ -9255,7 +9387,7 @@ type StartInvitationAcceptanceResponse struct {
 
 func (x *StartInvitationAcceptanceResponse) Reset() {
 	*x = StartInvitationAcceptanceResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[129]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9267,7 +9399,7 @@ func (x *StartInvitationAcceptanceResponse) String() string {
 func (*StartInvitationAcceptanceResponse) ProtoMessage() {}
 
 func (x *StartInvitationAcceptanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[129]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9280,7 +9412,7 @@ func (x *StartInvitationAcceptanceResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use StartInvitationAcceptanceResponse.ProtoReflect.Descriptor instead.
 func (*StartInvitationAcceptanceResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{129}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *StartInvitationAcceptanceResponse) GetOtpId() string {
@@ -9372,7 +9504,7 @@ type AcceptInvitationRequest struct {
 
 func (x *AcceptInvitationRequest) Reset() {
 	*x = AcceptInvitationRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[130]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[132]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9384,7 +9516,7 @@ func (x *AcceptInvitationRequest) String() string {
 func (*AcceptInvitationRequest) ProtoMessage() {}
 
 func (x *AcceptInvitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[130]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[132]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9397,7 +9529,7 @@ func (x *AcceptInvitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptInvitationRequest.ProtoReflect.Descriptor instead.
 func (*AcceptInvitationRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{130}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{132}
 }
 
 func (x *AcceptInvitationRequest) GetInvitationId() string {
@@ -9544,7 +9676,7 @@ type AcceptInvitationResponse struct {
 
 func (x *AcceptInvitationResponse) Reset() {
 	*x = AcceptInvitationResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[131]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[133]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9556,7 +9688,7 @@ func (x *AcceptInvitationResponse) String() string {
 func (*AcceptInvitationResponse) ProtoMessage() {}
 
 func (x *AcceptInvitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[131]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[133]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9569,7 +9701,7 @@ func (x *AcceptInvitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptInvitationResponse.ProtoReflect.Descriptor instead.
 func (*AcceptInvitationResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{131}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{133}
 }
 
 func (x *AcceptInvitationResponse) GetUserId() string {
@@ -9663,7 +9795,7 @@ type CheckStepUpRequest struct {
 
 func (x *CheckStepUpRequest) Reset() {
 	*x = CheckStepUpRequest{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[132]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9675,7 +9807,7 @@ func (x *CheckStepUpRequest) String() string {
 func (*CheckStepUpRequest) ProtoMessage() {}
 
 func (x *CheckStepUpRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[132]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9688,7 +9820,7 @@ func (x *CheckStepUpRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckStepUpRequest.ProtoReflect.Descriptor instead.
 func (*CheckStepUpRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{132}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *CheckStepUpRequest) GetAction() string {
@@ -9740,7 +9872,7 @@ type CheckStepUpResponse struct {
 
 func (x *CheckStepUpResponse) Reset() {
 	*x = CheckStepUpResponse{}
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[133]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9752,7 +9884,7 @@ func (x *CheckStepUpResponse) String() string {
 func (*CheckStepUpResponse) ProtoMessage() {}
 
 func (x *CheckStepUpResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[133]
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9765,7 +9897,7 @@ func (x *CheckStepUpResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckStepUpResponse.ProtoReflect.Descriptor instead.
 func (*CheckStepUpResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{133}
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *CheckStepUpResponse) GetSatisfied() bool {
@@ -9899,7 +10031,17 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12<\n" +
 	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"Q\n" +
 	"\x1aAdminResetPasswordResponse\x12\x15\n" +
-	"\x06otp_id\x18\x01 \x01(\tR\x05otpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xea\x01\n" +
+	"\x06otp_id\x18\x01 \x01(\tR\x05otpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xb1\x01\n" +
+	" SetServiceAccountPasswordRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
+	"\fnew_password\x18\x03 \x01(\tR\vnewPassword\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05authnP\x01\"\xc0\x01\n" +
+	"!SetServiceAccountPasswordResponse\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x129\n" +
+	"\n" +
+	"changed_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAt\x12)\n" +
+	"\x10revoked_sessions\x18\x03 \x01(\x03R\x0frevokedSessions:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05authnP\x01\"\xea\x01\n" +
 	"\x0eSendOTPRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12<\n" +
 	"\botp_type\x18\x02 \x01(\x0e2!.udb.core.authn.entity.v1.OTPTypeR\aotpType\x12%\n" +
@@ -10725,7 +10867,7 @@ func file_udb_core_authn_services_v1_core_proto_rawDescGZIP() []byte {
 	return file_udb_core_authn_services_v1_core_proto_rawDescData
 }
 
-var file_udb_core_authn_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 139)
+var file_udb_core_authn_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 141)
 var file_udb_core_authn_services_v1_core_proto_goTypes = []any{
 	(*CreateUserRequest)(nil),                    // 0: udb.core.authn.services.v1.CreateUserRequest
 	(*CreateUserResponse)(nil),                   // 1: udb.core.authn.services.v1.CreateUserResponse
@@ -10739,263 +10881,266 @@ var file_udb_core_authn_services_v1_core_proto_goTypes = []any{
 	(*ChangeUserStatusResponse)(nil),             // 9: udb.core.authn.services.v1.ChangeUserStatusResponse
 	(*AdminResetPasswordRequest)(nil),            // 10: udb.core.authn.services.v1.AdminResetPasswordRequest
 	(*AdminResetPasswordResponse)(nil),           // 11: udb.core.authn.services.v1.AdminResetPasswordResponse
-	(*SendOTPRequest)(nil),                       // 12: udb.core.authn.services.v1.SendOTPRequest
-	(*SendOTPResponse)(nil),                      // 13: udb.core.authn.services.v1.SendOTPResponse
-	(*VerifyOTPRequest)(nil),                     // 14: udb.core.authn.services.v1.VerifyOTPRequest
-	(*VerifyOTPResponse)(nil),                    // 15: udb.core.authn.services.v1.VerifyOTPResponse
-	(*ResendOTPRequest)(nil),                     // 16: udb.core.authn.services.v1.ResendOTPRequest
-	(*ResendOTPResponse)(nil),                    // 17: udb.core.authn.services.v1.ResendOTPResponse
-	(*Principal)(nil),                            // 18: udb.core.authn.services.v1.Principal
-	(*AuthnRequest)(nil),                         // 19: udb.core.authn.services.v1.AuthnRequest
-	(*AuthnResponse)(nil),                        // 20: udb.core.authn.services.v1.AuthnResponse
-	(*LoginRequest)(nil),                         // 21: udb.core.authn.services.v1.LoginRequest
-	(*LoginResponse)(nil),                        // 22: udb.core.authn.services.v1.LoginResponse
-	(*RefreshTokenRequest)(nil),                  // 23: udb.core.authn.services.v1.RefreshTokenRequest
-	(*RefreshTokenResponse)(nil),                 // 24: udb.core.authn.services.v1.RefreshTokenResponse
-	(*LogoutRequest)(nil),                        // 25: udb.core.authn.services.v1.LogoutRequest
-	(*LogoutResponse)(nil),                       // 26: udb.core.authn.services.v1.LogoutResponse
-	(*ChangePasswordRequest)(nil),                // 27: udb.core.authn.services.v1.ChangePasswordRequest
-	(*ChangePasswordResponse)(nil),               // 28: udb.core.authn.services.v1.ChangePasswordResponse
-	(*ValidateTokenRequest)(nil),                 // 29: udb.core.authn.services.v1.ValidateTokenRequest
-	(*ValidateTokenResponse)(nil),                // 30: udb.core.authn.services.v1.ValidateTokenResponse
-	(*CreateSessionRequest)(nil),                 // 31: udb.core.authn.services.v1.CreateSessionRequest
-	(*CreateSessionResponse)(nil),                // 32: udb.core.authn.services.v1.CreateSessionResponse
-	(*RefreshSessionRequest)(nil),                // 33: udb.core.authn.services.v1.RefreshSessionRequest
-	(*RefreshSessionResponse)(nil),               // 34: udb.core.authn.services.v1.RefreshSessionResponse
-	(*GetSessionRequest)(nil),                    // 35: udb.core.authn.services.v1.GetSessionRequest
-	(*GetSessionResponse)(nil),                   // 36: udb.core.authn.services.v1.GetSessionResponse
-	(*ListSessionsRequest)(nil),                  // 37: udb.core.authn.services.v1.ListSessionsRequest
-	(*ListSessionsResponse)(nil),                 // 38: udb.core.authn.services.v1.ListSessionsResponse
-	(*RevokeSessionRequest)(nil),                 // 39: udb.core.authn.services.v1.RevokeSessionRequest
-	(*RevokeSessionResponse)(nil),                // 40: udb.core.authn.services.v1.RevokeSessionResponse
-	(*ValidateCSRFRequest)(nil),                  // 41: udb.core.authn.services.v1.ValidateCSRFRequest
-	(*ValidateCSRFResponse)(nil),                 // 42: udb.core.authn.services.v1.ValidateCSRFResponse
-	(*EnrollMFARequest)(nil),                     // 43: udb.core.authn.services.v1.EnrollMFARequest
-	(*EnrollMFAResponse)(nil),                    // 44: udb.core.authn.services.v1.EnrollMFAResponse
-	(*ConfirmMFAEnrollmentRequest)(nil),          // 45: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest
-	(*ConfirmMFAEnrollmentResponse)(nil),         // 46: udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse
-	(*GenerateRecoveryCodesRequest)(nil),         // 47: udb.core.authn.services.v1.GenerateRecoveryCodesRequest
-	(*GenerateRecoveryCodesResponse)(nil),        // 48: udb.core.authn.services.v1.GenerateRecoveryCodesResponse
-	(*PutMfaPolicyRequest)(nil),                  // 49: udb.core.authn.services.v1.PutMfaPolicyRequest
-	(*PutMfaPolicyResponse)(nil),                 // 50: udb.core.authn.services.v1.PutMfaPolicyResponse
-	(*GetMfaPolicyRequest)(nil),                  // 51: udb.core.authn.services.v1.GetMfaPolicyRequest
-	(*GetMfaPolicyResponse)(nil),                 // 52: udb.core.authn.services.v1.GetMfaPolicyResponse
-	(*ForgotPasswordRequest)(nil),                // 53: udb.core.authn.services.v1.ForgotPasswordRequest
-	(*ForgotPasswordResponse)(nil),               // 54: udb.core.authn.services.v1.ForgotPasswordResponse
-	(*ResetPasswordRequest)(nil),                 // 55: udb.core.authn.services.v1.ResetPasswordRequest
-	(*ResetPasswordResponse)(nil),                // 56: udb.core.authn.services.v1.ResetPasswordResponse
-	(*IntrospectTokenRequest)(nil),               // 57: udb.core.authn.services.v1.IntrospectTokenRequest
-	(*IntrospectTokenResponse)(nil),              // 58: udb.core.authn.services.v1.IntrospectTokenResponse
-	(*GetJwksRequest)(nil),                       // 59: udb.core.authn.services.v1.GetJwksRequest
-	(*GetJwksResponse)(nil),                      // 60: udb.core.authn.services.v1.GetJwksResponse
-	(*SendPhoneVerificationRequest)(nil),         // 61: udb.core.authn.services.v1.SendPhoneVerificationRequest
-	(*SendPhoneVerificationResponse)(nil),        // 62: udb.core.authn.services.v1.SendPhoneVerificationResponse
-	(*StartWebAuthnRegistrationRequest)(nil),     // 63: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest
-	(*StartWebAuthnRegistrationResponse)(nil),    // 64: udb.core.authn.services.v1.StartWebAuthnRegistrationResponse
-	(*FinishWebAuthnRegistrationRequest)(nil),    // 65: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest
-	(*FinishWebAuthnRegistrationResponse)(nil),   // 66: udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse
-	(*StartWebAuthnAuthenticationRequest)(nil),   // 67: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest
-	(*StartWebAuthnAuthenticationResponse)(nil),  // 68: udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse
-	(*FinishWebAuthnAuthenticationRequest)(nil),  // 69: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest
-	(*FinishWebAuthnAuthenticationResponse)(nil), // 70: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse
-	(*ListDevicesRequest)(nil),                   // 71: udb.core.authn.services.v1.ListDevicesRequest
-	(*ListDevicesResponse)(nil),                  // 72: udb.core.authn.services.v1.ListDevicesResponse
-	(*RevokeDeviceRequest)(nil),                  // 73: udb.core.authn.services.v1.RevokeDeviceRequest
-	(*RevokeDeviceResponse)(nil),                 // 74: udb.core.authn.services.v1.RevokeDeviceResponse
-	(*AdminRevokeSessionRequest)(nil),            // 75: udb.core.authn.services.v1.AdminRevokeSessionRequest
-	(*AdminRevokeSessionResponse)(nil),           // 76: udb.core.authn.services.v1.AdminRevokeSessionResponse
-	(*AdminRevokeAllUserSessionsRequest)(nil),    // 77: udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest
-	(*AdminRevokeAllUserSessionsResponse)(nil),   // 78: udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse
-	(*AdminRevokeAllTenantSessionsRequest)(nil),  // 79: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest
-	(*AdminRevokeAllTenantSessionsResponse)(nil), // 80: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse
-	(*EmergencyRevokeRequest)(nil),               // 81: udb.core.authn.services.v1.EmergencyRevokeRequest
-	(*EmergencyRevokeResponse)(nil),              // 82: udb.core.authn.services.v1.EmergencyRevokeResponse
-	(*IssueMfaChallengeRequest)(nil),             // 83: udb.core.authn.services.v1.IssueMfaChallengeRequest
-	(*IssueMfaChallengeResponse)(nil),            // 84: udb.core.authn.services.v1.IssueMfaChallengeResponse
-	(*VerifyMfaChallengeRequest)(nil),            // 85: udb.core.authn.services.v1.VerifyMfaChallengeRequest
-	(*VerifyMfaChallengeResponse)(nil),           // 86: udb.core.authn.services.v1.VerifyMfaChallengeResponse
-	(*MfaFactorSummary)(nil),                     // 87: udb.core.authn.services.v1.MfaFactorSummary
-	(*ListMfaFactorsRequest)(nil),                // 88: udb.core.authn.services.v1.ListMfaFactorsRequest
-	(*ListMfaFactorsResponse)(nil),               // 89: udb.core.authn.services.v1.ListMfaFactorsResponse
-	(*DisableMfaFactorRequest)(nil),              // 90: udb.core.authn.services.v1.DisableMfaFactorRequest
-	(*DisableMfaFactorResponse)(nil),             // 91: udb.core.authn.services.v1.DisableMfaFactorResponse
-	(*RenamePasskeyRequest)(nil),                 // 92: udb.core.authn.services.v1.RenamePasskeyRequest
-	(*RenamePasskeyResponse)(nil),                // 93: udb.core.authn.services.v1.RenamePasskeyResponse
-	(*RevokeRecoveryCodesRequest)(nil),           // 94: udb.core.authn.services.v1.RevokeRecoveryCodesRequest
-	(*RevokeRecoveryCodesResponse)(nil),          // 95: udb.core.authn.services.v1.RevokeRecoveryCodesResponse
-	(*AdminResetMfaRequest)(nil),                 // 96: udb.core.authn.services.v1.AdminResetMfaRequest
-	(*AdminResetMfaResponse)(nil),                // 97: udb.core.authn.services.v1.AdminResetMfaResponse
-	(*WebAuthnCredentialSummary)(nil),            // 98: udb.core.authn.services.v1.WebAuthnCredentialSummary
-	(*ListWebAuthnCredentialsRequest)(nil),       // 99: udb.core.authn.services.v1.ListWebAuthnCredentialsRequest
-	(*ListWebAuthnCredentialsResponse)(nil),      // 100: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse
-	(*DeleteWebAuthnCredentialRequest)(nil),      // 101: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest
-	(*DeleteWebAuthnCredentialResponse)(nil),     // 102: udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse
-	(*PutTenantAuthPolicyRequest)(nil),           // 103: udb.core.authn.services.v1.PutTenantAuthPolicyRequest
-	(*PutTenantAuthPolicyResponse)(nil),          // 104: udb.core.authn.services.v1.PutTenantAuthPolicyResponse
-	(*GetTenantAuthPolicyRequest)(nil),           // 105: udb.core.authn.services.v1.GetTenantAuthPolicyRequest
-	(*GetTenantAuthPolicyResponse)(nil),          // 106: udb.core.authn.services.v1.GetTenantAuthPolicyResponse
-	(*SendLoginOtpRequest)(nil),                  // 107: udb.core.authn.services.v1.SendLoginOtpRequest
-	(*SendLoginOtpResponse)(nil),                 // 108: udb.core.authn.services.v1.SendLoginOtpResponse
-	(*LoginWithOtpRequest)(nil),                  // 109: udb.core.authn.services.v1.LoginWithOtpRequest
-	(*LoginWithOtpResponse)(nil),                 // 110: udb.core.authn.services.v1.LoginWithOtpResponse
-	(*StartOidcLoginRequest)(nil),                // 111: udb.core.authn.services.v1.StartOidcLoginRequest
-	(*StartOidcLoginResponse)(nil),               // 112: udb.core.authn.services.v1.StartOidcLoginResponse
-	(*FinishOidcLoginRequest)(nil),               // 113: udb.core.authn.services.v1.FinishOidcLoginRequest
-	(*FinishOidcLoginResponse)(nil),              // 114: udb.core.authn.services.v1.FinishOidcLoginResponse
-	(*LoginWithOidcIdTokenRequest)(nil),          // 115: udb.core.authn.services.v1.LoginWithOidcIdTokenRequest
-	(*LoginWithOidcIdTokenResponse)(nil),         // 116: udb.core.authn.services.v1.LoginWithOidcIdTokenResponse
-	(*InvitationInfo)(nil),                       // 117: udb.core.authn.services.v1.InvitationInfo
-	(*CreateInvitationRequest)(nil),              // 118: udb.core.authn.services.v1.CreateInvitationRequest
-	(*CreateInvitationResponse)(nil),             // 119: udb.core.authn.services.v1.CreateInvitationResponse
-	(*ListInvitationsRequest)(nil),               // 120: udb.core.authn.services.v1.ListInvitationsRequest
-	(*ListInvitationsResponse)(nil),              // 121: udb.core.authn.services.v1.ListInvitationsResponse
-	(*RevokeInvitationRequest)(nil),              // 122: udb.core.authn.services.v1.RevokeInvitationRequest
-	(*RevokeInvitationResponse)(nil),             // 123: udb.core.authn.services.v1.RevokeInvitationResponse
-	(*ResendInvitationRequest)(nil),              // 124: udb.core.authn.services.v1.ResendInvitationRequest
-	(*ResendInvitationResponse)(nil),             // 125: udb.core.authn.services.v1.ResendInvitationResponse
-	(*GetInvitationRequest)(nil),                 // 126: udb.core.authn.services.v1.GetInvitationRequest
-	(*GetInvitationResponse)(nil),                // 127: udb.core.authn.services.v1.GetInvitationResponse
-	(*StartInvitationAcceptanceRequest)(nil),     // 128: udb.core.authn.services.v1.StartInvitationAcceptanceRequest
-	(*StartInvitationAcceptanceResponse)(nil),    // 129: udb.core.authn.services.v1.StartInvitationAcceptanceResponse
-	(*AcceptInvitationRequest)(nil),              // 130: udb.core.authn.services.v1.AcceptInvitationRequest
-	(*AcceptInvitationResponse)(nil),             // 131: udb.core.authn.services.v1.AcceptInvitationResponse
-	(*CheckStepUpRequest)(nil),                   // 132: udb.core.authn.services.v1.CheckStepUpRequest
-	(*CheckStepUpResponse)(nil),                  // 133: udb.core.authn.services.v1.CheckStepUpResponse
-	nil,                                          // 134: udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
-	nil,                                          // 135: udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
-	nil,                                          // 136: udb.core.authn.services.v1.Principal.AttributesEntry
-	nil,                                          // 137: udb.core.authn.services.v1.AuthnRequest.AttributesEntry
-	nil,                                          // 138: udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
-	(*v1.RequestContext)(nil),                    // 139: udb.core.common.v1.RequestContext
-	(v11.AccountKind)(0),                         // 140: udb.core.authn.entity.v1.AccountKind
-	(*v11.User)(nil),                             // 141: udb.core.authn.entity.v1.User
-	(v11.UserStatus)(0),                          // 142: udb.core.authn.entity.v1.UserStatus
-	(*v1.PageRequest)(nil),                       // 143: udb.core.common.v1.PageRequest
-	(*v1.PageResponse)(nil),                      // 144: udb.core.common.v1.PageResponse
-	(*fieldmaskpb.FieldMask)(nil),                // 145: google.protobuf.FieldMask
-	(v11.OTPType)(0),                             // 146: udb.core.authn.entity.v1.OTPType
-	(v11.AuthCredentialType)(0),                  // 147: udb.core.authn.entity.v1.AuthCredentialType
-	(v11.DeviceType)(0),                          // 148: udb.core.authn.entity.v1.DeviceType
-	(*timestamppb.Timestamp)(nil),                // 149: google.protobuf.Timestamp
-	(v11.TokenType)(0),                           // 150: udb.core.authn.entity.v1.TokenType
-	(v11.SessionType)(0),                         // 151: udb.core.authn.entity.v1.SessionType
-	(*v11.Session)(nil),                          // 152: udb.core.authn.entity.v1.Session
-	(v11.AuthFactorKind)(0),                      // 153: udb.core.authn.entity.v1.AuthFactorKind
-	(*v11.Device)(nil),                           // 154: udb.core.authn.entity.v1.Device
-	(v11.MfaChallengePurpose)(0),                 // 155: udb.core.authn.entity.v1.MfaChallengePurpose
-	(*v11.TenantAuthPolicy)(nil),                 // 156: udb.core.authn.entity.v1.TenantAuthPolicy
+	(*SetServiceAccountPasswordRequest)(nil),     // 12: udb.core.authn.services.v1.SetServiceAccountPasswordRequest
+	(*SetServiceAccountPasswordResponse)(nil),    // 13: udb.core.authn.services.v1.SetServiceAccountPasswordResponse
+	(*SendOTPRequest)(nil),                       // 14: udb.core.authn.services.v1.SendOTPRequest
+	(*SendOTPResponse)(nil),                      // 15: udb.core.authn.services.v1.SendOTPResponse
+	(*VerifyOTPRequest)(nil),                     // 16: udb.core.authn.services.v1.VerifyOTPRequest
+	(*VerifyOTPResponse)(nil),                    // 17: udb.core.authn.services.v1.VerifyOTPResponse
+	(*ResendOTPRequest)(nil),                     // 18: udb.core.authn.services.v1.ResendOTPRequest
+	(*ResendOTPResponse)(nil),                    // 19: udb.core.authn.services.v1.ResendOTPResponse
+	(*Principal)(nil),                            // 20: udb.core.authn.services.v1.Principal
+	(*AuthnRequest)(nil),                         // 21: udb.core.authn.services.v1.AuthnRequest
+	(*AuthnResponse)(nil),                        // 22: udb.core.authn.services.v1.AuthnResponse
+	(*LoginRequest)(nil),                         // 23: udb.core.authn.services.v1.LoginRequest
+	(*LoginResponse)(nil),                        // 24: udb.core.authn.services.v1.LoginResponse
+	(*RefreshTokenRequest)(nil),                  // 25: udb.core.authn.services.v1.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),                 // 26: udb.core.authn.services.v1.RefreshTokenResponse
+	(*LogoutRequest)(nil),                        // 27: udb.core.authn.services.v1.LogoutRequest
+	(*LogoutResponse)(nil),                       // 28: udb.core.authn.services.v1.LogoutResponse
+	(*ChangePasswordRequest)(nil),                // 29: udb.core.authn.services.v1.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil),               // 30: udb.core.authn.services.v1.ChangePasswordResponse
+	(*ValidateTokenRequest)(nil),                 // 31: udb.core.authn.services.v1.ValidateTokenRequest
+	(*ValidateTokenResponse)(nil),                // 32: udb.core.authn.services.v1.ValidateTokenResponse
+	(*CreateSessionRequest)(nil),                 // 33: udb.core.authn.services.v1.CreateSessionRequest
+	(*CreateSessionResponse)(nil),                // 34: udb.core.authn.services.v1.CreateSessionResponse
+	(*RefreshSessionRequest)(nil),                // 35: udb.core.authn.services.v1.RefreshSessionRequest
+	(*RefreshSessionResponse)(nil),               // 36: udb.core.authn.services.v1.RefreshSessionResponse
+	(*GetSessionRequest)(nil),                    // 37: udb.core.authn.services.v1.GetSessionRequest
+	(*GetSessionResponse)(nil),                   // 38: udb.core.authn.services.v1.GetSessionResponse
+	(*ListSessionsRequest)(nil),                  // 39: udb.core.authn.services.v1.ListSessionsRequest
+	(*ListSessionsResponse)(nil),                 // 40: udb.core.authn.services.v1.ListSessionsResponse
+	(*RevokeSessionRequest)(nil),                 // 41: udb.core.authn.services.v1.RevokeSessionRequest
+	(*RevokeSessionResponse)(nil),                // 42: udb.core.authn.services.v1.RevokeSessionResponse
+	(*ValidateCSRFRequest)(nil),                  // 43: udb.core.authn.services.v1.ValidateCSRFRequest
+	(*ValidateCSRFResponse)(nil),                 // 44: udb.core.authn.services.v1.ValidateCSRFResponse
+	(*EnrollMFARequest)(nil),                     // 45: udb.core.authn.services.v1.EnrollMFARequest
+	(*EnrollMFAResponse)(nil),                    // 46: udb.core.authn.services.v1.EnrollMFAResponse
+	(*ConfirmMFAEnrollmentRequest)(nil),          // 47: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest
+	(*ConfirmMFAEnrollmentResponse)(nil),         // 48: udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse
+	(*GenerateRecoveryCodesRequest)(nil),         // 49: udb.core.authn.services.v1.GenerateRecoveryCodesRequest
+	(*GenerateRecoveryCodesResponse)(nil),        // 50: udb.core.authn.services.v1.GenerateRecoveryCodesResponse
+	(*PutMfaPolicyRequest)(nil),                  // 51: udb.core.authn.services.v1.PutMfaPolicyRequest
+	(*PutMfaPolicyResponse)(nil),                 // 52: udb.core.authn.services.v1.PutMfaPolicyResponse
+	(*GetMfaPolicyRequest)(nil),                  // 53: udb.core.authn.services.v1.GetMfaPolicyRequest
+	(*GetMfaPolicyResponse)(nil),                 // 54: udb.core.authn.services.v1.GetMfaPolicyResponse
+	(*ForgotPasswordRequest)(nil),                // 55: udb.core.authn.services.v1.ForgotPasswordRequest
+	(*ForgotPasswordResponse)(nil),               // 56: udb.core.authn.services.v1.ForgotPasswordResponse
+	(*ResetPasswordRequest)(nil),                 // 57: udb.core.authn.services.v1.ResetPasswordRequest
+	(*ResetPasswordResponse)(nil),                // 58: udb.core.authn.services.v1.ResetPasswordResponse
+	(*IntrospectTokenRequest)(nil),               // 59: udb.core.authn.services.v1.IntrospectTokenRequest
+	(*IntrospectTokenResponse)(nil),              // 60: udb.core.authn.services.v1.IntrospectTokenResponse
+	(*GetJwksRequest)(nil),                       // 61: udb.core.authn.services.v1.GetJwksRequest
+	(*GetJwksResponse)(nil),                      // 62: udb.core.authn.services.v1.GetJwksResponse
+	(*SendPhoneVerificationRequest)(nil),         // 63: udb.core.authn.services.v1.SendPhoneVerificationRequest
+	(*SendPhoneVerificationResponse)(nil),        // 64: udb.core.authn.services.v1.SendPhoneVerificationResponse
+	(*StartWebAuthnRegistrationRequest)(nil),     // 65: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest
+	(*StartWebAuthnRegistrationResponse)(nil),    // 66: udb.core.authn.services.v1.StartWebAuthnRegistrationResponse
+	(*FinishWebAuthnRegistrationRequest)(nil),    // 67: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest
+	(*FinishWebAuthnRegistrationResponse)(nil),   // 68: udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse
+	(*StartWebAuthnAuthenticationRequest)(nil),   // 69: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest
+	(*StartWebAuthnAuthenticationResponse)(nil),  // 70: udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse
+	(*FinishWebAuthnAuthenticationRequest)(nil),  // 71: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest
+	(*FinishWebAuthnAuthenticationResponse)(nil), // 72: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse
+	(*ListDevicesRequest)(nil),                   // 73: udb.core.authn.services.v1.ListDevicesRequest
+	(*ListDevicesResponse)(nil),                  // 74: udb.core.authn.services.v1.ListDevicesResponse
+	(*RevokeDeviceRequest)(nil),                  // 75: udb.core.authn.services.v1.RevokeDeviceRequest
+	(*RevokeDeviceResponse)(nil),                 // 76: udb.core.authn.services.v1.RevokeDeviceResponse
+	(*AdminRevokeSessionRequest)(nil),            // 77: udb.core.authn.services.v1.AdminRevokeSessionRequest
+	(*AdminRevokeSessionResponse)(nil),           // 78: udb.core.authn.services.v1.AdminRevokeSessionResponse
+	(*AdminRevokeAllUserSessionsRequest)(nil),    // 79: udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest
+	(*AdminRevokeAllUserSessionsResponse)(nil),   // 80: udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse
+	(*AdminRevokeAllTenantSessionsRequest)(nil),  // 81: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest
+	(*AdminRevokeAllTenantSessionsResponse)(nil), // 82: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse
+	(*EmergencyRevokeRequest)(nil),               // 83: udb.core.authn.services.v1.EmergencyRevokeRequest
+	(*EmergencyRevokeResponse)(nil),              // 84: udb.core.authn.services.v1.EmergencyRevokeResponse
+	(*IssueMfaChallengeRequest)(nil),             // 85: udb.core.authn.services.v1.IssueMfaChallengeRequest
+	(*IssueMfaChallengeResponse)(nil),            // 86: udb.core.authn.services.v1.IssueMfaChallengeResponse
+	(*VerifyMfaChallengeRequest)(nil),            // 87: udb.core.authn.services.v1.VerifyMfaChallengeRequest
+	(*VerifyMfaChallengeResponse)(nil),           // 88: udb.core.authn.services.v1.VerifyMfaChallengeResponse
+	(*MfaFactorSummary)(nil),                     // 89: udb.core.authn.services.v1.MfaFactorSummary
+	(*ListMfaFactorsRequest)(nil),                // 90: udb.core.authn.services.v1.ListMfaFactorsRequest
+	(*ListMfaFactorsResponse)(nil),               // 91: udb.core.authn.services.v1.ListMfaFactorsResponse
+	(*DisableMfaFactorRequest)(nil),              // 92: udb.core.authn.services.v1.DisableMfaFactorRequest
+	(*DisableMfaFactorResponse)(nil),             // 93: udb.core.authn.services.v1.DisableMfaFactorResponse
+	(*RenamePasskeyRequest)(nil),                 // 94: udb.core.authn.services.v1.RenamePasskeyRequest
+	(*RenamePasskeyResponse)(nil),                // 95: udb.core.authn.services.v1.RenamePasskeyResponse
+	(*RevokeRecoveryCodesRequest)(nil),           // 96: udb.core.authn.services.v1.RevokeRecoveryCodesRequest
+	(*RevokeRecoveryCodesResponse)(nil),          // 97: udb.core.authn.services.v1.RevokeRecoveryCodesResponse
+	(*AdminResetMfaRequest)(nil),                 // 98: udb.core.authn.services.v1.AdminResetMfaRequest
+	(*AdminResetMfaResponse)(nil),                // 99: udb.core.authn.services.v1.AdminResetMfaResponse
+	(*WebAuthnCredentialSummary)(nil),            // 100: udb.core.authn.services.v1.WebAuthnCredentialSummary
+	(*ListWebAuthnCredentialsRequest)(nil),       // 101: udb.core.authn.services.v1.ListWebAuthnCredentialsRequest
+	(*ListWebAuthnCredentialsResponse)(nil),      // 102: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse
+	(*DeleteWebAuthnCredentialRequest)(nil),      // 103: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest
+	(*DeleteWebAuthnCredentialResponse)(nil),     // 104: udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse
+	(*PutTenantAuthPolicyRequest)(nil),           // 105: udb.core.authn.services.v1.PutTenantAuthPolicyRequest
+	(*PutTenantAuthPolicyResponse)(nil),          // 106: udb.core.authn.services.v1.PutTenantAuthPolicyResponse
+	(*GetTenantAuthPolicyRequest)(nil),           // 107: udb.core.authn.services.v1.GetTenantAuthPolicyRequest
+	(*GetTenantAuthPolicyResponse)(nil),          // 108: udb.core.authn.services.v1.GetTenantAuthPolicyResponse
+	(*SendLoginOtpRequest)(nil),                  // 109: udb.core.authn.services.v1.SendLoginOtpRequest
+	(*SendLoginOtpResponse)(nil),                 // 110: udb.core.authn.services.v1.SendLoginOtpResponse
+	(*LoginWithOtpRequest)(nil),                  // 111: udb.core.authn.services.v1.LoginWithOtpRequest
+	(*LoginWithOtpResponse)(nil),                 // 112: udb.core.authn.services.v1.LoginWithOtpResponse
+	(*StartOidcLoginRequest)(nil),                // 113: udb.core.authn.services.v1.StartOidcLoginRequest
+	(*StartOidcLoginResponse)(nil),               // 114: udb.core.authn.services.v1.StartOidcLoginResponse
+	(*FinishOidcLoginRequest)(nil),               // 115: udb.core.authn.services.v1.FinishOidcLoginRequest
+	(*FinishOidcLoginResponse)(nil),              // 116: udb.core.authn.services.v1.FinishOidcLoginResponse
+	(*LoginWithOidcIdTokenRequest)(nil),          // 117: udb.core.authn.services.v1.LoginWithOidcIdTokenRequest
+	(*LoginWithOidcIdTokenResponse)(nil),         // 118: udb.core.authn.services.v1.LoginWithOidcIdTokenResponse
+	(*InvitationInfo)(nil),                       // 119: udb.core.authn.services.v1.InvitationInfo
+	(*CreateInvitationRequest)(nil),              // 120: udb.core.authn.services.v1.CreateInvitationRequest
+	(*CreateInvitationResponse)(nil),             // 121: udb.core.authn.services.v1.CreateInvitationResponse
+	(*ListInvitationsRequest)(nil),               // 122: udb.core.authn.services.v1.ListInvitationsRequest
+	(*ListInvitationsResponse)(nil),              // 123: udb.core.authn.services.v1.ListInvitationsResponse
+	(*RevokeInvitationRequest)(nil),              // 124: udb.core.authn.services.v1.RevokeInvitationRequest
+	(*RevokeInvitationResponse)(nil),             // 125: udb.core.authn.services.v1.RevokeInvitationResponse
+	(*ResendInvitationRequest)(nil),              // 126: udb.core.authn.services.v1.ResendInvitationRequest
+	(*ResendInvitationResponse)(nil),             // 127: udb.core.authn.services.v1.ResendInvitationResponse
+	(*GetInvitationRequest)(nil),                 // 128: udb.core.authn.services.v1.GetInvitationRequest
+	(*GetInvitationResponse)(nil),                // 129: udb.core.authn.services.v1.GetInvitationResponse
+	(*StartInvitationAcceptanceRequest)(nil),     // 130: udb.core.authn.services.v1.StartInvitationAcceptanceRequest
+	(*StartInvitationAcceptanceResponse)(nil),    // 131: udb.core.authn.services.v1.StartInvitationAcceptanceResponse
+	(*AcceptInvitationRequest)(nil),              // 132: udb.core.authn.services.v1.AcceptInvitationRequest
+	(*AcceptInvitationResponse)(nil),             // 133: udb.core.authn.services.v1.AcceptInvitationResponse
+	(*CheckStepUpRequest)(nil),                   // 134: udb.core.authn.services.v1.CheckStepUpRequest
+	(*CheckStepUpResponse)(nil),                  // 135: udb.core.authn.services.v1.CheckStepUpResponse
+	nil,                                          // 136: udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
+	nil,                                          // 137: udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
+	nil,                                          // 138: udb.core.authn.services.v1.Principal.AttributesEntry
+	nil,                                          // 139: udb.core.authn.services.v1.AuthnRequest.AttributesEntry
+	nil,                                          // 140: udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
+	(*v1.RequestContext)(nil),                    // 141: udb.core.common.v1.RequestContext
+	(v11.AccountKind)(0),                         // 142: udb.core.authn.entity.v1.AccountKind
+	(*v11.User)(nil),                             // 143: udb.core.authn.entity.v1.User
+	(v11.UserStatus)(0),                          // 144: udb.core.authn.entity.v1.UserStatus
+	(*v1.PageRequest)(nil),                       // 145: udb.core.common.v1.PageRequest
+	(*v1.PageResponse)(nil),                      // 146: udb.core.common.v1.PageResponse
+	(*fieldmaskpb.FieldMask)(nil),                // 147: google.protobuf.FieldMask
+	(*timestamppb.Timestamp)(nil),                // 148: google.protobuf.Timestamp
+	(v11.OTPType)(0),                             // 149: udb.core.authn.entity.v1.OTPType
+	(v11.AuthCredentialType)(0),                  // 150: udb.core.authn.entity.v1.AuthCredentialType
+	(v11.DeviceType)(0),                          // 151: udb.core.authn.entity.v1.DeviceType
+	(v11.TokenType)(0),                           // 152: udb.core.authn.entity.v1.TokenType
+	(v11.SessionType)(0),                         // 153: udb.core.authn.entity.v1.SessionType
+	(*v11.Session)(nil),                          // 154: udb.core.authn.entity.v1.Session
+	(v11.AuthFactorKind)(0),                      // 155: udb.core.authn.entity.v1.AuthFactorKind
+	(*v11.Device)(nil),                           // 156: udb.core.authn.entity.v1.Device
+	(v11.MfaChallengePurpose)(0),                 // 157: udb.core.authn.entity.v1.MfaChallengePurpose
+	(*v11.TenantAuthPolicy)(nil),                 // 158: udb.core.authn.entity.v1.TenantAuthPolicy
 }
 var file_udb_core_authn_services_v1_core_proto_depIdxs = []int32{
-	139, // 0: udb.core.authn.services.v1.CreateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
-	140, // 1: udb.core.authn.services.v1.CreateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	134, // 2: udb.core.authn.services.v1.CreateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
-	141, // 3: udb.core.authn.services.v1.CreateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	141, // 4: udb.core.authn.services.v1.GetUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	140, // 5: udb.core.authn.services.v1.ListUsersRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	142, // 6: udb.core.authn.services.v1.ListUsersRequest.status:type_name -> udb.core.authn.entity.v1.UserStatus
-	143, // 7: udb.core.authn.services.v1.ListUsersRequest.page:type_name -> udb.core.common.v1.PageRequest
-	141, // 8: udb.core.authn.services.v1.ListUsersResponse.users:type_name -> udb.core.authn.entity.v1.User
-	144, // 9: udb.core.authn.services.v1.ListUsersResponse.page:type_name -> udb.core.common.v1.PageResponse
-	139, // 10: udb.core.authn.services.v1.UpdateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
-	140, // 11: udb.core.authn.services.v1.UpdateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	135, // 12: udb.core.authn.services.v1.UpdateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
-	145, // 13: udb.core.authn.services.v1.UpdateUserRequest.update_mask:type_name -> google.protobuf.FieldMask
-	141, // 14: udb.core.authn.services.v1.UpdateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	142, // 15: udb.core.authn.services.v1.ChangeUserStatusRequest.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
-	139, // 16: udb.core.authn.services.v1.ChangeUserStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
-	141, // 17: udb.core.authn.services.v1.ChangeUserStatusResponse.user:type_name -> udb.core.authn.entity.v1.User
-	139, // 18: udb.core.authn.services.v1.AdminResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	146, // 19: udb.core.authn.services.v1.SendOTPRequest.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
-	139, // 20: udb.core.authn.services.v1.SendOTPRequest.context:type_name -> udb.core.common.v1.RequestContext
-	146, // 21: udb.core.authn.services.v1.VerifyOTPResponse.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
-	140, // 22: udb.core.authn.services.v1.Principal.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	136, // 23: udb.core.authn.services.v1.Principal.attributes:type_name -> udb.core.authn.services.v1.Principal.AttributesEntry
-	137, // 24: udb.core.authn.services.v1.AuthnRequest.attributes:type_name -> udb.core.authn.services.v1.AuthnRequest.AttributesEntry
-	147, // 25: udb.core.authn.services.v1.AuthnRequest.credential_type:type_name -> udb.core.authn.entity.v1.AuthCredentialType
-	18,  // 26: udb.core.authn.services.v1.AuthnResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	148, // 27: udb.core.authn.services.v1.LoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
-	139, // 28: udb.core.authn.services.v1.LogoutRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 29: udb.core.authn.services.v1.ChangePasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	149, // 30: udb.core.authn.services.v1.ChangePasswordResponse.changed_at:type_name -> google.protobuf.Timestamp
-	150, // 31: udb.core.authn.services.v1.ValidateTokenRequest.token_type:type_name -> udb.core.authn.entity.v1.TokenType
-	140, // 32: udb.core.authn.services.v1.ValidateTokenResponse.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	149, // 33: udb.core.authn.services.v1.ValidateTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
-	151, // 34: udb.core.authn.services.v1.ValidateTokenResponse.session_type:type_name -> udb.core.authn.entity.v1.SessionType
-	18,  // 35: udb.core.authn.services.v1.ValidateTokenResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	138, // 36: udb.core.authn.services.v1.ValidateTokenResponse.attributes:type_name -> udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
-	18,  // 37: udb.core.authn.services.v1.CreateSessionRequest.principal:type_name -> udb.core.authn.services.v1.Principal
-	152, // 38: udb.core.authn.services.v1.GetSessionResponse.session:type_name -> udb.core.authn.entity.v1.Session
-	143, // 39: udb.core.authn.services.v1.ListSessionsRequest.page:type_name -> udb.core.common.v1.PageRequest
-	152, // 40: udb.core.authn.services.v1.ListSessionsResponse.sessions:type_name -> udb.core.authn.entity.v1.Session
-	144, // 41: udb.core.authn.services.v1.ListSessionsResponse.page:type_name -> udb.core.common.v1.PageResponse
-	139, // 42: udb.core.authn.services.v1.RevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
-	149, // 43: udb.core.authn.services.v1.RevokeSessionResponse.revoked_at:type_name -> google.protobuf.Timestamp
-	153, // 44: udb.core.authn.services.v1.EnrollMFARequest.mfa_type:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	139, // 45: udb.core.authn.services.v1.EnrollMFARequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 46: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 47: udb.core.authn.services.v1.GenerateRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 48: udb.core.authn.services.v1.PutMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 49: udb.core.authn.services.v1.GetMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 50: udb.core.authn.services.v1.ForgotPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 51: udb.core.authn.services.v1.ResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 52: udb.core.authn.services.v1.IntrospectTokenRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 53: udb.core.authn.services.v1.GetJwksRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 54: udb.core.authn.services.v1.SendPhoneVerificationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 55: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 56: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 57: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 58: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	18,  // 59: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	143, // 60: udb.core.authn.services.v1.ListDevicesRequest.page:type_name -> udb.core.common.v1.PageRequest
-	139, // 61: udb.core.authn.services.v1.ListDevicesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	154, // 62: udb.core.authn.services.v1.ListDevicesResponse.devices:type_name -> udb.core.authn.entity.v1.Device
-	144, // 63: udb.core.authn.services.v1.ListDevicesResponse.page:type_name -> udb.core.common.v1.PageResponse
-	139, // 64: udb.core.authn.services.v1.RevokeDeviceRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 65: udb.core.authn.services.v1.AdminRevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 66: udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 67: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 68: udb.core.authn.services.v1.EmergencyRevokeRequest.context:type_name -> udb.core.common.v1.RequestContext
-	153, // 69: udb.core.authn.services.v1.IssueMfaChallengeRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	155, // 70: udb.core.authn.services.v1.IssueMfaChallengeRequest.purpose:type_name -> udb.core.authn.entity.v1.MfaChallengePurpose
-	139, // 71: udb.core.authn.services.v1.IssueMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
-	153, // 72: udb.core.authn.services.v1.IssueMfaChallengeResponse.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	139, // 73: udb.core.authn.services.v1.VerifyMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
-	153, // 74: udb.core.authn.services.v1.MfaFactorSummary.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	139, // 75: udb.core.authn.services.v1.ListMfaFactorsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	87,  // 76: udb.core.authn.services.v1.ListMfaFactorsResponse.factors:type_name -> udb.core.authn.services.v1.MfaFactorSummary
-	153, // 77: udb.core.authn.services.v1.DisableMfaFactorRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	139, // 78: udb.core.authn.services.v1.DisableMfaFactorRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 79: udb.core.authn.services.v1.RenamePasskeyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 80: udb.core.authn.services.v1.RevokeRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 81: udb.core.authn.services.v1.AdminResetMfaRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 82: udb.core.authn.services.v1.ListWebAuthnCredentialsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	98,  // 83: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse.credentials:type_name -> udb.core.authn.services.v1.WebAuthnCredentialSummary
-	139, // 84: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest.context:type_name -> udb.core.common.v1.RequestContext
-	139, // 85: udb.core.authn.services.v1.PutTenantAuthPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	156, // 86: udb.core.authn.services.v1.PutTenantAuthPolicyResponse.policy:type_name -> udb.core.authn.entity.v1.TenantAuthPolicy
-	139, // 87: udb.core.authn.services.v1.GetTenantAuthPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	156, // 88: udb.core.authn.services.v1.GetTenantAuthPolicyResponse.policy:type_name -> udb.core.authn.entity.v1.TenantAuthPolicy
-	139, // 89: udb.core.authn.services.v1.SendLoginOtpRequest.context:type_name -> udb.core.common.v1.RequestContext
-	148, // 90: udb.core.authn.services.v1.LoginWithOtpRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
-	148, // 91: udb.core.authn.services.v1.FinishOidcLoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
-	148, // 92: udb.core.authn.services.v1.LoginWithOidcIdTokenRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
-	149, // 93: udb.core.authn.services.v1.InvitationInfo.expires_at:type_name -> google.protobuf.Timestamp
-	149, // 94: udb.core.authn.services.v1.InvitationInfo.accepted_at:type_name -> google.protobuf.Timestamp
-	149, // 95: udb.core.authn.services.v1.InvitationInfo.last_sent_at:type_name -> google.protobuf.Timestamp
-	149, // 96: udb.core.authn.services.v1.InvitationInfo.created_at:type_name -> google.protobuf.Timestamp
-	149, // 97: udb.core.authn.services.v1.InvitationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	117, // 98: udb.core.authn.services.v1.CreateInvitationResponse.invitation:type_name -> udb.core.authn.services.v1.InvitationInfo
-	117, // 99: udb.core.authn.services.v1.ListInvitationsResponse.invitations:type_name -> udb.core.authn.services.v1.InvitationInfo
-	117, // 100: udb.core.authn.services.v1.RevokeInvitationResponse.invitation:type_name -> udb.core.authn.services.v1.InvitationInfo
-	117, // 101: udb.core.authn.services.v1.ResendInvitationResponse.invitation:type_name -> udb.core.authn.services.v1.InvitationInfo
-	149, // 102: udb.core.authn.services.v1.GetInvitationResponse.expires_at:type_name -> google.protobuf.Timestamp
-	139, // 103: udb.core.authn.services.v1.CheckStepUpRequest.context:type_name -> udb.core.common.v1.RequestContext
-	153, // 104: udb.core.authn.services.v1.CheckStepUpResponse.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	105, // [105:105] is the sub-list for method output_type
-	105, // [105:105] is the sub-list for method input_type
-	105, // [105:105] is the sub-list for extension type_name
-	105, // [105:105] is the sub-list for extension extendee
-	0,   // [0:105] is the sub-list for field type_name
+	141, // 0: udb.core.authn.services.v1.CreateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
+	142, // 1: udb.core.authn.services.v1.CreateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	136, // 2: udb.core.authn.services.v1.CreateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
+	143, // 3: udb.core.authn.services.v1.CreateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	143, // 4: udb.core.authn.services.v1.GetUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	142, // 5: udb.core.authn.services.v1.ListUsersRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	144, // 6: udb.core.authn.services.v1.ListUsersRequest.status:type_name -> udb.core.authn.entity.v1.UserStatus
+	145, // 7: udb.core.authn.services.v1.ListUsersRequest.page:type_name -> udb.core.common.v1.PageRequest
+	143, // 8: udb.core.authn.services.v1.ListUsersResponse.users:type_name -> udb.core.authn.entity.v1.User
+	146, // 9: udb.core.authn.services.v1.ListUsersResponse.page:type_name -> udb.core.common.v1.PageResponse
+	141, // 10: udb.core.authn.services.v1.UpdateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
+	142, // 11: udb.core.authn.services.v1.UpdateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	137, // 12: udb.core.authn.services.v1.UpdateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
+	147, // 13: udb.core.authn.services.v1.UpdateUserRequest.update_mask:type_name -> google.protobuf.FieldMask
+	143, // 14: udb.core.authn.services.v1.UpdateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	144, // 15: udb.core.authn.services.v1.ChangeUserStatusRequest.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
+	141, // 16: udb.core.authn.services.v1.ChangeUserStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
+	143, // 17: udb.core.authn.services.v1.ChangeUserStatusResponse.user:type_name -> udb.core.authn.entity.v1.User
+	141, // 18: udb.core.authn.services.v1.AdminResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	148, // 19: udb.core.authn.services.v1.SetServiceAccountPasswordResponse.changed_at:type_name -> google.protobuf.Timestamp
+	149, // 20: udb.core.authn.services.v1.SendOTPRequest.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
+	141, // 21: udb.core.authn.services.v1.SendOTPRequest.context:type_name -> udb.core.common.v1.RequestContext
+	149, // 22: udb.core.authn.services.v1.VerifyOTPResponse.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
+	142, // 23: udb.core.authn.services.v1.Principal.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	138, // 24: udb.core.authn.services.v1.Principal.attributes:type_name -> udb.core.authn.services.v1.Principal.AttributesEntry
+	139, // 25: udb.core.authn.services.v1.AuthnRequest.attributes:type_name -> udb.core.authn.services.v1.AuthnRequest.AttributesEntry
+	150, // 26: udb.core.authn.services.v1.AuthnRequest.credential_type:type_name -> udb.core.authn.entity.v1.AuthCredentialType
+	20,  // 27: udb.core.authn.services.v1.AuthnResponse.principal:type_name -> udb.core.authn.services.v1.Principal
+	151, // 28: udb.core.authn.services.v1.LoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	141, // 29: udb.core.authn.services.v1.LogoutRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 30: udb.core.authn.services.v1.ChangePasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	148, // 31: udb.core.authn.services.v1.ChangePasswordResponse.changed_at:type_name -> google.protobuf.Timestamp
+	152, // 32: udb.core.authn.services.v1.ValidateTokenRequest.token_type:type_name -> udb.core.authn.entity.v1.TokenType
+	142, // 33: udb.core.authn.services.v1.ValidateTokenResponse.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	148, // 34: udb.core.authn.services.v1.ValidateTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
+	153, // 35: udb.core.authn.services.v1.ValidateTokenResponse.session_type:type_name -> udb.core.authn.entity.v1.SessionType
+	20,  // 36: udb.core.authn.services.v1.ValidateTokenResponse.principal:type_name -> udb.core.authn.services.v1.Principal
+	140, // 37: udb.core.authn.services.v1.ValidateTokenResponse.attributes:type_name -> udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
+	20,  // 38: udb.core.authn.services.v1.CreateSessionRequest.principal:type_name -> udb.core.authn.services.v1.Principal
+	154, // 39: udb.core.authn.services.v1.GetSessionResponse.session:type_name -> udb.core.authn.entity.v1.Session
+	145, // 40: udb.core.authn.services.v1.ListSessionsRequest.page:type_name -> udb.core.common.v1.PageRequest
+	154, // 41: udb.core.authn.services.v1.ListSessionsResponse.sessions:type_name -> udb.core.authn.entity.v1.Session
+	146, // 42: udb.core.authn.services.v1.ListSessionsResponse.page:type_name -> udb.core.common.v1.PageResponse
+	141, // 43: udb.core.authn.services.v1.RevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
+	148, // 44: udb.core.authn.services.v1.RevokeSessionResponse.revoked_at:type_name -> google.protobuf.Timestamp
+	155, // 45: udb.core.authn.services.v1.EnrollMFARequest.mfa_type:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	141, // 46: udb.core.authn.services.v1.EnrollMFARequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 47: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 48: udb.core.authn.services.v1.GenerateRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 49: udb.core.authn.services.v1.PutMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 50: udb.core.authn.services.v1.GetMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 51: udb.core.authn.services.v1.ForgotPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 52: udb.core.authn.services.v1.ResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 53: udb.core.authn.services.v1.IntrospectTokenRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 54: udb.core.authn.services.v1.GetJwksRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 55: udb.core.authn.services.v1.SendPhoneVerificationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 56: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 57: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 58: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 59: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	20,  // 60: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse.principal:type_name -> udb.core.authn.services.v1.Principal
+	145, // 61: udb.core.authn.services.v1.ListDevicesRequest.page:type_name -> udb.core.common.v1.PageRequest
+	141, // 62: udb.core.authn.services.v1.ListDevicesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	156, // 63: udb.core.authn.services.v1.ListDevicesResponse.devices:type_name -> udb.core.authn.entity.v1.Device
+	146, // 64: udb.core.authn.services.v1.ListDevicesResponse.page:type_name -> udb.core.common.v1.PageResponse
+	141, // 65: udb.core.authn.services.v1.RevokeDeviceRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 66: udb.core.authn.services.v1.AdminRevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 67: udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 68: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 69: udb.core.authn.services.v1.EmergencyRevokeRequest.context:type_name -> udb.core.common.v1.RequestContext
+	155, // 70: udb.core.authn.services.v1.IssueMfaChallengeRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	157, // 71: udb.core.authn.services.v1.IssueMfaChallengeRequest.purpose:type_name -> udb.core.authn.entity.v1.MfaChallengePurpose
+	141, // 72: udb.core.authn.services.v1.IssueMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
+	155, // 73: udb.core.authn.services.v1.IssueMfaChallengeResponse.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	141, // 74: udb.core.authn.services.v1.VerifyMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
+	155, // 75: udb.core.authn.services.v1.MfaFactorSummary.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	141, // 76: udb.core.authn.services.v1.ListMfaFactorsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	89,  // 77: udb.core.authn.services.v1.ListMfaFactorsResponse.factors:type_name -> udb.core.authn.services.v1.MfaFactorSummary
+	155, // 78: udb.core.authn.services.v1.DisableMfaFactorRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	141, // 79: udb.core.authn.services.v1.DisableMfaFactorRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 80: udb.core.authn.services.v1.RenamePasskeyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 81: udb.core.authn.services.v1.RevokeRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 82: udb.core.authn.services.v1.AdminResetMfaRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 83: udb.core.authn.services.v1.ListWebAuthnCredentialsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	100, // 84: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse.credentials:type_name -> udb.core.authn.services.v1.WebAuthnCredentialSummary
+	141, // 85: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 86: udb.core.authn.services.v1.PutTenantAuthPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	158, // 87: udb.core.authn.services.v1.PutTenantAuthPolicyResponse.policy:type_name -> udb.core.authn.entity.v1.TenantAuthPolicy
+	141, // 88: udb.core.authn.services.v1.GetTenantAuthPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	158, // 89: udb.core.authn.services.v1.GetTenantAuthPolicyResponse.policy:type_name -> udb.core.authn.entity.v1.TenantAuthPolicy
+	141, // 90: udb.core.authn.services.v1.SendLoginOtpRequest.context:type_name -> udb.core.common.v1.RequestContext
+	151, // 91: udb.core.authn.services.v1.LoginWithOtpRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	151, // 92: udb.core.authn.services.v1.FinishOidcLoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	151, // 93: udb.core.authn.services.v1.LoginWithOidcIdTokenRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	148, // 94: udb.core.authn.services.v1.InvitationInfo.expires_at:type_name -> google.protobuf.Timestamp
+	148, // 95: udb.core.authn.services.v1.InvitationInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	148, // 96: udb.core.authn.services.v1.InvitationInfo.last_sent_at:type_name -> google.protobuf.Timestamp
+	148, // 97: udb.core.authn.services.v1.InvitationInfo.created_at:type_name -> google.protobuf.Timestamp
+	148, // 98: udb.core.authn.services.v1.InvitationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	119, // 99: udb.core.authn.services.v1.CreateInvitationResponse.invitation:type_name -> udb.core.authn.services.v1.InvitationInfo
+	119, // 100: udb.core.authn.services.v1.ListInvitationsResponse.invitations:type_name -> udb.core.authn.services.v1.InvitationInfo
+	119, // 101: udb.core.authn.services.v1.RevokeInvitationResponse.invitation:type_name -> udb.core.authn.services.v1.InvitationInfo
+	119, // 102: udb.core.authn.services.v1.ResendInvitationResponse.invitation:type_name -> udb.core.authn.services.v1.InvitationInfo
+	148, // 103: udb.core.authn.services.v1.GetInvitationResponse.expires_at:type_name -> google.protobuf.Timestamp
+	141, // 104: udb.core.authn.services.v1.CheckStepUpRequest.context:type_name -> udb.core.common.v1.RequestContext
+	155, // 105: udb.core.authn.services.v1.CheckStepUpResponse.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	106, // [106:106] is the sub-list for method output_type
+	106, // [106:106] is the sub-list for method input_type
+	106, // [106:106] is the sub-list for extension type_name
+	106, // [106:106] is the sub-list for extension extendee
+	0,   // [0:106] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_authn_services_v1_core_proto_init() }
@@ -11003,14 +11148,14 @@ func file_udb_core_authn_services_v1_core_proto_init() {
 	if File_udb_core_authn_services_v1_core_proto != nil {
 		return
 	}
-	file_udb_core_authn_services_v1_core_proto_msgTypes[103].OneofWrappers = []any{}
+	file_udb_core_authn_services_v1_core_proto_msgTypes[105].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_authn_services_v1_core_proto_rawDesc), len(file_udb_core_authn_services_v1_core_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   139,
+			NumMessages:   141,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

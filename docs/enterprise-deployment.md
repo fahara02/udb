@@ -170,8 +170,10 @@ automatically.
 
 ## 3. The auth control plane is on a separate (loopback-default) listener
 
-The Authn / Authz / ApiKey / IdP / ControlPlane services are **not** served on the
-public DataBroker port (`:50051`). They bind a separate internal listener at
+Every native service — Authn, Authz, ApiKey, IdP, ControlPlane, Storage, Vault,
+Messaging, Cache and the rest (the full list is
+[docs/generated/native-services.md](generated/native-services.md)) — is **not**
+served on the public DataBroker port (`:50051`). They bind a separate internal listener at
 `control_plane_addr`, which **defaults to loopback `127.0.0.1:(public_port+10)`**
 (i.e. `127.0.0.1:50061`).
 
@@ -180,8 +182,9 @@ Symptoms when it's not exposed:
   aren't mounted there).
 - against `:50061` from another host/container → `ECONNREFUSED` (loopback only).
 
-Fix: `UDB_AUTH_GRPC_ADDR=0.0.0.0:50061` (bind on a trusted interface only). This
-is a deliberate security default — keep the auth plane off the public internet.
+Fix: `UDB_AUTH_GRPC_ADDR=<internal-ip>:50061` (bind on a trusted interface only),
+and set the SDK's `authTarget` / `auth_target` / `AuthTarget` to it. This is a
+deliberate security default — keep the auth plane off the public internet.
 
 ---
 
@@ -231,6 +234,16 @@ native `PERMISSION_DENIED` is a missing token scope, not a missing policy row.
   users AND service accounts). Equivalent at runtime: `AuthzService.CreatePolicyRule`/
   `PutAuthzPolicy` (effective immediately). `udb authz seed` and `udb policy-seed`
   were removed in 0.6.0.
+
+- **Tenants do not inherit policies.** A rule matches its exact tenant domain, or
+  every tenant when its tenant is `*`. A parent tenant's rules do not apply inside
+  its child tenants: apply the policy file to each tenant. A service account
+  reaches another tenant only through an approved membership and
+  `ExchangeServiceTokenForTenant` ([service-accounts.md](service-accounts.md)).
+- **Roles add token scopes only when they declare them.** A person bound to a role
+  carries that role's `token_scopes` (inside the role's own tenant and project);
+  a role without `token_scopes` adds none. Service-account scopes come from the
+  grant, never from roles.
 
 For dev/bootstrap: `UDB_ABAC_DEFAULT_ALLOW=true` (only while `policy_rules` is
 empty). For production: seed real least-privilege `policy_rules` and leave

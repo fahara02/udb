@@ -156,7 +156,7 @@ var phase3Authn = map[string]bool{
 	"AdminRevokeAllUserSessions": true, "AdminRevokeAllTenantSessions": true, "EmergencyRevoke": true,
 	"ChangePassword": true, "ResetPassword": true, "AdminResetPassword": true, "ChangeUserStatus": true,
 	"AdminResetMfa": true, "RevokeRecoveryCodes": true, "RevokeDevice": true,
-	"DeleteWebAuthnCredential": true, "DisableMfaFactor": true,
+	"DeleteWebAuthnCredential": true, "DisableMfaFactor": true, "SetServiceAccountPassword": true,
 }
 
 var finalEphemeralCleanupRPCs = map[string]bool{

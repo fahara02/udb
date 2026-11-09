@@ -53,6 +53,35 @@ final class UdbRpcException extends UdbException
     }
 
     /**
+     * The broker-requested delay before a retry (ErrorDetail.retry_after_ms),
+     * in milliseconds, or 0 when none was sent or no detail was decoded.
+     * Pair with {@see isRetryable()}.
+     */
+    public function retryAfterMs(): int
+    {
+        return self::retryAfterMsOf($this->errorDetail);
+    }
+
+    /**
+     * The broker-requested retry delay carried by a gRPC status's
+     * `udb-error-detail-bin` trailer, in milliseconds, or 0 when none. Used by
+     * the SDK retry loops to honour the broker's delay.
+     */
+    public static function retryAfterMsFromStatus(mixed $status): int
+    {
+        return self::retryAfterMsOf(self::decodeErrorDetail($status));
+    }
+
+    private static function retryAfterMsOf(?object $detail): int
+    {
+        if ($detail === null || ! method_exists($detail, 'getRetryAfterMs')) {
+            return 0;
+        }
+
+        return max(0, (int) $detail->getRetryAfterMs());
+    }
+
+    /**
      * The decoded {@see \Udb\Entity\V1\ErrorKind} enum name (e.g.
      * "ERROR_KIND_CAPABILITY"), or '' when no detail was decoded.
      */

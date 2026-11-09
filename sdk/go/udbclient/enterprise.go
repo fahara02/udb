@@ -67,6 +67,9 @@ type EnterpriseSession struct {
 	// locally instead of sending a dead credential.
 	lastRefreshErr error
 	poisoned       bool
+	// refreshFailures counts consecutive failed background renewals (guarded by
+	// mu); it drives the loop's jittered exponential backoff.
+	refreshFailures int
 
 	// stopRefresh stops the background bearer refresher; closed once by Close.
 	stopRefresh chan struct{}
@@ -270,8 +273,21 @@ func (s *EnterpriseSession) startRefreshLoop() {
 // nextRefreshWait returns how long to sleep before the next refresh attempt: just
 // before (expiry - RefreshSkew). Only an already-due attempt is floored so failed
 // refreshes never busy-loop; a healthy short-lived token keeps its actual
-// boundary. Tokens without expiry use a fixed idle cadence.
+// boundary. Tokens without expiry use a fixed idle cadence. After consecutive
+// failed renewals the wait is at least a jittered exponential backoff (1s
+// doubling to 60s), so a broker outage is not retried in lockstep every second.
 func (s *EnterpriseSession) nextRefreshWait() time.Duration {
+	s.mu.Lock()
+	failures := s.refreshFailures
+	s.mu.Unlock()
+	d := s.scheduledRefreshWait()
+	if failures > 0 {
+		d = max(d, jitteredBackoff(failures, bgRefreshMin, renewalBackoffCap))
+	}
+	return d
+}
+
+func (s *EnterpriseSession) scheduledRefreshWait() time.Duration {
 	tok, err := s.tm.store.Load(context.Background())
 	if err != nil {
 		return bgRefreshRetry
@@ -303,6 +319,13 @@ func (s *EnterpriseSession) backgroundRefresh() {
 	if refErr == nil {
 		refErr = s.publishBearer(ctx)
 	}
+	s.mu.Lock()
+	if refErr != nil {
+		s.refreshFailures++
+	} else {
+		s.refreshFailures = 0
+	}
+	s.mu.Unlock()
 	if refErr != nil {
 		s.recordCredentialError(ctx, refErr)
 	}
@@ -320,10 +343,7 @@ func (s *EnterpriseSession) poisonedContext(ctx context.Context) (context.Contex
 	if !poisoned {
 		return ctx, false
 	}
-	reason := fmt.Errorf("udb: bearer refresh failed, session not authorized")
-	if cause != nil {
-		reason = fmt.Errorf("udb: bearer refresh failed, session not authorized: %w", cause)
-	}
+	reason := fmt.Errorf("udb: bearer refresh failed, session not authorized: %w", sessionExpired(cause))
 	pctx, cancel := context.WithCancelCause(ctx)
 	cancel(reason)
 	return pctx, true
@@ -371,11 +391,11 @@ func (s *EnterpriseSession) currentBearer(ctx context.Context) (string, error) {
 	_, err := s.tm.Token(ctx)
 	if err != nil {
 		s.recordCredentialError(ctx, err)
-		return "", credentialRefusal(err)
+		return "", renewalRefusal(ctx, err)
 	}
 	if err := s.publishBearer(ctx); err != nil {
 		s.recordCredentialError(ctx, err)
-		return "", credentialRefusal(err)
+		return "", renewalRefusal(ctx, err)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -416,11 +436,21 @@ func (s *EnterpriseSession) credentialError() error {
 	defer s.mu.Unlock()
 	if s.poisoned {
 		if s.lastRefreshErr == nil {
-			return credentialRefusal(fmt.Errorf("session is not authorized"))
+			return credentialRefusal(sessionExpired(fmt.Errorf("session is not authorized")))
 		}
-		return credentialRefusal(s.lastRefreshErr)
+		return credentialRefusal(sessionExpired(s.lastRefreshErr))
 	}
 	return nil
+}
+
+// renewalRefusal is the error a call gets when its credential could not be
+// renewed: the caller's own cancellation or deadline as-is, otherwise an
+// Unauthenticated error that wraps ErrSessionExpired and the renewal failure.
+func renewalRefusal(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return credentialRefusal(err)
+	}
+	return credentialRefusal(sessionExpired(err))
 }
 
 // setBearerLocked caches the refreshed bearer AND propagates it to the embedded

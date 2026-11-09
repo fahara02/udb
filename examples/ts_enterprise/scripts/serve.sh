@@ -24,7 +24,9 @@ if [[ -n "${UDB_CLI:-}" && -x "${UDB_CLI}" ]]; then CLI="$UDB_CLI"
 elif command -v udb >/dev/null 2>&1; then CLI="$(command -v udb)"
 elif [[ -x "$REPO_ROOT/target/release/udb.exe" ]]; then CLI="$REPO_ROOT/target/release/udb.exe"
 elif [[ -x "$REPO_ROOT/target/debug/udb.exe" ]]; then CLI="$REPO_ROOT/target/debug/udb.exe"
-else echo "Could not find the UDB CLI (set UDB_CLI)." >&2; exit 1; fi
+elif [[ -x "$REPO_ROOT/target/release/udb" ]]; then CLI="$REPO_ROOT/target/release/udb"
+elif [[ -x "$REPO_ROOT/target/debug/udb" ]]; then CLI="$REPO_ROOT/target/debug/udb"
+else echo "Could not find the UDB CLI (set UDB_CLI, or 'cargo build --bin udb')." >&2; exit 1; fi
 
 # Expose the auth control plane (authn/authz/apikey) so the SDK can reach Login
 # on a trusted interface. Defaults to loopback-only otherwise.

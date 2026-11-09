@@ -316,7 +316,12 @@ Retry contract: a replay-safe mutation is retried on transient errors **only
 when the request carries a non-empty idempotency key** — keyless mutations fail
 closed rather than risk a double apply. Typed error details decode from the
 `udb-error-detail-bin` trailer onto `UdbError.detail`
-(`kind` / `retryable` / `retryAfterMs` / `field_violations`).
+(`kind` / `retryable` / `retry_after_ms` / `field_violations`); `UdbError.retryAfterMs`
+is the broker's requested wait in milliseconds (0 when absent). A retry waits at
+least that long. `retry.maxRetryAfterMs` (default 10000) is the longest
+broker-requested delay the client waits for automatically; a longer one, or a
+wait that would pass the call's `deadlineMs`, is not slept: the client throws
+that error at once, `retryAfterMs` intact, so the caller decides when to retry.
 
 ## Platform Services (Vault, Metering, Scheduler, …)
 

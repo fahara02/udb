@@ -504,6 +504,15 @@ pub(crate) enum AuthCommand {
         user_id: String,
         reason: String,
     },
+    /// `udb auth service-account set-password`: set an existing service account's
+    /// password (SetServiceAccountPassword). Never applies to a person.
+    ServiceAccountSetPassword {
+        tenant_id: String,
+        user_id: String,
+        password_env: String,
+        password_file: String,
+        reason: String,
+    },
     /// Typed-grant management through the authenticated native Authn API.
     GrantCreate {
         tenant_id: String,
@@ -946,6 +955,13 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
         (Some("service-account"), Some("activate")) => AuthCommand::ServiceAccountActivate {
             tenant_id: flag_value("--tenant").unwrap_or_default(),
             user_id: flag_value("--user").unwrap_or_default(),
+            reason: flag_value("--reason").unwrap_or_default(),
+        },
+        (Some("service-account"), Some("set-password")) => AuthCommand::ServiceAccountSetPassword {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            user_id: flag_value("--user").unwrap_or_default(),
+            password_env: flag_value("--password-env").unwrap_or_default(),
+            password_file: flag_value("--password-file").unwrap_or_default(),
             reason: flag_value("--reason").unwrap_or_default(),
         },
         (Some("grant"), Some("create")) => AuthCommand::GrantCreate {

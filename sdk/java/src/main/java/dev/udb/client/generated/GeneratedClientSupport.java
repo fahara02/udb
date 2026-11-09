@@ -76,6 +76,16 @@ public final class GeneratedClientSupport {
     public final Duration maxBackoff;
     /** Exponential growth multiplier between attempts. */
     public final double backoffMultiplier;
+    /**
+     * The longest broker-requested delay ({@code ErrorDetail.retry_after_ms}) the
+     * client waits for automatically; a longer one is returned to the caller at
+     * once (the thrown {@link UdbRpcException} keeps {@code retryAfterMs()}). Within
+     * it the wait before a retry is the larger of the jittered backoff and the
+     * broker's delay. Default 10 seconds; {@code null} means the default.
+     */
+    public final Duration maxRetryAfter;
+    /** Sleeps between unary retry attempts. Test seam; defaults to {@link Thread#sleep}. */
+    public final RetrySleeper sleeper;
 
     private CallTuning(Builder b) {
       this.timeout = b.timeout;
@@ -83,6 +93,8 @@ public final class GeneratedClientSupport {
       this.initialBackoff = b.initialBackoff;
       this.maxBackoff = b.maxBackoff;
       this.backoffMultiplier = b.backoffMultiplier;
+      this.maxRetryAfter = b.maxRetryAfter;
+      this.sleeper = b.sleeper;
     }
 
     public static Builder builder() {
@@ -95,6 +107,8 @@ public final class GeneratedClientSupport {
       private Duration initialBackoff = Duration.ofMillis(100);
       private Duration maxBackoff = Duration.ofSeconds(5);
       private double backoffMultiplier = 2.0;
+      private Duration maxRetryAfter = DEFAULT_MAX_RETRY_AFTER;
+      private RetrySleeper sleeper = d -> Thread.sleep(d.toMillis());
 
       public Builder timeout(Duration v) {
         this.timeout = v;
@@ -121,13 +135,44 @@ public final class GeneratedClientSupport {
         return this;
       }
 
+      /**
+       * The longest broker-requested retry delay waited for automatically
+       * (default 10s); a longer one is returned to the caller at once.
+       */
+      public Builder maxRetryAfter(Duration v) {
+        this.maxRetryAfter = v;
+        return this;
+      }
+
+      /** Replace the sleep between retry attempts (tests observe the wait with it). */
+      public Builder sleeper(RetrySleeper v) {
+        this.sleeper = v;
+        return this;
+      }
+
       public CallTuning build() {
         return new CallTuning(this);
       }
     }
   }
 
-  /** Default tuning: 30s deadline, 4 attempts, 100ms→5s exponential backoff. */
+  /** Sleeps for the wait computed between unary retry attempts. */
+  @FunctionalInterface
+  public interface RetrySleeper {
+    void sleep(Duration wait) throws InterruptedException;
+  }
+
+  /**
+   * Default longest broker-requested delay the client waits for automatically;
+   * a longer one is returned to the caller at once. Declared before
+   * {@link #DEFAULT} so it is initialised when the default tuning is built.
+   */
+  public static final Duration DEFAULT_MAX_RETRY_AFTER = Duration.ofSeconds(10);
+
+  /**
+   * Default tuning: 30s deadline, 4 attempts, 100ms→5s exponential backoff, a
+   * broker-requested retry delay waited for up to 10s (a longer one is thrown).
+   */
   public static final CallTuning DEFAULT = CallTuning.builder().build();
 
   /**
@@ -322,7 +367,11 @@ public final class GeneratedClientSupport {
    * transient codes. DEADLINE_EXCEEDED is retried only for read-only RPCs. Mutations
    * retry only when the proto contract marks the RPC replay-safe and the request
    * carries a non-empty idempotency_key. A fresh metadata snapshot is produced for
-   * every attempt.
+   * every attempt. The wait before a retry is the larger of the jittered backoff
+   * and the broker's {@code retry_after_ms}; when the broker asked for a delay
+   * longer than {@link CallTuning#maxRetryAfter}, or that wait would pass the
+   * call's deadline, no sleep happens and the last error is thrown with its
+   * detail intact.
    */
   public static <I, O> O unary(
       Channel channel,
@@ -342,13 +391,25 @@ public final class GeneratedClientSupport {
         Channel ch = attempt(channel, tuning, deadlineOverride, headers);
         return ClientCalls.blockingUnaryCall(ch, method, opts, request);
       } catch (StatusRuntimeException ex) {
+        UdbRpcException failure = new UdbRpcException(rpcPath, ex);
         if (attempt < tuning.maxAttempts
             && isRetryable(ex.getStatus().getCode(), readOnly, replaySafe, hasIdempotencyKey)) {
-          sleep(backoff);
+          if (failure.retryAfterMs() > 0
+              && Duration.ofMillis(failure.retryAfterMs()).compareTo(maxRetryAfter(tuning)) > 0) {
+            throw failure;
+          }
+          Duration wait = retryWait(jitter(backoff), failure.retryAfterMs());
+          Deadline deadline = opts.getDeadline();
+          if (failure.retryAfterMs() > 0
+              && deadline != null
+              && deadline.timeRemaining(TimeUnit.NANOSECONDS) < wait.toNanos()) {
+            throw failure;
+          }
+          sleep(wait, tuning);
           backoff = nextBackoff(backoff, tuning);
           continue;
         }
-        throw new UdbRpcException(rpcPath, ex);
+        throw failure;
       }
     }
   }
@@ -475,15 +536,37 @@ public final class GeneratedClientSupport {
     return Duration.ofMillis((long) nextMs);
   }
 
-  private static void sleep(Duration step) {
-    // Full jitter on the current step: sleep in [step/2, step).
+  private static Duration jitter(Duration step) {
+    // Full jitter on the current step: a wait in [step/2, step].
     long ms = step.toMillis();
     long jittered = ms <= 0 ? 0 : ms / 2 + ThreadLocalRandom.current().nextLong(ms / 2 + 1);
-    if (jittered <= 0) {
+    return Duration.ofMillis(Math.max(0, jittered));
+  }
+
+  /** {@link CallTuning#maxRetryAfter}, or the 10s default when unset. */
+  private static Duration maxRetryAfter(CallTuning tuning) {
+    return tuning.maxRetryAfter != null ? tuning.maxRetryAfter : DEFAULT_MAX_RETRY_AFTER;
+  }
+
+  /**
+   * The wait before the next attempt: the larger of the jittered backoff and the
+   * server-requested delay. A delay above {@link CallTuning#maxRetryAfter} never
+   * gets here; the caller throws it instead.
+   */
+  private static Duration retryWait(Duration jitteredBackoff, long retryAfterMs) {
+    if (retryAfterMs <= 0) {
+      return jitteredBackoff;
+    }
+    Duration server = Duration.ofMillis(retryAfterMs);
+    return server.compareTo(jitteredBackoff) > 0 ? server : jitteredBackoff;
+  }
+
+  private static void sleep(Duration wait, CallTuning tuning) {
+    if (wait.isZero() || wait.isNegative()) {
       return;
     }
     try {
-      Thread.sleep(jittered);
+      tuning.sleeper.sleep(wait);
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
       throw new IllegalStateException("udb: retry backoff interrupted", ie);

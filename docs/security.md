@@ -122,6 +122,11 @@ is cured differently depending on which one you hit:
   scope). To grant access you mint a token/API key that carries the scope; a
   service account can only hold scopes present in its `ServiceAccountGrant`.
 
+A person's token gets extra scopes from a role only when that role sets
+`token_scopes` (stored as `Role.token_scopes_json`), and only inside the tenant
+and project that own the role. A role without `token_scopes` adds none, and
+service-account bearers never take scopes from roles: their ceiling is the grant.
+
 Casbin policy rows do nothing for native RPCs, and token scopes do not authorize
 data CRUD — do not confuse them. (A legacy ABAC table, `udb_abac_policies`, still
 exists but is no longer consulted for decisions; seed `policy_rules`, not it.)
@@ -140,6 +145,10 @@ Three tokens must be exact or a policy silently never matches:
    `read` / `write` vocabulary does **not** match.
 2. `object` is the `message_type` (proto FQN), or a package glob (`shop.v1.*` = `shop.v1` and `shop.v1.<anything>`; dots are literal), or `*`. A path-style object containing `/` uses `keyMatch2`.
 3. `tenant_id` is the caller's canonical **tenant UUID** (not the human code).
+
+A policy matches only its exact tenant domain, or every tenant when its tenant is
+`*` (or empty). Tenants do not inherit: a parent tenant's policies do not apply inside its
+child tenants, so apply a policy file to each tenant that needs it.
 
 Declare the standard set for a project in a version-controlled policy file and
 reconcile the tenant to it in one transaction:
@@ -189,9 +198,11 @@ A typical enterprise setup looks like this:
 ## Transport
 
 Encrypt traffic in transit. Use TLS for client traffic, and keep the native
-control-plane listener on an internal interface rather than a public one. For
-internal service-to-service traffic, use mTLS (mutual TLS) where your deployment
-profile calls for it.
+control-plane listener on an internal interface rather than a public one. mTLS
+(mutual TLS) is available on every listener (`UDB_TLS_CERT_PATH`,
+`UDB_TLS_KEY_PATH`, `UDB_MTLS_CLIENT_CA_PATH`) and is not on by default;
+`UDB_ENV=production` forces secure transport and mTLS on and refuses to start
+without the certificates.
 
 ## Sensitive Data
 
@@ -199,6 +210,11 @@ Mark sensitive and storage-only fields with proto field-security annotations.
 From there UDB does the work for you: generated output views and runtime
 redaction paths read the descriptor metadata and keep stored secrets out of
 public responses.
+
+Reads mask personal data. A column marked `is_pii` (or `mask_in_logs`) comes back
+as `***MASKED***` to any caller that does not hold the `udb:pii:read` scope (or
+`udb:*`). Grant `udb:pii:read` only to the services and roles that must see the
+clear value.
 
 Here's how to handle common classes of sensitive data:
 

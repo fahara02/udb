@@ -2420,6 +2420,104 @@ fn native_docs_markdown(
         out.push_str(row);
         out.push('\n');
     }
+    out.push_str(&native_rpc_access_markdown(manifest));
+    out
+}
+
+/// A credential type's short name, as the descriptor's `allowed_credential_types` holds it.
+fn credential_type_label(value: i32) -> &'static str {
+    match value {
+        1 => "bearer JWT",
+        2 => "session",
+        3 => "API key",
+        4 => "service account",
+        5 => "mTLS",
+        6 => "OIDC",
+        7 => "SAML",
+        8 => "WebAuthn",
+        9 => "external JWT",
+        _ => "unspecified",
+    }
+}
+
+/// What each native RPC needs from its caller, generated from the descriptor so it
+/// cannot drift: the scope that admits it, the credential types it accepts, and
+/// whether the request must name a tenant. A missing scope is refused with
+/// PERMISSION_DENIED naming the method and the scope.
+fn native_rpc_access_markdown(
+    manifest: &udb::runtime::descriptor_manifest::DescriptorContractManifest,
+) -> String {
+    let mut sections: Vec<(String, String)> = Vec::new();
+    for service in &manifest.services {
+        let Some(native) = service.native_service.as_ref() else {
+            continue;
+        };
+        let id = udb::runtime::service::native_registry::canonical_service_id(&native.service_id);
+        let mut section = format!("\n### `{id}` ({})\n\n", service.full_name());
+        section.push_str("| RPC | Kind | Scope (any of) | Credentials | Tenant |\n");
+        section.push_str("| --- | --- | --- | --- | --- |\n");
+        for rpc in &service.methods {
+            let security = rpc.endpoint_security.as_ref();
+            let scopes = security
+                .map(|s| {
+                    s.scopes
+                        .iter()
+                        .map(|scope| format!("`{scope}`"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                })
+                .filter(|text| !text.is_empty())
+                .unwrap_or_else(|| "—".to_string());
+            let credentials = security
+                .map(|s| {
+                    s.allowed_credential_types
+                        .iter()
+                        .map(|value| credential_type_label(*value))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                })
+                .filter(|text| !text.is_empty())
+                .unwrap_or_else(|| "any".to_string());
+            let mode = security
+                .map(|s| s.auth_mode_name())
+                .unwrap_or("unspecified");
+            let credentials = if security.is_some_and(|s| s.internal_grpc_only) {
+                format!("{credentials} (internal only)")
+            } else if mode.eq_ignore_ascii_case("public") || mode.ends_with("PUBLIC") {
+                "none (public)".to_string()
+            } else {
+                credentials
+            };
+            section.push_str(&format!(
+                "| `{}` | {} | {} | {} | {} |\n",
+                rpc.method,
+                udb::runtime::descriptor_manifest::operation_kind_name(rpc.operation_kind),
+                scopes,
+                credentials,
+                if security.is_some_and(|s| s.tenant_required) {
+                    "required"
+                } else {
+                    "—"
+                },
+            ));
+        }
+        sections.push((id, section));
+    }
+    sections.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut out = String::from(
+        "\n## Calling a native RPC\n\n\
+         Native services are served on the control-plane listener, not the DataBroker port: \
+         `UDB_AUTH_GRPC_ADDR`, which defaults to loopback on the DataBroker port plus 10 \
+         (50061 next to 50051). The DataBroker port answers `UNIMPLEMENTED` for them. \
+         The WebRTC peer services also listen on the peer listener.\n\n\
+         Each table lists the scope that admits an RPC; `udb:admin` (and, for authn, \
+         authz and apikey, `udb:auth:admin`) admits every RPC. A token carries a person's \
+         role scopes only when the role sets `token_scopes`. A missing scope is refused \
+         with `PERMISSION_DENIED`, naming the method and the scope.\n",
+    );
+    for (_, section) in sections {
+        out.push_str(&section);
+    }
     out
 }
 

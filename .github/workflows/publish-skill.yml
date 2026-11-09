@@ -43,6 +43,7 @@ jobs:
             udb-skill/plugins/udb/skills/using-udb/references/using-udb.md \
             udb-skill/plugins/udb/skills/using-udb/references/rpc-inventory.md \
             udb-skill/plugins/udb/skills/using-udb/references/sensitive-fields.md \
+            udb-skill/plugins/udb/skills/using-udb/references/native-services.md \
             udb-skill/shared/using-udb.md \
             udb-skill/openai/instructions.md \
             udb-skill/ollama/Modelfile \

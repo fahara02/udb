@@ -17,7 +17,7 @@
 ```
 
 A UDB SDK is the client library your application uses to talk to a running UDB
-broker. If you're building an app in Go, Python, TypeScript, PHP, C#, or Java and
+broker. If you're building an app in Go, Python, TypeScript, PHP, C#, Java, or Rust and
 want to read and write data through UDB, this is where you start.
 
 Each SDK does four jobs for you: it attaches the request metadata every call
@@ -35,10 +35,12 @@ Every SDK puts a small, high-level layer over the generated RPCs (the low-level
 remote procedure calls the broker exposes). Your application code stays short,
 but the layer never hides the rules that keep multi-tenant data correct:
 
-- **One connect and login that adopts your tenant.** You log in with a username
-  and password (or an API key) and name your tenant by its human *code*. The SDK
-  resolves that code to the canonical tenant UUID that row-level security (the
-  database's per-tenant access rule) actually checks. This one step prevents the
+- **One connect and login that adopts your tenant.** A service connects with an
+  API key, and its tenant and project come from the key. A person logs in with a
+  username and password (`connectEnterprise`) and names the tenant by its human
+  *code*. Either way the SDK adopts the canonical tenant UUID that row-level
+  security (the database's per-tenant access rule) actually checks, taken from
+  the verified principal. This one step prevents the
   most common first-integration bug: passing a tenant code where a UUID is
   expected and then silently reading zero rows.
 - **Typed, tenant-scoped data calls.** Read and write your own proto-defined
@@ -66,7 +68,7 @@ track the current generated surface instead of a hand-maintained count.
 | TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.6.13` |
 | PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.6.13` |
 | C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.6.13` |
-| Rust | `udb-client` | `cargo add udb-client@0.5.21` |
+| Rust | `udb-client` | `cargo add udb-client@0.6.13` |
 | Java | `io.github.fahara02:udb-java-client` | build from checkout until Maven Central publishing lands |
 
 ## What Every SDK Provides
@@ -118,7 +120,12 @@ SDK metadata objects carry:
 - client catalog/protocol version;
 - optional bearer token or API key.
 
-Bearer credentials use `authorization: Bearer ...`. API keys use `x-api-key`.
+Bearer credentials use `authorization: Bearer ...`. The project facades never send
+an API key raw: connecting with one exchanges it through `Authenticate{api_key}`
+for a bearer the SDK keeps fresh, and every call carries that bearer. Native
+services live on the control-plane listener (`127.0.0.1:50061`, the data port +
+10, by default), so set `authTarget` / `auth_target` / `AuthTarget` to it; the
+data-plane port answers `UNIMPLEMENTED` for native RPCs.
 
 A backend that calls UDB as a service account (and asks UDB about its users,
 or acts in a second tenant) should read

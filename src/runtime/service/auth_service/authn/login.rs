@@ -222,6 +222,36 @@ impl AuthnServiceImpl {
                 }
                 rec
             };
+            // An API key always authenticates as its own tenant. A tenant hint that names
+            // another one used to be ignored, so a caller believed it had picked a tenant it
+            // never got. Refuse it: an empty hint, or one naming the key's tenant by id or
+            // code, is fine.
+            let hint = req.tenant_hint.trim();
+            if !hint.is_empty()
+                && !self
+                    .resolve_sign_in_tenant(hint)
+                    .await
+                    .eq_ignore_ascii_case(rec.tenant_id.trim())
+            {
+                tracing::warn!(
+                    target: "udb.audit.authn",
+                    tenant_hint = %hint,
+                    key_tenant = %rec.tenant_id,
+                    "Authenticate: the API key's tenant differs from the tenant hint; refused"
+                );
+                return Err(login_invalid_fields(
+                    format!(
+                        "tenant_hint '{hint}' does not name this API key's tenant; an API key \
+                         always authenticates as its own tenant ({}). Send no tenant hint, or \
+                         that tenant's id or code",
+                        rec.tenant_id
+                    ),
+                    [(
+                        "tenant_hint",
+                        format!("must be empty or name tenant {}", rec.tenant_id),
+                    )],
+                ));
+            }
             let mut principal = principal_from_api_key(&rec);
             let mut requested_scopes = req.requested_scopes.clone();
             requested_scopes.retain(|scope| !scope.trim().is_empty());

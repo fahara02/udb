@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 424 RPCs across 29 services.
+Current generated RPC surface: 426 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -52,7 +52,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 79 | 22 | 44 | 13 | 0 |
+| AuthnService | 81 | 23 | 44 | 14 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 8 | 3 | 4 | 1 | 0 |
@@ -151,6 +151,7 @@ identity surface available to benchmark reports.
 | `AuthnService/ListDevices` | `list_devices` | `listDevices` | READ_ONLY |
 | `AuthnService/ListInvitations` | `list_invitations` | `listInvitations` | READ_ONLY |
 | `AuthnService/ListMfaFactors` | `list_mfa_factors` | `listMfaFactors` | READ_ONLY |
+| `AuthnService/ListOwnTenantMemberships` | `list_own_tenant_memberships` | `listOwnTenantMemberships` | READ_ONLY |
 | `AuthnService/ListServiceAccountGrants` | `list_service_account_grants` | `listServiceAccountGrants` | READ_ONLY |
 | `AuthnService/ListServiceAccountTenantMemberships` | `list_service_account_tenant_memberships` | `listServiceAccountTenantMemberships` | READ_ONLY |
 | `AuthnService/ListSessions` | `list_sessions` | `listSessions` | READ_ONLY |
@@ -180,6 +181,7 @@ identity surface available to benchmark reports.
 | `AuthnService/SendLoginOtp` | `send_login_otp` | `sendLoginOtp` | MUTATION |
 | `AuthnService/SendOTP` | `send_otp` | `sendOtp` | MUTATION |
 | `AuthnService/SendPhoneVerification` | `send_phone_verification` | `sendPhoneVerification` | MUTATION |
+| `AuthnService/SetServiceAccountPassword` | `set_service_account_password` | `setServiceAccountPassword` | DESTRUCTIVE |
 | `AuthnService/StartInvitationAcceptance` | `start_invitation_acceptance` | `startInvitationAcceptance` | MUTATION |
 | `AuthnService/StartOidcLogin` | `start_oidc_login` | `startOidcLogin` | MUTATION |
 | `AuthnService/StartWebAuthnAuthentication` | `start_web_authn_authentication` | `startWebAuthnAuthentication` | MUTATION |

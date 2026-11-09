@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Control Plane — UDB</title>
-<meta name="description" content="UDB's native control plane: 27 services and 303 RPCs for authentication, authorization, API keys, identity federation, tenancy, notifications, analytics, storage, assets, WebRTC, and policy distribution.">
+<meta name="description" content="UDB's native control plane: 28 services and 340 RPCs for authentication, authorization, API keys, identity federation, tenancy, notifications, analytics, storage, assets, WebRTC, and policy distribution.">
 <meta name="theme-color" content="#f8fafc">
 <link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
 <link rel="stylesheet" href="./styles.css">
@@ -32,11 +32,13 @@
 
 <main>
   <div class="wrap page-head">
-    <div class="eyebrow">Native control plane · 27 services · 303 RPCs</div>
+    <div class="eyebrow">Native control plane · 28 services · 340 RPCs</div>
     <h1>Identity, policy, and tenancy on an <span class="g">isolated listener</span></h1>
     <p class="lead">Alongside the data plane, UDB ships a network-isolated native control plane defined
       under <code>proto/udb/core/**</code> — all proto-driven and Postgres-backed, fail-closed, with no
-      in-memory stores. Counts are authoritative from the generated descriptor contract.</p>
+      in-memory stores. It listens on <code>UDB_AUTH_GRPC_ADDR</code> — loopback <code>127.0.0.1:50061</code>
+      (the data port + 10) by default — and the data-plane port answers <code>UNIMPLEMENTED</code> for its RPCs, so
+      SDKs set <code>authTarget</code> to it. Counts are authoritative from the generated descriptor contract.</p>
   </div>
 
   <section style="border-top:none">
@@ -50,29 +52,17 @@
 
   <section>
     <div class="wrap">
-      <div class="eyebrow">The 27 services</div>
+      <div class="eyebrow">The 28 services</div>
       <h2>Everything the platform <span class="accent">enforces</span></h2>
-      <div class="tablewrap mt28">
-        <table>
-          <thead><tr><th>Service</th><th>Category</th><th>What it does</th><th class="n">RPCs</th></tr></thead>
-          <tbody>
-            <tr><td><code>AuthnService</code></td><td>auth</td><td>JWT / session / API-key / external auth, RS256 signing + refresh, TOTP MFA, CSRF, OTP, devices, WebAuthn, signing-key rotation, user admin</td><td class="n">50</td></tr>
-            <tr><td><code>AuthzService</code></td><td>governance</td><td>RBAC + ABAC + ReBAC over a Casbin enforcer, role/policy/relationship CRUD, governance + simulation, audit decisions, <code>GetNativeAccess</code>, <code>GetPolicyBundle</code></td><td class="n">41</td></tr>
-            <tr><td><code>IdentityProviderService</code></td><td>auth</td><td>OIDC/SAML providers, SCIM provisioning, JIT, external-identity linking</td><td class="n">27</td></tr>
-            <tr><td><code>NotificationService</code></td><td>messaging</td><td>Notifications, templates, preferences, delivery stats (emits to Kafka)</td><td class="n">11</td></tr>
-            <tr><td><code>ApiKeyService</code></td><td>auth</td><td>Create / get / list / update / revoke / validate API keys + usage stats</td><td class="n">9</td></tr>
-            <tr><td><code>AssetService</code></td><td>storage</td><td>Asset-management pipelines (steps, EMBED → vector upsert), executor trait</td><td class="n">8</td></tr>
-            <tr><td><code>AnalyticsService</code></td><td>analytics</td><td>Pipeline metrics, executor performance, reconciliation, throughput, SLA compliance</td><td class="n">7</td></tr>
-            <tr><td><code>StorageService</code></td><td>storage</td><td>Object-storage metadata/lifecycle, quotas, presigned URLs, GC</td><td class="n">7</td></tr>
-            <tr><td><code>TenantService</code></td><td>tenant</td><td>Tenant + tenant-config CRUD</td><td class="n">6</td></tr>
-            <tr><td><code>ControlPlaneService</code></td><td>control</td><td>xDS-style versioned policy distribution (ACK/NACK/nonce, ordered delivery, canary rollout)</td><td class="n">5</td></tr>
-            <tr><td><code>RoomService</code> · WebRTC</td><td>realtime</td><td>Room lifecycle CRUD</td><td class="n">5</td></tr>
-            <tr><td><code>PeerService</code> · WebRTC</td><td>realtime</td><td>Peer lifecycle CRUD</td><td class="n">4</td></tr>
-            <tr><td><code>TrackService</code> · WebRTC</td><td>realtime</td><td>Track lifecycle CRUD</td><td class="n">4</td></tr>
-            <tr><td><code>TurnService</code> · WebRTC</td><td>realtime</td><td>TURN credential issuance (fail-closed)</td><td class="n">1</td></tr>
-            <tr><td><code>SignalingService</code> · WebRTC</td><td>realtime</td><td>WebRTC signaling bridge (PixelStreaming + json-relay)</td><td class="n">1</td></tr>
-          </tbody>
-        </table>
+      <p class="lead">Authentication, authorization (RBAC + ABAC + ReBAC), API keys, identity providers, tenants,
+        notifications, analytics, storage, assets, WebRTC (room, peer, track, TURN, signaling), versioned policy
+        distribution, vault, metering, scheduler, workflow, locks, search, embedding, webhooks, config, live query,
+        backup, messaging, and cache.</p>
+      <div class="callout cool mt28">
+        <p>Every service and RPC, with its required scopes, accepted credential kinds and tenant rule, is listed in
+          the generated <a href="https://github.com/fahara02/udb/blob/main/docs/generated/native-services.md">native
+          service reference</a>, rendered from the embedded descriptor by <code>udb native docs</code>, so it
+          cannot drift from what the broker enforces.</p>
       </div>
     </div>
   </section>

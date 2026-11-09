@@ -125,6 +125,10 @@ pub struct CallPolicy {
     pub deadline: Option<Duration>,
     pub max_attempts: u32,
     pub base_backoff: Duration,
+    /// The longest broker-requested delay (`ErrorDetail.retry_after_ms`) the
+    /// client waits for automatically; a longer one is returned to the caller
+    /// at once (the [`UdbError`] keeps `retry_after`). Defaults to 10 s.
+    pub max_retry_after: Duration,
     /// Whether the operation may be safely repeated. Defaults to `false`: a
     /// blanket retry on a mutation is how one payment becomes two.
     pub idempotent: bool,
@@ -136,6 +140,7 @@ impl Default for CallPolicy {
             deadline: Some(Duration::from_secs(30)),
             max_attempts: 3,
             base_backoff: Duration::from_millis(100),
+            max_retry_after: Duration::from_secs(10),
             idempotent: false,
         }
     }
@@ -186,23 +191,43 @@ impl CallPolicy {
         self
     }
 
-    /// Backoff before `attempt` (1-based), honouring the broker's `retry_after`
-    /// when it gave one.
+    /// The longest broker-requested retry delay this policy waits for; a longer
+    /// one is returned to the caller at once.
+    pub fn with_max_retry_after(mut self, cap: Duration) -> Self {
+        self.max_retry_after = cap;
+        self
+    }
+
+    /// Backoff before `attempt` (1-based): the larger of this policy's own
+    /// backoff and the broker's `retry_after`. A `retry_after` above
+    /// `max_retry_after` never gets here: [`Self::should_retry`] refuses it.
+    ///
+    /// The broker's delay is a floor, not a replacement: a short server hint
+    /// must not shrink an already-grown backoff.
     pub(crate) fn backoff_for(&self, attempt: u32, err: &UdbError) -> Duration {
-        if let Some(after) = err.retry_after() {
-            return after;
-        }
         // Exponential, capped. No jitter here: callers that need decorrelated
         // retries across a fleet should drive their own loop, and inventing
         // randomness inside a client makes failures harder to reproduce.
         let exp = self
             .base_backoff
-            .saturating_mul(1u32 << attempt.min(6).saturating_sub(1));
-        exp.min(Duration::from_secs(5))
+            .saturating_mul(1u32 << attempt.min(6).saturating_sub(1))
+            .min(Duration::from_secs(5));
+        match err.retry_after() {
+            Some(after) => exp.max(after),
+            None => exp,
+        }
     }
 
-    /// Whether another attempt is permitted.
+    /// Whether another attempt is permitted. A broker-requested delay longer
+    /// than `max_retry_after` is not waited for: the error goes back to the
+    /// caller at once, its `retry_after` intact, so the caller decides.
     pub(crate) fn should_retry(&self, attempt: u32, err: &UdbError) -> bool {
+        if err
+            .retry_after()
+            .is_some_and(|after| after > self.max_retry_after)
+        {
+            return false;
+        }
         self.idempotent && attempt < self.max_attempts && err.is_retryable()
     }
 }
@@ -301,6 +326,59 @@ mod tests {
         assert_eq!(
             CallPolicy::idempotent().backoff_for(3, &err),
             Duration::from_millis(1234)
+        );
+    }
+
+    #[test]
+    fn backoff_never_shrinks_below_its_own_step_for_a_short_retry_after() {
+        let err = UdbError {
+            status: Status::new(Code::ResourceExhausted, "slow down"),
+            detail: Some(ErrorDetail {
+                retryable: true,
+                retry_after_ms: 1200,
+                ..Default::default()
+            }),
+        };
+        // Attempt 6: own backoff 100ms * 32 = 3.2s, above the broker's 1.2s.
+        assert_eq!(
+            CallPolicy::idempotent().backoff_for(6, &err),
+            Duration::from_millis(3200)
+        );
+        // Attempt 1: own backoff 100ms, so the broker's 1.2s wins.
+        assert_eq!(
+            CallPolicy::idempotent().backoff_for(1, &err),
+            Duration::from_millis(1200)
+        );
+    }
+
+    #[test]
+    fn retry_after_above_the_cap_is_returned_not_retried() {
+        let throttled = |ms: i64| UdbError {
+            status: Status::new(Code::ResourceExhausted, "slow down"),
+            detail: Some(ErrorDetail {
+                retryable: true,
+                retry_after_ms: ms,
+                ..Default::default()
+            }),
+        };
+        let err = throttled(5000);
+        let policy = CallPolicy::idempotent().with_max_retry_after(Duration::from_millis(1500));
+        assert!(!policy.should_retry(1, &err), "5s is above the 1.5s cap");
+        assert_eq!(err.code(), Code::ResourceExhausted);
+        assert_eq!(err.retry_after(), Some(Duration::from_millis(5000)));
+
+        assert_eq!(
+            CallPolicy::default().max_retry_after,
+            Duration::from_secs(10),
+            "default cap"
+        );
+        assert!(!CallPolicy::idempotent().should_retry(1, &throttled(60_000)));
+        // A delay at the default cap is still waited for.
+        let at_cap = throttled(10_000);
+        assert!(CallPolicy::idempotent().should_retry(1, &at_cap));
+        assert_eq!(
+            CallPolicy::idempotent().backoff_for(1, &at_cap),
+            Duration::from_secs(10)
         );
     }
 

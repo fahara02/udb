@@ -14,7 +14,11 @@
 //   udb --help
 //
 // On launch it resolves the version-matched `udb` binary in this order:
-//   1. an already-installed `udb` on PATH whose `--version` matches {{UDB_VERSION}};
+//   0. $UDB_BIN, if it names an existing file;
+//   1. an already-installed `udb` on PATH whose `--version` matches {{UDB_VERSION}}
+//      (every match is tried; this launcher's own tool shim is skipped, each
+//      probe has a 5 s timeout, and a launcher started by another launcher,
+//      UDB_LAUNCHER_ACTIVE set, skips PATH entirely so it cannot recurse);
 //   2. a previously cached download under the per-user cache dir;
 //   3. otherwise downloads the v{{UDB_VERSION}} release asset for this OS/arch
 //      from https://github.com/fahara02/udb/releases and caches it.
@@ -49,11 +53,28 @@ internal static class UdbCli
     /// <summary>Find a usable `udb` binary, downloading the matched release if needed.</summary>
     private static async Task<string> ResolveBinaryAsync()
     {
-        // 1) PATH, if its version matches.
-        var onPath = FindOnPath();
-        if (onPath is not null && VersionMatches(onPath))
+        // 0) Explicit operator override (same contract as the other SDK launchers).
+        var forced = Environment.GetEnvironmentVariable("UDB_BIN");
+        if (!string.IsNullOrEmpty(forced) && File.Exists(forced))
         {
-            return onPath;
+            return forced;
+        }
+
+        // 1) PATH, if its version matches. A nested launcher (one started by
+        //    another launcher) never probes PATH: that bounds the recursion.
+        if (!IsNestedLauncher())
+        {
+            foreach (var candidate in PathCandidates())
+            {
+                if (IsLauncherCandidate(candidate))
+                {
+                    continue;
+                }
+                if (VersionMatches(candidate))
+                {
+                    return candidate;
+                }
+            }
         }
 
         // 2) per-user cache.
@@ -69,19 +90,94 @@ internal static class UdbCli
 
     private static string ExeName => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "udb.exe" : "udb";
 
-    private static string? FindOnPath()
+    // Recursion guard. Every child this launcher starts (a `--version` probe or
+    // the final exec) gets UDB_LAUNCHER_ACTIVE=1. A launcher that starts with it
+    // already set is nested (a PATH candidate was itself a launcher) and never
+    // probes PATH, so one invocation can start only a bounded number of processes.
+    private const string LauncherEnv = "UDB_LAUNCHER_ACTIVE";
+    private const int ProbeTimeoutMs = 5000;
+
+    private static bool IsNestedLauncher() =>
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(LauncherEnv));
+
+    private static StringComparison PathComparison =>
+        RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+    /// <summary>Every `udb` on PATH, in PATH order (all matches, not only the first).</summary>
+    private static List<string> PathCandidates()
     {
         var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
         var sep = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':';
+        var found = new List<string>();
+        var seen = new HashSet<string>(StringComparer.FromComparison(PathComparison));
         foreach (var dir in path.Split(sep, StringSplitOptions.RemoveEmptyEntries))
         {
             var candidate = Path.Combine(dir.Trim(), ExeName);
-            if (File.Exists(candidate))
+            if (File.Exists(candidate) && seen.Add(CanonicalPath(candidate)))
             {
-                return candidate;
+                found.Add(candidate);
             }
         }
-        return null;
+        return found;
+    }
+
+    /// <summary>Absolute path with symlinks resolved (best effort).</summary>
+    private static string CanonicalPath(string path)
+    {
+        try
+        {
+            var full = Path.GetFullPath(path);
+            var target = File.ResolveLinkTarget(full, returnFinalTarget: true);
+            return target is null ? full : Path.GetFullPath(target.FullName);
+        }
+        catch
+        {
+            return path;
+        }
+    }
+
+    /// <summary>
+    /// True when <paramref name="candidate"/> is this launcher (the `dotnet tool`
+    /// shim or the process image itself), so probing it would run a launcher again.
+    /// </summary>
+    private static bool IsLauncherCandidate(string candidate)
+    {
+        var real = CanonicalPath(candidate);
+        var selves = new List<string>();
+        if (Environment.ProcessPath is { Length: > 0 } processPath)
+        {
+            selves.Add(CanonicalPath(processPath));
+        }
+        var entry = System.Reflection.Assembly.GetEntryAssembly()?.Location;
+        if (!string.IsNullOrEmpty(entry))
+        {
+            selves.Add(CanonicalPath(entry));
+        }
+        foreach (var self in selves)
+        {
+            if (string.Equals(real, self, PathComparison))
+            {
+                return true;
+            }
+        }
+        // A `dotnet tool install --global/--tool-path` shim sits in a directory
+        // that also holds the tool `.store`; that `udb` is this launcher (or
+        // another version of it), never the real binary.
+        try
+        {
+            var dir = Path.GetDirectoryName(Path.GetFullPath(candidate));
+            if (dir is not null && Directory.Exists(Path.Combine(dir, ".store")))
+            {
+                return true;
+            }
+        }
+        catch
+        {
+            return true;
+        }
+        return false;
     }
 
     private static bool VersionMatches(string binary)
@@ -93,11 +189,26 @@ internal static class UdbCli
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
+                CreateNoWindow = true,
             };
+            psi.Environment[LauncherEnv] = "1";
             using var proc = Process.Start(psi);
             if (proc is null) return false;
-            var stdout = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(5000);
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+            var stderrTask = proc.StandardError.ReadToEndAsync();
+            if (!proc.WaitForExit(ProbeTimeoutMs))
+            {
+                try
+                {
+                    proc.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // already gone
+                }
+                return false;
+            }
+            var stdout = stdoutTask.Wait(ProbeTimeoutMs) ? stdoutTask.Result : string.Empty;
             return stdout.Contains(Version, StringComparison.Ordinal);
         }
         catch
@@ -252,6 +363,7 @@ internal static class UdbCli
     private static int Exec(string binary, string[] args)
     {
         var psi = new ProcessStartInfo(binary) { UseShellExecute = false };
+        psi.Environment[LauncherEnv] = "1";
         foreach (var a in args)
         {
             psi.ArgumentList.Add(a);

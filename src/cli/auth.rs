@@ -219,6 +219,25 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
             require("user", &user_id)?;
             super::identity_ops::service_account_activate(&tenant_id, &user_id, &reason).await
         }
+        AuthCommand::ServiceAccountSetPassword {
+            tenant_id,
+            user_id,
+            password_env,
+            password_file,
+            reason,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("user", &user_id)?;
+            require("reason", &reason)?;
+            super::identity_ops::service_account_set_password(
+                &tenant_id,
+                &user_id,
+                &password_env,
+                &password_file,
+                &reason,
+            )
+            .await
+        }
         AuthCommand::GrantCreate {
             tenant_id,
             user_id,

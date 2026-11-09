@@ -82,6 +82,10 @@ namespace Udb.Core.Authn.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.AdminResetPasswordResponse> __Marshaller_udb_core_authn_services_v1_AdminResetPasswordResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.AdminResetPasswordResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest> __Marshaller_udb_core_authn_services_v1_SetServiceAccountPasswordRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse> __Marshaller_udb_core_authn_services_v1_SetServiceAccountPasswordResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.SendOTPRequest> __Marshaller_udb_core_authn_services_v1_SendOTPRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.SendOTPRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.SendOTPResponse> __Marshaller_udb_core_authn_services_v1_SendOTPResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.SendOTPResponse.Parser));
@@ -310,6 +314,10 @@ namespace Udb.Core.Authn.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.RevokeServiceAccountTenantMembershipResponse> __Marshaller_udb_core_authn_services_v1_RevokeServiceAccountTenantMembershipResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.RevokeServiceAccountTenantMembershipResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest> __Marshaller_udb_core_authn_services_v1_ListOwnTenantMembershipsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse> __Marshaller_udb_core_authn_services_v1_ListOwnTenantMembershipsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest> __Marshaller_udb_core_authn_services_v1_ExchangeServiceTokenForTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse> __Marshaller_udb_core_authn_services_v1_ExchangeServiceTokenForTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse.Parser));
@@ -421,6 +429,14 @@ namespace Udb.Core.Authn.Services.V1 {
         "AdminResetPassword",
         __Marshaller_udb_core_authn_services_v1_AdminResetPasswordRequest,
         __Marshaller_udb_core_authn_services_v1_AdminResetPasswordResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest, global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse> __Method_SetServiceAccountPassword = new grpc::Method<global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest, global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "SetServiceAccountPassword",
+        __Marshaller_udb_core_authn_services_v1_SetServiceAccountPasswordRequest,
+        __Marshaller_udb_core_authn_services_v1_SetServiceAccountPasswordResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.SendOTPRequest, global::Udb.Core.Authn.Services.V1.SendOTPResponse> __Method_SendOTP = new grpc::Method<global::Udb.Core.Authn.Services.V1.SendOTPRequest, global::Udb.Core.Authn.Services.V1.SendOTPResponse>(
@@ -879,6 +895,14 @@ namespace Udb.Core.Authn.Services.V1 {
         __Marshaller_udb_core_authn_services_v1_RevokeServiceAccountTenantMembershipResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest, global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse> __Method_ListOwnTenantMemberships = new grpc::Method<global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest, global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListOwnTenantMemberships",
+        __Marshaller_udb_core_authn_services_v1_ListOwnTenantMembershipsRequest,
+        __Marshaller_udb_core_authn_services_v1_ListOwnTenantMembershipsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse> __Method_ExchangeServiceTokenForTenant = new grpc::Method<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
@@ -1060,6 +1084,21 @@ namespace Udb.Core.Authn.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.AdminResetPasswordResponse> AdminResetPassword(global::Udb.Core.Authn.Services.V1.AdminResetPasswordRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+      /// no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+      /// current password, so an account whose password was lost could never sign in again.
+      /// Refused for a person. The account's sessions are revoked, and the change is audited.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse> SetServiceAccountPassword(global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1650,10 +1689,19 @@ namespace Udb.Core.Authn.Services.V1 {
       /// session. Every use re-checks the membership (ACTIVE, same revision), the
       /// home grant and the account. No, expired or revoked membership: one
       /// uniform PERMISSION_DENIED.
+      /// The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+      /// whose home is the caller's tenant. Called with the same home service bearer and
+      /// scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse> ListOwnTenantMemberships(global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse> ExchangeServiceTokenForTenant(global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest request, grpc::ServerCallContext context)
       {
@@ -2078,6 +2126,66 @@ namespace Udb.Core.Authn.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.AdminResetPasswordResponse> AdminResetPasswordAsync(global::Udb.Core.Authn.Services.V1.AdminResetPasswordRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_AdminResetPassword, null, options, request);
+      }
+      /// <summary>
+      /// Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+      /// no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+      /// current password, so an account whose password was lost could never sign in again.
+      /// Refused for a person. The account's sessions are revoked, and the change is audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse SetServiceAccountPassword(global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetServiceAccountPassword(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+      /// no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+      /// current password, so an account whose password was lost could never sign in again.
+      /// Refused for a person. The account's sessions are revoked, and the change is audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse SetServiceAccountPassword(global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_SetServiceAccountPassword, null, options, request);
+      }
+      /// <summary>
+      /// Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+      /// no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+      /// current password, so an account whose password was lost could never sign in again.
+      /// Refused for a person. The account's sessions are revoked, and the change is audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse> SetServiceAccountPasswordAsync(global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetServiceAccountPasswordAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+      /// no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+      /// current password, so an account whose password was lost could never sign in again.
+      /// Refused for a person. The account's sessions are revoked, and the change is audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse> SetServiceAccountPasswordAsync(global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_SetServiceAccountPassword, null, options, request);
       }
       /// <summary>
       /// ── OTP ──────────────────────────────────────────────────────────────────
@@ -4287,77 +4395,109 @@ namespace Udb.Core.Authn.Services.V1 {
       /// session. Every use re-checks the membership (ACTIVE, same revision), the
       /// home grant and the account. No, expired or revoked membership: one
       /// uniform PERMISSION_DENIED.
+      /// The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+      /// whose home is the caller's tenant. Called with the same home service bearer and
+      /// scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
       /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse ListOwnTenantMemberships(global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListOwnTenantMemberships(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Exchange a service account's HOME bearer for a short-lived access token
+      /// in a tenant that approved it (ServiceAccountTenantMembership). Service
+      /// accounts only, and never with a token minted by this RPC. The token's
+      /// subject is the service account, its tenant/project are the target, its
+      /// scopes are requested_scopes within the membership's approved scopes (all
+      /// of them when empty), its service identity is the home grant's, and it
+      /// carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+      /// minutes and never past the membership's expiry; no refresh token, no
+      /// session. Every use re-checks the membership (ACTIVE, same revision), the
+      /// home grant and the account. No, expired or revoked membership: one
+      /// uniform PERMISSION_DENIED.
+      /// The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+      /// whose home is the caller's tenant. Called with the same home service bearer and
+      /// scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse ListOwnTenantMemberships(global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListOwnTenantMemberships, null, options, request);
+      }
+      /// <summary>
+      /// Exchange a service account's HOME bearer for a short-lived access token
+      /// in a tenant that approved it (ServiceAccountTenantMembership). Service
+      /// accounts only, and never with a token minted by this RPC. The token's
+      /// subject is the service account, its tenant/project are the target, its
+      /// scopes are requested_scopes within the membership's approved scopes (all
+      /// of them when empty), its service identity is the home grant's, and it
+      /// carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+      /// minutes and never past the membership's expiry; no refresh token, no
+      /// session. Every use re-checks the membership (ACTIVE, same revision), the
+      /// home grant and the account. No, expired or revoked membership: one
+      /// uniform PERMISSION_DENIED.
+      /// The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+      /// whose home is the caller's tenant. Called with the same home service bearer and
+      /// scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse> ListOwnTenantMembershipsAsync(global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListOwnTenantMembershipsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Exchange a service account's HOME bearer for a short-lived access token
+      /// in a tenant that approved it (ServiceAccountTenantMembership). Service
+      /// accounts only, and never with a token minted by this RPC. The token's
+      /// subject is the service account, its tenant/project are the target, its
+      /// scopes are requested_scopes within the membership's approved scopes (all
+      /// of them when empty), its service identity is the home grant's, and it
+      /// carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+      /// minutes and never past the membership's expiry; no refresh token, no
+      /// session. Every use re-checks the membership (ACTIVE, same revision), the
+      /// home grant and the account. No, expired or revoked membership: one
+      /// uniform PERMISSION_DENIED.
+      /// The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+      /// whose home is the caller's tenant. Called with the same home service bearer and
+      /// scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse> ListOwnTenantMembershipsAsync(global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListOwnTenantMemberships, null, options, request);
+      }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse ExchangeServiceTokenForTenant(global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ExchangeServiceTokenForTenant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
-      /// <summary>
-      /// Exchange a service account's HOME bearer for a short-lived access token
-      /// in a tenant that approved it (ServiceAccountTenantMembership). Service
-      /// accounts only, and never with a token minted by this RPC. The token's
-      /// subject is the service account, its tenant/project are the target, its
-      /// scopes are requested_scopes within the membership's approved scopes (all
-      /// of them when empty), its service identity is the home grant's, and it
-      /// carries `home_tenant_id` and the membership pin. Lifetime: at most 15
-      /// minutes and never past the membership's expiry; no refresh token, no
-      /// session. Every use re-checks the membership (ACTIVE, same revision), the
-      /// home grant and the account. No, expired or revoked membership: one
-      /// uniform PERMISSION_DENIED.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="options">The options for the call.</param>
-      /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse ExchangeServiceTokenForTenant(global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_ExchangeServiceTokenForTenant, null, options, request);
       }
-      /// <summary>
-      /// Exchange a service account's HOME bearer for a short-lived access token
-      /// in a tenant that approved it (ServiceAccountTenantMembership). Service
-      /// accounts only, and never with a token minted by this RPC. The token's
-      /// subject is the service account, its tenant/project are the target, its
-      /// scopes are requested_scopes within the membership's approved scopes (all
-      /// of them when empty), its service identity is the home grant's, and it
-      /// carries `home_tenant_id` and the membership pin. Lifetime: at most 15
-      /// minutes and never past the membership's expiry; no refresh token, no
-      /// session. Every use re-checks the membership (ACTIVE, same revision), the
-      /// home grant and the account. No, expired or revoked membership: one
-      /// uniform PERMISSION_DENIED.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
-      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
-      /// <param name="cancellationToken">An optional token for canceling the call.</param>
-      /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse> ExchangeServiceTokenForTenantAsync(global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return ExchangeServiceTokenForTenantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
-      /// <summary>
-      /// Exchange a service account's HOME bearer for a short-lived access token
-      /// in a tenant that approved it (ServiceAccountTenantMembership). Service
-      /// accounts only, and never with a token minted by this RPC. The token's
-      /// subject is the service account, its tenant/project are the target, its
-      /// scopes are requested_scopes within the membership's approved scopes (all
-      /// of them when empty), its service identity is the home grant's, and it
-      /// carries `home_tenant_id` and the membership pin. Lifetime: at most 15
-      /// minutes and never past the membership's expiry; no refresh token, no
-      /// session. Every use re-checks the membership (ACTIVE, same revision), the
-      /// home grant and the account. No, expired or revoked membership: one
-      /// uniform PERMISSION_DENIED.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="options">The options for the call.</param>
-      /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse> ExchangeServiceTokenForTenantAsync(global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest request, grpc::CallOptions options)
       {
@@ -5231,6 +5371,7 @@ namespace Udb.Core.Authn.Services.V1 {
           .AddMethod(__Method_UpdateUser, serviceImpl.UpdateUser)
           .AddMethod(__Method_ChangeUserStatus, serviceImpl.ChangeUserStatus)
           .AddMethod(__Method_AdminResetPassword, serviceImpl.AdminResetPassword)
+          .AddMethod(__Method_SetServiceAccountPassword, serviceImpl.SetServiceAccountPassword)
           .AddMethod(__Method_SendOTP, serviceImpl.SendOTP)
           .AddMethod(__Method_VerifyOTP, serviceImpl.VerifyOTP)
           .AddMethod(__Method_ResendOTP, serviceImpl.ResendOTP)
@@ -5288,6 +5429,7 @@ namespace Udb.Core.Authn.Services.V1 {
           .AddMethod(__Method_CreateServiceAccountTenantMembership, serviceImpl.CreateServiceAccountTenantMembership)
           .AddMethod(__Method_ListServiceAccountTenantMemberships, serviceImpl.ListServiceAccountTenantMemberships)
           .AddMethod(__Method_RevokeServiceAccountTenantMembership, serviceImpl.RevokeServiceAccountTenantMembership)
+          .AddMethod(__Method_ListOwnTenantMemberships, serviceImpl.ListOwnTenantMemberships)
           .AddMethod(__Method_ExchangeServiceTokenForTenant, serviceImpl.ExchangeServiceTokenForTenant)
           .AddMethod(__Method_PutTenantAuthPolicy, serviceImpl.PutTenantAuthPolicy)
           .AddMethod(__Method_GetTenantAuthPolicy, serviceImpl.GetTenantAuthPolicy)
@@ -5319,6 +5461,7 @@ namespace Udb.Core.Authn.Services.V1 {
       serviceBinder.AddMethod(__Method_UpdateUser, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.UpdateUserRequest, global::Udb.Core.Authn.Services.V1.UpdateUserResponse>(serviceImpl.UpdateUser));
       serviceBinder.AddMethod(__Method_ChangeUserStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ChangeUserStatusRequest, global::Udb.Core.Authn.Services.V1.ChangeUserStatusResponse>(serviceImpl.ChangeUserStatus));
       serviceBinder.AddMethod(__Method_AdminResetPassword, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.AdminResetPasswordRequest, global::Udb.Core.Authn.Services.V1.AdminResetPasswordResponse>(serviceImpl.AdminResetPassword));
+      serviceBinder.AddMethod(__Method_SetServiceAccountPassword, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordRequest, global::Udb.Core.Authn.Services.V1.SetServiceAccountPasswordResponse>(serviceImpl.SetServiceAccountPassword));
       serviceBinder.AddMethod(__Method_SendOTP, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.SendOTPRequest, global::Udb.Core.Authn.Services.V1.SendOTPResponse>(serviceImpl.SendOTP));
       serviceBinder.AddMethod(__Method_VerifyOTP, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.VerifyOTPRequest, global::Udb.Core.Authn.Services.V1.VerifyOTPResponse>(serviceImpl.VerifyOTP));
       serviceBinder.AddMethod(__Method_ResendOTP, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ResendOTPRequest, global::Udb.Core.Authn.Services.V1.ResendOTPResponse>(serviceImpl.ResendOTP));
@@ -5376,6 +5519,7 @@ namespace Udb.Core.Authn.Services.V1 {
       serviceBinder.AddMethod(__Method_CreateServiceAccountTenantMembership, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.CreateServiceAccountTenantMembershipRequest, global::Udb.Core.Authn.Services.V1.CreateServiceAccountTenantMembershipResponse>(serviceImpl.CreateServiceAccountTenantMembership));
       serviceBinder.AddMethod(__Method_ListServiceAccountTenantMemberships, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ListServiceAccountTenantMembershipsRequest, global::Udb.Core.Authn.Services.V1.ListServiceAccountTenantMembershipsResponse>(serviceImpl.ListServiceAccountTenantMemberships));
       serviceBinder.AddMethod(__Method_RevokeServiceAccountTenantMembership, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.RevokeServiceAccountTenantMembershipRequest, global::Udb.Core.Authn.Services.V1.RevokeServiceAccountTenantMembershipResponse>(serviceImpl.RevokeServiceAccountTenantMembership));
+      serviceBinder.AddMethod(__Method_ListOwnTenantMemberships, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest, global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse>(serviceImpl.ListOwnTenantMemberships));
       serviceBinder.AddMethod(__Method_ExchangeServiceTokenForTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse>(serviceImpl.ExchangeServiceTokenForTenant));
       serviceBinder.AddMethod(__Method_PutTenantAuthPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse>(serviceImpl.PutTenantAuthPolicy));
       serviceBinder.AddMethod(__Method_GetTenantAuthPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse>(serviceImpl.GetTenantAuthPolicy));

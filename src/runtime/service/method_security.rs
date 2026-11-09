@@ -1746,10 +1746,10 @@ fn enforce(
         // Name the method's own scope(s) so a least-privilege service knows
         // exactly what to add to its grant (not only the admin scopes).
         let message = if method_scopes.is_empty() {
-            "scope udb:admin or udb:auth:admin is required".to_string()
+            format!("{path} requires scope udb:admin or udb:auth:admin")
         } else {
             format!(
-                "scope {} is required (or udb:admin / udb:auth:admin)",
+                "{path} requires scope {} (or udb:admin / udb:auth:admin)",
                 method_scopes.join(" or ")
             )
         };
@@ -2266,6 +2266,7 @@ where
                     credential_type = audit_principal.credential_type,
                     credential_id = %audit_principal.credential_id,
                     auth_method = %audit_principal.auth_method,
+                    detail = %status.message(),
                     "native method authorization denied"
                 );
                 Box::pin(async move { Ok(status.into_http()) })

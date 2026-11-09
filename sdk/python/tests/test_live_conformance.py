@@ -1722,10 +1722,11 @@ def requires_platform_perf_identity(client_cls, method_name: str) -> bool:
 
 
 def requires_service_account_perf_identity(client_cls, method_name: str) -> bool:
-    """ExchangeServiceTokenForTenant is callable only by a service account
-    presenting its HOME-tenant bearer; membership create/list/revoke stay with
-    the bench tenant admin (the membership target)."""
-    return client_cls is AuthnServiceClient and method_name == "ExchangeServiceTokenForTenant"
+    """ExchangeServiceTokenForTenant and ListOwnTenantMemberships are callable
+    only by a service account presenting its HOME-tenant bearer; membership
+    create/list/revoke stay with the bench tenant admin (the membership target)."""
+    return client_cls is AuthnServiceClient and method_name in (
+        "ExchangeServiceTokenForTenant", "ListOwnTenantMemberships")
 
 
 def test_platform_perf_identity_routing_is_narrow():
@@ -1739,10 +1740,12 @@ def test_platform_perf_identity_routing_is_narrow():
     assert not requires_platform_perf_identity(TenantServiceClient, "PurgeTenant")
     assert not requires_platform_perf_identity(DataBrokerClient, "Select")
     assert not requires_platform_perf_identity(DataBrokerClient, "EnsureProject")
-    assert requires_service_account_perf_identity(AuthnServiceClient, "ExchangeServiceTokenForTenant")
-    assert not requires_platform_perf_identity(AuthnServiceClient, "ExchangeServiceTokenForTenant")
+    for name in ("ExchangeServiceTokenForTenant", "ListOwnTenantMemberships"):
+        assert requires_service_account_perf_identity(AuthnServiceClient, name)
+        assert not requires_platform_perf_identity(AuthnServiceClient, name)
     for name in ("CreateServiceAccountTenantMembership", "ListServiceAccountTenantMemberships",
-                 "RevokeServiceAccountTenantMembership", "Login", "ValidateToken"):
+                 "RevokeServiceAccountTenantMembership", "SetServiceAccountPassword",
+                 "Login", "ValidateToken"):
         assert not requires_service_account_perf_identity(AuthnServiceClient, name)
     assert not requires_service_account_perf_identity(DataBrokerClient, "ListProjects")
 
@@ -4552,7 +4555,7 @@ AUTH_LAST_PERF = {
     "Logout", "RevokeSession", "RevokeDevice", "DisableMfaFactor", "RevokeRecoveryCodes",
     "DeleteWebAuthnCredential", "ChangePassword", "ResetPassword", "AdminResetPassword",
     "ChangeUserStatus", "AdminResetMfa", "AdminRevokeSession", "AdminRevokeAllUserSessions",
-    "AdminRevokeAllTenantSessions", "EmergencyRevoke",
+    "AdminRevokeAllTenantSessions", "EmergencyRevoke", "SetServiceAccountPassword",
 }
 
 TERMINAL_PERF_METHODS = {
@@ -4824,11 +4827,12 @@ def test_live_perf():
         def is_cdc_subscription(client_cls, method) -> bool:
             return client_cls is DataBrokerClient and method.name == "PublishCDC"
 
-        # ExchangeServiceTokenForTenant is callable only by a service account
-        # presenting its HOME-tenant bearer. The prepared fixtures name such an
-        # account (membership_exchange_username, password UDB_LIVE_PASSWORD) with
-        # an active membership in the bench tenant. Its client is built lazily,
-        # right before that single measured row, so the bearer is fresh. When the
+        # ExchangeServiceTokenForTenant and ListOwnTenantMemberships are callable
+        # only by a service account presenting its HOME-tenant bearer. The
+        # prepared fixtures name such an account (membership_exchange_username,
+        # password UDB_LIVE_PASSWORD) with an active membership in the bench
+        # tenant. Its client is built lazily, right before the first of those
+        # measured rows, so the bearer is fresh. When the
         # fixture is absent or the login fails the row is measured with the
         # ordinary client and fails honestly.
         def service_account_caller():

@@ -21,9 +21,10 @@ front of many databases and the backend services (auth, secrets, search, jobs,
 storage, and more) you'd otherwise stitch together yourself. This page is the
 map: find what you're trying to do in the left column and follow the link.
 
-If you're brand new, start with the [project overview](../README.md) to see what
-UDB is and why it exists. When you're ready to build, jump straight to the guide
-that matches your task below.
+**Start here:** new to UDB? Read the [project overview](../README.md) and follow
+its [Quick Start](../README.md#quick-start), then
+[integration.md](integration.md) to connect an application. When you're ready
+for more, jump straight to the guide that matches your task below.
 
 This is the public documentation for UDB 0.6.13. The guides are grouped by what you're doing: understanding the architecture,
 annotating your protos, integrating an app, using the native services, running
@@ -50,6 +51,12 @@ Each row is a task. Read across to the guide that covers it.
 | From-scratch hardened/enterprise bring-up: minimal env set, TLS/mTLS, auth-plane exposure, ABAC vs policy_rules, pooler-safe DSN, SDK mTLS | [enterprise-deployment.md](enterprise-deployment.md) |
 | Request context, identity, authorization, sensitive data, and compliance profiles | [security.md](security.md) |
 | Service accounts acting for users: what a service token carries, CheckAccess for a user, acting in another tenant, phone-only users, lock contention | [service-accounts.md](service-accounts.md) |
+| Auth operator runbooks: readiness failures, login and MFA failures, key rotation, denial spikes, policy drift | [auth-runbooks.md](auth-runbooks.md) |
+| High-availability deployment: the 3-replica reference architecture | [deploy-ha.md](deploy-ha.md) |
+| Service-level objectives: per-RPC latency budgets and the metrics that measure them | [slo.md](slo.md) |
+| Generating typed ORM entity/repository models with `udb orm scaffold` | [orm-scaffold.md](orm-scaffold.md) |
+| PHP performance: warm gRPC channels, persistent workers, a local UDB sidecar | [php-perf.md](php-perf.md) |
+| CI architecture: what CI runs, on which event, and which checks gate merges | [ci-architecture.md](ci-architecture.md) |
 | Testing | [testing.md](testing.md) |
 | SDKs | [../sdk/README.md](../sdk/README.md) |
 
@@ -82,7 +89,7 @@ These files are produced automatically from UDB's service descriptors, so they
 always match the running build. Don't hand-edit them — regenerate them with the
 commands below.
 
-- [generated/native-services.md](generated/native-services.md) - native service table
+- [generated/native-services.md](generated/native-services.md) - native service and RPC table: scopes, accepted credentials, tenant rules
 - [generated/udb-native-contract.json](generated/udb-native-contract.json) - descriptor-derived service contract
 - [generated/authn-authz-rpc-inventory.md](generated/authn-authz-rpc-inventory.md) - auth RPC inventory
 - [generated/authn-authz-sensitive-fields.md](generated/authn-authz-sensitive-fields.md) - sensitive-field inventory

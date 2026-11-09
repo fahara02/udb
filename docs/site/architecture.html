@@ -88,12 +88,15 @@
     <div class="wrap">
       <div class="eyebrow">Two planes, one contract</div>
       <h2>Data plane and a <span class="accent">network-isolated</span> control plane</h2>
+      <p class="lead">The data-plane port answers <code>UNIMPLEMENTED</code> for native RPCs; SDKs reach the native services through <code>authTarget</code>.</p>
       <div class="tablewrap mt28">
         <table>
           <thead><tr><th>Plane</th><th>Listener</th><th>Surface</th><th class="n">RPCs</th></tr></thead>
           <tbody>
-            <tr><td><b>Data plane</b></td><td>Public <code>DataBroker</code></td><td>Relational, vector, object, cache, document, graph, time-series, analytical; transactions, CDC, catalog, migration, saga</td><td class="n">76</td></tr>
-            <tr><td><b>Control plane</b></td><td>Isolated <code>UDB_AUTH_GRPC_ADDR</code></td><td>27 native services — authn, authz, API keys, IdP, tenant, notification, analytics, storage, asset, WebRTC, policy distribution — plus vault, metering, scheduler, search, webhook, workflow, lock, livequery, config, backup, and embedding</td><td class="n">302</td></tr>
+            <tr><td><b>Data plane</b></td><td>Public <code>DataBroker</code>, <code>:50051</code></td><td>Relational, vector, object, cache, document, graph, time-series, analytical; transactions, CDC, catalog, migration, saga</td><td class="n">84</td></tr>
+            <tr><td><b>Control plane</b></td><td>Isolated <code>UDB_AUTH_GRPC_ADDR</code>, loopback <code>:50061</code> (data port + 10) by default</td><td>28 native services — authn, authz, API keys, IdP, tenant, notification, analytics, storage, asset, WebRTC, policy distribution, vault, metering, scheduler, search, webhook, workflow, lock, livequery, config, backup, embedding, messaging, and cache. Per-RPC scopes and credentials: <a href="https://github.com/fahara02/udb/blob/main/docs/generated/native-services.md">generated service reference</a></td><td class="n">340</td></tr>
+            <tr><td><b>WebRTC peer</b></td><td><code>UDB_WEBRTC_GRPC_ADDR</code>, loopback <code>:50071</code> (data port + 20)</td><td>Peer-token RPCs for browser and app peers</td><td class="n">—</td></tr>
+            <tr><td><b>Metrics</b></td><td><code>UDB_METRICS_ADDR</code>, <code>0.0.0.0:50052</code></td><td>Prometheus metrics</td><td class="n">—</td></tr>
           </tbody>
         </table>
       </div>

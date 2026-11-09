@@ -208,6 +208,37 @@ public final class AuthnServiceGrpc {
     return getAdminResetPasswordMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest,
+      com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse> getSetServiceAccountPasswordMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SetServiceAccountPassword",
+      requestType = com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest.class,
+      responseType = com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest,
+      com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse> getSetServiceAccountPasswordMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest, com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse> getSetServiceAccountPasswordMethod;
+    if ((getSetServiceAccountPasswordMethod = AuthnServiceGrpc.getSetServiceAccountPasswordMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getSetServiceAccountPasswordMethod = AuthnServiceGrpc.getSetServiceAccountPasswordMethod) == null) {
+          AuthnServiceGrpc.getSetServiceAccountPasswordMethod = getSetServiceAccountPasswordMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest, com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SetServiceAccountPassword"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("SetServiceAccountPassword"))
+              .build();
+        }
+      }
+    }
+    return getSetServiceAccountPasswordMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SendOTPRequest,
       com.udb.core.authn.services.v1.SendOTPResponse> getSendOTPMethod;
 
@@ -1975,6 +2006,37 @@ public final class AuthnServiceGrpc {
     return getRevokeServiceAccountTenantMembershipMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest,
+      com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse> getListOwnTenantMembershipsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListOwnTenantMemberships",
+      requestType = com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest.class,
+      responseType = com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest,
+      com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse> getListOwnTenantMembershipsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest, com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse> getListOwnTenantMembershipsMethod;
+    if ((getListOwnTenantMembershipsMethod = AuthnServiceGrpc.getListOwnTenantMembershipsMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getListOwnTenantMembershipsMethod = AuthnServiceGrpc.getListOwnTenantMembershipsMethod) == null) {
+          AuthnServiceGrpc.getListOwnTenantMembershipsMethod = getListOwnTenantMembershipsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest, com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListOwnTenantMemberships"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ListOwnTenantMemberships"))
+              .build();
+        }
+      }
+    }
+    return getListOwnTenantMembershipsMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest,
       com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> getExchangeServiceTokenForTenantMethod;
 
@@ -2594,6 +2656,19 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+     * no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+     * current password, so an account whose password was lost could never sign in again.
+     * Refused for a person. The account's sessions are revoked, and the change is audited.
+     * </pre>
+     */
+    default void setServiceAccountPassword(com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSetServiceAccountPasswordMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * ── OTP ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -3140,7 +3215,17 @@ public final class AuthnServiceGrpc {
      * session. Every use re-checks the membership (ACTIVE, same revision), the
      * home grant and the account. No, expired or revoked membership: one
      * uniform PERMISSION_DENIED.
+     * The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+     * whose home is the caller's tenant. Called with the same home service bearer and
+     * scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
      * </pre>
+     */
+    default void listOwnTenantMemberships(com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListOwnTenantMembershipsMethod(), responseObserver);
+    }
+
+    /**
      */
     default void exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request,
         io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> responseObserver) {
@@ -3437,6 +3522,20 @@ public final class AuthnServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminResetPasswordResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getAdminResetPasswordMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+     * no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+     * current password, so an account whose password was lost could never sign in again.
+     * Refused for a person. The account's sessions are revoked, and the change is audited.
+     * </pre>
+     */
+    public void setServiceAccountPassword(com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSetServiceAccountPasswordMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -4044,7 +4143,18 @@ public final class AuthnServiceGrpc {
      * session. Every use re-checks the membership (ACTIVE, same revision), the
      * home grant and the account. No, expired or revoked membership: one
      * uniform PERMISSION_DENIED.
+     * The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+     * whose home is the caller's tenant. Called with the same home service bearer and
+     * scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
      * </pre>
+     */
+    public void listOwnTenantMemberships(com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListOwnTenantMembershipsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
      */
     public void exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request,
         io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> responseObserver) {
@@ -4330,6 +4440,19 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.AdminResetPasswordResponse adminResetPassword(com.udb.core.authn.services.v1.AdminResetPasswordRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getAdminResetPasswordMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+     * no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+     * current password, so an account whose password was lost could never sign in again.
+     * Refused for a person. The account's sessions are revoked, and the change is audited.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse setServiceAccountPassword(com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSetServiceAccountPasswordMethod(), getCallOptions(), request);
     }
 
     /**
@@ -4880,7 +5003,17 @@ public final class AuthnServiceGrpc {
      * session. Every use re-checks the membership (ACTIVE, same revision), the
      * home grant and the account. No, expired or revoked membership: one
      * uniform PERMISSION_DENIED.
+     * The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+     * whose home is the caller's tenant. Called with the same home service bearer and
+     * scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
      * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse listOwnTenantMemberships(com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListOwnTenantMembershipsMethod(), getCallOptions(), request);
+    }
+
+    /**
      */
     public com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
@@ -5150,6 +5283,19 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.AdminResetPasswordResponse adminResetPassword(com.udb.core.authn.services.v1.AdminResetPasswordRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getAdminResetPasswordMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+     * no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+     * current password, so an account whose password was lost could never sign in again.
+     * Refused for a person. The account's sessions are revoked, and the change is audited.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse setServiceAccountPassword(com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSetServiceAccountPasswordMethod(), getCallOptions(), request);
     }
 
     /**
@@ -5700,7 +5846,17 @@ public final class AuthnServiceGrpc {
      * session. Every use re-checks the membership (ACTIVE, same revision), the
      * home grant and the account. No, expired or revoked membership: one
      * uniform PERMISSION_DENIED.
+     * The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+     * whose home is the caller's tenant. Called with the same home service bearer and
+     * scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
      * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse listOwnTenantMemberships(com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListOwnTenantMembershipsMethod(), getCallOptions(), request);
+    }
+
+    /**
      */
     public com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
@@ -5976,6 +6132,20 @@ public final class AuthnServiceGrpc {
         com.udb.core.authn.services.v1.AdminResetPasswordRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getAdminResetPasswordMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+     * no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+     * current password, so an account whose password was lost could never sign in again.
+     * Refused for a person. The account's sessions are revoked, and the change is audited.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse> setServiceAccountPassword(
+        com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSetServiceAccountPasswordMethod(), getCallOptions()), request);
     }
 
     /**
@@ -6583,7 +6753,18 @@ public final class AuthnServiceGrpc {
      * session. Every use re-checks the membership (ACTIVE, same revision), the
      * home grant and the account. No, expired or revoked membership: one
      * uniform PERMISSION_DENIED.
+     * The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+     * whose home is the caller's tenant. Called with the same home service bearer and
+     * scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
      * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse> listOwnTenantMemberships(
+        com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListOwnTenantMembershipsMethod(), getCallOptions()), request);
+    }
+
+    /**
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> exchangeServiceTokenForTenant(
         com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request) {
@@ -6803,79 +6984,81 @@ public final class AuthnServiceGrpc {
   private static final int METHODID_UPDATE_USER = 3;
   private static final int METHODID_CHANGE_USER_STATUS = 4;
   private static final int METHODID_ADMIN_RESET_PASSWORD = 5;
-  private static final int METHODID_SEND_OTP = 6;
-  private static final int METHODID_VERIFY_OTP = 7;
-  private static final int METHODID_RESEND_OTP = 8;
-  private static final int METHODID_AUTHENTICATE = 9;
-  private static final int METHODID_LOGIN = 10;
-  private static final int METHODID_REFRESH_TOKEN = 11;
-  private static final int METHODID_LOGOUT = 12;
-  private static final int METHODID_CHANGE_PASSWORD = 13;
-  private static final int METHODID_VALIDATE_TOKEN = 14;
-  private static final int METHODID_CREATE_SESSION = 15;
-  private static final int METHODID_REFRESH_SESSION = 16;
-  private static final int METHODID_GET_SESSION = 17;
-  private static final int METHODID_LIST_SESSIONS = 18;
-  private static final int METHODID_REVOKE_SESSION = 19;
-  private static final int METHODID_VALIDATE_CSRF = 20;
-  private static final int METHODID_ENROLL_MFA = 21;
-  private static final int METHODID_CONFIRM_MFAENROLLMENT = 22;
-  private static final int METHODID_GENERATE_RECOVERY_CODES = 23;
-  private static final int METHODID_PUT_MFA_POLICY = 24;
-  private static final int METHODID_GET_MFA_POLICY = 25;
-  private static final int METHODID_FORGOT_PASSWORD = 26;
-  private static final int METHODID_RESET_PASSWORD = 27;
-  private static final int METHODID_INTROSPECT_TOKEN = 28;
-  private static final int METHODID_SEND_PHONE_VERIFICATION = 29;
-  private static final int METHODID_GET_JWKS = 30;
-  private static final int METHODID_START_WEB_AUTHN_REGISTRATION = 31;
-  private static final int METHODID_FINISH_WEB_AUTHN_REGISTRATION = 32;
-  private static final int METHODID_START_WEB_AUTHN_AUTHENTICATION = 33;
-  private static final int METHODID_FINISH_WEB_AUTHN_AUTHENTICATION = 34;
-  private static final int METHODID_LIST_DEVICES = 35;
-  private static final int METHODID_REVOKE_DEVICE = 36;
-  private static final int METHODID_ADMIN_REVOKE_SESSION = 37;
-  private static final int METHODID_ADMIN_REVOKE_ALL_USER_SESSIONS = 38;
-  private static final int METHODID_ADMIN_REVOKE_ALL_TENANT_SESSIONS = 39;
-  private static final int METHODID_EMERGENCY_REVOKE = 40;
-  private static final int METHODID_ISSUE_MFA_CHALLENGE = 41;
-  private static final int METHODID_VERIFY_MFA_CHALLENGE = 42;
-  private static final int METHODID_LIST_MFA_FACTORS = 43;
-  private static final int METHODID_DISABLE_MFA_FACTOR = 44;
-  private static final int METHODID_RENAME_PASSKEY = 45;
-  private static final int METHODID_REVOKE_RECOVERY_CODES = 46;
-  private static final int METHODID_ADMIN_RESET_MFA = 47;
-  private static final int METHODID_LIST_WEB_AUTHN_CREDENTIALS = 48;
-  private static final int METHODID_DELETE_WEB_AUTHN_CREDENTIAL = 49;
-  private static final int METHODID_CREATE_SERVICE_ACCOUNT_GRANT = 50;
-  private static final int METHODID_GET_SERVICE_ACCOUNT_GRANT = 51;
-  private static final int METHODID_LIST_SERVICE_ACCOUNT_GRANTS = 52;
-  private static final int METHODID_REPLACE_SERVICE_ACCOUNT_GRANT = 53;
-  private static final int METHODID_ROTATE_SERVICE_ACCOUNT_IDENTITY = 54;
-  private static final int METHODID_TRANSFER_SERVICE_ACCOUNT_GRANT = 55;
-  private static final int METHODID_REVOKE_SERVICE_ACCOUNT_GRANT = 56;
-  private static final int METHODID_CREATE_CERTIFICATE_BINDING = 57;
-  private static final int METHODID_LIST_CERTIFICATE_BINDINGS = 58;
-  private static final int METHODID_REVOKE_CERTIFICATE_BINDING = 59;
-  private static final int METHODID_CREATE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP = 60;
-  private static final int METHODID_LIST_SERVICE_ACCOUNT_TENANT_MEMBERSHIPS = 61;
-  private static final int METHODID_REVOKE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP = 62;
-  private static final int METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT = 63;
-  private static final int METHODID_PUT_TENANT_AUTH_POLICY = 64;
-  private static final int METHODID_GET_TENANT_AUTH_POLICY = 65;
-  private static final int METHODID_SEND_LOGIN_OTP = 66;
-  private static final int METHODID_LOGIN_WITH_OTP = 67;
-  private static final int METHODID_START_OIDC_LOGIN = 68;
-  private static final int METHODID_FINISH_OIDC_LOGIN = 69;
-  private static final int METHODID_LOGIN_WITH_OIDC_ID_TOKEN = 70;
-  private static final int METHODID_CREATE_INVITATION = 71;
-  private static final int METHODID_LIST_INVITATIONS = 72;
-  private static final int METHODID_REVOKE_INVITATION = 73;
-  private static final int METHODID_RESEND_INVITATION = 74;
-  private static final int METHODID_GET_INVITATION = 75;
-  private static final int METHODID_START_INVITATION_ACCEPTANCE = 76;
-  private static final int METHODID_ACCEPT_INVITATION = 77;
-  private static final int METHODID_CHECK_STEP_UP = 78;
+  private static final int METHODID_SET_SERVICE_ACCOUNT_PASSWORD = 6;
+  private static final int METHODID_SEND_OTP = 7;
+  private static final int METHODID_VERIFY_OTP = 8;
+  private static final int METHODID_RESEND_OTP = 9;
+  private static final int METHODID_AUTHENTICATE = 10;
+  private static final int METHODID_LOGIN = 11;
+  private static final int METHODID_REFRESH_TOKEN = 12;
+  private static final int METHODID_LOGOUT = 13;
+  private static final int METHODID_CHANGE_PASSWORD = 14;
+  private static final int METHODID_VALIDATE_TOKEN = 15;
+  private static final int METHODID_CREATE_SESSION = 16;
+  private static final int METHODID_REFRESH_SESSION = 17;
+  private static final int METHODID_GET_SESSION = 18;
+  private static final int METHODID_LIST_SESSIONS = 19;
+  private static final int METHODID_REVOKE_SESSION = 20;
+  private static final int METHODID_VALIDATE_CSRF = 21;
+  private static final int METHODID_ENROLL_MFA = 22;
+  private static final int METHODID_CONFIRM_MFAENROLLMENT = 23;
+  private static final int METHODID_GENERATE_RECOVERY_CODES = 24;
+  private static final int METHODID_PUT_MFA_POLICY = 25;
+  private static final int METHODID_GET_MFA_POLICY = 26;
+  private static final int METHODID_FORGOT_PASSWORD = 27;
+  private static final int METHODID_RESET_PASSWORD = 28;
+  private static final int METHODID_INTROSPECT_TOKEN = 29;
+  private static final int METHODID_SEND_PHONE_VERIFICATION = 30;
+  private static final int METHODID_GET_JWKS = 31;
+  private static final int METHODID_START_WEB_AUTHN_REGISTRATION = 32;
+  private static final int METHODID_FINISH_WEB_AUTHN_REGISTRATION = 33;
+  private static final int METHODID_START_WEB_AUTHN_AUTHENTICATION = 34;
+  private static final int METHODID_FINISH_WEB_AUTHN_AUTHENTICATION = 35;
+  private static final int METHODID_LIST_DEVICES = 36;
+  private static final int METHODID_REVOKE_DEVICE = 37;
+  private static final int METHODID_ADMIN_REVOKE_SESSION = 38;
+  private static final int METHODID_ADMIN_REVOKE_ALL_USER_SESSIONS = 39;
+  private static final int METHODID_ADMIN_REVOKE_ALL_TENANT_SESSIONS = 40;
+  private static final int METHODID_EMERGENCY_REVOKE = 41;
+  private static final int METHODID_ISSUE_MFA_CHALLENGE = 42;
+  private static final int METHODID_VERIFY_MFA_CHALLENGE = 43;
+  private static final int METHODID_LIST_MFA_FACTORS = 44;
+  private static final int METHODID_DISABLE_MFA_FACTOR = 45;
+  private static final int METHODID_RENAME_PASSKEY = 46;
+  private static final int METHODID_REVOKE_RECOVERY_CODES = 47;
+  private static final int METHODID_ADMIN_RESET_MFA = 48;
+  private static final int METHODID_LIST_WEB_AUTHN_CREDENTIALS = 49;
+  private static final int METHODID_DELETE_WEB_AUTHN_CREDENTIAL = 50;
+  private static final int METHODID_CREATE_SERVICE_ACCOUNT_GRANT = 51;
+  private static final int METHODID_GET_SERVICE_ACCOUNT_GRANT = 52;
+  private static final int METHODID_LIST_SERVICE_ACCOUNT_GRANTS = 53;
+  private static final int METHODID_REPLACE_SERVICE_ACCOUNT_GRANT = 54;
+  private static final int METHODID_ROTATE_SERVICE_ACCOUNT_IDENTITY = 55;
+  private static final int METHODID_TRANSFER_SERVICE_ACCOUNT_GRANT = 56;
+  private static final int METHODID_REVOKE_SERVICE_ACCOUNT_GRANT = 57;
+  private static final int METHODID_CREATE_CERTIFICATE_BINDING = 58;
+  private static final int METHODID_LIST_CERTIFICATE_BINDINGS = 59;
+  private static final int METHODID_REVOKE_CERTIFICATE_BINDING = 60;
+  private static final int METHODID_CREATE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP = 61;
+  private static final int METHODID_LIST_SERVICE_ACCOUNT_TENANT_MEMBERSHIPS = 62;
+  private static final int METHODID_REVOKE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP = 63;
+  private static final int METHODID_LIST_OWN_TENANT_MEMBERSHIPS = 64;
+  private static final int METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT = 65;
+  private static final int METHODID_PUT_TENANT_AUTH_POLICY = 66;
+  private static final int METHODID_GET_TENANT_AUTH_POLICY = 67;
+  private static final int METHODID_SEND_LOGIN_OTP = 68;
+  private static final int METHODID_LOGIN_WITH_OTP = 69;
+  private static final int METHODID_START_OIDC_LOGIN = 70;
+  private static final int METHODID_FINISH_OIDC_LOGIN = 71;
+  private static final int METHODID_LOGIN_WITH_OIDC_ID_TOKEN = 72;
+  private static final int METHODID_CREATE_INVITATION = 73;
+  private static final int METHODID_LIST_INVITATIONS = 74;
+  private static final int METHODID_REVOKE_INVITATION = 75;
+  private static final int METHODID_RESEND_INVITATION = 76;
+  private static final int METHODID_GET_INVITATION = 77;
+  private static final int METHODID_START_INVITATION_ACCEPTANCE = 78;
+  private static final int METHODID_ACCEPT_INVITATION = 79;
+  private static final int METHODID_CHECK_STEP_UP = 80;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -6917,6 +7100,10 @@ public final class AuthnServiceGrpc {
         case METHODID_ADMIN_RESET_PASSWORD:
           serviceImpl.adminResetPassword((com.udb.core.authn.services.v1.AdminResetPasswordRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminResetPasswordResponse>) responseObserver);
+          break;
+        case METHODID_SET_SERVICE_ACCOUNT_PASSWORD:
+          serviceImpl.setServiceAccountPassword((com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse>) responseObserver);
           break;
         case METHODID_SEND_OTP:
           serviceImpl.sendOTP((com.udb.core.authn.services.v1.SendOTPRequest) request,
@@ -7146,6 +7333,10 @@ public final class AuthnServiceGrpc {
           serviceImpl.revokeServiceAccountTenantMembership((com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse>) responseObserver);
           break;
+        case METHODID_LIST_OWN_TENANT_MEMBERSHIPS:
+          serviceImpl.listOwnTenantMemberships((com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse>) responseObserver);
+          break;
         case METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT:
           serviceImpl.exchangeServiceTokenForTenant((com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>) responseObserver);
@@ -7270,6 +7461,13 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.AdminResetPasswordRequest,
               com.udb.core.authn.services.v1.AdminResetPasswordResponse>(
                 service, METHODID_ADMIN_RESET_PASSWORD)))
+        .<com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest, com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse>addMethod(
+          getSetServiceAccountPasswordMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest, com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.SetServiceAccountPasswordRequest,
+              com.udb.core.authn.services.v1.SetServiceAccountPasswordResponse>(
+                service, METHODID_SET_SERVICE_ACCOUNT_PASSWORD)))
         .<com.udb.core.authn.services.v1.SendOTPRequest, com.udb.core.authn.services.v1.SendOTPResponse>addMethod(
           getSendOTPMethod(),
           io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.SendOTPRequest, com.udb.core.authn.services.v1.SendOTPResponse>asyncUnaryCall(
@@ -7669,6 +7867,13 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest,
               com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse>(
                 service, METHODID_REVOKE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP)))
+        .<com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest, com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse>addMethod(
+          getListOwnTenantMembershipsMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest, com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ListOwnTenantMembershipsRequest,
+              com.udb.core.authn.services.v1.ListOwnTenantMembershipsResponse>(
+                service, METHODID_LIST_OWN_TENANT_MEMBERSHIPS)))
         .<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest, com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>addMethod(
           getExchangeServiceTokenForTenantMethod(),
           io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest, com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>asyncUnaryCall(
@@ -7835,6 +8040,7 @@ public final class AuthnServiceGrpc {
               .addMethod(getUpdateUserMethod())
               .addMethod(getChangeUserStatusMethod())
               .addMethod(getAdminResetPasswordMethod())
+              .addMethod(getSetServiceAccountPasswordMethod())
               .addMethod(getSendOTPMethod())
               .addMethod(getVerifyOTPMethod())
               .addMethod(getResendOTPMethod())
@@ -7892,6 +8098,7 @@ public final class AuthnServiceGrpc {
               .addMethod(getCreateServiceAccountTenantMembershipMethod())
               .addMethod(getListServiceAccountTenantMembershipsMethod())
               .addMethod(getRevokeServiceAccountTenantMembershipMethod())
+              .addMethod(getListOwnTenantMembershipsMethod())
               .addMethod(getExchangeServiceTokenForTenantMethod())
               .addMethod(getPutTenantAuthPolicyMethod())
               .addMethod(getGetTenantAuthPolicyMethod())

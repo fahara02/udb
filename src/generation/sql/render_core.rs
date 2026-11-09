@@ -325,13 +325,9 @@ pub(crate) fn render_delta_operation(
                 }
             })
             .unwrap_or_else(|| missing_column_note(op)),
-        ChangeKind::RenameColumn => format!(
-            "ALTER TABLE {}.{} RENAME COLUMN {} TO {};",
-            qi(&op.schema),
-            qi(&op.table),
-            qi(&op.object_name),
-            qi(&op.column)
-        ),
+        ChangeKind::RenameColumn => {
+            guarded_rename_column_sql(&op.schema, &op.table, &op.object_name, &op.column)
+        }
         ChangeKind::ChangeColumnType => table
             .and_then(|table| find_column(table, &op.column))
             .map(|column| {

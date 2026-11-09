@@ -27,6 +27,9 @@ import (
 type apiKeySession struct {
 	key   string
 	retry time.Duration
+	// backoff is the first wait between attempts of one exchange (default 1s);
+	// tests shorten it.
+	backoff time.Duration
 
 	mu         sync.Mutex
 	expiresAt  time.Time
@@ -69,12 +72,12 @@ func (u *Udb) startAPIKeyExchange(ctx context.Context, key string, retry time.Du
 	u.credential.provider.Store(&credentialProvider{
 		resolve: func(ctx context.Context) (string, error) {
 			if _, err := u.renewAPIKey(ctx, s, false); err != nil {
-				return "", credentialRefusal(err)
+				return "", renewalRefusal(ctx, err)
 			}
 			s.mu.Lock()
 			defer s.mu.Unlock()
 			if !time.Now().Before(s.expiresAt) {
-				return "", credentialRefusal(errors.New("API key bearer is expired"))
+				return "", credentialRefusal(sessionExpired(errors.New("API key bearer is expired")))
 			}
 			return s.bearer, nil
 		},
@@ -83,7 +86,7 @@ func (u *Udb) startAPIKeyExchange(ctx context.Context, key string, retry time.Du
 			defer s.mu.Unlock()
 			var binding *credentialBindingError
 			if s.refreshErr != nil && (errors.As(s.refreshErr, &binding) || !time.Now().Before(s.expiresAt)) {
-				return credentialRefusal(s.refreshErr)
+				return credentialRefusal(sessionExpired(s.refreshErr))
 			}
 			return nil
 		},
@@ -118,7 +121,7 @@ func (u *Udb) renewAPIKey(ctx context.Context, s *apiKeySession, force bool) (ti
 	flight := &apiKeyRenewalFlight{done: make(chan struct{})}
 	s.inflight = flight
 	s.mu.Unlock()
-	exp, err := u.performAPIKeyExchange(ctx, s)
+	exp, err := u.exchangeWithRetry(ctx, s)
 	s.mu.Lock()
 	if err != nil {
 		s.refreshErr = err
@@ -128,6 +131,37 @@ func (u *Udb) renewAPIKey(ctx context.Context, s *apiKeySession, force bool) (ti
 	close(flight.done)
 	s.mu.Unlock()
 	return exp, err
+}
+
+// exchangeWithRetry re-authenticates with the key, making up to renewalAttempts
+// attempts with a jittered, doubling wait between them. Only a transient failure
+// (broker unreachable, overloaded, or the reply lost) is retried.
+func (u *Udb) exchangeWithRetry(ctx context.Context, s *apiKeySession) (time.Time, error) {
+	s.mu.Lock()
+	backoff := s.backoff
+	s.mu.Unlock()
+	var lastErr error
+	for attempt := 0; attempt < renewalAttempts; attempt++ {
+		if attempt > 0 {
+			if sleepContext(ctx, jitteredBackoff(attempt, backoff, renewalBackoffCap)) != nil {
+				return time.Time{}, lastErr
+			}
+			select {
+			case <-s.stop:
+				return time.Time{}, lastErr
+			default:
+			}
+		}
+		exp, err := u.performAPIKeyExchange(ctx, s)
+		if err == nil {
+			return exp, nil
+		}
+		lastErr = err
+		if !transientRenewalError(ctx, err) {
+			break
+		}
+	}
+	return time.Time{}, lastErr
 }
 
 func (u *Udb) performAPIKeyExchange(ctx context.Context, s *apiKeySession) (time.Time, error) {
@@ -183,7 +217,8 @@ func (u *Udb) performAPIKeyExchange(ctx context.Context, s *apiKeySession) (time
 }
 
 // keepAPIKeyBearer re-exchanges at 4/5 of the bearer's life. A failed exchange
-// is retried every s.retry and reported by CredentialErr. Demand joins this
+// is reported by CredentialErr and retried after a jittered exponential backoff
+// (starting at the smaller of s.retry and 1s, doubling to 60s). Demand joins this
 // same flight and refuses locally when renewal fails; it never emits old auth.
 func (u *Udb) keepAPIKeyBearer(s *apiKeySession, exp time.Time) {
 	for {
@@ -193,7 +228,7 @@ func (u *Udb) keepAPIKeyBearer(s *apiKeySession, exp time.Time) {
 			return
 		case <-time.After(wait):
 		}
-		for {
+		for failures := 1; ; failures++ {
 			base := context.Background()
 			if u.credential != nil {
 				base = u.credential.ctx
@@ -209,7 +244,7 @@ func (u *Udb) keepAPIKeyBearer(s *apiKeySession, exp time.Time) {
 			select {
 			case <-s.stop:
 				return
-			case <-time.After(s.retry):
+			case <-time.After(jitteredBackoff(failures, min(s.retry, renewalBackoffBase), renewalBackoffCap)):
 			}
 		}
 	}

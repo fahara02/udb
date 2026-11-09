@@ -1299,6 +1299,28 @@ pub(crate) fn ql(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
 
+/// Rename a column only while the old one exists and the new one does not. A
+/// `previous_column_name` rename is issued twice in one start, by the bootstrap of an
+/// existing table and by the delta, and either may run first or alone; whichever does,
+/// the other must find nothing to do rather than fail or add an empty column.
+pub(crate) fn guarded_rename_column_sql(schema: &str, table: &str, from: &str, to: &str) -> String {
+    format!(
+        "DO $$\nBEGIN\n  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = {schema_l} \
+         AND table_name = {table_l} AND column_name = {from_l})\n     AND NOT EXISTS (SELECT 1 FROM \
+         information_schema.columns WHERE table_schema = {schema_l} AND table_name = {table_l} AND \
+         column_name = {to_l}) THEN\n    ALTER TABLE {schema_q}.{table_q} RENAME COLUMN {from_q} TO {to_q};\n  \
+         END IF;\nEND$$;",
+        schema_l = ql(schema),
+        table_l = ql(table),
+        from_l = ql(from),
+        to_l = ql(to),
+        schema_q = qi(schema),
+        table_q = qi(table),
+        from_q = qi(from),
+        to_q = qi(to),
+    )
+}
+
 // generated_at_unix() intentionally removed — embedding timestamps in artifact
 // content broke idempotency: every run produced a new SHA-256 checksum for
 // otherwise-identical artifacts, causing the skip logic in execute_sql_artifacts

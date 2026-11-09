@@ -22,6 +22,7 @@ from .generated_client import (
     RetryPolicy,
     _is_replay_safe,
     _request_has_idempotency_key,
+    _retry_deadline,
 )
 from .metadata import ConsistencyMode, Metadata, ReadFence, WriteReceipt
 from .record_codec import format_timestamp
@@ -361,6 +362,8 @@ class UdbClient(_ClientBase):
         method = getattr(self._stub, rpc_name)
         request = self._with_context(request, metadata)
         facts = self._retry_facts(rpc_name, request)
+        effective_timeout = self._timeout if timeout is None else timeout
+        deadline = _retry_deadline(effective_timeout)
         attempt = 0
         while True:
             attempt += 1
@@ -368,12 +371,14 @@ class UdbClient(_ClientBase):
                 return method(
                     request,
                     metadata=self._call_metadata(metadata),
-                    timeout=self._timeout if timeout is None else timeout,
+                    timeout=effective_timeout,
                 )
             except grpc.RpcError as error:
                 if self._retry.should_retry(error.code(), attempt, **facts):
-                    time.sleep(self._retry.backoff_for(attempt))
-                    continue
+                    wait = self._retry.wait_for(attempt, error, deadline)
+                    if wait is not None:
+                        time.sleep(wait)
+                        continue
                 raise map_rpc_error(rpc_name, error) from error
 
     def select(
@@ -1136,6 +1141,8 @@ class UdbAsyncClient(_ClientBase):
         method = getattr(self._stub, rpc_name)
         request = self._with_context(request, metadata)
         facts = self._retry_facts(rpc_name, request)
+        effective_timeout = self._timeout if timeout is None else timeout
+        deadline = _retry_deadline(effective_timeout)
         attempt = 0
         while True:
             attempt += 1
@@ -1143,12 +1150,14 @@ class UdbAsyncClient(_ClientBase):
                 return await method(
                     request,
                     metadata=self._call_metadata(metadata),
-                    timeout=self._timeout if timeout is None else timeout,
+                    timeout=effective_timeout,
                 )
             except grpc.RpcError as error:
                 if self._retry.should_retry(error.code(), attempt, **facts):
-                    await asyncio.sleep(self._retry.backoff_for(attempt))
-                    continue
+                    wait = self._retry.wait_for(attempt, error, deadline)
+                    if wait is not None:
+                        await asyncio.sleep(wait)
+                        continue
                 raise map_rpc_error(rpc_name, error) from error
 
     async def select(

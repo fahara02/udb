@@ -198,9 +198,12 @@ their next call. Approving the account again creates a new revision; tokens of
 the old one stay dead.
 
 An exchange with no membership, or an expired or revoked one, gets a single
-`PERMISSION_DENIED` (`service_tenant_membership_required`). A human, an API key
-or an exchanged token gets `PERMISSION_DENIED` too: only a service account's
-home bearer can exchange.
+`PERMISSION_DENIED` (`service_tenant_membership_required`). A human, a raw API
+key presented as a header (`x-api-key`), or an exchanged token gets
+`PERMISSION_DENIED` too: only a service account's home bearer can exchange. The
+bearer that `Authenticate{api_key}` mints for a service account's key — what every
+SDK sends after connecting with an API key — is a home bearer and can exchange,
+provided its grant approves `udb:authn:exchange-tenant-token`.
 
 ### Login hints never grant anything
 

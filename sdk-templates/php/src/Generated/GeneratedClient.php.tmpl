@@ -178,12 +178,20 @@ final class GeneratedClient
     private ?array $channelOptions = null;
 
     /**
+     * The wait between unary retry attempts, in milliseconds. Null means
+     * `usleep`; unit tests replace it to observe the wait without sleeping.
+     *
+     * @var (\Closure(int):void)|null
+     */
+    private ?\Closure $retrySleep = null;
+
+    /**
      * @param  array{
      *   endpoint:string,
      *   tls?: array{enabled?:bool, root_certs?:?string, target?:?string},
      *   channel_options?: array<string,mixed>,
      *   deadline_ms?: int,
-     *   retry?: array{max_attempts?:int, base_delay_ms?:int, max_delay_ms?:int},
+     *   retry?: array{max_attempts?:int, base_delay_ms?:int, max_delay_ms?:int, max_retry_after_ms?:int},
      * }  $config
      */
     public function __construct(private readonly array $config)
@@ -489,6 +497,17 @@ final class GeneratedClient
         $maxAttempts = max(1, (int) ($retry['max_attempts'] ?? 4));
         $baseDelayMs = max(1, (int) ($retry['base_delay_ms'] ?? 50));
         $maxDelayMs = max($baseDelayMs, (int) ($retry['max_delay_ms'] ?? 2_000));
+        // The longest broker-requested delay (ErrorDetail.retry_after_ms) the client
+        // waits for automatically; a longer one is returned to the caller at once.
+        // <= 0 means the default (10s).
+        $maxRetryAfterMs = (int) ($retry['max_retry_after_ms'] ?? self::DEFAULT_MAX_RETRY_AFTER_MS);
+        if ($maxRetryAfterMs <= 0) {
+            $maxRetryAfterMs = self::DEFAULT_MAX_RETRY_AFTER_MS;
+        }
+        // The call's timeout (deadline_ms) bounds the whole call, retries included,
+        // when the broker asks for a delay.
+        $timeoutMs = isset($opts['timeout']) ? intdiv((int) $opts['timeout'], 1000) : 0;
+        $startedNs = hrtime(true);
 
         $lastStatus = null;
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
@@ -519,7 +538,20 @@ final class GeneratedClient
             $lastStatus = $status;
             if ($attempt < $maxAttempts
                 && $this->isRetryable($code, $readOnly, $replaySafe, $hasIdempotencyKey)) {
-                $this->sleepBackoff($attempt, $baseDelayMs, $maxDelayMs);
+                $serverMs = UdbRpcException::retryAfterMsFromStatus($status);
+                if ($serverMs > $maxRetryAfterMs) {
+                    // The broker asked for a longer delay than the client waits
+                    // for: surface its error (detail intact) now, the caller decides.
+                    break;
+                }
+                $waitMs = $this->retryDelayMs($attempt, $baseDelayMs, $maxDelayMs, $serverMs);
+                if ($serverMs > 0 && $timeoutMs > 0
+                    && intdiv(hrtime(true) - $startedNs, 1_000_000) + $waitMs > $timeoutMs) {
+                    // The broker's delay would pass the call's timeout: do not
+                    // sleep, surface its error (detail intact) now.
+                    break;
+                }
+                $this->sleepMs($waitMs);
                 continue;
             }
             break;
@@ -697,17 +729,39 @@ final class GeneratedClient
     // so REPLAY_SAFE / idempotency-key can be consulted) — never guessed from the name.
 
     /**
-     * Exponential backoff with full jitter, capped at `max_delay_ms`. Sleeps
-     * via `usleep` (microseconds). Honours a broker-supplied `retry_after_ms`
-     * from the typed ErrorDetail when present (set by `mapError`-adjacent
-     * decode in a follow-up; here we use the computed backoff).
+     * Default longest broker-requested delay the client waits for automatically
+     * (`retry.max_retry_after_ms`); a longer one is returned to the caller at once.
      */
-    private function sleepBackoff(int $attempt, int $baseDelayMs, int $maxDelayMs): void
-    {
+    private const DEFAULT_MAX_RETRY_AFTER_MS = 10_000;
+
+    /**
+     * The wait before retry `$attempt` (1-based): exponential backoff with full
+     * jitter capped at `max_delay_ms`, raised to the broker-requested
+     * `retry_after_ms` (from the typed ErrorDetail) when it is larger. The
+     * caller has already refused a delay above `max_retry_after_ms`.
+     */
+    private function retryDelayMs(
+        int $attempt,
+        int $baseDelayMs,
+        int $maxDelayMs,
+        int $serverRetryAfterMs,
+    ): int {
         $ceil = (int) min($maxDelayMs, $baseDelayMs * (2 ** ($attempt - 1)));
-        $jittered = random_int(0, max(0, $ceil));
-        if ($jittered > 0) {
-            usleep($jittered * 1000);
+        $waitMs = random_int(0, max(0, $ceil));
+        if ($serverRetryAfterMs > 0) {
+            $waitMs = max($waitMs, $serverRetryAfterMs);
+        }
+        return $waitMs;
+    }
+
+    private function sleepMs(int $ms): void
+    {
+        if ($this->retrySleep !== null) {
+            ($this->retrySleep)($ms);
+            return;
+        }
+        if ($ms > 0) {
+            usleep($ms * 1000);
         }
     }
 

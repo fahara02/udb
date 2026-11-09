@@ -100,6 +100,10 @@ class RetryPolicy:
     multiplier: float = 2.0
     jitter: float = 0.2
     retryable_codes: frozenset[grpc.StatusCode] = field(default_factory=lambda: _RETRYABLE_CODES)
+    #: The longest broker-requested delay (``retry_after_ms``, milliseconds) the
+    #: client waits for automatically; a longer one is returned to the caller at
+    #: once (the raised error keeps ``retry_after_ms``).
+    max_retry_after_ms: int = 10000
 
     def should_retry(
         self,
@@ -137,6 +141,45 @@ class RetryPolicy:
     def backoff_for(self, attempt: int) -> float:
         base = min(self.initial_backoff * (self.multiplier ** (attempt - 1)), self.max_backoff)
         return base + random.uniform(0.0, base * self.jitter)
+
+    def wait_for(self, attempt: int, error: Any, deadline: float | None = None) -> float | None:
+        """Seconds to wait before retrying after ``error``, or ``None`` to stop.
+
+        Without a broker-requested ``retry_after_ms`` the wait is the jittered
+        :meth:`backoff_for`. With one, the wait is the larger of the two, but
+        ``None`` is returned (the caller raises the error, its detail intact,
+        without sleeping) when the delay is longer than
+        :attr:`max_retry_after_ms` or when ``deadline`` (a ``time.monotonic()``
+        instant) is set and the wait would pass it.
+        """
+        wait = self.backoff_for(attempt)
+        retry_after_ms = _retry_after_ms_of(error)
+        if retry_after_ms > 0:
+            if retry_after_ms > int(self.max_retry_after_ms):
+                return None
+            wait = max(wait, retry_after_ms / 1000.0)
+            if deadline is not None and time.monotonic() + wait > deadline:
+                return None
+        return wait
+
+
+def _retry_deadline(timeout: float | None) -> float | None:
+    """The ``time.monotonic()`` instant a call's retries must not sleep past."""
+    if timeout is None or timeout <= 0:
+        return None
+    return time.monotonic() + timeout
+
+
+def _retry_after_ms_of(error: Any) -> int:
+    """The broker's ``retry_after_ms`` on a failed attempt, or 0 when absent."""
+    value = getattr(error, "retry_after_ms", None)
+    if value is None:
+        decoded = _decode_error_detail(_extract_error_detail(error))
+        value = getattr(decoded, "retry_after_ms", 0)
+    try:
+        return max(int(value or 0), 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _decode_error_detail(detail: bytes | None) -> Any | None:
@@ -299,6 +342,7 @@ def invoke_unary(
     policy = retry or RetryPolicy()
     replay_safe = _is_replay_safe(rpc_path) if rpc_path else False
     has_key = _request_has_idempotency_key(request)
+    deadline = _retry_deadline(timeout)
     attempt = 0
     while True:
         attempt += 1
@@ -313,8 +357,10 @@ def invoke_unary(
                 replay_safe=replay_safe,
                 has_idempotency_key=has_key,
             ):
-                time.sleep(policy.backoff_for(attempt))
-                continue
+                wait = policy.wait_for(attempt, error, deadline)
+                if wait is not None:
+                    time.sleep(wait)
+                    continue
             raise _map_error(rpc_name, error) from error
 
 
@@ -535,6 +581,7 @@ class _ServiceClientBase:
         rpc_path = f"/{self._SERVICE_FULL}/{rpc_name}"
         replay_safe = _is_replay_safe(rpc_path)
         has_key = _request_has_idempotency_key(request)
+        deadline = _retry_deadline(self._timeout if timeout is None else timeout)
         attempt = 0
         while True:
             attempt += 1
@@ -554,8 +601,10 @@ class _ServiceClientBase:
                     replay_safe=replay_safe,
                     has_idempotency_key=has_key,
                 ):
-                    time.sleep(self._retry.backoff_for(attempt))
-                    continue
+                    wait = self._retry.wait_for(attempt, error, deadline)
+                    if wait is not None:
+                        time.sleep(wait)
+                        continue
                 raise _map_error(rpc_name, error) from error
 
     def _invoke_server_streaming(
@@ -574,6 +623,7 @@ class _ServiceClientBase:
         rpc_path = f"/{self._SERVICE_FULL}/{rpc_name}"
         replay_safe = _is_replay_safe(rpc_path)
         has_key = _request_has_idempotency_key(request)
+        deadline = _retry_deadline(timeout)
         attempt = 0
         while True:
             attempt += 1
@@ -600,8 +650,10 @@ class _ServiceClientBase:
                     replay_safe=replay_safe,
                     has_idempotency_key=has_key,
                 ):
-                    time.sleep(self._retry.backoff_for(attempt))
-                    continue
+                    wait = self._retry.wait_for(attempt, error, deadline)
+                    if wait is not None:
+                        time.sleep(wait)
+                        continue
                 raise _map_error(rpc_name, error) from error
 
             def _drain() -> Iterator[Any]:

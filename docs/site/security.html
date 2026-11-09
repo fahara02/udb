@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Security &amp; Compliance — UDB</title>
-<meta name="description" content="UDB security: per-tenant RLS, field-level encryption, mTLS by default, fail-closed posture, a unified compliance audit envelope, and SOC 2 / ISO 27001 / PCI-HIPAA deployment profiles.">
+<meta name="description" content="UDB security: per-tenant RLS, field-level encryption, PII masking, mTLS (mandatory in production), fail-closed posture, a unified compliance audit envelope, and SOC 2 / ISO 27001 / PCI-HIPAA deployment profiles.">
 <meta name="theme-color" content="#f8fafc">
 <link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
 <link rel="stylesheet" href="./styles.css">
@@ -44,7 +44,7 @@
       <div class="grid c3">
         <div class="card reveal"><div class="ic">🧱</div><h3>Per-tenant RLS</h3><p>Row-level security with tenant context applied via <code>SET LOCAL</code> (transaction-scoped, pool-safe). Where a backend can’t enforce engine RLS, the broker applies tenant predicates on every read and write — and capability reporting never claims RLS it can’t enforce.</p></div>
         <div class="card warm reveal d1"><div class="ic">🔐</div><h3>Field-level encryption</h3><p>AES-256-GCM-SIV encryption-at-rest for UDB-owned sensitive state: outbox/CDC payloads, object/native-service state, and auth secrets — with active-version selection, old-version decrypt, and a key rotation / compromise workflow.</p></div>
-        <div class="card reveal d2"><div class="ic">🔗</div><h3>mTLS by default</h3><p>Mutual TLS for internal gRPC — broker-to-broker, the control-plane listener, internal workers, and the WebRTC peer listener. <code>UDB_REQUIRE_SECURE_TRANSPORT</code> hardens client-facing transport; enterprise mode refuses insecure transport unless explicitly configured for development.</p></div>
+        <div class="card reveal d2"><div class="ic">🔗</div><h3>mTLS, mandatory in production</h3><p>Mutual TLS is available for every gRPC listener — data plane, control plane, and WebRTC peer — via <code>UDB_TLS_CERT_PATH</code>, <code>UDB_TLS_KEY_PATH</code> and <code>UDB_MTLS_CLIENT_CA_PATH</code>. It is off in a dev setup; <code>UDB_ENV=production</code> forces secure transport and mTLS on and refuses to start without the certificates.</p></div>
       </div>
     </div>
   </section>
@@ -62,6 +62,8 @@
             <tr><td>Backup / restore</td><td>Unscoped backup/export is rejected; cross-tenant restore is blocked unless an explicit privileged override is present.</td></tr>
             <tr><td>Replication</td><td>Publications require a tenant scope or explicit tenant filter; unknown scope fails closed.</td></tr>
             <tr><td>RLS-bypass ops</td><td>TRUNCATE, FK cascades, unique/PK leakage, and privileged maintenance are guarded.</td></tr>
+            <tr><td>PII columns</td><td>Columns marked <code>is_pii</code> (or <code>mask_in_logs</code>) come back as <code>***MASKED***</code> unless the caller holds <code>udb:pii:read</code>.</td></tr>
+            <tr><td>Parent and child tenants</td><td>Policies match the exact tenant domain (or a wildcard rule); a parent tenant's policies do not apply inside its child tenants. A service account reaches another tenant only through an approved membership and a short-lived exchanged token.</td></tr>
             <tr><td>Endpoint security</td><td>A descriptor-driven method-security tower layer enforces auth mode, scopes/roles, tenant/project equality, CSRF, internal-only, and credential-type contracts per RPC.</td></tr>
           </tbody>
         </table>

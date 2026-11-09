@@ -15,7 +15,10 @@ declare(strict_types=1);
  *   1. Uses $UDB_BIN if it points at an executable (operator override).
  *   2. Reuses an `udb` already on PATH **iff** its `--version` matches the
  *      SDK's pinned version (0.6.13); a mismatched PATH binary is
- *      ignored so the SDK and broker stay in lockstep.
+ *      ignored so the SDK and broker stay in lockstep. Every PATH match is
+ *      tried; this launcher and any launcher copy or Composer proxy are
+ *      skipped, each probe has a 5 s timeout, and a launcher started by
+ *      another launcher (UDB_LAUNCHER_ACTIVE set) skips PATH entirely.
  *   3. Otherwise downloads the matching release asset for this OS/arch from
  *      github.com/fahara02/udb (tag v0.6.13) into a per-user cache
  *      dir, then execs it.
@@ -25,6 +28,18 @@ declare(strict_types=1);
 
 const UDB_VERSION = '0.6.13';
 const UDB_REPO = 'fahara02/udb';
+
+/*
+ * Recursion guard. Every child this launcher starts (a `--version` probe or the
+ * final exec) gets UDB_LAUNCHER_ACTIVE=1. A launcher that starts with it already
+ * set is nested (a PATH candidate was itself a launcher) and never probes PATH,
+ * so one invocation can start only a bounded number of processes. (Constants
+ * must be declared before the exit(main()) call below: they are not hoisted.)
+ */
+const UDB_LAUNCHER_ENV = 'UDB_LAUNCHER_ACTIVE';
+const UDB_PROBE_TIMEOUT_SECONDS = 5;
+/* A launcher script / Composer proxy is small; the real binary is tens of MB. */
+const UDB_SHIM_SNIFF_MAX_BYTES = 2 * 1024 * 1024;
 
 exit(main(array_slice($argv, 1)));
 
@@ -50,10 +65,17 @@ function resolveBinary(): ?string
         return $override;
     }
 
-    // 2. Version-matched binary already on PATH.
-    $onPath = findOnPath('udb' . (isWindows() ? '.exe' : ''));
-    if ($onPath !== null && binaryVersionMatches($onPath)) {
-        return $onPath;
+    // 2. Version-matched binary already on PATH. A nested launcher (one started
+    //    by another launcher) never probes PATH: that bounds the recursion.
+    if (! isNestedLauncher()) {
+        foreach (pathCandidates('udb' . (isWindows() ? '.exe' : '')) as $candidate) {
+            if (isLauncherCandidate($candidate)) {
+                continue;
+            }
+            if (binaryVersionMatches($candidate)) {
+                return $candidate;
+            }
+        }
     }
 
     // 3. Cached download from a previous run.
@@ -66,30 +88,130 @@ function resolveBinary(): ?string
     return downloadRelease($cached);
 }
 
-/** Locate an executable on PATH without spawning `which`/`where`. */
-function findOnPath(string $name): ?string
+function isNestedLauncher(): bool
+{
+    $v = getenv(UDB_LAUNCHER_ENV);
+    return is_string($v) && $v !== '';
+}
+
+/** @return array<string, string> the current environment plus the guard variable */
+function childEnv(): array
+{
+    $env = getenv();
+    $env = is_array($env) ? $env : [];
+    $env[UDB_LAUNCHER_ENV] = '1';
+    return $env;
+}
+
+/**
+ * Every executable named $name on PATH, in PATH order (all matches, not only
+ * the first), without spawning `which`/`where`.
+ *
+ * @return list<string>
+ */
+function pathCandidates(string $name): array
 {
     $path = (string) getenv('PATH');
     $sep = isWindows() ? ';' : ':';
+    $found = [];
+    $seen = [];
     foreach (explode($sep, $path) as $dir) {
         if ($dir === '') {
             continue;
         }
         $candidate = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $name;
-        if (is_file($candidate) && is_executable($candidate)) {
-            return $candidate;
+        if (! is_file($candidate) || ! is_executable($candidate)) {
+            continue;
         }
+        $key = normalizedPath($candidate);
+        if ($key === null || isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $found[] = $candidate;
     }
-    return null;
+    return $found;
 }
 
-/** Run `<bin> --version` and check it reports the pinned UDB version. */
+function normalizedPath(string $path): ?string
+{
+    $real = realpath($path);
+    if ($real === false) {
+        return null;
+    }
+    return isWindows() ? strtolower($real) : $real;
+}
+
+/** True when probing $candidate would run a udb launcher (this one or a copy). */
+function isLauncherCandidate(string $candidate): bool
+{
+    $real = normalizedPath($candidate);
+    if ($real === null) {
+        return true;
+    }
+    $selves = [__FILE__];
+    if (isset($_SERVER['argv'][0]) && is_string($_SERVER['argv'][0])) {
+        $selves[] = $_SERVER['argv'][0];
+    }
+    foreach ($selves as $self) {
+        if (normalizedPath($self) === $real) {
+            return true;
+        }
+    }
+    // A small file naming the guard variable (a launcher copy) or this package
+    // (a Composer bin proxy) is a launcher.
+    $size = @filesize($real);
+    if ($size === false) {
+        return true;
+    }
+    if ($size <= UDB_SHIM_SNIFF_MAX_BYTES) {
+        $data = @file_get_contents($real);
+        if (is_string($data) && (str_contains($data, UDB_LAUNCHER_ENV) || str_contains($data, 'udb-laravel'))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Run `<bin> --version` (bounded by a timeout) and check the pinned version. */
 function binaryVersionMatches(string $bin): bool
 {
-    $out = @shell_exec(escapeshellarg($bin) . ' --version 2>&1');
-    if (! is_string($out)) {
+    $proc = @proc_open(
+        [$bin, '--version'],
+        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+        $pipes,
+        null,
+        childEnv()
+    );
+    if (! is_resource($proc)) {
         return false;
     }
+    fclose($pipes[0]);
+    stream_set_blocking($pipes[1], false);
+    stream_set_blocking($pipes[2], false);
+    $out = '';
+    $deadline = microtime(true) + UDB_PROBE_TIMEOUT_SECONDS;
+    while (true) {
+        $out .= (string) stream_get_contents($pipes[1]);
+        $out .= (string) stream_get_contents($pipes[2]);
+        $status = proc_get_status($proc);
+        if (! $status['running']) {
+            break;
+        }
+        if (microtime(true) >= $deadline) {
+            proc_terminate($proc, 9);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($proc);
+            return false;
+        }
+        usleep(20000);
+    }
+    $out .= (string) stream_get_contents($pipes[1]);
+    $out .= (string) stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    proc_close($proc);
     return str_contains($out, UDB_VERSION);
 }
 
@@ -210,7 +332,7 @@ function httpGet(string $url): ?string
 function execBinary(string $bin, array $args): int
 {
     if (function_exists('pcntl_exec') && ! isWindows()) {
-        pcntl_exec($bin, $args);
+        pcntl_exec($bin, $args, childEnv());
         // pcntl_exec only returns on failure.
         fwrite(STDERR, "udb: failed to exec {$bin}\n");
         return 1;
@@ -220,7 +342,9 @@ function execBinary(string $bin, array $args): int
     $proc = proc_open(
         $cmd,
         [0 => STDIN, 1 => STDOUT, 2 => STDERR],
-        $pipes
+        $pipes,
+        null,
+        childEnv()
     );
     if (! is_resource($proc)) {
         fwrite(STDERR, "udb: failed to start {$bin}\n");

@@ -85,8 +85,11 @@ Edit the templates here, **not** the rendered files under `sdk/php/`
 (rendered output is regenerated and overwritten). Useful knobs:
 
 - Retry tuning is read from `config/udb.php` via the optional `retry` key
-  (`max_attempts`, `base_delay_ms`, `max_delay_ms`) the generated client reads
+  (`max_attempts`, `base_delay_ms`, `max_delay_ms`, `max_retry_after_ms`) the generated client reads
   from the same config array the hand-written `UdbClient` consumes.
+  `max_retry_after_ms` (default 10000) is the longest broker-requested delay
+  the client waits for automatically; a longer one is returned to the caller at
+  once (the `UdbRpcException` keeps `retry_after_ms`).
 - To change the released asset naming convention, edit `releaseAssetName()` in
   `bin/udb.tmpl`.
 

@@ -74,8 +74,18 @@ streams catch up from their own journal watermark. Monitor
 `udb_livequery_journal_scans_total{source="shared"}` and `{source="catch_up"}` to
 distinguish the shared polling load from reconnect or slow-subscriber recovery.
 
-UDB runs two listeners. The **data plane** is the public gRPC endpoint your
-application clients talk to. Run it where those clients can reach it:
+UDB runs four listeners. Ports below assume the data plane on `50051`; the
+others follow it:
+
+| Listener | Default | Override | Serves |
+|---|---|---|---|
+| Data plane | `0.0.0.0:50051` | serve argument, `UDB_GRPC_ADDR` / `UDB_GRPC_BIND_ADDR` | `DataBroker` (answers `UNIMPLEMENTED` for native RPCs) |
+| Control plane | `127.0.0.1:` data port + 10 (`50061`) | `UDB_AUTH_GRPC_ADDR` | Every native service (authn, authz, API keys, storage, …) |
+| WebRTC peer | `127.0.0.1:` data port + 20 (`50071`) | `UDB_WEBRTC_GRPC_ADDR` | Peer-token WebRTC RPCs for browser/app peers |
+| Metrics | `0.0.0.0:50052` | `UDB_METRICS_ADDR` (`UDB_METRICS_ALLOWED_CIDR` restricts callers) | Prometheus metrics |
+
+The **data plane** is the public gRPC endpoint your application clients talk
+to. Run it where those clients can reach it:
 
 ```bash
 udb serve proto "" 0.0.0.0:50051
@@ -85,13 +95,17 @@ If you'd rather pull the address from the environment, set `UDB_GRPC_ADDR` or
 `UDB_GRPC_BIND_ADDR`.
 
 The **control plane** — the native services that handle auth, storage, and the
-rest — is more sensitive, so keep it off the public internet. Run it on an
-internal network or behind a trusted gateway:
+rest — is more sensitive, so keep it off the public internet. By default it
+binds loopback (`127.0.0.1:50061`), so only processes on the broker's host can
+reach it. SDKs and services on other hosts need it on an internal interface:
 
 ```bash
-export UDB_AUTH_GRPC_ADDR=127.0.0.1:50061   # :50052 is the metrics port
+export UDB_AUTH_GRPC_ADDR=10.0.0.5:50061   # the broker's internal IP; never 0.0.0.0 on a public host
 udb serve proto "" 0.0.0.0:50051
 ```
+
+Clients then set `authTarget` / `auth_target` / `AuthTarget` to that address.
+Calling a native service on the data-plane port returns `UNIMPLEMENTED`.
 
 ### Rate limits and version pins
 
@@ -233,7 +247,14 @@ validation, and the optional media services:
 | Setting | Purpose |
 |---|---|
 | `UDB_GRPC_ADDR` / `UDB_GRPC_BIND_ADDR` | Public broker listener |
-| `UDB_AUTH_GRPC_ADDR` | Native control-plane listener |
+| `UDB_AUTH_GRPC_ADDR` | Native control-plane listener (default `127.0.0.1:` data port + 10) |
+| `UDB_METRICS_ADDR` / `UDB_METRICS_ALLOWED_CIDR` | Metrics listener (default `0.0.0.0:50052`) and the CIDR allowed to scrape it |
+| `UDB_NATIVE_SERVICES_ENABLED` | Global switch for the native services; `UDB_NATIVE_SERVICES=authn,authz,…` serves only the listed ones |
+| `UDB_TLS_CERT_PATH` / `UDB_TLS_KEY_PATH` | Server certificate and key (`UDB_TLS_CERT_PEM` / `UDB_TLS_KEY_PEM` for inline PEM) |
+| `UDB_MTLS_CLIENT_CA_PATH` / `UDB_MTLS_REQUIRED` | Client-certificate CA and the mTLS requirement (forced on under `UDB_ENV=production`) |
+| `UDB_CDC_ENABLED` | `false` stops UDB's own side-effect events (see [Events And CDC](#events-and-cdc)) |
+| `UDB_CDC_JOURNAL_ONLY` | `true` delivers events through the durable PostgreSQL journal and local streams, without Kafka |
+| `UDB_MIGRATE_ENABLED` / `UDB_MIGRATION_APPROVAL_PLAN` | Startup migration switch and the approved plan it may apply (see [Reviewed catalog transitions](#reviewed-catalog-transitions)) |
 | `UDB_JWT_ISSUER` / `UDB_JWT_AUDIENCE` | JWT validation expectations |
 | `UDB_JWT_PUBLIC_KEY` / `UDB_JWT_JWKS_URL` | JWT validation key source |
 | `UDB_JWT_PRIVATE_KEY` | UDB-issued token signing |
@@ -248,23 +269,24 @@ And these point the broker at whichever backends your deployment uses:
 
 | Backend | Settings |
 |---|---|
-| Postgres | `UDB_DATABASE_URL`, `UDB_POSTGRES_DSN` |
+| Postgres | `UDB_PG_DSN` (or `DATABASE_URL`, or the libpq `PGHOST`/`PGDATABASE`/… variables) |
 | MySQL | `UDB_MYSQL_DSN` |
-| SQLite | `UDB_SQLITE_PATH` |
+| SQLite | `UDB_SQLITE_DSN` |
 | SQL Server | `UDB_MSSQL_DSN` |
-| Redis | `UDB_REDIS_URL` |
-| Memcached | `UDB_MEMCACHED_URL` |
-| ClickHouse | `UDB_CLICKHOUSE_DSN`, `UDB_COLUMN_DSN`, `UDB_COLUMN_HTTP_URL` |
+| Redis | `UDB_REDIS_DSN` (or `REDIS_URL`) |
+| Memcached | `UDB_MEMCACHED_DSN` |
+| ClickHouse | `UDB_COLUMN_DSN`, `UDB_COLUMN_HTTP_URL` |
 | Cassandra / Scylla | `UDB_CASSANDRA_DSN` |
-| MongoDB | `UDB_MONGODB_DSN`, `UDB_NOSQL_DSN`, `UDB_NOSQL_API_URL` |
-| Neo4j | `UDB_NEO4J_DSN`, `UDB_GRAPH_DSN`, `UDB_GRAPH_HTTP_URL` |
-| Qdrant | `UDB_QDRANT_URL`, `UDB_QDRANT_API_KEY` |
-| Weaviate | `UDB_WEAVIATE_URL`, `UDB_WEAVIATE_API_KEY` |
-| Pinecone | `UDB_PINECONE_API_KEY`, `UDB_PINECONE_INDEX` |
-| S3 / MinIO | `UDB_S3_BUCKET`, `UDB_MINIO_ENDPOINT`, `UDB_MINIO_ACCESS_KEY`, `UDB_MINIO_SECRET_KEY` |
+| MongoDB | `UDB_NOSQL_DSN`, `UDB_NOSQL_API_URL` |
+| Neo4j | `UDB_GRAPH_DSN`, `UDB_GRAPH_HTTP_URL` |
+| Elasticsearch | `UDB_ELASTIC_DSN` |
+| Qdrant | `UDB_QDRANT_URL` (or `QDRANT_URL`), `UDB_QDRANT_API_KEY` |
+| Weaviate | `UDB_WEAVIATE_DSN` (the API key travels in the DSN) |
+| Pinecone | `UDB_PINECONE_DSN` in the form `apikey://<key>@<host>` |
+| S3 / MinIO | `UDB_MINIO_ENDPOINT` (or `S3_ENDPOINT`), `UDB_MINIO_ACCESS_KEY`, `UDB_MINIO_SECRET_KEY`, `UDB_MINIO_REGION`; `UDB_STORAGE_BUCKET` for native storage |
 | Azure Blob | `UDB_AZUREBLOB_DSN` |
 | Google Cloud Storage | `UDB_GCS_DSN` |
-| Kafka / CDC | `UDB_KAFKA_BROKERS` |
+| Kafka / CDC | `UDB_KAFKA_BROKERS` (or `KAFKA_BROKERS`) |
 
 ### Transaction refusals and replay
 
@@ -419,6 +441,20 @@ In practice, track:
 - topic-policy generation, age, and availability;
 - consumer lag;
 - schema/catalog version attached to emitted events.
+
+Two switches decide where events go:
+
+- `UDB_CDC_ENABLED=false` is a full stop for UDB's own events. No side-effect
+  event (data mutations, auth and native-service events) is written to the outbox,
+  and the tailer that drains it does not start. An event a caller enqueues by name
+  (`EnqueueOutboxEvent`) is still stored and waits for a tailer, and a mutation
+  that requires CDC is refused. The default is enabled.
+- `UDB_CDC_JOURNAL_ONLY=true` delivers through the durable PostgreSQL journal and
+  local stream fan-out, without Kafka. It is an explicit transport choice, never a
+  fallback for failed Kafka delivery.
+
+`udb verify --live` reports delivery health (outbox backlog, consumer lag against
+the journal, projection queue age) and exits 1 when a check fails.
 
 Treat an authorization or topic-policy change as a stream-lifetime event, not
 only a connect-time check. Open CDC streams periodically revalidate their
@@ -722,3 +758,35 @@ objects and other table-security changes are refused until their application
 and verification paths exist. Keep approval files private and retain the exact
 candidate and plan for release review. Response files cache server evidence;
 they are not canonical stores.
+
+### Restoring cleared transition receipts
+
+Every start re-proves the active reviewed transition from its receipts in
+`public.schema_migrations`. When they are gone the broker refuses to start with
+"native target/application receipt is incomplete or mismatched". Rebuild them:
+
+```bash
+udb catalog restore-receipts --run RUN_ID [--dsn "$UDB_PG_DSN"]
+```
+
+It regenerates each receipt from the transition's stored plan and keeps them only
+if they reproduce the stored application evidence, which commits to every filename
+and checksum. Otherwise it writes nothing. Find the run id in
+`udb_system.udb_catalog_reviewed_transitions`.
+
+### Moving a transition to a restored or relocated database
+
+A reviewed transition is bound to the identity its database answered with,
+including the server's address and port. After a restore to a new server, or when
+the server's address changes, the broker refuses to start with "routed native
+target authority changed". Move the transition:
+
+```bash
+udb catalog rebind-target --run RUN_ID --actor OPERATOR --reason "restored to db-2" [--dsn "$UDB_PG_DSN"]
+```
+
+It moves the transition only when the database proves it holds the transition's
+reviewed schema, and records who moved it, why, and from which identity in
+`udb_system.udb_catalog_reviewed_target_rebinds`. Otherwise it writes nothing. Run it
+with the broker's own settings and network, so the database answers as it does to
+the broker. Then run `udb catalog restore-receipts` if the receipts are gone too.

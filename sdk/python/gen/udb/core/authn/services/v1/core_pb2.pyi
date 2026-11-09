@@ -175,6 +175,28 @@ class AdminResetPasswordResponse(_message.Message):
     otp_id: str
     def __init__(self, otp_id: _Optional[str] = ...) -> None: ...
 
+class SetServiceAccountPasswordRequest(_message.Message):
+    __slots__ = ("tenant_id", "user_id", "new_password", "reason")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    NEW_PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    user_id: str
+    new_password: str
+    reason: str
+    def __init__(self, tenant_id: _Optional[str] = ..., user_id: _Optional[str] = ..., new_password: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class SetServiceAccountPasswordResponse(_message.Message):
+    __slots__ = ("user_id", "changed_at", "revoked_sessions")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANGED_AT_FIELD_NUMBER: _ClassVar[int]
+    REVOKED_SESSIONS_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    changed_at: _timestamp_pb2.Timestamp
+    revoked_sessions: int
+    def __init__(self, user_id: _Optional[str] = ..., changed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., revoked_sessions: _Optional[int] = ...) -> None: ...
+
 class SendOTPRequest(_message.Message):
     __slots__ = ("user_id", "otp_type", "correlation_id", "context")
     USER_ID_FIELD_NUMBER: _ClassVar[int]

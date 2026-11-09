@@ -36,7 +36,10 @@ udb verify --live --dsn "postgresql://user:pass@host:5432/app"
 ```
 
 It exits `0` when the live schema matches the manifest and `1` with a list of
-findings when it does not, so it can gate a deploy directly.
+findings when it does not, so it can gate a deploy directly. It also checks
+delivery health — outbox backlog, durable-consumer lag against the journal,
+projection queue age — and exits `1` when a check fails, for example an outbox
+that no CDC tailer drains.
 
 This matters because of a distinction that is easy to miss:
 
@@ -111,8 +114,13 @@ binds it to one specific change set. Point the broker at it:
 
 ```bash
 UDB_MIGRATE_ENABLED=true
-# config: migration.require_approval_plan=/path/to/plan.json
+UDB_MIGRATION_APPROVAL_PLAN=/path/to/plan.json   # or config: migration.require_approval_plan
 ```
+
+The environment variable wins over the config file, so a deploy names the plan it
+just approved. With `UDB_MIGRATE_ENABLED=false` (the `udb env --profile enterprise`
+default) a start applies only the project-schema changes this plan covers, and
+refuses to start while any other change is pending.
 
 With an approval signing key configured, `serve` refuses this file and requires a
 signed plan. Each approver signs, with their key in `UDB_APPROVAL_APPROVER_KEYS`, or
@@ -284,6 +292,46 @@ with `is_encrypted` was stored in clear. Both now apply, and a
 - a column newly marked `is_encrypted` still holds clear text in its existing rows. They
   read as before, but stay in clear until rewritten, and a lookup by value does not find them
   until then: rewrite them through the broker.
+
+**Upgrading to 0.6.9 — JSON string columns carry JSON text (breaking for callers).**
+In Go, TypeScript and Python, a string field on an `is_json`, `is_jsonb` or `JSON`
+column reads and writes the column's JSON text: a JSON string reads as `"My"` with
+its quotes, and writing `"My"` stores that JSON string. Remove any code that added
+or stripped a layer of encoding around such fields; it would now store a string
+containing the quotes. The broker also shares one Redis connection per endpoint,
+which ends the minute-long `Unavailable` bursts seen under load.
+
+**Upgrading to 0.6.10 and 0.6.11** — no caller changes. 0.6.10 makes the SDK test
+fakes hold JSON columns as the broker does. 0.6.11 makes `udb verify --live` and
+`udb up` accept `CHECK` rules re-created from a `pg_dump`.
+
+**Upgrading to 0.6.12 — reviewed-transition receipts survive a migrating start.**
+Earlier, a migrating start after a reviewed catalog transition cleared the
+transition's receipts and every later start failed with "native
+target/application receipt is incomplete or mismatched". After upgrading, rebuild
+them with `udb catalog restore-receipts --run RUN_ID` (see
+[operations.md](operations.md#restoring-cleared-transition-receipts)).
+`udb verify --live` now also names the cause when no CDC tailer drains the outbox.
+
+**Upgrading to 0.6.13 — three settings now do what they say (breaking for callers).**
+
+- `UDB_MIGRATE_ENABLED=false` holds the project's schema on start. The broker never
+  read it before. Now a start with it off applies no change to the project's own
+  schemas unless the approved plan in `UDB_MIGRATION_APPROVAL_PLAN` covers it, and
+  refuses to start while one is pending ("UDB_MIGRATE_ENABLED=false and the protos
+  change the project's schema"). UDB's own system and native-service tables still
+  migrate. Fix: review with `udb plan`, approve it and set
+  `UDB_MIGRATION_APPROVAL_PLAN`, or set `UDB_MIGRATE_ENABLED=true` for the start that
+  should apply it.
+- `UDB_CDC_ENABLED=false` skips UDB's own side-effect events (native-service and
+  auth events as well as data mutations), so nothing piles up in an undrained
+  outbox. An event a caller enqueues explicitly (`EnqueueOutboxEvent`, a
+  transaction's enqueue step, DLQ replay) is still stored and delivered once CDC
+  runs.
+- `udb catalog rebind-target --run RUN_ID --actor WHO --reason WHY` moves a reviewed
+  transition to a restored or relocated database, which previously refused to start
+  with "routed native target authority changed" (see
+  [operations.md](operations.md#moving-a-transition-to-a-restored-or-relocated-database)).
 
 ## Related
 

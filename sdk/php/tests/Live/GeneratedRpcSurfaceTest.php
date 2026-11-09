@@ -1670,12 +1670,15 @@ function phpRequiresPlatformPerfIdentity(string $serviceName, string $methodName
     return isset($rpcs[strtolower($serviceName).'/'.rpcSnake($methodName)]);
 }
 
-// ExchangeServiceTokenForTenant is callable only by a service account
-// presenting its HOME-tenant bearer; membership create/list/revoke stay with
-// the bench tenant admin (the membership target).
+// ExchangeServiceTokenForTenant and ListOwnTenantMemberships are callable only
+// by a service account presenting its HOME-tenant bearer; membership
+// create/list/revoke stay with the bench tenant admin (the membership target).
 function phpRequiresServiceAccountPerfIdentity(string $serviceName, string $methodName): bool
 {
-    return strtolower($serviceName).'/'.rpcSnake($methodName) === 'authnservice/exchange_service_token_for_tenant';
+    return in_array(strtolower($serviceName).'/'.rpcSnake($methodName), [
+        'authnservice/exchange_service_token_for_tenant',
+        'authnservice/list_own_tenant_memberships',
+    ], true);
 }
 
 // Log in the prepared home-tenant service account (membership_exchange_username,
@@ -3705,9 +3708,13 @@ it('routes only global benchmark RPCs to the platform identity', function () {
         ->and(phpRequiresPlatformPerfIdentity('AuthnService', 'ExchangeServiceTokenForTenant'))->toBeFalse();
 });
 
-it('routes only the tenant token exchange to the service-account identity', function () {
+it('routes only the tenant token exchange and own-membership list to the service-account identity', function () {
     expect(phpRequiresServiceAccountPerfIdentity('AuthnService', 'ExchangeServiceTokenForTenant'))->toBeTrue()
         ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'exchange_service_token_for_tenant'))->toBeTrue()
+        ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'ListOwnTenantMemberships'))->toBeTrue()
+        ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'list_own_tenant_memberships'))->toBeTrue()
+        ->and(phpRequiresPlatformPerfIdentity('AuthnService', 'ListOwnTenantMemberships'))->toBeFalse()
+        ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'SetServiceAccountPassword'))->toBeFalse()
         ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'CreateServiceAccountTenantMembership'))->toBeFalse()
         ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'ListServiceAccountTenantMemberships'))->toBeFalse()
         ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'RevokeServiceAccountTenantMembership'))->toBeFalse()
@@ -5409,7 +5416,7 @@ it('measures per-RPC latency', function () {
     // state and invitation code) right after session setup. Each signs a DIFFERENT account
     // in; the benchmark bearer is kept.
     $PHASE1_AUTHN = ['login', 'refresh_session', 'authenticate', 'validate_token', 'introspect_token', 'refresh_token', 'get_jwks', 'login_with_otp', 'finish_oidc_login', 'login_with_oidc_id_token', 'accept_invitation'];
-    $PHASE3_AUTHN = ['logout', 'revoke_session', 'admin_revoke_session', 'admin_revoke_all_user_sessions', 'admin_revoke_all_tenant_sessions', 'emergency_revoke', 'change_password', 'reset_password', 'admin_reset_password', 'change_user_status', 'admin_reset_mfa', 'revoke_recovery_codes', 'revoke_device', 'delete_web_authn_credential', 'disable_mfa_factor'];
+    $PHASE3_AUTHN = ['logout', 'revoke_session', 'admin_revoke_session', 'admin_revoke_all_user_sessions', 'admin_revoke_all_tenant_sessions', 'emergency_revoke', 'change_password', 'reset_password', 'admin_reset_password', 'change_user_status', 'admin_reset_mfa', 'revoke_recovery_codes', 'revoke_device', 'delete_web_authn_credential', 'disable_mfa_factor', 'set_service_account_password'];
     $CATALOG_LIFECYCLE = ['StageCatalog' => 0, 'ActivateCatalog' => 1, 'RollbackCatalog' => 2];
     $okRank = ['read_only' => 0, 'mutation' => 1, 'destructive' => 2];
     $apiKeyOf = fn (string $svc, string $name) => "$svc/$name";
@@ -5475,8 +5482,9 @@ it('measures per-RPC latency', function () {
         return $withinPhase !== 0 ? $withinPhase : $a['ordinal'] <=> $b['ordinal'];
     });
     $reauthenticatedForPurge = false;
-    // Built lazily, right before the single ExchangeServiceTokenForTenant row,
-    // so the home-tenant service-account bearer is fresh.
+    // Built lazily, right before the first service-account row
+    // (ExchangeServiceTokenForTenant / ListOwnTenantMemberships), so the
+    // home-tenant service-account bearer is fresh.
     $serviceAccountCaller = null;
     $serviceAccountResolved = false;
     foreach ($units as $u) {

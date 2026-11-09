@@ -4016,6 +4016,12 @@ impl AuthnService for AuthnServiceImpl {
     ) -> Result<Response<authn_pb::AdminResetPasswordResponse>, Status> {
         self.admin_reset_password_impl(request).await
     }
+    async fn set_service_account_password(
+        &self,
+        request: Request<authn_pb::SetServiceAccountPasswordRequest>,
+    ) -> Result<Response<authn_pb::SetServiceAccountPasswordResponse>, Status> {
+        self.set_service_account_password_impl(request).await
+    }
     // ── Typed service-account grants + mTLS certificate bindings
     //    (fix_plan Phases 2+3) — delegating to the grants module. ──
     async fn create_service_account_grant(
@@ -4115,6 +4121,13 @@ impl AuthnService for AuthnServiceImpl {
     ) -> Result<Response<authn_pb::ExchangeServiceTokenForTenantResponse>, Status> {
         let pool = self.require_pool()?.clone();
         super::memberships::exchange_service_token_for_tenant(self, &pool, request).await
+    }
+    async fn list_own_tenant_memberships(
+        &self,
+        request: Request<authn_pb::ListOwnTenantMembershipsRequest>,
+    ) -> Result<Response<authn_pb::ListOwnTenantMembershipsResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::memberships::list_own_tenant_memberships(self, &pool, request).await
     }
     async fn send_otp(
         &self,

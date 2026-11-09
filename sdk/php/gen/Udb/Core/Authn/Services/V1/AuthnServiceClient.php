@@ -113,6 +113,24 @@ class AuthnServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+     * no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+     * current password, so an account whose password was lost could never sign in again.
+     * Refused for a person. The account's sessions are revoked, and the change is audited.
+     * @param \Udb\Core\Authn\Services\V1\SetServiceAccountPasswordRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\SetServiceAccountPasswordResponse>
+     */
+    public function SetServiceAccountPassword(\Udb\Core\Authn\Services\V1\SetServiceAccountPasswordRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\SetServiceAccountPasswordResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── OTP ──────────────────────────────────────────────────────────────────
      * @param \Udb\Core\Authn\Services\V1\SendOTPRequest $argument input argument
      * @param array $metadata metadata
@@ -994,6 +1012,23 @@ class AuthnServiceClient extends \Grpc\BaseStub {
      * session. Every use re-checks the membership (ACTIVE, same revision), the
      * home grant and the account. No, expired or revoked membership: one
      * uniform PERMISSION_DENIED.
+     * The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+     * whose home is the caller's tenant. Called with the same home service bearer and
+     * scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
+     * @param \Udb\Core\Authn\Services\V1\ListOwnTenantMembershipsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ListOwnTenantMembershipsResponse>
+     */
+    public function ListOwnTenantMemberships(\Udb\Core\Authn\Services\V1\ListOwnTenantMembershipsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ListOwnTenantMembershipsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \Udb\Core\Authn\Services\V1\ExchangeServiceTokenForTenantRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

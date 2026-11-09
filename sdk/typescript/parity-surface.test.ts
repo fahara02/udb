@@ -1592,7 +1592,9 @@ test("an explicit login replaces the pin and stops re-login with the old credent
     await session.tokenStore.save({ accessToken: "x", refreshToken: "r", expiresAt: Date.now() - 1_000 });
     calls.length = 0;
     await session.refreshIfNeeded().catch(() => undefined);
-    assert.equal(calls.length, 0, "the enterprise renewal path must be gone");
+    // The plain refresh rides the credential-free renewal view too; what must be
+    // gone is any re-login or verification with the replaced credentials.
+    assert.deepEqual(calls, ["refresh:r"], "the enterprise renewal path must be gone");
   } finally {
     session.close();
   }

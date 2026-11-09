@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 424 RPCs across 29 services.
+Current generated RPC surface: 426 RPCs across 29 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -37,7 +37,7 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 79 | 22 | 44 | 13 | 0 |
+| AuthnService | 81 | 23 | 44 | 14 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 8 | 3 | 4 | 1 | 0 |
@@ -135,6 +135,7 @@ benchmark harnesses.
 | AuthnService | `AuthnService/ListDevices` | `list_devices` | `listDevices` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListInvitations` | `list_invitations` | `listInvitations` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListMfaFactors` | `list_mfa_factors` | `listMfaFactors` | READ_ONLY | authn.md |
+| AuthnService | `AuthnService/ListOwnTenantMemberships` | `list_own_tenant_memberships` | `listOwnTenantMemberships` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListServiceAccountGrants` | `list_service_account_grants` | `listServiceAccountGrants` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListServiceAccountTenantMemberships` | `list_service_account_tenant_memberships` | `listServiceAccountTenantMemberships` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListSessions` | `list_sessions` | `listSessions` | READ_ONLY | authn.md |
@@ -164,6 +165,7 @@ benchmark harnesses.
 | AuthnService | `AuthnService/SendLoginOtp` | `send_login_otp` | `sendLoginOtp` | MUTATION | authn.md |
 | AuthnService | `AuthnService/SendOTP` | `send_otp` | `sendOtp` | MUTATION | authn.md |
 | AuthnService | `AuthnService/SendPhoneVerification` | `send_phone_verification` | `sendPhoneVerification` | MUTATION | authn.md |
+| AuthnService | `AuthnService/SetServiceAccountPassword` | `set_service_account_password` | `setServiceAccountPassword` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/StartInvitationAcceptance` | `start_invitation_acceptance` | `startInvitationAcceptance` | MUTATION | authn.md |
 | AuthnService | `AuthnService/StartOidcLogin` | `start_oidc_login` | `startOidcLogin` | MUTATION | authn.md |
 | AuthnService | `AuthnService/StartWebAuthnAuthentication` | `start_web_authn_authentication` | `startWebAuthnAuthentication` | MUTATION | authn.md |

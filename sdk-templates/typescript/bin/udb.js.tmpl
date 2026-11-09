@@ -6,6 +6,10 @@
 // Resolution order:
 //   1. $UDB_BIN, if set and executable, is used verbatim.
 //   2. A `udb` already on PATH whose `--version` matches v{{UDB_VERSION}} is used.
+//      Every PATH match is tried in order; this launcher, its npm shims and any
+//      other launcher copy are skipped, each probe has a 5 s timeout, and a
+//      launcher started by another launcher (UDB_LAUNCHER_ACTIVE set) skips
+//      PATH entirely, so a launcher can never recurse into itself.
 //   3. Otherwise the matching raw release binary is downloaded once from
 //      github.com/fahara02/udb (tag v{{UDB_VERSION}}, asset `udb-<os>-<arch>[-<variant>][.exe]`)
 //      into a per-user cache dir and executed thereafter.
@@ -67,12 +71,34 @@ function cacheDir() {
   return path.join(base, "udb", `v${UDB_VERSION}`);
 }
 
+// ── Recursion guard ─────────────────────────────────────────────────────────────
+// Every child this launcher starts (a `--version` probe or the final exec) gets
+// UDB_LAUNCHER_ACTIVE=1. A launcher that starts with it already set is nested
+// (some PATH candidate was itself a launcher) and must never probe PATH, so one
+// invocation can start at most a bounded number of processes.
+const LAUNCHER_ENV = "UDB_LAUNCHER_ACTIVE";
+const PROBE_TIMEOUT_MS = 5000;
+// A launcher script or shim is small; the real udb binary is tens of MB.
+const SHIM_SNIFF_MAX_BYTES = 2 * 1024 * 1024;
+
+function childEnv() {
+  return { ...process.env, [LAUNCHER_ENV]: "1" };
+}
+
+function isNestedLauncher() {
+  return Boolean(process.env[LAUNCHER_ENV]);
+}
+
 // ── Reuse an existing version-matched binary ────────────────────────────────────
 function versionMatches(bin) {
   try {
     const out = execFileSync(bin, ["--version"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      env: childEnv(),
+      timeout: PROBE_TIMEOUT_MS,
+      killSignal: "SIGKILL",
+      windowsHide: true,
     });
     return out.includes(UDB_VERSION);
   } catch {
@@ -80,13 +106,74 @@ function versionMatches(bin) {
   }
 }
 
+function realpathOrNull(p) {
+  try {
+    return fs.realpathSync(p);
+  } catch {
+    return null;
+  }
+}
+
+function samePath(a, b) {
+  if (!a || !b) return false;
+  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
+// True when `candidate` is this launcher (or a shim/copy of a udb launcher) and
+// so must never be probed: probing it would run a launcher again.
+function isLauncherCandidate(candidate) {
+  const real = realpathOrNull(candidate);
+  if (!real) return true;
+  const selves = [__filename, process.argv[1]].filter(Boolean).map(realpathOrNull);
+  if (selves.some((s) => samePath(real, s))) return true;
+  // npm / yarn / pnpm bin shims live in node_modules/.bin and point at a launcher.
+  const parts = path.resolve(candidate).split(/[\\/]+/);
+  for (let i = 0; i + 1 < parts.length; i += 1) {
+    if (parts[i] === "node_modules" && parts[i + 1] === ".bin") return true;
+  }
+  // Windows only executes a real `udb.exe` here; `udb`, `udb.cmd`, `udb.ps1` are shims.
+  if (process.platform === "win32" && !real.toLowerCase().endsWith(".exe")) return true;
+  // A small file naming the guard variable is a launcher copy (this file, another
+  // project's copy, or a wrapper around one).
+  try {
+    const st = fs.statSync(real);
+    if (!st.isFile()) return true;
+    if (st.size <= SHIM_SNIFF_MAX_BYTES && fs.readFileSync(real).includes(LAUNCHER_ENV)) return true;
+  } catch {
+    return true;
+  }
+  return false;
+}
+
+// Every `udb` on PATH, in PATH order (all matches, not just the first).
+function pathCandidates() {
+  const which = process.platform === "win32" ? "where" : "which";
+  const args = process.platform === "win32" ? ["udb"] : ["-a", "udb"];
+  const r = spawnSync(which, args, {
+    encoding: "utf8",
+    env: childEnv(),
+    timeout: PROBE_TIMEOUT_MS,
+    windowsHide: true,
+  });
+  if (r.status !== 0 || typeof r.stdout !== "string") return [];
+  const seen = new Set();
+  const out = [];
+  for (const line of r.stdout.split(/\r?\n/)) {
+    const c = line.trim();
+    if (!c || seen.has(c)) continue;
+    seen.add(c);
+    out.push(c);
+  }
+  return out;
+}
+
 function findOnPath() {
   if (process.env.UDB_BIN && fs.existsSync(process.env.UDB_BIN)) return process.env.UDB_BIN;
-  const which = process.platform === "win32" ? "where" : "which";
-  const r = spawnSync(which, ["udb"], { encoding: "utf8" });
-  if (r.status === 0) {
-    const candidate = r.stdout.split(/\r?\n/).find((l) => l.trim().length > 0);
-    if (candidate && versionMatches(candidate.trim())) return candidate.trim();
+  // A nested launcher never probes PATH: that is what bounds the recursion.
+  if (isNestedLauncher()) return null;
+  for (const candidate of pathCandidates()) {
+    if (isLauncherCandidate(candidate)) continue;
+    if (versionMatches(candidate)) return candidate;
   }
   return null;
 }
@@ -206,7 +293,7 @@ async function main() {
       process.exit(127);
     }
   }
-  const child = spawnSync(bin, process.argv.slice(2), { stdio: "inherit" });
+  const child = spawnSync(bin, process.argv.slice(2), { stdio: "inherit", env: childEnv() });
   if (child.error) {
     logErr(`failed to exec ${bin}: ${child.error.message}`);
     process.exit(126);

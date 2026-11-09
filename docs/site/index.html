@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UDB — Universal Data Broker</title>
-<meta name="description" content="UDB is a proto-driven gRPC control point in front of 18 backend kinds — with built-in auth, tenant/project enforcement, migrations, CDC, and SDKs for 6 languages. Try the in-browser playground that runs UDB's real parser, DDL generator, and IR-to-SQL query compiler in WebAssembly.">
+<meta name="description" content="UDB is a proto-driven gRPC control point in front of 18 backend kinds — with built-in auth, tenant/project enforcement, migrations, CDC, and SDKs for 7 languages. Try the in-browser playground that runs UDB's real parser, DDL generator, and IR-to-SQL query compiler in WebAssembly.">
 <meta name="theme-color" content="#f8fafc">
 <link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
 <meta property="og:title" content="UDB — Universal Data Broker">
-<meta property="og:description" content="One proto-driven gRPC control point in front of 18 backend kinds — auth, tenant/project enforcement, migrations, CDC, and SDKs for 6 languages.">
+<meta property="og:description" content="One proto-driven gRPC control point in front of 18 backend kinds — auth, tenant/project enforcement, migrations, CDC, and SDKs for 7 languages.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="./assets/udb_logo.svg">
 <link rel="stylesheet" href="./styles.css">
@@ -37,7 +37,7 @@
 <main>
   <div class="hero">
     <div class="wrap">
-      <span class="pill reveal"><span class="dot"></span> <b>v0.6.13</b> · 18 backends · 382 RPCs · six SDKs</span>
+      <span class="pill reveal"><span class="dot"></span> <b>v0.6.13</b> · 18 backends · 424 RPCs · seven SDKs</span>
       <div class="reveal d1"><img class="logo" src="./assets/udb_logo.svg" alt="Universal Data Broker logo"></div>
       <h1 class="reveal d1">UDB is the typed control point for <span class="g">app data</span></h1>
       <p class="tagline reveal d2"><b>Declare once</b> · <b>enforce centrally</b> · <b>call from any SDK</b></p>
@@ -58,9 +58,9 @@
         <div class="proof-node"><span>04</span><b>SDKs</b><small>consistent facades, metadata, credentials, retries</small></div>
       </div>
       <div class="badges reveal d5">
-        <span class="badge">DataBroker <b>79 RPCs</b></span>
-        <span class="badge">Native services <b>303 RPCs</b></span>
-        <span class="badge">Contract <b>4.0.0</b></span>
+        <span class="badge">DataBroker <b>84 RPCs</b></span>
+        <span class="badge">Native services <b>340 RPCs</b></span>
+        <span class="badge">Contract <b>8.0.0</b></span>
         <span class="badge">Protocol <b>1.0.0</b></span>
       </div>
     </div>
@@ -71,9 +71,9 @@
     <div class="wrap">
       <div class="stats">
         <div class="stat reveal"><div class="n"><span data-count="18">18</span></div><div class="l">Backend kinds</div></div>
-        <div class="stat reveal d1"><div class="n"><span data-count="79">79</span></div><div class="l">DataBroker RPCs</div></div>
-        <div class="stat reveal d2"><div class="n"><span data-count="302">302</span></div><div class="l">Control-plane RPCs</div></div>
-        <div class="stat reveal d3"><div class="n"><span data-count="6">6</span></div><div class="l">SDK languages</div></div>
+        <div class="stat reveal d1"><div class="n"><span data-count="84">84</span></div><div class="l">DataBroker RPCs</div></div>
+        <div class="stat reveal d2"><div class="n"><span data-count="340">340</span></div><div class="l">Control-plane RPCs</div></div>
+        <div class="stat reveal d3"><div class="n"><span data-count="7">7</span></div><div class="l">SDK languages</div></div>
       </div>
     </div>
   </section>
@@ -90,7 +90,7 @@
         <div><b>Model</b><span>Entities, table placement, columns, data classes, and storage targets live in annotated protobuf.</span></div>
         <div><b>Enforce</b><span>Auth, scopes, tenant/project binding, row-level security, idempotency, and audit metadata are checked before dispatch.</span></div>
         <div><b>Route</b><span>The broker compiles requests through a neutral IR and executes against SQL, vector, object, cache, graph, document, and analytical stores.</span></div>
-        <div><b>Ship</b><span>Six SDKs expose the same project facade, credential rules, metadata headers, and generated native-service surface.</span></div>
+        <div><b>Ship</b><span>Seven SDKs expose the same project facade, credential rules, metadata headers, and generated native-service surface.</span></div>
       </div>
     </div>
   </section>
@@ -101,13 +101,13 @@
       <h2 class="reveal">UDB is more than CRUD over gRPC</h2>
       <div class="surface-grid mt28">
         <article class="surface reveal">
-          <span>Data plane</span><h3>79 broker RPCs</h3>
+          <span>Data plane</span><h3>84 broker RPCs</h3>
           <p>Select, upsert, delete, batch, vector search, object operations, graph traversal, cache, CDC, migrations, transaction control, and backend health through one serving contract.</p>
           <a href="./data-plane.html">Inspect the data plane</a>
         </article>
         <article class="surface reveal d1">
-          <span>Control plane</span><h3>303 native RPCs</h3>
-          <p>Auth, identity federation, tenancy, policy bundles, API keys, notifications, storage, realtime, analytics, audit, and operational services behind the native listener.</p>
+          <span>Control plane</span><h3>340 native RPCs</h3>
+          <p>Auth, identity federation, tenancy, policy bundles, API keys, notifications, storage, realtime, analytics, audit, and operational services behind the native control-plane listener (loopback <code>:50061</code> by default).</p>
           <a href="./control-plane.html">Inspect native services</a>
         </article>
         <article class="surface reveal d2">
@@ -172,48 +172,52 @@
             <div class="panel" id="p1"><pre><span class="k">import</span> os
 <span class="k">from</span> udb_client.project <span class="k">import</span> UdbProject
 
+<span class="c"># the API key is exchanged for a self-refreshing bearer;</span>
+<span class="c"># tenant and project come from the key</span>
 <span class="k">with</span> <span class="t">UdbProject</span>.<span class="fn">connect</span>(
-    target=<span class="s">"127.0.0.1:50051"</span>,
-    tenant_id=<span class="s">"acme"</span>,
-    project_id=<span class="s">"billing"</span>,
-    bearer_token=os.environ[<span class="s">"UDB_TOKEN"</span>],
+    target=<span class="s">"127.0.0.1:50051"</span>,       <span class="c"># data plane</span>
+    auth_target=<span class="s">"127.0.0.1:50061"</span>,  <span class="c"># control plane: data port + 10</span>
+    api_key=os.environ[<span class="s">"UDB_API_KEY"</span>],
 ) <span class="k">as</span> udb:
     pdf = open(<span class="s">"invoice.pdf"</span>, <span class="s">"rb"</span>).read()
     udb.storage.upload_file(<span class="s">"invoice.pdf"</span>, pdf, {<span class="s">"content_type"</span>: <span class="s">"application/pdf"</span>})
     udb.authz.allow_role(<span class="s">"reader"</span>, <span class="s">"invoice"</span>, <span class="s">"Select"</span>)
-    rows = udb.data.table(<span class="s">"invoice"</span>).select(where={<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
+    rows = udb.data.table(<span class="s">"acme.billing.v1.Invoice"</span>).select(where={<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
             <div class="panel" id="p2"><pre><span class="k">import</span> (
     <span class="s">"os"</span>
     udb <span class="s">"github.com/fahara02/udb/sdk/go/udbclient"</span>
 )
 
-project, _ := udb.<span class="fn">Connect</span>(ctx, udb.Config{
-    Target: <span class="s">"127.0.0.1:50051"</span>,
-    TenantID: <span class="s">"acme"</span>, ProjectID: <span class="s">"billing"</span>,
-    Credentials: udb.Credentials{Bearer: os.Getenv(<span class="s">"UDB_TOKEN"</span>)},
+project, err := udb.<span class="fn">Connect</span>(ctx, udb.Config{
+    Target:      <span class="s">"127.0.0.1:50051"</span>, <span class="c">// data plane</span>
+    AuthTarget:  <span class="s">"127.0.0.1:50061"</span>, <span class="c">// control plane: data port + 10</span>
+    Credentials: udb.Credentials{APIKey: os.Getenv(<span class="s">"UDB_API_KEY"</span>)},
 })
+<span class="k">if</span> err != nil { <span class="k">return</span> err }
 <span class="k">defer</span> project.<span class="fn">Close</span>()
 pdf, _ := os.<span class="fn">ReadFile</span>(<span class="s">"invoice.pdf"</span>)
 _, _ = project.Storage.<span class="fn">UploadFile</span>(ctx, <span class="s">"invoice.pdf"</span>, pdf, udb.<span class="fn">WithContentType</span>(<span class="s">"application/pdf"</span>))
-invoices := project.<span class="fn">Entity</span>(<span class="s">"invoice"</span>, udb.<span class="fn">Key</span>(<span class="s">"invoice_id"</span>))
+invoices := project.<span class="fn">Entity</span>(<span class="s">"acme.billing.v1.Invoice"</span>, udb.<span class="fn">Key</span>(<span class="s">"invoice_id"</span>))
 rows, _ := invoices.<span class="fn">Select</span>(ctx, map[string]any{<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
             <div class="panel" id="p3"><pre><span class="k">import</span> { readFile } <span class="k">from</span> <span class="s">"node:fs/promises"</span>;
 <span class="k">import</span> { UdbProject } <span class="k">from</span> <span class="s">"@udb_plus/sdk"</span>;
 
 <span class="k">const</span> udb = <span class="k">await</span> UdbProject.<span class="fn">connect</span>({
-  target: <span class="s">"127.0.0.1:50051"</span>,
-  tenantId: <span class="s">"acme"</span>,
-  projectId: <span class="s">"billing"</span>,
-  credentials: { bearerToken: process.env.UDB_TOKEN },
+  target: <span class="s">"127.0.0.1:50051"</span>,     <span class="c">// data plane</span>
+  authTarget: <span class="s">"127.0.0.1:50061"</span>, <span class="c">// control plane: data port + 10</span>
+  tenantId: process.env.UDB_TENANT_ID!, <span class="c">// the key's own tenant UUID</span>
+  credentials: { apiKey: process.env.UDB_API_KEY },
 });
 <span class="k">const</span> pdf = <span class="k">await</span> readFile(<span class="s">"invoice.pdf"</span>);
 <span class="k">await</span> udb.storage.<span class="fn">uploadFile</span>(<span class="s">"invoice.pdf"</span>, pdf, { contentType: <span class="s">"application/pdf"</span> });
 <span class="k">await</span> udb.authz.<span class="fn">allowRole</span>(<span class="s">"reader"</span>, { resource: <span class="s">"invoice"</span>, action: <span class="s">"Select"</span> });
-<span class="k">const</span> rows = <span class="k">await</span> udb.data.table(<span class="s">"Invoice"</span>).select({ where: { status: <span class="s">"open"</span> } });</pre></div>
-            <div class="panel" id="p4"><pre><span class="c"># scaffold a project, generate SDKs, run the broker</span>
-$ udb scaffold
-$ udb sdk generate
-$ udb serve
+<span class="k">const</span> rows = <span class="k">await</span> udb.data.table(<span class="s">"acme.billing.v1.Invoice"</span>).select({ where: { status: <span class="s">"open"</span> } });</pre></div>
+            <div class="panel" id="p4"><pre><span class="c"># env, broker, first admin, catalog + policies</span>
+$ udb env --profile dev --out .env
+$ udb serve proto "" 0.0.0.0:50051
+$ udb auth bootstrap user --tenant acme --project billing ...
+$ udb up --project billing --tenant $TENANT_UUID
+$ udb sdk generate --lang all
 
 <span class="c"># inspect the generated contract</span>
 $ udb native manifest | jq <span class="s">'.service_count'</span></pre></div>
@@ -261,8 +265,8 @@ $ udb native manifest | jq <span class="s">'.service_count'</span></pre></div>
       <h2 class="reveal">Dive into the <span class="accent">platform</span></h2>
       <div class="grid c3 mt28">
         <a class="card reveal" href="./architecture.html"><div class="ic">🧭</div><h3>Architecture</h3><p>Proto → catalog manifest → per-request runtime pipeline; the descriptor is the single source of truth.</p><span class="more">How it works</span></a>
-        <a class="card warm reveal d1" href="./data-plane.html"><div class="ic">🗄️</div><h3>Data plane</h3><p>79 RPCs across every backend, plus 2PC/XA, sagas, CDC→Kafka, and migrations.</p><span class="more">Explore</span></a>
-        <a class="card reveal d2" href="./control-plane.html"><div class="ic">🔐</div><h3>Control plane</h3><p>27 native services, 303 RPCs — auth, identity, tenancy, and policy distribution.</p><span class="more">See services</span></a>
+        <a class="card warm reveal d1" href="./data-plane.html"><div class="ic">🗄️</div><h3>Data plane</h3><p>84 RPCs across every backend, plus 2PC/XA, sagas, CDC→Kafka, and migrations.</p><span class="more">Explore</span></a>
+        <a class="card reveal d2" href="./control-plane.html"><div class="ic">🔐</div><h3>Control plane</h3><p>28 native services, 340 RPCs — auth, identity, tenancy, and policy distribution.</p><span class="more">See services</span></a>
         <a class="card warm reveal" href="./security.html"><div class="ic">🛡️</div><h3>Security</h3><p>RLS, encryption, mTLS, fail-closed posture, and compliance profiles.</p><span class="more">Security model</span></a>
         <a class="card reveal d1" href="./enterprise.html"><div class="ic">⚙️</div><h3>Enterprise &amp; HA</h3><p>Leader election, recovery, observability, SLOs, and runbooks.</p><span class="more">Operate at scale</span></a>
         <a class="card reveal d2" href="./sdks.html"><div class="ic">🧩</div><h3>SDKs</h3><p>Workflow helpers for app code, raw generated clients for advanced protocol access.</p><span class="more">Get started</span></a>

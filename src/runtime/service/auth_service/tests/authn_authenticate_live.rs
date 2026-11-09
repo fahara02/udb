@@ -136,7 +136,7 @@ async fn live_postgres_authn_authenticate_api_key() {
 
     let exchanged = authn
         .authenticate(Request::new(authn_pb::AuthnRequest {
-            api_key: created.plain_key,
+            api_key: created.plain_key.clone(),
             requested_scopes: vec!["data:read".to_string()],
             ..Default::default()
         }))
@@ -189,6 +189,42 @@ async fn live_postgres_authn_authenticate_api_key() {
         .expect("validated API-key bearer principal");
     assert_eq!(validated_principal.service_identity, grant.service_identity);
     assert_eq!(validated_principal.username, user.username);
+
+    // An API key always authenticates as its own tenant. A hint naming that tenant is
+    // accepted; a hint naming another tenant used to be ignored and is now refused.
+    for _ in 0..3 {
+        let matching = authn
+            .authenticate(Request::new(authn_pb::AuthnRequest {
+                api_key: created.plain_key.clone(),
+                tenant_hint: "acme".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("a hint naming the key's own tenant is accepted")
+            .into_inner();
+        assert_eq!(
+            matching.principal.expect("api-key principal").tenant_id,
+            "acme"
+        );
+        for other in ["globex".to_string(), uuid::Uuid::new_v4().to_string()] {
+            let refused = authn
+                .authenticate(Request::new(authn_pb::AuthnRequest {
+                    api_key: created.plain_key.clone(),
+                    tenant_hint: other.clone(),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("a hint naming another tenant is refused");
+            assert_eq!(refused.code(), tonic::Code::InvalidArgument, "{other}");
+            assert!(
+                refused
+                    .message()
+                    .contains("does not name this API key's tenant"),
+                "{}",
+                refused.message()
+            );
+        }
+    }
 
     let err = authn
         .authenticate(Request::new(authn_pb::AuthnRequest {

@@ -61,6 +61,7 @@ mod asset_service;
 // defining a parallel evidence envelope. Only widens visibility within the crate.
 pub(crate) mod auth_service;
 pub(crate) mod cross_tenant_read;
+mod wrong_listener;
 // Phase 9.10: native BackupService — tenant-level logical backup and restore.
 // The leader wires `build_backup_service` + `add_service(backup_service::
 // BackupServiceServer::new(...))` in `serve()`, mirroring `tenant_service`/
@@ -2868,7 +2869,20 @@ pub async fn serve(
             .into_inner()
     };
 
-    let mut server = grpc_server_builder().layer(make_layer());
+    // A native call that reaches this DataBroker listener is told where native services
+    // listen, instead of a bare UNIMPLEMENTED. Same address the control plane binds below.
+    let control_plane_hint =
+        native_registry::any_control_plane_enabled(&runtime_config).then(|| {
+            let configured = runtime_config.native_services.control_plane_addr.trim();
+            if configured.is_empty() {
+                format!("127.0.0.1:{}", addr.port().wrapping_add(10))
+            } else {
+                configured.to_string()
+            }
+        });
+    let mut server = grpc_server_builder()
+        .layer(make_layer())
+        .layer(wrong_listener::WrongListenerLayer::new(control_plane_hint));
     if let Some(tls) = tls_config_from_settings(&runtime_config.service.tls)? {
         server = server.tls_config(tls)?;
     }

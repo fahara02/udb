@@ -1036,6 +1036,48 @@ pub(super) async fn service_account_activate(
     Ok(service_account_json(&user, false, true))
 }
 
+/// `udb auth service-account set-password`: set an existing service account's password
+/// through SetServiceAccountPassword, read from an env var or a file, never the command
+/// line. The broker refuses a person and revokes the account's sessions.
+pub(super) async fn service_account_set_password(
+    tenant: &str,
+    user_id: &str,
+    password_env: &str,
+    password_file: &str,
+    reason: &str,
+) -> Result<Value, String> {
+    bounded_field(tenant, 120, "tenant", false)?;
+    canonical_uuid(user_id)?;
+    bounded_field(reason, 2048, "reason", false)?;
+    operator_bearer()?;
+    let base = std::env::current_dir().map_err(|_| "working directory is unavailable")?;
+    let password = SecretRef {
+        env: password_env.trim().to_string(),
+        file: password_file.trim().to_string(),
+    }
+    .resolve(&base)
+    .map_err(|err| format!("{err} (pass --password-env or --password-file)"))?;
+    let mut auth = AuthnServiceClient::new(connect_native_auth().await?);
+    let response = auth
+        .set_service_account_password(req(
+            authn_pb::SetServiceAccountPasswordRequest {
+                tenant_id: tenant.to_string(),
+                user_id: user_id.to_string(),
+                new_password: password.0,
+                reason: reason.to_string(),
+            },
+            tenant,
+        )?)
+        .await
+        .map_err(|s| rpc_error("set service account password", s))?
+        .into_inner();
+    Ok(serde_json::json!({
+        "user_id": response.user_id,
+        "password_set": true,
+        "revoked_sessions": response.revoked_sessions,
+    }))
+}
+
 /// Refuse anything but this tenant's SERVICE_ACCOUNT. Activating a person would
 /// bypass their channel verification.
 fn verify_service_account_activation(user: &user_pb::User, tenant: &str) -> Result<(), String> {

@@ -26,6 +26,9 @@ table.
   with its required scope, tenant fields, request/response types, and
   handler. Ground truth for "which scope does this call need" and
   `PERMISSION_DENIED` on `:50061`.
+- [references/native-services.md](references/native-services.md) — the
+  generated (`udb native docs`) per-service inventory: dependencies, RPC count,
+  and which listener (control-plane / peer) serves each service.
 - [references/service-accounts.md](references/service-accounts.md) — service
   accounts acting for users: what a service token carries (grant scopes,
   filtered roles), `CheckAccess` for a user (`udb:authz:check-access-for`,
@@ -40,16 +43,18 @@ table.
 1. **Entities are protos.** Table = annotated `message`; its fully-qualified
    name (e.g. `shop.v1.Customer`) is the `message_type` for every data RPC.
 2. **THREE planes on THREE listeners.** Data plane (`DataBroker` CRUD) on the
-   public port (default `:50051`); native/control plane (all 27 services) on a
-   **loopback-by-default** listener (`UDB_AUTH_GRPC_ADDR`, default `:50061`);
-   WebRTC peer plane (`:50071`). Every SDK has `target` AND `authTarget`.
+   public port (default `:50051`); native/control plane (all 28 gRPC services) on a
+   **loopback-by-default** listener (`UDB_AUTH_GRPC_ADDR`, default
+   `127.0.0.1:` data port + 10 = `:50061`); WebRTC peer plane (`:50071`). Every
+   SDK has `target` AND `authTarget`.
    `UNIMPLEMENTED` = native call sent to the data port; `ECONNREFUSED` = the
    loopback auth listener isn't exposed.
 3. **THREE authorization surfaces, cured differently.** Data CRUD → **Casbin
-   policy rows** (`udb_authz.policy_rules`); native RPCs → **token scopes**
-   (`endpoint_security`, `udb:<service>:<method>`); the old ABAC table is dead.
-   A data deny needs a *policy row*; a native deny needs a *scope*. Don't confuse
-   them.
+   policy rows** (`udb_authz.policy_rules`) PLUS the coarse token scopes
+   `udb:read` (reads) / `udb:write` (writes) / `udb:stream` (CDC); native RPCs →
+   **per-method token scopes** (`endpoint_security`, `udb:<service>:<method>`);
+   the old ABAC table is dead. A data deny needs a *policy row* (or the coarse
+   scope); a native deny needs a *scope*. Don't confuse them.
 4. **Two kinds of caller.** A **human** logs in (username/password → JWT). A
    **service** is a `SERVICE_ACCOUNT` user + a **mandatory `ServiceAccountGrant`**
    (no grant = can't authenticate — the #1 "works as a user, fails as a service"
@@ -140,7 +145,9 @@ canonical UUID, so human project codes like `private` are safe. `is_public` is
 contract; run BEFORE first start) · `udb doctor --enterprise` (manifest-aware
 preflight — lists every unmet prereq + missing required backend at once) ·
 `udb policy apply -f <policies.yaml> --tenant <UUID>` (offline data-plane
-policy) · `udb native list/docs` · `udb compat-matrix` (authoritative
+policy) · `udb up` (protos → served catalog, then the `udb.yaml` policies/
+identities/seed) · `udb identity diff|apply -f <identities.yaml>` (service-account
+grants) · `udb native list/docs` · `udb compat-matrix` (authoritative
 annotations). Since 0.3.7, `udb --help`, `udb help <cmd>`, command `--help`,
 `udb --version`, and near-miss "did you mean" suggestions are supported.
 
@@ -152,15 +159,18 @@ Redis / Kafka / object store / ledger), wrong lifecycle, or missing config ·
 `UNAUTHENTICATED`→missing bearer, or empty tenant; an API key is exchanged for a
 JWT (the SDKs do it; a raw `x-api-key` is never sent) · `INVALID_ARGUMENT`→unknown
 message_type (`udb sdk manifest`), or "tenant isolation requires filter on
-tenant_id" (put the tenant UUID in the filter), or non-UUID `project_id` on
-storage · `ABORTED`→CAS/revision conflict (re-read, retry) · `NOT_FOUND`→may be
-"exists but not your tenant" (by design).
+tenant_id" (put the tenant UUID in the filter), or "scope udb:read|udb:write is
+required" (coarse data-plane scope missing from the token), or non-UUID
+`project_id` on storage, or an API-key `Authenticate` whose tenant hint names
+another tenant (0.6.14+) · `ABORTED`→CAS/revision conflict (re-read, retry) ·
+`NOT_FOUND`→may be "exists but not your tenant" (by design).
 
 **`PERMISSION_DENIED` decision tree:** (1) "purpose is required" → send
 `x-purpose`. (2) NATIVE call → token missing scope `udb:<service>:<method>` (for
 a service, add it to its grant first). (3) DATA call → Casbin: "no authz policy"
 = zero rows → `udb policy apply -f <policies.yaml> --tenant <T-UUID>` then bind
-the principal; "no applicable allow policy" = one of the three token traps —
+the principal; "denied by Casbin PERM model: no policy allows action …" or "…
+no allow rule grants action …" = one of the three token traps —
 `action` must be `Select`/`Upsert`/… (not `data.select`), `tenant_id`=caller
 UUID, `object`=message_type, subject matches. (4) "tenant mismatch" → use the
 credential's UUID.

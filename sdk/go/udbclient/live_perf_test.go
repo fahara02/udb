@@ -172,11 +172,12 @@ func TestLivePerf(t *testing.T) {
 	platformGen = NewGenerated(authConn, liveGeneratedOptions(platformMeta, platformAuthz))
 	platformBrokerGen = NewGenerated(brokerConn, liveGeneratedOptions(platformMeta, platformAuthz))
 
-	// ExchangeServiceTokenForTenant is callable only by a service account
-	// presenting its HOME-tenant bearer. The prepared fixtures name such an
-	// account (membership_exchange_username, password UDB_LIVE_PASSWORD) with an
-	// active membership in the bench tenant. Its client is built lazily, right
-	// before that single measured row, so the bearer is fresh. When the fixture is
+	// ExchangeServiceTokenForTenant and ListOwnTenantMemberships are callable
+	// only by a service account presenting its HOME-tenant bearer. The prepared
+	// fixtures name such an account (membership_exchange_username, password
+	// UDB_LIVE_PASSWORD) with an active membership in the bench tenant. Its
+	// client is built lazily, right before the first of those measured rows, so
+	// the bearer is fresh. When the fixture is
 	// absent or the login fails the row is measured with the ordinary client and
 	// fails honestly.
 	var serviceAccountGen *GeneratedClient
@@ -601,11 +602,18 @@ func requiresPlatformBenchmarkIdentity(rpc RPCInfo) bool {
 	}
 }
 
-// ExchangeServiceTokenForTenant is the only RPC a human caller cannot succeed
-// on: the broker requires a service account presenting its HOME-tenant bearer.
-// Membership create/list/revoke stay with the bench tenant admin (the target).
+// ExchangeServiceTokenForTenant and ListOwnTenantMemberships are the only RPCs
+// a human caller cannot succeed on: the broker requires a service account
+// presenting its HOME-tenant bearer. Membership create/list/revoke stay with the
+// bench tenant admin (the target).
 func requiresServiceAccountBenchmarkIdentity(rpc RPCInfo) bool {
-	return rpc.FullMethod == "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"
+	switch rpc.FullMethod {
+	case "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant",
+		"/udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships":
+		return true
+	default:
+		return false
+	}
 }
 
 func liveBenchmarkClient(rpc RPCInfo, broker, auth, platformBroker, platformAuth *GeneratedClient) *GeneratedClient {
@@ -662,16 +670,18 @@ func TestPlatformBenchmarkIdentityRoutingIsNarrow(t *testing.T) {
 }
 
 func TestServiceAccountBenchmarkIdentityRoutingIsNarrow(t *testing.T) {
-	exchange := RPCInfo{Service: "AuthnService", Name: "ExchangeServiceTokenForTenant", FullMethod: "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"}
-	if !requiresServiceAccountBenchmarkIdentity(exchange) {
-		t.Fatal("AuthnService/ExchangeServiceTokenForTenant must use the service-account fixture")
-	}
-	if requiresPlatformBenchmarkIdentity(exchange) {
-		t.Fatal("AuthnService/ExchangeServiceTokenForTenant must not use the platform fixture")
+	for _, name := range []string{"ExchangeServiceTokenForTenant", "ListOwnTenantMemberships"} {
+		rpc := RPCInfo{Service: "AuthnService", Name: name, FullMethod: "/udb.core.authn.services.v1.AuthnService/" + name}
+		if !requiresServiceAccountBenchmarkIdentity(rpc) {
+			t.Fatalf("AuthnService/%s must use the service-account fixture", name)
+		}
+		if requiresPlatformBenchmarkIdentity(rpc) {
+			t.Fatalf("AuthnService/%s must not use the platform fixture", name)
+		}
 	}
 	for _, name := range []string{
 		"CreateServiceAccountTenantMembership", "ListServiceAccountTenantMemberships",
-		"RevokeServiceAccountTenantMembership", "Login", "ValidateToken",
+		"RevokeServiceAccountTenantMembership", "SetServiceAccountPassword", "Login", "ValidateToken",
 	} {
 		rpc := RPCInfo{Service: "AuthnService", Name: name, FullMethod: "/udb.core.authn.services.v1.AuthnService/" + name}
 		if requiresServiceAccountBenchmarkIdentity(rpc) {

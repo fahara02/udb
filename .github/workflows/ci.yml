@@ -549,9 +549,10 @@ jobs:
           node scripts/gen-bench-bodies-json.mjs
           node scripts/gen-sdk-benchmark-docs.mjs
           python3 scripts/generate-codebase-map.py
-          python3 udb-skill/sync_references.py
           target/debug/udb native manifest > docs/generated/udb-native-contract.json
           target/debug/udb native docs > docs/generated/native-services.md
+          # After the generated docs it copies into the skill.
+          python3 udb-skill/sync_references.py
           target/debug/udb native contract-baseline \
             --baseline docs/generated/contract-baseline.bin
           # Intent-to-add so a NEWLY generated file (a template whose output has
@@ -566,6 +567,7 @@ jobs:
             docs/generated/native-services.md \
             docs/generated/contract-baseline.bin \
             udb-skill/plugins/udb/skills/udb-coding/references/codebase-map.md \
+            udb-skill/plugins/udb/skills/using-udb/references/native-services.md \
             > ci-native-docs.patch
       - name: Upload CI-generated native documentation repair patch
         if: failure() && runner.os == 'Linux' && steps.canonical-build.outcome == 'success'
@@ -818,6 +820,19 @@ jobs:
           fi
           grep -q '^\[skipped\] catalog' /tmp/up-second.err
           "$udb" catalog status --project ci-up
+      - name: The schema-change guide runs as written (add, remove, rename on a table with rows)
+        shell: bash
+        env:
+          # The walkthrough starts its own broker and must migrate for real.
+          UDB_STARTUP_DRY_RUN: "false"
+          UDB_STARTUP_FORCE_SYNC: "false"
+          PGPASSWORD: udb
+        run: |
+          set -euo pipefail
+          psql -h localhost -U udb -d udb_ci -c "CREATE DATABASE udb_walkthrough;"
+          UDB_CLI="$PWD/target/debug/udb" \
+            UDB_PG_DSN=postgres://udb:udb@localhost:5432/udb_walkthrough \
+            examples/schema_change/walkthrough.sh
       - name: Stop broker
         if: always()
         shell: bash

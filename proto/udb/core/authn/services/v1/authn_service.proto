@@ -412,6 +412,68 @@ service AuthnService {
     };
   }
 
+  // Set a SERVICE ACCOUNT's password, as an admin of its tenant. A service account has
+  // no mailbox for the reset code AdminResetPassword sends, and ChangePassword needs the
+  // current password, so an account whose password was lost could never sign in again.
+  // Refused for a person. The account's sessions are revoked, and the change is audited.
+  rpc SetServiceAccountPassword(SetServiceAccountPasswordRequest) returns (SetServiceAccountPasswordResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:admin-reset-password"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.SetServiceAccountPassword"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "set_service_account_password" rest_operation_id: "setServiceAccountPassword"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 1
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.set_service_account_password.boilerplate"
+      route_name: "set_service_account_password"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.SetServiceAccountPassword"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/service-accounts/{user_id}/password"
+      body: "*"
+    };
+  }
+
   // ── OTP ──────────────────────────────────────────────────────────────────
   rpc SendOTP(SendOTPRequest) returns (SendOTPResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
@@ -3092,6 +3154,54 @@ service AuthnService {
   // session. Every use re-checks the membership (ACTIVE, same revision), the
   // home grant and the account. No, expired or revoked membership: one
   // uniform PERMISSION_DENIED.
+  // The tenants a service account can reach: its own ACTIVE, unexpired memberships,
+  // whose home is the caller's tenant. Called with the same home service bearer and
+  // scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
+  rpc ListOwnTenantMemberships(ListOwnTenantMembershipsRequest) returns (ListOwnTenantMembershipsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:exchange-tenant-token"
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "authn.ListOwnTenantMemberships"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_own_tenant_memberships" rest_operation_id: "listOwnTenantMemberships"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.list_own_tenant_memberships.boilerplate"
+      route_name: "list_own_tenant_memberships"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/auth/own-tenant-memberships"};
+  }
   rpc ExchangeServiceTokenForTenant(ExchangeServiceTokenForTenantRequest) returns (ExchangeServiceTokenForTenantResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
@@ -4468,6 +4578,37 @@ message ListServiceAccountTenantMembershipsResponse {
   string message = 3;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 4;
+}
+
+message ListOwnTenantMembershipsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  int32 page_size = 1;
+  // Opaque continuation token from a previous response.
+  string page_token = 2;
+}
+
+message ListOwnTenantMembershipsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // ACTIVE, unexpired memberships whose home is the caller's tenant.
+  repeated udb.core.authn.entity.v1.ServiceAccountTenantMembership memberships = 1;
+  // Empty on the last page.
+  string next_page_token = 2;
 }
 
 message RevokeServiceAccountTenantMembershipRequest {

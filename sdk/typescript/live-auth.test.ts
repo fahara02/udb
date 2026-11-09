@@ -131,18 +131,21 @@ function requiresPlatformBenchmarkIdentity(serviceName: string, methodName: stri
   return PLATFORM_BENCHMARK_RPCS.has(`${serviceName}/${methodName}`);
 }
 
-// ExchangeServiceTokenForTenant is refused for a human or API-key caller: only a
-// service account presenting its HOME bearer may exchange it. The membership
-// create/list/revoke rows stay on the bench tenant's ordinary administrator.
+// ExchangeServiceTokenForTenant and ListOwnTenantMemberships are refused for a
+// human or API-key caller: only a service account presenting its HOME bearer may
+// call them. The membership create/list/revoke rows stay on the bench tenant's
+// ordinary administrator.
 const SERVICE_ACCOUNT_BENCHMARK_RPCS = new Set([
   "AuthnService/exchange_service_token_for_tenant",
+  "AuthnService/list_own_tenant_memberships",
 ]);
 
 function requiresServiceAccountBenchmarkIdentity(serviceName: string, methodName: string): boolean {
   return SERVICE_ACCOUNT_BENCHMARK_RPCS.has(`${serviceName}/${methodName}`);
 }
 
-/** The service account that measures ExchangeServiceTokenForTenant, from the
+/** The service account that measures ExchangeServiceTokenForTenant and
+ *  ListOwnTenantMemberships, from the
  *  prepared fixtures; undefined when the fixture script provided none (an older
  *  broker), in which case the row runs on the ordinary caller and fails honestly.
  *  Read by EXACT key: PerfFixtures.lookup suffix-matches, so
@@ -2053,8 +2056,11 @@ test("benchmark platform routing is exact and preserves ordinary Authz CRUD", ()
   assert.throws(() => verifiedNativeFixtureActor(principal, "tenant-1", "foreign-project"), /foreign authenticated project/);
 });
 
-test("benchmark service-account routing covers only the tenant token exchange", () => {
+test("benchmark service-account routing covers only the tenant token exchange and own-membership list", () => {
   assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "exchange_service_token_for_tenant"), true);
+  assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "list_own_tenant_memberships"), true);
+  assert.equal(requiresPlatformBenchmarkIdentity("AuthnService", "list_own_tenant_memberships"), false);
+  assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "set_service_account_password"), false);
   assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "create_service_account_tenant_membership"), false);
   assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "list_service_account_tenant_memberships"), false);
   assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "revoke_service_account_tenant_membership"), false);
@@ -5114,6 +5120,7 @@ test("live per-RPC perf", {
       "admin_revoke_all_tenant_sessions", "emergency_revoke", "change_password",
       "reset_password", "admin_reset_password", "change_user_status", "admin_reset_mfa",
       "revoke_recovery_codes", "revoke_device", "delete_web_authn_credential", "disable_mfa_factor",
+      "set_service_account_password",
     ]);
 
     type Unit = { serviceName: string; api: any; methodName: string; fn: any };
@@ -5173,8 +5180,8 @@ test("live per-RPC perf", {
     // before the final self-PurgeTenant.
     phase3.sort((a, b) => Number(a.methodName === "admin_revoke_all_tenant_sessions") - Number(b.methodName === "admin_revoke_all_tenant_sessions"));
 
-    // ExchangeServiceTokenForTenant only accepts a service account's HOME bearer.
-    // Right before measuring it, log the fixture's service account in (in its home
+    // ExchangeServiceTokenForTenant and ListOwnTenantMemberships only accept a
+    // service account's HOME bearer. Right before measuring each, log the fixture's service account in (in its home
     // tenant), verify the bearer and measure on a client carrying that principal's
     // tenant/project/user/service identity. Without the fixture (or if that login
     // fails) the row runs on the ordinary caller and its refusal is recorded.

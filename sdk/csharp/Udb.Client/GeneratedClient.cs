@@ -6,7 +6,7 @@
 //   UDB version:      0.6.13
 //   Protocol version: 1.0.0
 //   Services:         29
-//   RPCs:             424
+//   RPCs:             426
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -127,6 +127,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.authn.services.v1.AuthnService/ListDevices"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListDevices", "AuthnService", "ListDevices", "list_devices", "listDevices", "read_only", "get", "/v1/auth/users/{user_id}/devices");
         map["/udb.core.authn.services.v1.AuthnService/ListInvitations"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListInvitations", "AuthnService", "ListInvitations", "list_invitations", "listInvitations", "read_only", "get", "/v1/auth/invitations");
         map["/udb.core.authn.services.v1.AuthnService/ListMfaFactors"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListMfaFactors", "AuthnService", "ListMfaFactors", "list_mfa_factors", "listMfaFactors", "read_only", "get", "/v1/auth/users/{user_id}/mfa/factors");
+        map["/udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships", "AuthnService", "ListOwnTenantMemberships", "list_own_tenant_memberships", "listOwnTenantMemberships", "read_only", "get", "/v1/auth/own-tenant-memberships");
         map["/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants", "AuthnService", "ListServiceAccountGrants", "list_service_account_grants", "listServiceAccountGrants", "read_only", "get", "/v1/auth/service-account-grants");
         map["/udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships", "AuthnService", "ListServiceAccountTenantMemberships", "list_service_account_tenant_memberships", "listServiceAccountTenantMemberships", "read_only", "get", "/v1/auth/tenants/{target_tenant_id}/service-account-memberships");
         map["/udb.core.authn.services.v1.AuthnService/ListSessions"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ListSessions", "AuthnService", "ListSessions", "list_sessions", "listSessions", "read_only", "get", "/v1/auth/users/{user_id}/sessions");
@@ -156,6 +157,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.authn.services.v1.AuthnService/SendLoginOtp"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/SendLoginOtp", "AuthnService", "SendLoginOtp", "send_login_otp", "sendLoginOtp", "mutation", "post", "/v1/auth/sessions:sendLoginOtp");
         map["/udb.core.authn.services.v1.AuthnService/SendOTP"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/SendOTP", "AuthnService", "SendOTP", "send_otp", "sendOtp", "mutation", "post", "/v1/auth/otps:send");
         map["/udb.core.authn.services.v1.AuthnService/SendPhoneVerification"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/SendPhoneVerification", "AuthnService", "SendPhoneVerification", "send_phone_verification", "sendPhoneVerification", "mutation", "post", "/v1/auth/users/{user_id}/phones:verify");
+        map["/udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword", "AuthnService", "SetServiceAccountPassword", "set_service_account_password", "setServiceAccountPassword", "destructive", "post", "/v1/auth/service-accounts/{user_id}/password");
         map["/udb.core.authn.services.v1.AuthnService/StartInvitationAcceptance"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/StartInvitationAcceptance", "AuthnService", "StartInvitationAcceptance", "start_invitation_acceptance", "startInvitationAcceptance", "mutation", "post", "/v1/auth/invitations/{invitation_id}:startAcceptance");
         map["/udb.core.authn.services.v1.AuthnService/StartOidcLogin"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/StartOidcLogin", "AuthnService", "StartOidcLogin", "start_oidc_login", "startOidcLogin", "mutation", "post", "/v1/auth/oidc-logins:start");
         map["/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication", "AuthnService", "StartWebAuthnAuthentication", "start_web_authn_authentication", "startWebAuthnAuthentication", "mutation", "post", "/v1/auth/webauthn/authentication:start");
@@ -580,7 +582,7 @@ public sealed partial class GeneratedAssetServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.authn.services.v1.AuthnService</c> service
-/// (79 RPCs). Forwards to the buf-generated
+/// (81 RPCs). Forwards to the buf-generated
 /// <c>AuthnServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedAuthnServiceClient : GeneratedServiceBase
@@ -2757,6 +2759,29 @@ public sealed partial class GeneratedAuthnServiceClient
 public sealed partial class GeneratedAuthnServiceClient
 {
     /// <summary>
+    /// <c>list_own_tenant_memberships</c> (unary) — forwards to <c>AuthnServiceClient.ListOwnTenantMembershipsAsync</c>.
+    /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListOwnTenantMembershipsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListOwnTenantMembershipsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships",
+            co => (object)_stub.ListOwnTenantMembershipsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedAuthnServiceClient
+{
+    /// <summary>
     /// <c>list_service_account_grants</c> (unary) — forwards to <c>AuthnServiceClient.ListServiceAccountGrantsAsync</c>.
     /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -3417,6 +3442,29 @@ public sealed partial class GeneratedAuthnServiceClient
             deadline,
             cancellationToken,
             "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedAuthnServiceClient
+{
+    /// <summary>
+    /// <c>set_service_account_password</c> (unary) — forwards to <c>AuthnServiceClient.SetServiceAccountPasswordAsync</c>.
+    /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> SetServiceAccountPasswordAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SetServiceAccountPasswordAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.authn.services.v1.AuthnService/SetServiceAccountPassword",
+            co => (object)_stub.SetServiceAccountPasswordAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
             "false" == "true",
             (object)request);
     }

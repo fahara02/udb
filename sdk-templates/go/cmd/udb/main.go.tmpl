@@ -10,7 +10,9 @@
 //
 //  1. If $UDB_BIN points at an executable, use it.
 //  2. Else if a `udb` of the matching version (v{{UDB_VERSION}}) is already on
-//     $PATH (and is not this launcher), exec that.
+//     $PATH (and is not this launcher), exec that. Every PATH match is tried,
+//     each probe has a 5 s timeout, and a launcher started by another launcher
+//     (UDB_LAUNCHER_ACTIVE set) skips PATH entirely, so it cannot recurse.
 //  3. Else download the matching release asset from
 //     github.com/fahara02/udb (tag v{{UDB_VERSION}}) for the current GOOS/GOARCH
 //     into a per-user cache dir, then exec it. Subsequent runs reuse the cache.
@@ -25,6 +27,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -68,7 +71,7 @@ func run(bin string, args []string) (int, error) {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
+	cmd.Env = childEnv()
 	if err := cmd.Run(); err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
@@ -122,24 +125,110 @@ func isExecutable(path string) bool {
 	return fi.Mode().Perm()&0o111 != 0
 }
 
+// launcherEnv is set on every child this launcher starts (a `--version` probe
+// or the final exec). A launcher that starts with it already set is nested (a
+// PATH candidate was itself a launcher) and never probes PATH, so one
+// invocation can start only a bounded number of processes.
+const launcherEnv = "UDB_LAUNCHER_ACTIVE"
+
+// probeTimeout bounds a `--version` probe so a hung candidate cannot stall.
+const probeTimeout = 5 * time.Second
+
+// childEnv is the current environment plus the recursion-guard variable.
+func childEnv() []string {
+	return append(os.Environ(), launcherEnv+"=1")
+}
+
+func isNestedLauncher() bool {
+	return os.Getenv(launcherEnv) != ""
+}
+
+// canonicalPath resolves symlinks and makes p absolute; "" when p is unusable.
+func canonicalPath(p string) string {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return ""
+	}
+	if real, err := filepath.EvalSymlinks(abs); err == nil {
+		abs = real
+	}
+	if runtime.GOOS == "windows" {
+		abs = strings.ToLower(abs)
+	}
+	return abs
+}
+
+// isSelfCandidate reports whether candidate is this launcher (same file after
+// resolving symlinks). self is the launcher's canonical path.
+func isSelfCandidate(candidate, self string) bool {
+	c := canonicalPath(candidate)
+	if c == "" {
+		return true
+	}
+	if self != "" && c == self {
+		return true
+	}
+	if fi, err := os.Stat(candidate); err == nil && self != "" {
+		if si, err := os.Stat(self); err == nil && os.SameFile(fi, si) {
+			return true
+		}
+	}
+	return false
+}
+
+// pathCandidates lists every `udb` executable on PATH, in PATH order.
+func pathCandidates() []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+		if dir == "" {
+			continue
+		}
+		candidate := filepath.Join(dir, exeName("udb"))
+		if !isExecutable(candidate) {
+			continue
+		}
+		key := canonicalPath(candidate)
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, candidate)
+	}
+	return out
+}
+
+// versionMatches runs `<bin> --version` with a timeout and the guard variable.
+func versionMatches(bin string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bin, "--version")
+	cmd.Env = childEnv()
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(out), udbVersion)
+}
+
 // lookPathMatching returns a `udb` on PATH whose `--version` reports udbVersion,
-// excluding this launcher binary itself.
+// excluding this launcher binary itself. Every PATH match is tried in order;
+// a nested launcher (launcherEnv set) never probes PATH.
 func lookPathMatching() string {
-	self, _ := os.Executable()
-	self, _ = filepath.Abs(self)
-	candidate, err := exec.LookPath(exeName("udb"))
-	if err != nil {
+	if isNestedLauncher() {
 		return ""
 	}
-	if abs, _ := filepath.Abs(candidate); abs == self {
-		return ""
+	self := ""
+	if exe, err := os.Executable(); err == nil {
+		self = canonicalPath(exe)
 	}
-	out, err := exec.Command(candidate, "--version").Output()
-	if err != nil {
-		return ""
-	}
-	if strings.Contains(string(out), udbVersion) {
-		return candidate
+	for _, candidate := range pathCandidates() {
+		if isSelfCandidate(candidate, self) {
+			continue
+		}
+		if versionMatches(candidate) {
+			return candidate
+		}
 	}
 	return ""
 }

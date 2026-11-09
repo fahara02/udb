@@ -51,6 +51,13 @@ message UsageEvent {
       columns: "tenant_id"
       columns: "occurred_at_unix"
     }
+    // The rollup worker reads one time range across every tenant; the indexes above
+    // lead with tenant_id and cannot serve that, so each pass scanned the whole table.
+    indexes: {
+      index_name: "idx_usage_events_ts"
+      index_type: "BTREE"
+      columns: "occurred_at_unix"
+    }
     cdc_topic: "udb.metering.usage_events.cdc"
     required_scope: "metering:read"
   };

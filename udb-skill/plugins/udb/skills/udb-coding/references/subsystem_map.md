@@ -209,16 +209,16 @@ Each is a proto-driven gRPC service, no in-memory store. Read the per-service
 |---|---|---|---|
 | TenantService | `udb_tenant.*` CRUD | `CreateTenant`/`ListTenants`/`GetTenant` | tenant from verified claim, never body |
 | VaultService (flagship) | KV + Transit + Seal secrets | `VaultService` KV/Transit/Seal RPCs | seal fails closed if master key unavailable |
-| StorageService | object metadata + presigned writes | `RegisterFile`/`GeneratePresignedUrl`/`DeleteFile` | v1 is metadata only; bytes via presigned URL |
+| StorageService | object metadata + presigned writes | `RegisterUpload`/`FinalizeUpload`/`GetDownloadUrl`/`DeleteFile`/`SetScanVerdict` | metadata only; bytes via presigned URL; downloads pass the scan gate |
 | AssetService | asset CRUD + processing pipelines | 8 RPCs + `consumer`/`execution` submodules | auto-trigger orchestration |
 | WebRTC | rooms/peers/tracks, TURN, signaling | `WebRTC`, `SignalingService` | only transient signaling is in-memory |
 | LockService | distributed locks + fencing | `AcquireLock`/`ReleaseLock` | lock name from verified claim tenant |
-| CacheService | self-invalidating cache | `cache_get/set/delete/scan` | Redis `SCAN` not `KEYS` |
-| ConfigService | feature flags | `EvaluateFlag`/`eval::evaluate_flag` | resolve-once TTL, no worker |
+| CacheService | self-invalidating cache | `Get`/`Set`/`Increment`/`Delete`/`Scan` + namespace RPCs | Redis `SCAN` not `KEYS` |
+| ConfigService | feature flags | `EvaluateFlags`/`eval::evaluate_flag` | resolve-once TTL, no worker |
 | MeteringService | usage + quotas | `CheckQuota`/`record_usage` | metering NEVER fails the metered request |
 | EmbeddingService | vectors (sidecar-only inference) | `RegisterSource`/`Backfill`/`Retrieve` | inference in sidecars only |
 | LiveQueryService | snapshot + CDC delta streaming | `Subscribe` | tenant isolation enforced twice |
-| SearchService | one search box (FT/vector/hybrid, RRF) | `Search`/`HybridSearch` | mediated dispatch only |
+| SearchService | one search box (FT/vector/hybrid, RRF) | `Search` (+ `CreateIndex`/`ListIndexes`/`Reindex`/`DeleteIndex`) | mediated dispatch only |
 | SchedulerService | durable cron/one-shot | `SchedulerService` RPCs | uses `WORKER_SCHEDULER_TICK` lease |
 | NotificationService | multi-channel notifications | `NotificationService` RPCs | templates/tenant hybrid |
 | AnalyticsService | pipeline metrics/throughput | `GetThroughput` etc. | |
@@ -227,7 +227,8 @@ Each is a proto-driven gRPC service, no in-memory store. Read the per-service
 | WorkflowService | long-running workflows/sagas | `WorkflowService` RPCs | `WORKER_*` leases |
 | ControlPlaneService | xDS-style policy/config push | `StreamResources` | backends pushed before their policies |
 | IdentityProviderService | SAML/SCIM/OIDC federation | `IdentityProviderService` RPCs | SCIM HTTP off by default |
-| Analytics / Cache / … | (19 services total beyond Authn/Authz/ApiKey) | per `runtime/service/<svc>/mod.rs` | |
+| MessagingService | MLS (RFC 9420) E2EE delivery service + key directory | `RegisterMessagingDevice`/`ClaimKeyPackages`/`SubmitCommit`/`SendMessage`/`StreamInbox` | broker holds only public group state + opaque ciphertext; Postgres-only |
+| Analytics / Cache / … | (28 gRPC services in total — `docs/generated/native-services.md`) | per `runtime/service/<svc>/mod.rs` | |
 
 ---
 
