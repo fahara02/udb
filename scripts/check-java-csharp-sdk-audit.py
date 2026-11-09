@@ -92,11 +92,13 @@ CHECKS: tuple[SourceCheck, ...] = (
             ".setMessageType(messageType)",
             ".setFilter(toStruct(where))",
             ".setRecordJson(ByteString.copyFromUtf8(toJson(record)))",
-            ".setPayload(toStruct(record))",
             ".addAllConflictFields(key)",
             "Struct.newBuilder()",
             "selectJson(",
         ),
+        # The row goes once, in record_json: a second copy in payload is a second
+        # row the broker refuses when the two differ.
+        forbidden=(".setPayload(toStruct(record))",),
     ),
     SourceCheck(
         "java typed receipt/fence helper surface",
@@ -223,11 +225,11 @@ CHECKS: tuple[SourceCheck, ...] = (
             "MessageType = MessageType",
             "Filter = ToStruct(where)",
             "RecordJson = ByteString.CopyFromUtf8(RecordJson(record))",
-            "Payload = ToStruct(record)",
             "request.ConflictFields.AddRange(Key)",
             "UdbIr.Entities",
             "DecodeRecords(",
         ),
+        forbidden=("Payload = ToStruct(record)",),
     ),
     SourceCheck(
         "csharp typed receipt/fence helper surface",

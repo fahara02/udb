@@ -76,7 +76,6 @@ public sealed class UdbEntityHandle
             Context = Context(_metadata()),
             MessageType = MessageType,
             RecordJson = ByteString.CopyFromUtf8(RecordJson(record)),
-            Payload = ToStruct(record),
             ReturnRecord = returnRecord,
             IdempotencyKey = idempotencyKey ?? string.Empty,
         };

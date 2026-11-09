@@ -49,7 +49,8 @@ release line was tagged.
   read `payload` first, so the row was written with every column missing ("required field ...
   missing" on a NOT NULL column). The SDK now leaves `payload` unset, and the broker treats an
   empty `payload` as no row, so released Python clients write correctly against a new broker.
-- **The Java SDK's entity `upsert` sends the row once**, in `record_json`.
+- **The Java and C# SDKs' entity `upsert` sends the row once**, in `record_json`; they also
+  sent it as `payload`.
 - **The test fakes compare a JSON column's `expected` as the broker does.** The Go, Python and
   TypeScript fakes stored JSON text as the document it encodes but compared `expected` as the
   text, so a row whose JSON was `"[]"` failed as the expectation of its own next commit
