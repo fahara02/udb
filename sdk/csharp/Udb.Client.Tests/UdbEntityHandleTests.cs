@@ -65,7 +65,9 @@ public sealed class UdbEntityHandleTests
         Assert.True(seenUpsert.ReturnRecord);
         Assert.Equal("idem-1", seenUpsert.IdempotencyKey);
         Assert.Contains("\"invoice_id\":\"inv-1\"", seenUpsert.RecordJson.ToStringUtf8());
-        Assert.Equal(42, seenUpsert.Payload.Fields["total_cents"].NumberValue);
+        // The row goes once, in record_json; a second copy in payload is not sent.
+        Assert.Contains("\"total_cents\":42", seenUpsert.RecordJson.ToStringUtf8());
+        Assert.Null(seenUpsert.Payload);
 
         Assert.NotNull(seenDelete);
         Assert.Equal("example.invoice.v1.Invoice", seenDelete!.MessageType);

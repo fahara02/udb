@@ -776,17 +776,27 @@ and checksum. Otherwise it writes nothing. Find the run id in
 
 ### Moving a transition to a restored or relocated database
 
-A reviewed transition is bound to the identity its database answered with,
-including the server's address and port. After a restore to a new server, or when
-the server's address changes, the broker refuses to start with "routed native
-target authority changed". Move the transition:
+A reviewed transition is bound to its routing and to the database's UDB identity: one
+row in `udb_system.udb_database_identity`, created on first use, that travels with the
+data. A recreated Postgres container, a new server address, a restore of the same data
+(under any database name) and a rotated login role all keep the binding, and the broker
+starts. A different database is refused with "routed native target authority changed".
+
+A transition bound by an earlier release (to the server address) is moved to the
+identity by the first start whose address still matches. A copy taken before that, for
+example a rehearsal clone of a database that has not run this release yet, still
+refuses. Move the transition on the copy:
 
 ```bash
-udb catalog rebind-target --run RUN_ID --actor OPERATOR --reason "restored to db-2" [--dsn "$UDB_PG_DSN"]
+udb catalog rebind-target --run RUN_ID --actor OPERATOR --reason "rehearsal copy" [--dsn "$UDB_PG_DSN"]
 ```
 
-It moves the transition only when the database proves it holds the transition's
-reviewed schema, and records who moved it, why, and from which identity in
-`udb_system.udb_catalog_reviewed_target_rebinds`. Otherwise it writes nothing. Run it
-with the broker's own settings and network, so the database answers as it does to
-the broker. Then run `udb catalog restore-receipts` if the receipts are gone too.
+It moves the transition when the copy proves it holds the transition's application: its
+receipts in `public.schema_migrations` reproduce the stored evidence, the same proof
+every start makes, so it works after later changes moved the schema on. When the
+receipts are gone it falls back to comparing the transition's reviewed schema. It
+records who moved it, why, and from which identity in
+`udb_system.udb_catalog_reviewed_target_rebinds`, and otherwise writes nothing. Run it
+with the broker's own settings and network, so the database answers as it does to the
+broker. Run it once for each applied transition (find them in
+`udb_system.udb_catalog_reviewed_transitions`).

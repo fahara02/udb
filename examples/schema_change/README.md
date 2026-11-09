@@ -186,9 +186,10 @@ pg_restore -d orders_rehearsal production.dump
 udb verify --live --dsn "postgresql://localhost/orders_rehearsal"
 ```
 
-The rehearsal shows how *your data* interacts with the change. If the database was
-restored to a new server and a reviewed catalog transition refuses with "routed native
-target authority changed", see `udb catalog rebind-target --help`.
+The rehearsal shows how *your data* interacts with the change. A restore of the same
+data keeps its reviewed catalog transitions bound. Only a copy taken before its source
+ran a release with database identities refuses with "routed native target authority
+changed"; see `udb catalog rebind-target --help`.
 
 ## Adding a new entity
 

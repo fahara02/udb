@@ -150,16 +150,25 @@ const COMMANDS: &[CmdHelp] = &[
     CmdHelp {
         name: "catalog rebind-target",
         group: "Core",
-        summary: "Move a reviewed transition to the restored or relocated database it runs on.",
+        summary: "Move a reviewed transition to a copied or different database that holds it.",
         usage: "udb catalog rebind-target --run <run id> --actor <who> --reason <why> [--dsn <dsn>]",
-        details: "  A reviewed transition is bound to the identity its database answered with,
-  which includes the server's address and port. After a restore to a new server, or
-  when the server's address changes, the broker refuses to start with \"routed native
-  target authority changed\". This moves the transition only when the database proves
-  it holds the transition's reviewed schema, and records who moved it, why, and from
-  which identity in udb_system.udb_catalog_reviewed_target_rebinds. Otherwise it writes
-  nothing. Run it with the broker's own settings and network, so the database answers
-  as it does to the broker. Then run catalog restore-receipts if the receipts are gone.",
+        details: "  A reviewed transition is bound to its routing and the database's UDB identity,
+  the single row of udb_system.udb_database_identity. The identity is ordinary data, so
+  a recreated container, a new server address or a restore of the same data keeps it
+  and the broker starts as before. A copy made before the identity existed, or a
+  different database, answers with another identity, and the broker refuses to start
+  with \"routed native target authority changed\". This command is for that case.
+  It moves the transition only when the database proves it holds it: the transition's
+  receipts in public.schema_migrations reproduce its stored application evidence, the
+  proof every start accepts, which still holds after later changes moved the schema
+  on. When the receipts are gone, the database must instead hold the transition's
+  reviewed schema exactly. It records who moved it, why, and from which binding in
+  udb_system.udb_catalog_reviewed_target_rebinds, and otherwise writes nothing. When
+  neither proof holds, restore public.schema_migrations with the data, or plan the
+  change again. A transition an earlier release bound to the server's address is moved
+  to the identity at the next start while the address is unchanged. Run it with the
+  broker's own settings and network, so the database answers as it does to the broker.
+  Then run catalog restore-receipts if the receipts are gone.",
     },
     CmdHelp {
         name: "verify",

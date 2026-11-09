@@ -187,14 +187,34 @@ pub struct RuntimeBackendInstance {
 
 /// One exact, project-authorized PostgreSQL write target. The instance alias is
 /// persisted with migration plans, while `provenance_sha256` binds that alias
-/// to both its routing policy and the physical PostgreSQL endpoint observed at
-/// resolution time. Callers must re-resolve and compare the provenance before
-/// executing deferred work.
+/// to both its routing policy and the database's UDB identity (the single row
+/// of `udb_system.udb_database_identity`), which a recreated container or a
+/// restore of the same data keeps. Callers must re-resolve and compare the
+/// provenance before executing deferred work, accepting
+/// `legacy_provenance_sha256` (the pre-identity binding to the server's
+/// address) for values written by earlier releases. New values always store
+/// `provenance_sha256`.
 #[derive(Debug, Clone)]
 pub(crate) struct ProjectPostgresWriteTarget {
     pub instance: String,
     pub pool: PgPool,
     pub provenance_sha256: String,
+    pub legacy_provenance_sha256: String,
+}
+
+impl ProjectPostgresWriteTarget {
+    /// Whether a stored binding names this target: by its identity, or by its unchanged
+    /// legacy address.
+    fn binding_of(
+        &self,
+        bound: &str,
+    ) -> Result<accessors::TargetBindingMatch, accessors::TargetMoved> {
+        accessors::match_target_binding(
+            bound,
+            &self.legacy_provenance_sha256,
+            &self.provenance_sha256,
+        )
+    }
 }
 
 /// Canonical runtime routing target parsed from a backend selector.

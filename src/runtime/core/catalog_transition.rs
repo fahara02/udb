@@ -131,18 +131,26 @@ fn rebind_relation() -> String {
 }
 
 /// The refusal for a completed transition whose routed target no longer matches, naming the
-/// command that proves a restored or relocated database and moves the transition to it.
+/// command that proves a copied or different database and moves the transition to it.
 fn target_moved(id: Uuid, what: &str) -> tonic::Status {
     refusal(
         "reviewed_target_authority_changed",
         format!(
-            "{what}: the database answers with another identity (a restore to a new server, or \
-             a server whose address or port changed). If this is the same data, prove it holds \
-             the reviewed schema and move the transition to it with `udb catalog rebind-target \
-             --run {id} --actor <who> --reason <why>`"
+            "{what}: the transition is bound to the database's UDB identity \
+             (udb_system.udb_database_identity) and its routing, and this database answers \
+             with another identity or the routing changed. A recreated container or a restore \
+             of the same data keeps the identity and passes; a copy made before the identity \
+             existed, or a different database, does not. If this database holds the \
+             transition's data, prove it and move the transition to it with `udb catalog \
+             rebind-target --run {id} --actor <who> --reason <why>`"
         ),
     )
 }
+
+/// The `reason` recorded when a binding an earlier release made to the server's address is
+/// moved to the database identity.
+const IDENTITY_UPGRADE_REASON: &str =
+    "identity upgrade: bind to the database identity instead of the server address";
 
 fn refusal(code: &'static str, message: impl Into<String>) -> tonic::Status {
     catalog_admin_schema_status("reviewed_catalog_transition", code, message)
@@ -525,6 +533,68 @@ impl DataBrokerRuntime {
         .map_err(|err| {
             catalog_admin_internal_status("reviewed_target_rebind_storage", err.to_string())
         })?;
+        // The control database's identity exists before any binding is computed on it; a
+        // routed target on another database gets its own on first resolution.
+        let mut connection = self.pg_pool()?.acquire().await.map_err(|err| {
+            catalog_admin_internal_status("database_identity_acquire", err.to_string())
+        })?;
+        super::accessors::postgres_database_identity(&mut connection)
+            .await
+            .map_err(|err| catalog_admin_internal_status("database_identity", err.to_string()))?;
+        Ok(())
+    }
+
+    /// Whether completed transition `id` is bound to `target`. A binding an earlier release made
+    /// to the server's address, which still matches, is moved to the database identity in the
+    /// caller's transaction, so the next address change still passes.
+    async fn bound_to_target(
+        &self,
+        connection: &mut sqlx::PgConnection,
+        id: Uuid,
+        plan: &ReviewedCatalogPlan,
+        target: &ProjectPostgresWriteTarget,
+    ) -> Result<bool, tonic::Status> {
+        let bound = self
+            .bound_target_provenance(&mut *connection, id, plan)
+            .await?;
+        match target.binding_of(&bound) {
+            Ok(super::accessors::TargetBindingMatch::Identity) => Ok(true),
+            Ok(super::accessors::TargetBindingMatch::LegacyAddress) => {
+                self.record_identity_upgrade(connection, id, &bound, &target.provenance_sha256)
+                    .await?;
+                Ok(true)
+            }
+            Err(super::accessors::TargetMoved) => Ok(false),
+        }
+    }
+
+    async fn record_identity_upgrade(
+        &self,
+        connection: &mut sqlx::PgConnection,
+        id: Uuid,
+        from: &str,
+        to: &str,
+    ) -> Result<(), tonic::Status> {
+        sqlx::query(&format!(
+            "INSERT INTO {}(run_id,from_provenance_sha256,to_provenance_sha256,rebound_by,reason) \
+             VALUES($1,$2,$3,'udb',$4)",
+            rebind_relation()
+        ))
+        .bind(id)
+        .bind(from)
+        .bind(to)
+        .bind(IDENTITY_UPGRADE_REASON)
+        .execute(&mut *connection)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status("reviewed_identity_upgrade", err.to_string())
+        })?;
+        tracing::info!(
+            run_id = %id,
+            from = from,
+            to = to,
+            "reviewed catalog transition bound to the database identity instead of the server address"
+        );
         Ok(())
     }
 
@@ -970,7 +1040,7 @@ impl DataBrokerRuntime {
         }
         self.validate_reviewed_plan_base(&plan, active)?;
         if plan.target_instance != target.instance
-            || plan.target_provenance_sha256 != target.provenance_sha256
+            || target.binding_of(&plan.target_provenance_sha256).is_err()
         {
             return Err(refusal(
                 "reviewed_target_authority_changed",
@@ -1048,7 +1118,7 @@ impl DataBrokerRuntime {
                 Some(&mut **tx),
             )
             .await?;
-        if target.provenance_sha256 != self.bound_target_provenance(&mut **tx, id, &plan).await?
+        if !self.bound_to_target(&mut **tx, id, &plan, &target).await?
             || !self
                 .verified_reviewed_target(&plan, &target.pool, &mut **tx)
                 .await?
@@ -1973,7 +2043,7 @@ impl DataBrokerRuntime {
                 Some(&mut *tx),
             )
             .await?;
-        if target.provenance_sha256 != self.bound_target_provenance(&mut *tx, id, &plan).await? {
+        if !self.bound_to_target(&mut *tx, id, &plan, &target).await? {
             return Err(target_moved(
                 id,
                 "the transition's routed target changed, so its receipts cannot be restored",
@@ -2054,13 +2124,17 @@ impl DataBrokerRuntime {
         Ok(restored)
     }
 
-    /// Move a completed reviewed transition to the database it now runs on, after a restore to a
-    /// new server or a server whose address changed. The transition is bound to the identity its
-    /// target answered with, which includes the server's address, so such a database can never
-    /// re-prove it and the broker refuses to start. This moves it only when the database proves
-    /// it holds the transition's reviewed schema, the same check an apply replay makes, and
-    /// records who moved it, why, and from what. Returns the identities it moved between, or
-    /// `None` when the transition is already bound to this database.
+    /// Move a completed reviewed transition to the database it now runs on. The transition is
+    /// bound to its routing and the database's UDB identity, which a recreated container or a
+    /// restore of the same data keeps, so this is needed only for a copy made before the
+    /// identity existed or for a different database. It moves the transition only when the
+    /// database proves it holds the transition: its receipts in `public.schema_migrations`
+    /// reproduce the stored application evidence (the proof every start accepts, which holds
+    /// after later changes moved the schema on), or, when they do not, the database still holds
+    /// the reviewed schema exactly. It records who moved it, why, and from what. A binding an
+    /// earlier release made to this database's unchanged address is moved to the identity
+    /// without a proof. Returns the bindings it moved between, or `None` when the transition is
+    /// already bound to this database.
     pub async fn rebind_reviewed_transition_target(
         &self,
         run_id: &str,
@@ -2109,19 +2183,19 @@ impl DataBrokerRuntime {
             )
             .await?;
         let bound = self.bound_target_provenance(&mut *tx, id, &plan).await?;
-        if target.provenance_sha256 == bound {
-            return Ok(None);
+        match target.binding_of(&bound) {
+            Ok(super::accessors::TargetBindingMatch::Identity) => return Ok(None),
+            Ok(super::accessors::TargetBindingMatch::LegacyAddress) => {
+                self.record_identity_upgrade(&mut *tx, id, &bound, &target.provenance_sha256)
+                    .await?;
+                tx.commit().await.map_err(|err| {
+                    catalog_admin_internal_status("rebind_target_commit", err.to_string())
+                })?;
+                return Ok(Some((bound, target.provenance_sha256)));
+            }
+            Err(super::accessors::TargetMoved) => {}
         }
-        if !self
-            .verified_reviewed_target(&plan, &target.pool, &mut *tx)
-            .await?
-        {
-            return Err(refusal(
-                "reviewed_target_verification_failed",
-                "this database does not hold the transition's reviewed schema, so the transition \
-                 cannot move to it; nothing was written",
-            ));
-        }
+        let proof = self.rebind_proof(&mut tx, id, &plan, &target).await?;
         sqlx::query(&format!(
             "INSERT INTO {}(run_id,from_provenance_sha256,to_provenance_sha256,rebound_by,reason) \
              VALUES($1,$2,$3,$4,$5)",
@@ -2144,9 +2218,82 @@ impl DataBrokerRuntime {
             to = %target.provenance_sha256,
             actor = actor.trim(),
             reason = reason.trim(),
+            proof = proof,
             "reviewed catalog transition moved to the database it now runs on"
         );
         Ok(Some((bound, target.provenance_sha256)))
+    }
+
+    /// What proves `target` holds completed transition `id`: `"receipts"` when its receipts
+    /// reproduce the stored application evidence, `"schema"` when they do not but the database
+    /// holds the reviewed schema exactly. Otherwise the refusal says what is missing.
+    async fn rebind_proof(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        id: Uuid,
+        plan: &ReviewedCatalogPlan,
+        target: &ProjectPostgresWriteTarget,
+    ) -> Result<&'static str, tonic::Status> {
+        let stored: String = sqlx::query_scalar(&format!(
+            "SELECT application_evidence_sha256 FROM {} WHERE run_id=$1",
+            relation()
+        ))
+        .bind(id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|err| catalog_admin_internal_status("rebind_target_evidence", err.to_string()))?;
+        match self
+            .reviewed_application_evidence(tx, id, plan, &target.pool)
+            .await
+        {
+            Ok(evidence) if evidence == stored => return Ok("receipts"),
+            Err(status) if status.code() == tonic::Code::Internal => return Err(status),
+            // Missing or mismatched receipts: the reviewed schema may still prove it.
+            _ => {}
+        }
+        if self
+            .verified_reviewed_target(plan, &target.pool, &mut **tx)
+            .await?
+        {
+            return Ok("schema");
+        }
+        let filenames: Vec<String> = native_artifacts(id, plan)
+            .into_iter()
+            .map(|artifact| artifact.rel_path)
+            .collect();
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM public.schema_migrations WHERE filename = ANY($1)",
+        )
+        .bind(&filenames);
+        let receipts =
+            if super::accessors::postgres_pools_share_connections(self.pg_pool()?, &target.pool) {
+                count.fetch_one(&mut **tx).await
+            } else {
+                count.fetch_one(&target.pool).await
+            }
+            .map_err(|err| {
+                catalog_admin_internal_status("rebind_target_receipts", err.to_string())
+            })?;
+        Err(refusal(
+            "reviewed_target_verification_failed",
+            if receipts == 0 {
+                format!(
+                    "this database has none of the transition's receipts in \
+                     public.schema_migrations and does not hold its reviewed schema, so nothing \
+                     proves it holds the transition; nothing was written. Restore \
+                     public.schema_migrations with the rest of the data (`udb catalog \
+                     restore-receipts --run {id}` rebuilds the receipts, but only on the \
+                     database the transition is bound to), or plan the change again on this \
+                     database"
+                )
+            } else {
+                "the transition's receipts on this database do not reproduce its stored \
+                 application evidence, and the database does not hold its reviewed schema, so \
+                 it is not the database the transition ran on; nothing was written. Plan the \
+                 change again on this database"
+                    .to_string()
+            },
+        ))
     }
 
     pub(super) async fn reviewed_catalog_compatibility_evidence(
@@ -2235,8 +2382,9 @@ impl DataBrokerRuntime {
                 Some(&mut **tx),
             )
             .await?;
-        if target_route.provenance_sha256
-            != self.bound_target_provenance(&mut **tx, id, &plan).await?
+        if !self
+            .bound_to_target(&mut **tx, id, &plan, &target_route)
+            .await?
         {
             return Err(target_moved(id, "routed native target authority changed"));
         }

@@ -44,6 +44,24 @@ release line was tagged.
 
 ### Fixed
 
+- **A reviewed catalog transition survives a recreated Postgres container or a restore.** A
+  transition was bound to the address and port its database answered from, so a deploy that
+  recreated the Postgres container (a new docker IP) or restored the data elsewhere refused every
+  start with "routed native target authority changed". Each database now carries a UDB identity,
+  one row in `udb_system.udb_database_identity` created on first use, and a transition is bound to
+  its routing and that identity. A recreated container, a new address, a restore of the same data
+  (under any database name) and a rotated login role keep the binding; a different database is
+  still refused. A transition an earlier release bound to the address starts while the address is
+  unchanged, and that start moves it to the identity (a row in
+  `udb_system.udb_catalog_reviewed_target_rebinds` by `udb`), so the next address change passes.
+  Migration plans made by an earlier release still apply while the address is unchanged.
+- **`udb catalog rebind-target` moves a transition that later changes superseded.** It proved the
+  move by comparing the whole schema with the transition's reviewed target, which no longer holds
+  once later approved changes moved the schema on, so it refused with "this database does not
+  hold the transition's reviewed schema". It now accepts the proof every start accepts: the
+  transition's receipts in `public.schema_migrations` reproduce its stored application evidence.
+  The schema comparison remains the proof when the receipts are gone, and the refusal says which
+  is missing: restore `public.schema_migrations` with the data, or plan the change again.
 - **The Python SDK's record writes no longer store an empty row.** `upsert(record=...)` and the
   model and async writes always set an empty `payload` Struct beside `record_json`, and the broker
   read `payload` first, so the row was written with every column missing ("required field ...

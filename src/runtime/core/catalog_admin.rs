@@ -4035,8 +4035,12 @@ impl DataBrokerRuntime {
                 Some(&mut *authority_guard),
             )
             .await?;
+        // A plan an earlier release made carries the address-bound provenance; it applies while
+        // the address is unchanged. New plans carry the identity-bound one.
         if project_target.instance != stored_target_instance
-            || project_target.provenance_sha256 != stored_target_provenance
+            || project_target
+                .binding_of(&stored_target_provenance)
+                .is_err()
         {
             return Err(migration_authority_status(
                 "migration_target_authority_changed",

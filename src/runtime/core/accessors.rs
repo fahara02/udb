@@ -9,6 +9,139 @@ pub(super) fn postgres_pools_share_connections(first: &PgPool, second: &PgPool) 
     std::ptr::eq(first.options(), second.options())
 }
 
+/// The table holding the UDB identity of a PostgreSQL database: one row, created once per
+/// database. It is ordinary data, so a dump, a restore or a recreated container keeps it, and a
+/// different database has another one.
+pub(super) const DATABASE_IDENTITY_TABLE: &str = "udb_database_identity";
+
+pub(super) fn database_identity_relation() -> String {
+    let config = crate::runtime::system::SystemCatalogConfig::default();
+    format!(
+        "{}.{}",
+        qi_runtime(&config.cdc.system_schema),
+        qi_runtime(DATABASE_IDENTITY_TABLE)
+    )
+}
+
+/// The UDB identity of the PostgreSQL database `connection` is on, created on first use. The
+/// creation runs in its own transaction (a savepoint inside a caller's transaction) under an
+/// advisory lock, so brokers starting at once agree on one identity; the single-row primary key
+/// admits only one.
+pub(super) async fn postgres_database_identity(
+    connection: &mut sqlx::PgConnection,
+) -> Result<Uuid, sqlx::Error> {
+    let relation = database_identity_relation();
+    let select = format!("SELECT identity FROM {relation} WHERE singleton");
+    let present: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+        .bind(&relation)
+        .fetch_one(&mut *connection)
+        .await?;
+    if present
+        && let Some(identity) = sqlx::query_scalar::<_, Uuid>(&select)
+            .fetch_optional(&mut *connection)
+            .await?
+    {
+        return Ok(identity);
+    }
+    let config = crate::runtime::system::SystemCatalogConfig::default();
+    let mut tx = sqlx::Connection::begin(&mut *connection).await?;
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended('udb.database.identity', 534154))")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(&format!(
+        "CREATE SCHEMA IF NOT EXISTS {}",
+        qi_runtime(&config.cdc.system_schema)
+    ))
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(&format!(
+        "CREATE TABLE IF NOT EXISTS {relation} (
+            singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton),
+            identity UUID NOT NULL UNIQUE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now())"
+    ))
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(&format!(
+        "INSERT INTO {relation}(identity) VALUES (gen_random_uuid()) ON CONFLICT (singleton) DO NOTHING"
+    ))
+    .execute(&mut *tx)
+    .await?;
+    let identity = sqlx::query_scalar::<_, Uuid>(&select)
+        .fetch_one(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(identity)
+}
+
+fn postgres_target_provenance_digest(parts: &[&str]) -> String {
+    let mut hasher = Sha256::new();
+    for part in parts {
+        hasher.update((part.len() as u64).to_be_bytes());
+        hasher.update(part.as_bytes());
+    }
+    format!("{:x}", hasher.finalize())
+}
+
+/// The binding written before the database identity existed: the routing policy plus the
+/// database name, login role and the server's address and port. Kept only to recognise
+/// bindings written by earlier releases.
+pub(super) fn postgres_target_provenance_v1(
+    routing: &[&str; 7],
+    database: &str,
+    user: &str,
+    server_address: &str,
+    server_port: &str,
+) -> String {
+    let mut parts = vec!["UDB_PROJECT_POSTGRES_TARGET_V1"];
+    parts.extend_from_slice(routing);
+    parts.extend_from_slice(&[database, user, server_address, server_port]);
+    postgres_target_provenance_digest(&parts)
+}
+
+/// The binding: the routing policy plus the database's UDB identity. The server's address and
+/// port, the database name and the login role are left out: a recreated container, a restore
+/// of the same data under another name and a credential rotation are all the same database.
+pub(super) fn postgres_target_provenance_v2(
+    routing: &[&str; 7],
+    database_identity: &str,
+) -> String {
+    let mut parts = vec!["UDB_PROJECT_POSTGRES_TARGET_V2"];
+    parts.extend_from_slice(routing);
+    parts.push(database_identity);
+    postgres_target_provenance_digest(&parts)
+}
+
+/// How a stored binding matches the live target.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum TargetBindingMatch {
+    /// Bound to the database identity.
+    Identity,
+    /// Bound by an earlier release to the server's address, which is unchanged. The binding is
+    /// upgraded to the identity so the next address change still passes.
+    LegacyAddress,
+}
+
+/// The stored binding names neither the live database's identity nor its legacy address.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct TargetMoved;
+
+pub(super) fn match_target_binding(
+    bound: &str,
+    legacy_v1: &str,
+    identity_v2: &str,
+) -> Result<TargetBindingMatch, TargetMoved> {
+    if bound.is_empty() {
+        Err(TargetMoved)
+    } else if bound == identity_v2 {
+        Ok(TargetBindingMatch::Identity)
+    } else if bound == legacy_v1 {
+        Ok(TargetBindingMatch::LegacyAddress)
+    } else {
+        Err(TargetMoved)
+    }
+}
+
 fn invalid_backend_selector_status(selector: &str) -> tonic::Status {
     crate::runtime::executor_utils::invalid_argument_fields(
         format!("unknown backend '{selector}'"),
@@ -516,8 +649,6 @@ impl DataBrokerRuntime {
         expected_instance: Option<&str>,
         control_connection: Option<&mut sqlx::PgConnection>,
     ) -> Result<ProjectPostgresWriteTarget, tonic::Status> {
-        use sha2::{Digest, Sha256};
-
         let project_id = project_id.trim();
         if project_id.is_empty() {
             return Err(crate::runtime::executor_utils::invalid_argument_fields(
@@ -630,43 +761,49 @@ impl DataBrokerRuntime {
         };
 
         let pool = self.pg_pool_for_instance(Some(&selected))?.clone();
-        let (database, user, server_address, server_port): (
-            String,
-            String,
-            Option<String>,
-            Option<i32>,
-        ) = {
-            let query = sqlx::query_as(
-                "SELECT current_database()::TEXT, current_user::TEXT,
-                        inet_server_addr()::TEXT, inet_server_port()",
-            );
-            let same_pool = self
-                .pg_pool
-                .as_ref()
-                .is_some_and(|control| postgres_pools_share_connections(control, &pool));
-            match control_connection {
-                Some(connection) if same_pool => query.fetch_one(connection).await,
-                _ => query.fetch_one(&pool).await,
-            }
-        }
-        .map_err(|err| {
+        let unavailable = |err: sqlx::Error| {
             crate::runtime::executor_utils::retryable_status(
                 "postgres",
                 "project_write_target_provenance_unavailable",
                 crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
                 format!(
-                    "failed to prove PostgreSQL write target '{}' for project '{}': {err}",
-                    selected, project_id
+                    "failed to prove PostgreSQL write target '{selected}' for project '{project_id}': {err}"
                 ),
             )
-        })?;
+        };
+        let same_pool = self
+            .pg_pool
+            .as_ref()
+            .is_some_and(|control| postgres_pools_share_connections(control, &pool));
+        // The caller's control transaction is reused when it is on the target's own pool, so a
+        // one-connection pool never waits on itself.
+        let mut acquired = None;
+        let connection: &mut sqlx::PgConnection = match control_connection {
+            Some(connection) if same_pool => connection,
+            _ => &mut **acquired.insert(pool.acquire().await.map_err(unavailable)?),
+        };
+        let (database, user, server_address, server_port): (
+            String,
+            String,
+            Option<String>,
+            Option<i32>,
+        ) = sqlx::query_as(
+            "SELECT current_database()::TEXT, current_user::TEXT,
+                    inet_server_addr()::TEXT, inet_server_port()",
+        )
+        .fetch_one(&mut *connection)
+        .await
+        .map_err(unavailable)?;
+        let database_identity = postgres_database_identity(&mut *connection)
+            .await
+            .map_err(unavailable)?
+            .to_string();
+        drop(acquired);
         let labels_json = serde_json::to_string(&labels).unwrap_or_default();
         let routing_mode = self.config.project_routing_mode.trim().to_ascii_lowercase();
         let server_address = server_address.unwrap_or_default();
         let server_port = server_port.unwrap_or_default().to_string();
-        let mut hasher = Sha256::new();
-        for part in [
-            "UDB_PROJECT_POSTGRES_TARGET_V1",
+        let routing = [
             project_id,
             "postgres",
             selected.as_str(),
@@ -674,19 +811,21 @@ impl DataBrokerRuntime {
             dsn_env.as_str(),
             labels_json.as_str(),
             routing_mode.as_str(),
-            database.as_str(),
-            user.as_str(),
-            server_address.as_str(),
-            server_port.as_str(),
-        ] {
-            hasher.update((part.len() as u64).to_be_bytes());
-            hasher.update(part.as_bytes());
-        }
+        ];
+        let legacy_provenance_sha256 = postgres_target_provenance_v1(
+            &routing,
+            &database,
+            &user,
+            &server_address,
+            &server_port,
+        );
+        let provenance_sha256 = postgres_target_provenance_v2(&routing, &database_identity);
 
         Ok(ProjectPostgresWriteTarget {
             instance: selected,
             pool,
-            provenance_sha256: format!("{:x}", hasher.finalize()),
+            provenance_sha256,
+            legacy_provenance_sha256,
         })
     }
 
@@ -2693,5 +2832,82 @@ mod dispatch_project_scope_tests {
                 "hr",
             )
             .expect_err("a foreign project must not reach it either");
+    }
+}
+
+#[cfg(test)]
+mod target_provenance_tests {
+    use super::*;
+
+    const ROUTING: [&str; 7] = [
+        "proj-1",
+        "postgres",
+        "primary",
+        "legacy_primary",
+        "",
+        "{}",
+        "strict",
+    ];
+    const IDENTITY: &str = "7d3f0c1e-9b4a-4f6e-8a51-2c9d0e7b1f43";
+
+    #[test]
+    fn v1_is_the_digest_earlier_releases_stored() {
+        // Pinned from an independent SHA-256 over the released part list (u64 big-endian
+        // length + bytes per part), so legacy bindings keep matching.
+        assert_eq!(
+            postgres_target_provenance_v1(&ROUTING, "app", "udb", "172.18.0.2/32", "5432"),
+            "ae6ad06f09264a3d51c6dcb70bf57ec8e6393de00baca947a9f3cb31e178e92b"
+        );
+    }
+
+    #[test]
+    fn v2_binds_routing_and_identity_only() {
+        let v2 = postgres_target_provenance_v2(&ROUTING, IDENTITY);
+        assert_eq!(
+            v2,
+            "fbaaff5418c7dc6e302731f0ad44f91f0e3224f8c080cd0c1369328faa0a7536"
+        );
+        // A recreated container answers from another address: V1 moves, V2 cannot.
+        assert_ne!(
+            postgres_target_provenance_v1(&ROUTING, "app", "udb", "172.18.0.2/32", "5432"),
+            postgres_target_provenance_v1(&ROUTING, "app", "udb", "172.18.0.9/32", "5432"),
+        );
+        // Another database has another identity.
+        assert_ne!(
+            v2,
+            postgres_target_provenance_v2(&ROUTING, "00000000-0000-4000-8000-000000000001")
+        );
+        // The routing policy is still bound.
+        let mut rerouted = ROUTING;
+        rerouted[6] = "permissive";
+        assert_ne!(v2, postgres_target_provenance_v2(&rerouted, IDENTITY));
+        let mut relabelled = ROUTING;
+        relabelled[5] = "{\"project_id\":\"other\"}";
+        assert_ne!(v2, postgres_target_provenance_v2(&relabelled, IDENTITY));
+    }
+
+    #[test]
+    fn a_binding_matches_by_identity_or_legacy_address_only() {
+        let v1 = postgres_target_provenance_v1(&ROUTING, "app", "udb", "172.18.0.2/32", "5432");
+        let v2 = postgres_target_provenance_v2(&ROUTING, IDENTITY);
+        assert_eq!(
+            match_target_binding(&v2, &v1, &v2),
+            Ok(TargetBindingMatch::Identity)
+        );
+        assert_eq!(
+            match_target_binding(&v1, &v1, &v2),
+            Ok(TargetBindingMatch::LegacyAddress)
+        );
+        // A legacy binding from another address, or another database's identity, is moved.
+        let elsewhere =
+            postgres_target_provenance_v1(&ROUTING, "app", "udb", "172.18.0.9/32", "5432");
+        assert_eq!(match_target_binding(&elsewhere, &v1, &v2), Err(TargetMoved));
+        let other_database =
+            postgres_target_provenance_v2(&ROUTING, "00000000-0000-4000-8000-000000000001");
+        assert_eq!(
+            match_target_binding(&other_database, &v1, &v2),
+            Err(TargetMoved)
+        );
+        assert_eq!(match_target_binding("", "", ""), Err(TargetMoved));
     }
 }

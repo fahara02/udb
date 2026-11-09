@@ -25,11 +25,10 @@ public sealed class UdbChannelTlsTests
         var options = UdbChannel.DefaultOptions(new X509Certificate2Collection { cert }, cert);
         var handler = Assert.IsType<SocketsHttpHandler>(options.HttpHandler);
         var clientCertificates = handler.SslOptions.ClientCertificates!;
-        Assert.Equal(1, clientCertificates.Count);
-        Assert.Same(cert, clientCertificates[0]);
+        Assert.Same(cert, Assert.Single(clientCertificates));
         var policy = Assert.IsType<X509ChainPolicy>(handler.SslOptions.CertificateChainPolicy);
         Assert.Equal(X509ChainTrustMode.CustomRootTrust, policy.TrustMode);
-        Assert.Equal(1, policy.CustomTrustStore.Count);
+        Assert.Single(policy.CustomTrustStore);
     }
 
     [Fact]

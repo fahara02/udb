@@ -103,7 +103,7 @@ pub(crate) enum Command {
         dsn: Option<String>,
     },
     /// `udb catalog rebind-target --run <id> --actor <who> --reason <why>`: move a completed
-    /// reviewed transition to the restored or relocated database it now runs on.
+    /// reviewed transition to a copied or different database that proves it holds it.
     CatalogRebindTarget {
         run: String,
         actor: String,

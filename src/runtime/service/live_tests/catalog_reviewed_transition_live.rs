@@ -3396,7 +3396,9 @@ async fn receipts_survive_cleanup_and_restore(
         .rebind_reviewed_transition_target(&run_id, "operator", " ")
         .await
         .expect_err("a rebind without a reason is refused");
-    // Negative: a database that does not hold the reviewed schema cannot take the transition.
+    // The schema moves on past the transition's reviewed target, as later approved changes do:
+    // a reviewed table no longer exists under its reviewed name. The schema check can no longer
+    // prove this database; only the receipts can, the proof every start accepts.
     let (schema, table): (String, String) = sqlx::query_as(&format!(
         "SELECT plan_json->'target_manifest'->'tables'->0->>'schema', \
                 plan_json->'target_manifest'->'tables'->0->>'table' \
@@ -3412,29 +3414,79 @@ async fn receipts_survive_cleanup_and_restore(
     sqlx::query(&rename(&table, &hidden))
         .execute(&target)
         .await
-        .expect("hide a reviewed table");
-    let unverified = restorer
+        .expect("move the schema past the reviewed one");
+    let rewrite_receipts = async |sql: &str| {
+        sqlx::query(sql)
+            .bind(&fresh_receipts)
+            .execute(&target)
+            .await
+            .expect("rewrite the transition's receipts");
+    };
+    // Negative: receipts that do not reproduce the stored evidence prove nothing.
+    rewrite_receipts(
+        "UPDATE public.schema_migrations SET checksum = 'tampered:' || checksum \
+         WHERE filename LIKE $1",
+    )
+    .await;
+    let mismatched = restorer
         .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
         .await
-        .expect_err("a database without the reviewed schema is refused");
+        .expect_err("receipts that do not reproduce the evidence are refused");
     assert!(
-        unverified.message().contains("does not hold"),
+        mismatched.message().contains("do not reproduce")
+            && mismatched.message().contains("nothing was written"),
         "{}",
-        unverified.message()
+        mismatched.message()
     );
+    rewrite_receipts(
+        "UPDATE public.schema_migrations SET checksum = substr(checksum, 10) \
+         WHERE filename LIKE $1 AND checksum LIKE 'tampered:%'",
+    )
+    .await;
+    // Negative: with the receipts gone and the schema moved on, the refusal names the receipts.
+    rewrite_receipts(
+        "UPDATE public.schema_migrations SET filename = 'hidden/' || filename \
+         WHERE filename LIKE $1",
+    )
+    .await;
+    let missing = restorer
+        .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
+        .await
+        .expect_err("a database with neither proof is refused");
+    assert!(
+        missing
+            .message()
+            .contains("none of the transition's receipts")
+            && missing.message().contains("udb catalog restore-receipts")
+            && missing.message().contains("nothing was written"),
+        "{}",
+        missing.message()
+    );
+    rewrite_receipts(
+        "UPDATE public.schema_migrations SET filename = substr(filename, 8) \
+         WHERE filename LIKE 'hidden/' || $1",
+    )
+    .await;
+    assert_eq!(count_rebinds().await, 1, "a refused rebind wrote a row");
+    assert_eq!(
+        count_receipts(&target).await,
+        receipts_before,
+        "the receipts are back"
+    );
+
+    // The superseded transition moves: its receipts reproduce its evidence though the schema
+    // has moved on.
+    let (from, to) = restorer
+        .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
+        .await
+        .expect("receipts that reproduce the evidence take the transition")
+        .expect("the transition moves");
+    assert_eq!(from, "another-server");
+    assert_ne!(to, "another-server");
     sqlx::query(&rename(&hidden, &table))
         .execute(&target)
         .await
         .expect("put the reviewed table back");
-    assert_eq!(count_rebinds().await, 1, "a refused rebind wrote a row");
-
-    let (from, to) = restorer
-        .rebind_reviewed_transition_target(&run_id, "operator", "restored to a new server")
-        .await
-        .expect("a database holding the reviewed schema takes the transition")
-        .expect("the transition moves");
-    assert_eq!(from, "another-server");
-    assert_ne!(to, "another-server");
     for _ in 0..3 {
         assert!(
             restorer
@@ -3453,4 +3505,119 @@ async fn receipts_survive_cleanup_and_restore(
             .expect("the moved transition re-proves on this database"),
         0
     );
+
+    // A rebind binds to the database's UDB identity, not the server's address.
+    let (project_id, target_instance): (String, String) = sqlx::query_as(&format!(
+        "SELECT plan_json->>'project_id', plan_json->>'target_instance' \
+         FROM {evidence_relation} WHERE run_id = $1::UUID"
+    ))
+    .bind(&run_id)
+    .fetch_one(&control)
+    .await
+    .expect("read the transition's routed target");
+    let live = restorer
+        .project_postgres_write_target(&project_id, Some(&target_instance))
+        .await
+        .expect("resolve the routed target");
+    assert_eq!(to, live.provenance_sha256, "the rebind bound the identity");
+    assert_ne!(live.legacy_provenance_sha256, live.provenance_sha256);
+
+    // A binding an earlier release made to the server's address starts while the address is
+    // unchanged, and that start moves it to the identity, so the next address change passes.
+    sqlx::query(&format!(
+        "INSERT INTO {rebinds}(run_id,from_provenance_sha256,to_provenance_sha256,rebound_by,reason) \
+         VALUES ($1::UUID,$2,$3,'test','simulate a binding an earlier release made')"
+    ))
+    .bind(&run_id)
+    .bind(&live.provenance_sha256)
+    .bind(&live.legacy_provenance_sha256)
+    .execute(&control)
+    .await
+    .expect("bind the transition to the server's address, as earlier releases did");
+    restorer
+        .upgrade_and_validate_catalog_provenance()
+        .await
+        .expect("a legacy binding at the unchanged address starts");
+    let latest = async || -> (String, String, String, String) {
+        sqlx::query_as(&format!(
+            "SELECT from_provenance_sha256, to_provenance_sha256, rebound_by, reason \
+             FROM {rebinds} WHERE run_id = $1::UUID ORDER BY rebind_id DESC LIMIT 1"
+        ))
+        .bind(&run_id)
+        .fetch_one(&control)
+        .await
+        .expect("read the newest rebind")
+    };
+    assert_eq!(
+        latest().await,
+        (
+            live.legacy_provenance_sha256.clone(),
+            live.provenance_sha256.clone(),
+            "udb".to_string(),
+            "identity upgrade: bind to the database identity instead of the server address"
+                .to_string(),
+        ),
+        "the start moved the legacy binding to the identity"
+    );
+    let upgraded = count_rebinds().await;
+    assert_eq!(upgraded, 4, "one legacy binding, one upgrade");
+    for _ in 0..3 {
+        restorer
+            .upgrade_and_validate_catalog_provenance()
+            .await
+            .expect("an identity binding starts");
+    }
+    assert_eq!(
+        count_rebinds().await,
+        upgraded,
+        "an identity binding is not upgraded again"
+    );
+
+    // Another database answers with another identity: refused, and nothing is upgraded.
+    let identity_relation = "udb_system.udb_database_identity";
+    let identity: Uuid = sqlx::query_scalar(&format!("SELECT identity FROM {identity_relation}"))
+        .fetch_one(&target)
+        .await
+        .expect("the routed database has a UDB identity");
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>(&format!("SELECT COUNT(*) FROM {identity_relation}"))
+            .fetch_one(&target)
+            .await
+            .expect("count the identities"),
+        1,
+        "a database has one identity"
+    );
+    sqlx::query(&format!(
+        "UPDATE {identity_relation} SET identity = gen_random_uuid()"
+    ))
+    .execute(&target)
+    .await
+    .expect("make the routed database another database");
+    for _ in 0..3 {
+        let refused = restorer
+            .upgrade_and_validate_catalog_provenance()
+            .await
+            .expect_err("another database identity is refused");
+        assert!(
+            refused
+                .message()
+                .contains("routed native target authority changed"),
+            "{}",
+            refused.message()
+        );
+    }
+    assert_eq!(
+        count_rebinds().await,
+        upgraded,
+        "a refused start wrote a row"
+    );
+    sqlx::query(&format!("UPDATE {identity_relation} SET identity = $1"))
+        .bind(identity)
+        .execute(&target)
+        .await
+        .expect("restore the routed database's identity");
+    restorer
+        .upgrade_and_validate_catalog_provenance()
+        .await
+        .expect("the original identity starts again");
 }

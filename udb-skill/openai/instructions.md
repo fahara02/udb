@@ -1644,7 +1644,7 @@ strings. General map:
 | Works in the parent tenant, denied in a child (WORKSPACE) tenant | Policies and role bindings do not inherit. `udb policy apply --tenant <child-UUID>` with the same file and bind roles in the child. |
 | Start refuses: "UDB_MIGRATE_ENABLED=false and the protos change the project's schema" | Approve the plan and point `UDB_MIGRATION_APPROVAL_PLAN` at it, or start once with `UDB_MIGRATE_ENABLED=true`. |
 | Start refuses: "native target/application receipt is incomplete or mismatched" | `udb catalog restore-receipts --run <run id>`. |
-| Start refuses: "routed native target authority changed" (restore / new DB server IP) | `udb catalog rebind-target --run <id> --actor <who> --reason <why>`, then `restore-receipts` if needed. |
+| Start refuses: "routed native target authority changed" (a different database, or a copy taken before its source ran a release with database identities) | `udb catalog rebind-target --run <id> --actor <who> --reason <why>` on the copy, once per applied transition. A recreated container or a restore of the same data does not refuse. |
 | Token stops working after N minutes (service) | Service accounts have no refresh token. Re-exchange the API key → bearer and hot-swap. |
 | `INTERNAL` on a write, no detail | `UDB_VERBOSE_DB_ERRORS=true` to surface the DB cause (constraint, type, RLS). |
 | Migration "COMPLETED" but the unique index isn't unique | A non-unique index of the same NAME shadows it. Rename the new unique index. |
@@ -2097,9 +2097,12 @@ Running it twice changes nothing. Each piece also runs alone:
 - **`udb verify --live`** — read-only comparison of protos vs the live database;
   exits 1 on any finding, and an undelivered outbox counts as a finding
   (delivery is part of verify).
-- **Reviewed transitions after a restore or a new DB server address:**
-  `udb catalog rebind-target --run <run id> --actor <who> --reason <why>`
-  (start refused with "routed native target authority changed"), then
+- **Reviewed transitions follow the database's UDB identity**
+  (`udb_system.udb_database_identity`), not its address: a recreated container or a
+  restore of the same data keeps them. A copy taken before its source ran a release
+  with identities refuses with "routed native target authority changed":
+  `udb catalog rebind-target --run <run id> --actor <who> --reason <why>` on it
+  (proved by the transition's receipts). When receipts are gone, run
   `udb catalog restore-receipts --run <run id>` (start refused with "native
   target/application receipt is incomplete or mismatched"). Find the run id in
   `udb_system.udb_catalog_reviewed_transitions`.
