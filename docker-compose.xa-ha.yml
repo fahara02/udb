@@ -27,7 +27,6 @@ x-udb-xa-ha-env: &udb-xa-ha-env
   UDB_XA_RECOVERY_INTERVAL_SECS: "2"
   UDB_XA_RECOVERY_MAX_ATTEMPTS: "10"
   UDB_XA_RECOVERY_GRACE_SECS: "0"
-  UDB_ABAC_DEFAULT_ALLOW: "true"
   RUST_LOG: info
 
 x-udb-xa-ha-depends: &udb-xa-ha-depends

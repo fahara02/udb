@@ -773,7 +773,6 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ("echo \"UDB_SERVICE_IDENTITY_REQUIRED=false\"", "dev service identity posture"),
         ("echo \"UDB_ENABLE_ADMIN_SEED=1\"", "admin seed gate env"),
         ("echo \"UDB_NOTIFICATION_TEST_MODE=1\"", "notification failed-log test-mode env"),
-        ("echo \"UDB_ABAC_DEFAULT_ALLOW=true\"", "dev ABAC allow env"),
         ("echo \"UDB_GRPC_MAX_CONCURRENT=512\"", "gRPC benchmark concurrency headroom"),
         ("echo \"UDB_READ_MAX_CONCURRENT=300\"", "read admission headroom"),
         ("echo \"UDB_WRITE_MAX_CONCURRENT=100\"", "write admission headroom"),

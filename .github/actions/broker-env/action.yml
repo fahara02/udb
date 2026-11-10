@@ -184,8 +184,6 @@ runs:
         echo "UDB_ENABLE_ADMIN_SEED=1" >> "$env_file"
         # Enables the served notification FAILED-log harness path used by SDK benchmarks.
         echo "UDB_NOTIFICATION_TEST_MODE=1" >> "$env_file"
-        # ABAC default allow for the dev/bench harness.
-        echo "UDB_ABAC_DEFAULT_ALLOW=true" >> "$env_file"
 
         # Background workers off for the bench (deterministic harness).
         echo "UDB_PROJECTION_ENABLED=false" >> "$env_file"

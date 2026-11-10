@@ -714,7 +714,6 @@ jobs:
       UDB_PG_DSN: postgres://udb:udb@localhost:5432/udb_ci
       UDB_GRPC_ADDR: 127.0.0.1:50051
       UDB_METRICS_ADDR: 127.0.0.1:19090
-      UDB_ABAC_DEFAULT_ALLOW: "true"
       UDB_CDC_ENABLED: "false"
       UDB_PROJECTION_ENABLED: "false"
       UDB_PROJECTION_RECONCILE_ENABLED: "false"
@@ -1373,7 +1372,6 @@ jobs:
       UDB_TLS_REQUIRED: "false"
       UDB_SERVICE_IDENTITY_REQUIRED: "false"
       UDB_ENABLE_ADMIN_SEED: "1"
-      UDB_ABAC_DEFAULT_ALLOW: "true"
       UDB_CDC_ENABLED: "false"
       UDB_PROJECTION_ENABLED: "false"
       UDB_PROJECTION_RECONCILE_ENABLED: "false"
@@ -1510,7 +1508,6 @@ jobs:
       UDB_TLS_REQUIRED: "false"
       UDB_SERVICE_IDENTITY_REQUIRED: "false"
       UDB_ENABLE_ADMIN_SEED: "1"
-      UDB_ABAC_DEFAULT_ALLOW: "true"
       UDB_CDC_ENABLED: "false"
       UDB_PROJECTION_ENABLED: "false"
       UDB_PROJECTION_RECONCILE_ENABLED: "false"
@@ -1730,7 +1727,6 @@ jobs:
       UDB_TLS_REQUIRED: "false"
       UDB_SERVICE_IDENTITY_REQUIRED: "false"
       UDB_ENABLE_ADMIN_SEED: "1"
-      UDB_ABAC_DEFAULT_ALLOW: "true"
       UDB_CDC_ENABLED: "false"
       UDB_PROJECTION_ENABLED: "false"
       UDB_PROJECTION_RECONCILE_ENABLED: "false"

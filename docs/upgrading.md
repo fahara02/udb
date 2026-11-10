@@ -330,7 +330,9 @@ them with `udb catalog restore-receipts --run RUN_ID` (see
   tenant (INVALID_ARGUMENT on `tenant_hint`; send no hint or the key's own tenant), and
   SDK retries return at once when the broker's `retry_after_ms` exceeds the client's
   limit (default 10 s). A write that carries two different rows, one in `payload` and
-  one in `record_json`, is refused.
+  one in `record_json`, is refused. `UDB_ABAC_DEFAULT_ALLOW=true` now takes effect on a
+  development broker (it never applied before): unset it if your tests expect
+  default-deny before their policies exist.
 
 **Upgrading to 0.6.13 — three settings now do what they say (breaking for callers).**
 

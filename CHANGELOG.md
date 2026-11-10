@@ -25,6 +25,12 @@ release line was tagged.
   - detect: `Authenticate` with an API key fails with INVALID_ARGUMENT on field `tenant_hint`,
     "tenant_hint '…' does not name this API key's tenant"
   - fix: send no hint, or the key's own tenant (code or UUID)
+- **`UDB_ABAC_DEFAULT_ALLOW=true` now takes effect.** It never applied before (see Fixed), so a
+  development broker that set it still ran default-deny. It now allows every call, including
+  `CheckAccess`, until an operator writes the first policy. Production still refuses it.
+  - detect: a development broker with the setting and no operator policy allows a call that it
+    used to deny (a test asserting a deny before its policy exists fails)
+  - fix: unset `UDB_ABAC_DEFAULT_ALLOW`, or write the policies the deployment needs
 - **SDK retries no longer wait out a long `retry_after_ms`.** All seven SDKs wait the broker's
   `retry_after_ms` when it is within the client's limit (default 10 s) and the call's deadline;
   a longer one now returns the error at once instead of sleeping.
