@@ -7,6 +7,8 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.14] - 2026-11-10
+
 ### Breaking for callers
 
 - **A write that carries two different rows is refused.** An `Upsert`, `Insert` or transaction
@@ -17,8 +19,31 @@ release line was tagged.
     payload and one in record_json"
   - fix: send the row in one field only
 
+- **API-key `Authenticate` refuses a tenant hint that names another tenant.** The key's own tenant
+  was used and the hint was ignored, so a caller that sent the wrong tenant got a token for a
+  different tenant than it asked for.
+  - detect: `Authenticate` with an API key fails with INVALID_ARGUMENT on field `tenant_hint`,
+    "tenant_hint '…' does not name this API key's tenant"
+  - fix: send no hint, or the key's own tenant (code or UUID)
+- **SDK retries no longer wait out a long `retry_after_ms`.** All seven SDKs wait the broker's
+  `retry_after_ms` when it is within the client's limit (default 10 s) and the call's deadline;
+  a longer one now returns the error at once instead of sleeping.
+  - detect: a call the broker throttles with a long retry-after fails immediately with the
+    throttle error
+  - fix: raise the client's retry-after limit (`maxRetryAfter` and its per-language equivalent),
+    or back off in your own code
+
 ### Added
 
+- **`SetServiceAccountPassword` and `ListOwnTenantMemberships`.** An operator sets a service
+  account's password (`udb auth service-account set-password --tenant --user
+  --password-env|--password-file --reason`), and a service account lists the tenants it may
+  exchange into (`/v1/auth/own-tenant-memberships`, scope `udb:authn:exchange-tenant-token`).
+- **`examples/schema_change`: a runnable schema-change walkthrough.** Add a column, hold it with
+  `UDB_MIGRATE_ENABLED=false`, approve it, drop it on purpose, add a NOT NULL column with a
+  default, and rename with `previous_column_name`, ten checked steps run in CI.
+- **`node scripts/check-versions.mjs --set <x.y.z>`** sets the version in `versions.json` and every
+  manifest, including the examples' SDK pins, in one step.
 - **A deployment compose stack, `deploy/`.** The released broker image and Postgres
   (PostGIS + pg_partman) run as shipped; Redis, MinIO, Qdrant, Kafka and LiveKit are commented
   blocks that name the native services needing each and the broker lines to uncomment.
@@ -44,6 +69,23 @@ release line was tagged.
 
 ### Fixed
 
+- **The SDK `udb` launchers no longer recurse.** Each launcher probed `which udb`, found itself
+  and started itself without bound (2,622 processes in ten minutes on a test host). Launchers
+  skip their own copies and shims, check every PATH match, never probe PATH when another
+  launcher started them, and time each probe out.
+- **TypeScript and Go sessions sign in again after a failed refresh.** A session holding an API key
+  or a password re-authenticates; a refresh-only session fails with a typed
+  `SessionExpiredError` / `ErrSessionExpired`, and Go reports each failed re-exchange as it
+  happens.
+- **A column renamed with `previous_column_name` keeps its values on a table with rows.** The
+  bootstrap added the new name empty before the rename ran; it now renames in place first.
+- **A native call on the data listener names the control-plane listener** to call instead of a
+  bare UNIMPLEMENTED.
+- **The metering rollup reads its window through a time index** instead of scanning every tenant's
+  usage events.
+- **The examples pin the released SDK.** They pinned SDKs from months ago; their pins now move
+  with every release.
+- **The Pages site keeps each release's benchmark** and states counts from the descriptor.
 - **A reviewed catalog transition survives a recreated Postgres container or a restore.** A
   transition was bound to the address and port its database answered from, so a deploy that
   recreated the Postgres container (a new docker IP) or restored the data elsewhere refused every

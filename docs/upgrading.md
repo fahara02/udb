@@ -313,6 +313,25 @@ them with `udb catalog restore-receipts --run RUN_ID` (see
 [operations.md](operations.md#restoring-cleared-transition-receipts)).
 `udb verify --live` now also names the cause when no CDC tailer drains the outbox.
 
+**Upgrading to 0.6.14 — reviewed transitions follow the database, not its address.**
+
+- The first 0.6.14 start moves each reviewed catalog transition bound by an earlier
+  release (to the server's address) onto the database's UDB identity, a row in
+  `udb_system.udb_database_identity`, as long as the address still matches. After that,
+  a recreated Postgres container, a restore of the same data and a rotated login role
+  keep the binding. Start 0.6.14 once against the database at its usual address before
+  you move or restore it.
+- A copy taken before that first start (a rehearsal clone) still refuses with "routed
+  native target authority changed". Run `udb catalog rebind-target --run <id> --actor
+  <who> --reason <why>` on the copy, once per applied transition. It is proved by the
+  transition's receipts, so it works after later changes moved the schema on (see
+  [operations.md](operations.md#moving-a-transition-to-a-restored-or-relocated-database)).
+- Breaking for callers: API-key `Authenticate` refuses a tenant hint naming another
+  tenant (INVALID_ARGUMENT on `tenant_hint`; send no hint or the key's own tenant), and
+  SDK retries return at once when the broker's `retry_after_ms` exceeds the client's
+  limit (default 10 s). A write that carries two different rows, one in `payload` and
+  one in `record_json`, is refused.
+
 **Upgrading to 0.6.13 — three settings now do what they say (breaking for callers).**
 
 - `UDB_MIGRATE_ENABLED=false` holds the project's schema on start. The broker never

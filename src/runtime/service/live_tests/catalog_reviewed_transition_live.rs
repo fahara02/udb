@@ -612,22 +612,49 @@ async fn cleanup_owned_authority(
         .map_err(|_| "commit owned catalog cleanup")
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-#[ignore = "requires actual Postgres/CREATE DATABASE; unfiltered native CI live lane"]
-async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_application() {
-    run_reviewed_catalog_fixture(false, false).await;
+/// Run a reviewed-transition fixture on its own thread with a large stack. The fixture
+/// grew past the 2 MiB test-thread stack in CI's debug build (a stack overflow there,
+/// not on every host), so it gets a dedicated runtime whose threads all have room.
+fn run_fixture_on_large_stack(single_connection: bool, primary_as_target: bool) {
+    const STACK: usize = 32 * 1024 * 1024;
+    let outcome = std::thread::Builder::new()
+        .name("reviewed-transition-fixture".to_string())
+        .stack_size(STACK)
+        .spawn(move || {
+            tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(2)
+                .thread_stack_size(STACK)
+                .enable_all()
+                .build()
+                .expect("fixture runtime")
+                .block_on(Box::pin(run_reviewed_catalog_fixture(
+                    single_connection,
+                    primary_as_target,
+                )));
+        })
+        .expect("spawn fixture thread")
+        .join();
+    if let Err(panic) = outcome {
+        std::panic::resume_unwind(panic);
+    }
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[test]
 #[ignore = "requires actual Postgres/CREATE DATABASE; unfiltered native CI live lane"]
-async fn live_reviewed_catalog_transition_single_connection_distinct_target() {
-    run_reviewed_catalog_fixture(true, false).await;
+fn live_reviewed_catalog_transition_requires_native_approval_and_verified_application() {
+    run_fixture_on_large_stack(false, false);
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[test]
 #[ignore = "requires actual Postgres/CREATE DATABASE; unfiltered native CI live lane"]
-async fn live_reviewed_catalog_transition_single_connection_primary_target() {
-    run_reviewed_catalog_fixture(true, true).await;
+fn live_reviewed_catalog_transition_single_connection_distinct_target() {
+    run_fixture_on_large_stack(true, false);
+}
+
+#[test]
+#[ignore = "requires actual Postgres/CREATE DATABASE; unfiltered native CI live lane"]
+fn live_reviewed_catalog_transition_single_connection_primary_target() {
+    run_fixture_on_large_stack(true, true);
 }
 
 // These fixtures deliberately use only the production APIs already present in

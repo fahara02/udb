@@ -86,7 +86,7 @@ def write_json(name: str, value: object) -> None:
 def validate_fixture(data: bytes) -> None:
     text = data.decode("utf-8")
     require(ASSERTION in text, "corrected fixture lacks the named real capacity assertion")
-    names = re.findall(r"async fn (live_reviewed_catalog_transition_[A-Za-z0-9_]+)\(\)", text)
+    names = re.findall(r"(?:async )?fn (live_reviewed_catalog_transition_[A-Za-z0-9_]+)\(\)", text)
     require(sorted(names) == sorted(CASES), "corrected fixture must retain exactly the three reviewed served cases")
     require(
         "let provisioner_subject = provisioner.user_id;" in text
@@ -105,9 +105,13 @@ def validate_fixture(data: bytes) -> None:
     require('"standalone-producer-unique"' in text and '"owned-promoted-unique"' in text
             and "assert_native_unique_base(" in text and "UNIQUE USING INDEX" in text,
             "both phases must retain actual native standalone producer verification and deliberate owned promotion")
-    require("get_max_connections()" in text and
-            "run_reviewed_catalog_fixture(true, true)" in text and
-            "run_reviewed_catalog_fixture(true, false)" in text,
+    # The cases call the fixture directly or through the large-stack runner
+    # (run_fixture_on_large_stack), which runs the same fixture on its own thread.
+    def runs(args: str) -> bool:
+        return (f"run_reviewed_catalog_fixture({args})" in text
+                or f"run_fixture_on_large_stack({args})" in text)
+
+    require("get_max_connections()" in text and runs("true, true") and runs("true, false"),
             "both shared/distinct serving pool assertions must execute")
     for newer_api in (
         "_on_connection(", "CatalogAuthorityConnection", "postgres_pools_share_connections",

@@ -20,7 +20,7 @@ contract UDB derives DB schema (DDL), runtime security enforcement, the
 descriptor-declared service/RPC surface, seven language SDKs
 (TypeScript, Python, Go, Java, C#, PHP, Rust), CLI
 scaffolds and docs. Three planes:
-Current product/SDK baseline is **0.6.13** with wire protocol **1.0.0**.
+Current product/SDK baseline is **0.6.14** with wire protocol **1.0.0**.
 Version strings must continue to derive from
 manifests/`env!("CARGO_PKG_VERSION")`, not hand-coded literals.
 

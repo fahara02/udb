@@ -14,19 +14,19 @@ declare(strict_types=1);
  *
  *   1. Uses $UDB_BIN if it points at an executable (operator override).
  *   2. Reuses an `udb` already on PATH **iff** its `--version` matches the
- *      SDK's pinned version (0.6.13); a mismatched PATH binary is
+ *      SDK's pinned version (0.6.14); a mismatched PATH binary is
  *      ignored so the SDK and broker stay in lockstep. Every PATH match is
  *      tried; this launcher and any launcher copy or Composer proxy are
  *      skipped, each probe has a 5 s timeout, and a launcher started by
  *      another launcher (UDB_LAUNCHER_ACTIVE set) skips PATH entirely.
  *   3. Otherwise downloads the matching release asset for this OS/arch from
- *      github.com/fahara02/udb (tag v0.6.13) into a per-user cache
+ *      github.com/fahara02/udb (tag v0.6.14) into a per-user cache
  *      dir, then execs it.
  *
  * All trailing arguments are forwarded verbatim to the real binary.
  */
 
-const UDB_VERSION = '0.6.13';
+const UDB_VERSION = '0.6.14';
 const UDB_REPO = 'fahara02/udb';
 
 /*
@@ -229,7 +229,7 @@ function cachedBinaryPath(): string
     return $dir . DIRECTORY_SEPARATOR . 'udb' . (isWindows() ? '.exe' : '');
 }
 
-/** Download the per-OS/arch release asset for tag v0.6.13. */
+/** Download the per-OS/arch release asset for tag v0.6.14. */
 function downloadRelease(string $dest): ?string
 {
     $asset = releaseAssetName();
