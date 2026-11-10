@@ -17,6 +17,8 @@ on:
       - "Cargo.lock"
       - ".github/workflows/benchmark-candidate.yml"
       - ".github/workflows/_live-sdk-suite.yml"
+      # The broker the benchmark starts is configured here; a change to it must be measured.
+      - ".github/actions/broker-env/**"
       - ".github/workflows/release-binaries.yml"
       - "scripts/prepare-benchmark-fixtures.py"
       - "scripts/fixtures/benchmark-analytics.sql"
