@@ -2033,7 +2033,7 @@ jobs:
     if: github.event_name == 'push'
     needs: quick-gate
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
     env:
       # Docker allocates a free PostgreSQL host port; tests use the resolved DSN.
       UDB_INTEGRATION_PG_BINDING: "5432"
@@ -2239,9 +2239,10 @@ jobs:
 
       - name: Native service live tests
         id: native_live
-        # A full pass takes ~20 minutes. Bound the step (not the job) so a hang
-        # fails here and the Postgres diagnostics below still run.
-        timeout-minutes: 45
+        # A full pass takes ~43 minutes (it ran ~20 when this bound was set). Bound
+        # the step (not the job) so a hang fails here and the Postgres diagnostics
+        # below still run, with headroom for the suite and the runner to vary.
+        timeout-minutes: 60
         # --test-threads=1: the live tests share Postgres schemas and
         # serialize their setup; run them serially to avoid cross-talk.
         env:

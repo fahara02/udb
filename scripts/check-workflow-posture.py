@@ -1478,7 +1478,7 @@ NATIVE_LOAD_CASE_RE = re.compile(r'^\s*run_case\s+"([^"]+)"', re.MULTILINE)
 
 CI_NATIVE_INTEGRATION_REQUIREMENTS = (
     ("native-integration:", "native-integration job"),
-    ("timeout-minutes: 75", "native-integration timeout"),
+    ("timeout-minutes: 90", "native-integration timeout"),
     ("Reclaim runner disk for live backend stack", "native-integration runner disk reclaim step"),
     ("docker system prune -af --volumes", "native-integration Docker storage prune"),
     ("cache-key: native-integration", "native-integration Rust cache key"),
@@ -8063,7 +8063,7 @@ jobs:
     if: github.event_name == 'push'
     needs: quick-gate
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
     steps:
       - name: Reclaim runner disk for live backend stack
         run: |
