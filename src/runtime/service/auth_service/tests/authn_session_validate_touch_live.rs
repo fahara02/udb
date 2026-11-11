@@ -88,13 +88,14 @@ async fn live_postgres_session_validate_touch_preserves_boundaries_and_identity(
             .expect("validate actual session");
         assert_eq!(validated.is_some(), accepted, "{label}");
         let persisted = store.get(&base.session_id_hash).await.unwrap().unwrap();
-        assert_eq!(
-            persisted.updated_at_unix,
-            if accepted { now } else { updated },
-            "{label}"
-        );
+        // An accepted session is stamped only when its stamp is older than the
+        // touch interval (or never set); otherwise validation only reads it.
+        let interval = crate::runtime::authn::session_touch_interval_secs(idle) as u64;
+        let stale = updated == 0 || (updated <= now && now - updated >= interval);
+        let expected_stamp = if accepted && stale { now } else { updated };
+        assert_eq!(persisted.updated_at_unix, expected_stamp, "{label}");
         if let Some(validated) = validated {
-            assert_eq!(validated.updated_at_unix, now, "{label}");
+            assert_eq!(validated.updated_at_unix, expected_stamp, "{label}");
             assert_eq!(validated.principal_id, base.principal_id);
             assert_eq!(validated.user_id, base.user_id);
             assert_eq!(validated.tenant_id, base.tenant_id);
@@ -181,7 +182,10 @@ async fn live_postgres_session_validate_touch_rechecks_concurrent_revoke() {
     let store = Arc::new(PostgresSessionStore::new(pool.clone(), ""));
     let now = now_unix();
     let raw = format!("sess_{}", uuid::Uuid::new_v4().simple());
-    let base = record(&raw, &user.user_id, now);
+    let mut base = record(&raw, &user.user_id, now);
+    // Older than the touch interval, so validation takes the UPDATE branch, which
+    // must recheck the session after the concurrent revocation commits.
+    base.updated_at_unix = now - 2 * crate::runtime::authn::session_touch_interval_secs(0) as u64;
     store.put(&base).await.unwrap();
     let m = session_model();
     let mut revoke = pool.begin().await.unwrap();
@@ -319,5 +323,126 @@ async fn live_postgres_session_jwt_refuses_durable_identity_change_without_touch
             .valid,
         "the unchanged durable identity remains valid"
     );
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// A session stamped within the touch interval validates by reading: it must not
+/// wait behind another transaction holding its row (every call of one signed-in
+/// user used to queue on that lock), and a committed revocation is still refused.
+#[tokio::test]
+#[ignore = "requires live Postgres; run in the unfiltered native live lane"]
+async fn live_postgres_session_validate_fresh_session_takes_no_row_lock() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone());
+    let user = create_verified_user(&authn, "validate-nolock", "CorrectHorse1!").await;
+    let store = Arc::new(PostgresSessionStore::new(pool.clone(), ""));
+    let now = now_unix();
+    let raw = format!("sess_{}", uuid::Uuid::new_v4().simple());
+    let base = record(&raw, &user.user_id, now);
+    store.put(&base).await.unwrap();
+    let m = session_model();
+    let expected = scope(&base);
+
+    // Another transaction holds the session row, as a concurrent touch would.
+    let mut holder = pool.begin().await.unwrap();
+    sqlx::query(&format!(
+        "SELECT 1 FROM {} WHERE {} = $1 FOR UPDATE",
+        m.relation,
+        m.q("session_token_lookup")
+    ))
+    .bind(&base.session_id_hash)
+    .execute(&mut *holder)
+    .await
+    .unwrap();
+    for attempt in 0..5 {
+        let validated = tokio::time::timeout(
+            Duration::from_secs(2),
+            validate_session_for_scope(store.as_ref(), &raw, KEY, now, 0, &expected),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("validation {attempt} waited on the held session row"))
+        .expect("validation succeeds");
+        assert!(
+            validated.is_some(),
+            "validation {attempt} accepts the fresh session"
+        );
+    }
+    holder.rollback().await.unwrap();
+    assert_eq!(
+        store
+            .get(&base.session_id_hash)
+            .await
+            .unwrap()
+            .unwrap()
+            .updated_at_unix,
+        base.updated_at_unix,
+        "a fresh session is not rewritten"
+    );
+
+    // A committed revocation is refused by the read branch too.
+    sqlx::query(&format!(
+        "UPDATE {} SET {} = FALSE WHERE {} = $1",
+        m.relation,
+        m.q("is_active"),
+        m.q("session_token_lookup")
+    ))
+    .bind(&base.session_id_hash)
+    .execute(&pool)
+    .await
+    .unwrap();
+    for attempt in 0..3 {
+        let validated = validate_session_for_scope(store.as_ref(), &raw, KEY, now, 0, &expected)
+            .await
+            .expect("validation succeeds");
+        assert!(validated.is_none(), "revoked session refused ({attempt})");
+    }
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// Parallel calls on a session whose stamp is stale: one stamps it, the others find
+/// it already stamped. Every call is still accepted, and the stamp is written once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "requires live Postgres; run in the unfiltered native live lane"]
+async fn live_postgres_session_validate_parallel_calls_on_stale_session_all_accepted() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone());
+    let user = create_verified_user(&authn, "validate-race", "CorrectHorse1!").await;
+    let store = Arc::new(PostgresSessionStore::new(pool.clone(), ""));
+    let now = now_unix();
+    let raw = format!("sess_{}", uuid::Uuid::new_v4().simple());
+    let mut base = record(&raw, &user.user_id, now);
+    base.updated_at_unix = now - 2 * crate::runtime::authn::session_touch_interval_secs(0) as u64;
+    store.put(&base).await.unwrap();
+    let expected = scope(&base);
+    for round in 0..3 {
+        let mut calls = Vec::new();
+        for _ in 0..16 {
+            let (store, raw, expected) = (store.clone(), raw.clone(), expected.clone());
+            calls.push(tokio::spawn(async move {
+                validate_session_for_scope(store.as_ref(), &raw, KEY, now, 0, &expected).await
+            }));
+        }
+        for call in calls {
+            let validated = call.await.expect("join").expect("validation succeeds");
+            assert!(
+                validated.is_some(),
+                "round {round}: a parallel call on a valid session was refused"
+            );
+        }
+        assert_eq!(
+            store
+                .get(&base.session_id_hash)
+                .await
+                .unwrap()
+                .unwrap()
+                .updated_at_unix,
+            now,
+            "round {round}: the stale stamp is written"
+        );
+    }
     cleanup_native_auth_db(&pool).await;
 }

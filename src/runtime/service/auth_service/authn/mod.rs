@@ -2486,18 +2486,34 @@ impl AuthnServiceImpl {
         }
         // Phase 3 (I2.3): reject any token whose jti is on the durable cluster-wide
         // revocation deny list, before its natural expiry — across every node.
-        if let Some(jti) = claims.jti.as_deref().filter(|j| !j.trim().is_empty())
-            && self
+        if let Some(jti) = claims.jti.as_deref().filter(|j| !j.trim().is_empty()) {
+            let (revoked, reason) = self
                 .is_token_revoked(
                     jti,
                     claims.tenant_id.as_deref().unwrap_or_default(),
                     claims.sub.as_deref().unwrap_or_default(),
                     claims.iat.unwrap_or(0).max(0) as u64,
                 )
-                .await
-                .0
-        {
-            return Ok(JwtPersistedState::Rejected);
+                .await;
+            // Under fail-closed a revocation store that cannot answer still denies,
+            // but as a retryable outage that names the cause: reporting it as a
+            // revoked token sent clients into re-sign-in storms exactly while the
+            // store was overloaded.
+            match crate::runtime::authn::revocation::revocation_verdict(revoked, &reason) {
+                crate::runtime::authn::revocation::RevocationVerdict::NotRevoked => {}
+                crate::runtime::authn::revocation::RevocationVerdict::Revoked(_) => {
+                    return Ok(JwtPersistedState::Rejected);
+                }
+                crate::runtime::authn::revocation::RevocationVerdict::StoreUnavailable => {
+                    return Err(crate::runtime::executor_utils::retryable_status(
+                        "authn",
+                        "revocation_lookup",
+                        crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                        "the revocation store did not answer; the call is refused \
+                         (fail-closed) and can be retried",
+                    ));
+                }
+            }
         }
         if let Some(jti) = claims.jti.as_deref().filter(|j| j.starts_with("sess_")) {
             let expected = authn::SessionValidationScope {

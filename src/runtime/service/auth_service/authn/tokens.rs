@@ -502,6 +502,18 @@ impl AuthnServiceImpl {
                 claims.iat.unwrap_or(0).max(0) as u64,
             )
             .await;
+        // An unanswered revocation store is an outage, not an inactive token.
+        if crate::runtime::authn::revocation::revocation_verdict(revoked, &revocation_reason)
+            == crate::runtime::authn::revocation::RevocationVerdict::StoreUnavailable
+        {
+            return Err(crate::runtime::executor_utils::retryable_status(
+                "authn",
+                "revocation_lookup",
+                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                "the revocation store did not answer; introspection is refused (fail-closed) \
+                 and can be retried",
+            ));
+        }
         let persisted_ok = self.jwt_persisted_state_valid(&claims, now).await?;
         let active = !revoked && persisted_ok;
         Ok(Response::new(authn_pb::IntrospectTokenResponse {

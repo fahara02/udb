@@ -7,6 +7,21 @@ release line was tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A signed-in user's calls no longer queue on their session row.** Every bearer call validated
+  its session with an UPDATE that stamped `last_active_at`, so every call was a durable write and
+  one user's concurrent calls waited on that row's lock behind each other's commits. On a busy
+  database a page making many calls took about 15 s. The stamp is now written only when it is
+  older than the touch interval (60 s, or a tenth of the idle TTL when that is shorter); every
+  other call validates with a read that takes no lock. Revocation, expiry, idle time and token
+  scope are still checked on every call, and a session revoked while its stamp was being written
+  is still refused. The idle timeout can fire up to one interval early.
+- **Under fail-closed, an unanswered revocation store is an outage, not a revoked token.** When
+  Redis or Postgres could not answer the revocation check, the call was refused as a revoked or
+  inactive token, so clients signed in again and added load while the store was struggling. It
+  is still refused, now as a retryable UNAVAILABLE that names the revocation store.
+
 ## [0.6.14] - 2026-11-10
 
 ### Breaking for callers

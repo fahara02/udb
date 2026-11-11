@@ -1994,21 +1994,47 @@ impl SessionStore for PostgresSessionStore {
         let active_epoch =
             format!("GREATEST(COALESCE(EXTRACT(EPOCH FROM {last_active})::BIGINT, 0), 0)");
         let projection = self.record_projection();
-        // UPDATE rechecks its predicates after a concurrent revocation's row
-        // lock is released. RETURNING is therefore the validation result; a
-        // stale SELECT followed by an update affecting zero rows cannot succeed.
-        // This canonical store retains its existing pool/RLS authority. Verified
-        // JWT scope is also bound explicitly, without changing raw-session calls.
+        // Every bearer call validates its session here. Writing last_active_at on
+        // each one made every call a durable write, and one user's concurrent
+        // calls queued on the session row's lock behind each other's commits
+        // (seconds per call on a busy database). The stamp is written only when
+        // it is older than the touch interval; otherwise the same predicates are
+        // read, which takes no lock. Revocation, expiry, idle time and scope are
+        // still checked on every call, in one statement: the UPDATE branch
+        // rechecks them after a concurrent revocation's lock is released, and the
+        // read branch sees only committed state.
+        let valid = format!(
+            "{token} = $1 AND {active} \
+             AND ({expires_epoch} = 0 OR $2::BIGINT < {expires_epoch}) \
+             AND ($3::BIGINT = 0 OR {active_epoch} = 0 OR $2::BIGINT - {active_epoch} <= $3::BIGINT) \
+             AND ($4::TEXT IS NULL OR ({principal}::TEXT = $4 AND {tenant}::TEXT = $5 \
+                  AND COALESCE({project}::TEXT, '') = $6 \
+                  AND COALESCE({metadata}->>'service_identity', '') = $7))"
+        );
+        // A session whose stamp is stale is answered only by the UPDATE, which
+        // rechecks every predicate after a concurrent revocation's lock is
+        // released; the read branch answers only sessions that were fresh, so a
+        // stale snapshot can never vouch for a row the UPDATE just refused.
+        let stale = format!("({active_epoch} = 0 OR $2::BIGINT - {active_epoch} >= $8::BIGINT)");
         let sql = format!(
-            "/* udb_session_validate_and_touch */ UPDATE {rel} \
-             SET {last_active} = to_timestamp($2::BIGINT::DOUBLE PRECISION) \
-             WHERE {token} = $1 AND {active} \
-               AND ({expires_epoch} = 0 OR $2::BIGINT < {expires_epoch}) \
-               AND ($3::BIGINT = 0 OR {active_epoch} = 0 OR $2::BIGINT - {active_epoch} <= $3::BIGINT) \
-               AND ($4::TEXT IS NULL OR ({principal}::TEXT = $4 AND {tenant}::TEXT = $5 \
-                    AND COALESCE({project}::TEXT, '') = $6 \
-                    AND COALESCE({metadata}->>'service_identity', '') = $7)) \
-             RETURNING {projection}",
+            "/* udb_session_validate_and_touch */ WITH touched AS ( \
+               UPDATE {rel} SET {last_active} = to_timestamp($2::BIGINT::DOUBLE PRECISION) \
+               WHERE {valid} AND {stale} \
+               RETURNING {projection}) \
+             SELECT * FROM touched \
+             UNION ALL \
+             SELECT {projection} FROM {rel} \
+             WHERE {valid} AND NOT {stale} AND NOT EXISTS (SELECT 1 FROM touched)",
+            rel = self.relation(),
+        );
+        // Run when the statement above yields nothing: the session is invalid, or
+        // it needed a stamp and a concurrent statement changed it first (another
+        // call stamped it, or a revocation committed). A new statement reads the
+        // committed state, so the first case stays refused and the second is
+        // answered from the row as it now is. Rare, so the common path stays one
+        // statement.
+        let recheck = format!(
+            "/* udb_session_validate_recheck */ SELECT {projection} FROM {rel} WHERE {valid}",
             rel = self.relation(),
         );
         let row = sqlx::query(&sql)
@@ -2019,6 +2045,7 @@ impl SessionStore for PostgresSessionStore {
             .bind(expected.map(|scope| scope.tenant_id.as_str()))
             .bind(expected.map(|scope| scope.project_id.as_str()))
             .bind(expected.map(|scope| scope.service_identity.as_str()))
+            .bind(session_touch_interval_secs(idle_ttl_secs))
             .fetch_optional(&self.pool)
             .await
             .map_err(|err| {
@@ -2027,6 +2054,25 @@ impl SessionStore for PostgresSessionStore {
                     &err,
                 )
             })?;
+        let row = match row {
+            Some(row) => Some(row),
+            None => sqlx::query(&recheck)
+                .bind(session_id_hash)
+                .bind(now)
+                .bind(i64::try_from(idle_ttl_secs).unwrap_or(i64::MAX))
+                .bind(expected.map(|scope| scope.principal_id.as_str()))
+                .bind(expected.map(|scope| scope.tenant_id.as_str()))
+                .bind(expected.map(|scope| scope.project_id.as_str()))
+                .bind(expected.map(|scope| scope.service_identity.as_str()))
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|err| {
+                    crate::runtime::executor_utils::sqlx_error_to_tagged_string(
+                        "session_validate_recheck",
+                        &err,
+                    )
+                })?,
+        };
         row.as_ref()
             .map(session_from_row)
             .transpose()
@@ -3916,6 +3962,21 @@ impl PostgresUserStore {
             .transpose()
             .map_err(|err| format!("decode tenant-scoped user failed: {err}"))
     }
+}
+
+/// How old a session's last_active_at may be before validation writes it again.
+/// Validation runs on every bearer call; writing on each one made every call a
+/// durable write that queued on the session row. A stale stamp only makes the idle
+/// check stricter, by at most this interval, so it stays a small part of the idle
+/// TTL: a tenth of it, at most 60 s, at least 1 s.
+pub fn session_touch_interval_secs(idle_ttl_secs: u64) -> i64 {
+    const MAX_TOUCH_INTERVAL_SECS: u64 = 60;
+    let interval = if idle_ttl_secs == 0 {
+        MAX_TOUCH_INTERVAL_SECS
+    } else {
+        (idle_ttl_secs / 10).clamp(1, MAX_TOUCH_INTERVAL_SECS)
+    };
+    interval as i64
 }
 
 /// Validate a raw session id against the store at `now_unix`, returning the

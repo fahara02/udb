@@ -42,6 +42,29 @@ pub const REVOKED_PRINCIPAL_KEY_PREFIX: &str = "udb:denylist:principal";
 pub const REVOCATION_PRINCIPAL_DENYLIST_HIT_REASON: &str =
     "token revoked (principal cluster denylist)";
 
+/// What a revocation check means to a caller: not revoked, revoked, or a store that
+/// could not answer (only reported under fail-closed, which denies on it). A store
+/// that cannot answer is an outage the caller should retry, never a revoked token:
+/// reporting it as revoked sent clients into re-sign-in storms while the store was
+/// overloaded.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RevocationVerdict {
+    NotRevoked,
+    Revoked(String),
+    StoreUnavailable,
+}
+
+/// Read the `(revoked, reason)` pair `is_token_revoked` returns.
+pub fn revocation_verdict(revoked: bool, reason: &str) -> RevocationVerdict {
+    if !revoked {
+        RevocationVerdict::NotRevoked
+    } else if reason == REVOCATION_STORE_UNAVAILABLE_REASON {
+        RevocationVerdict::StoreUnavailable
+    } else {
+        RevocationVerdict::Revoked(reason.to_string())
+    }
+}
+
 /// Pure decision for what token validation should return when the revocation
 /// store lookup itself errors.
 ///
@@ -323,6 +346,34 @@ impl JtiDenylist {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_unanswered_store_is_an_outage_not_a_revoked_token() {
+        // Every fail-closed store error the checks produce is read as an outage.
+        let (revoked, reason) = revocation_lookup_error_outcome(true);
+        assert_eq!(
+            revocation_verdict(revoked, &reason),
+            RevocationVerdict::StoreUnavailable
+        );
+        let (revoked, reason) = denylist_check_outcome(DenylistDecision::Error, true).unwrap();
+        assert_eq!(
+            revocation_verdict(revoked, &reason),
+            RevocationVerdict::StoreUnavailable
+        );
+        // A real revocation stays a revocation; a miss stays valid.
+        let (revoked, reason) = denylist_check_outcome(DenylistDecision::Revoked, true).unwrap();
+        assert_eq!(
+            revocation_verdict(revoked, &reason),
+            RevocationVerdict::Revoked(REVOCATION_DENYLIST_HIT_REASON.to_string())
+        );
+        assert_eq!(revocation_verdict(false, ""), RevocationVerdict::NotRevoked);
+        // Fail-open never produces an outage verdict: the lookup error is not revoked.
+        let (revoked, reason) = revocation_lookup_error_outcome(false);
+        assert_eq!(
+            revocation_verdict(revoked, &reason),
+            RevocationVerdict::NotRevoked
+        );
+    }
 
     #[test]
     fn lookup_error_fails_closed_when_hardened() {
