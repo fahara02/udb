@@ -1520,6 +1520,14 @@ they need `UDB_AUTH_TARGET` (or `UDB_GRPC_TARGET`) and an admin bearer in
   rotated keys in the signing-key registry carry their own kid.)
 - `UDB_SESSION_ENABLED=true` + `UDB_SESSION_HASH_SECRET` — server sessions
   (browser flows); the hash secret is ALSO used to hash API keys.
+- `UDB_SESSION_BACKEND` — `postgres` (default; durable, atomic revocation
+  recheck) or `redis` (in memory; a Redis restart without AOF signs everyone
+  out). Validation stamps `last_active_at` at most once per touch interval
+  (60 s, or idle TTL/10), so parallel calls of one user never queue on the
+  session row. `UDB_SESSION_TTL_SECONDS` (86400) / `UDB_SESSION_IDLE_TTL_SECONDS` (3600).
+- `UDB_AUTH_VERDICT_CACHE_MS` (default 2000) — a broker remembers a bearer's
+  live-state verdict this long; a revocation on the same node is immediate, one
+  on another node lands within this time; `0` = check live state every call.
 - `UDB_PASSWORD_HASH_SECRET` — keyed HMAC for native passwords; must be the SAME
   value at bootstrap and at serve, or login can't verify. Falls back to
   `UDB_SESSION_HASH_SECRET`.

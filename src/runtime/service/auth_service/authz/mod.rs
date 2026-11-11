@@ -1264,6 +1264,8 @@ impl AuthzServiceImpl {
     }
 
     pub(super) async fn emit_event(&self, event: AuthEvent) {
+        // Grant, role and membership changes can end a bearer's validity.
+        crate::runtime::service::auth_service::authn::verdict_cache::invalidate();
         let topic = event.topic;
         if let Err(err) = self.event_sink.emit(event).await {
             tracing::warn!(topic, error = %err, "failed to publish authz event");

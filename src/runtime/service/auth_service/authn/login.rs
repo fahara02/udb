@@ -462,7 +462,9 @@ impl AuthnServiceImpl {
             // Phase 3: a UDB-issued JWT must still be backed by live persisted
             // state — reject it here too if the subject user was suspended or the
             // issuing session revoked (same rule as ValidateToken).
-            let user = match self.jwt_persisted_state_user(&claims, now_unix()).await? {
+            // A gateway calls this for every request it serves, so the verdict is
+            // the per-request cached one (see `verdict_cache`).
+            let user = match self.jwt_persisted_state_cached(&claims, now_unix()).await? {
                 // A human subject's row was already read by the check.
                 super::JwtPersistedState::Valid { user: Some(user) } => Some(user),
                 // Service bearers were checked against the typed grant; read

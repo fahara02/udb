@@ -17,6 +17,15 @@ release line was tagged.
   other call validates with a read that takes no lock. Revocation, expiry, idle time and token
   scope are still checked on every call, and a session revoked while its stamp was being written
   is still refused. The idle timeout can fire up to one interval early.
+- **A bearer's validity is checked once per few seconds, not on every call.** Each bearer call
+  (and a gateway's `Authenticate` for every request it serves) re-read the user row, the token
+  revocation, the session and the refresh family or service grant, several round trips before
+  the call itself ran, so a page paid them many times over. The verdict is now remembered for
+  `UDB_AUTH_VERDICT_CACHE_MS` (default 2000 ms; `0` checks live state on every call). A
+  revocation, logout, status, grant, role, membership, API key or IdP change made on the same
+  broker node takes effect on the next call; one made on another node within that time. Errors
+  are never remembered. Step-up, refresh and membership exchange still check live state.
+- **`UDB_SESSION_BACKEND` is documented** (`postgres` default, or `redis`), with its trade-offs.
 - **Under fail-closed, an unanswered revocation store is an outage, not a revoked token.** When
   Redis or Postgres could not answer the revocation check, the call was refused as a revoked or
   inactive token, so clients signed in again and added load while the store was struggling. It

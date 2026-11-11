@@ -55,6 +55,8 @@ pub async fn emit(
     tenant_id: impl Into<String>,
     body: Value,
 ) {
+    // Provisioning and deprovisioning change user status: drop remembered verdicts.
+    crate::runtime::service::auth_service::authn::verdict_cache::invalidate();
     let event = AuthEvent::new(topic, document_id, tenant_id, body);
     if let Err(err) = sink.emit(event).await {
         tracing::warn!(topic, error = %err, "failed to publish idp event");

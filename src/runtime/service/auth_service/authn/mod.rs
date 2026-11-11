@@ -339,6 +339,8 @@ mod sessions;
 mod signing_keys;
 mod token_family;
 mod tokens;
+/// Remembered per-request token verdicts; every auth event emitter drops them.
+pub(crate) mod verdict_cache;
 // 0.6.6 identity flows (one topic module each).
 mod invitations;
 mod oidc_login;
@@ -1854,6 +1856,7 @@ pub(crate) use mfa::{otp_dev_echo_enabled, otp_dev_echo_resolved};
 
 /// Outcome of re-checking a UDB-issued JWT against live persisted state
 /// (`AuthnServiceImpl::jwt_persisted_state_user`).
+#[derive(Clone)]
 pub(crate) enum JwtPersistedState {
     /// No longer backed by live state: suspended/deleted subject, revoked or
     /// replaced grant, revoked jti, ended session or refresh family.
@@ -2102,6 +2105,9 @@ impl AuthnServiceImpl {
     // Shared helpers used across the topic submodules — `pub(super)` so each
     // `impl AuthnServiceImpl` block in a sibling module can call them.
     pub(super) async fn emit_event(&self, event: AuthEvent) {
+        // Every auth mutation emits an event; remembered verdicts are dropped so
+        // a revocation or status change on this node is seen by the next call.
+        verdict_cache::invalidate();
         let topic = event.topic;
         if let Err(err) = self.event_sink.emit(event).await {
             tracing::warn!(topic, error = %err, "failed to publish authn event");
@@ -2129,6 +2135,7 @@ impl AuthnServiceImpl {
         conn: &mut sqlx::PgConnection,
         event: AuthEvent,
     ) -> Result<(), Status> {
+        verdict_cache::invalidate();
         let topic = event.topic;
         self.event_sink
             .write_in_tx(conn, event)
@@ -2361,15 +2368,39 @@ impl AuthnServiceImpl {
         )
     }
 
+    /// Whether a UDB-issued JWT is still backed by live state. Every bearer call
+    /// (and token introspection) asks this, and answering it costs several
+    /// database and Redis round trips, so the verdict is remembered for a short
+    /// time (see [`verdict_cache`]). Errors are never remembered.
     pub(crate) async fn jwt_persisted_state_valid(
         &self,
         claims: &crate::runtime::security::SecurityClaims,
         now: u64,
     ) -> Result<bool, Status> {
         Ok(matches!(
-            self.jwt_persisted_state_user(claims, now).await?,
+            self.jwt_persisted_state_cached(claims, now).await?,
             JwtPersistedState::Valid { .. }
         ))
+    }
+
+    /// [`Self::jwt_persisted_state_user`] for the per-request paths (every bearer
+    /// call, token introspection, a gateway's per-request Authenticate), served
+    /// from [`verdict_cache`] when a fresh verdict for the same claims exists.
+    /// Step-up, refresh and membership exchange keep calling the live check.
+    pub(crate) async fn jwt_persisted_state_cached(
+        &self,
+        claims: &crate::runtime::security::SecurityClaims,
+        now: u64,
+    ) -> Result<JwtPersistedState, Status> {
+        let cache = verdict_cache::shared();
+        let key = verdict_cache::key(claims);
+        if let Some(state) = cache.get(&key) {
+            return Ok(state);
+        }
+        let generation = cache.generation();
+        let state = self.jwt_persisted_state_user(claims, now).await?;
+        cache.put(key, generation, state.clone());
+        Ok(state)
     }
 
     /// Read the native user row behind a credential subject, UNCACHED: the

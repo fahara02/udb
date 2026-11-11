@@ -310,6 +310,8 @@ impl ApiKeyServiceImpl {
     const ANOMALY_WINDOW_SECS: i64 = 3600;
 
     async fn emit_event(&self, event: AuthEvent) {
+        // An API key change can end a bearer's validity: drop remembered verdicts.
+        crate::runtime::service::auth_service::authn::verdict_cache::invalidate();
         let topic = event.topic;
         if let Err(err) = self.event_sink.emit(event).await {
             tracing::warn!(topic, error = %err, "failed to publish apikey event");

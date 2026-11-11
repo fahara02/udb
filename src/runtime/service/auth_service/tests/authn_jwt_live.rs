@@ -601,3 +601,99 @@ async fn live_postgres_refresh_token_dies_with_session_logout() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+/// The per-request verdict is remembered, but a revocation made on this node ends it
+/// at once, and a change made elsewhere (written straight to the store, as another
+/// broker node would) ends it within the cache lifetime.
+#[tokio::test]
+#[ignore = "requires live Postgres; run in the unfiltered native live lane"]
+async fn live_postgres_cached_bearer_verdict_honours_revocation() {
+    use crate::runtime::authn::{PostgresSessionStore, SessionStore, hash_secret};
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone());
+    let user = create_verified_user(&authn, "jwtverdict", "CorrectHorse1!").await;
+    let security = crate::runtime::security::SecurityConfig {
+        jwt_public_key: Some(include_str!("../../../testdata/jwt_rs256_public.pem").to_string()),
+        ..crate::runtime::security::SecurityConfig::default()
+    };
+    let login = |device: &'static str| {
+        let authn = &authn;
+        let email = user.email.clone();
+        async move {
+            authn
+                .login(Request::new(authn_pb::LoginRequest {
+                    username: email,
+                    password: "CorrectHorse1!".to_string(),
+                    device_name: device.to_string(),
+                    ..Default::default()
+                }))
+                .await
+                .expect("login")
+                .into_inner()
+        }
+    };
+    let now = || {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    };
+
+    // 1. Revoked on this node: refused by the very next call.
+    let first = login("verdict-local").await;
+    let claims = crate::runtime::security::validate_bearer_token(&security, &first.access_token)
+        .expect("decode bearer");
+    for _ in 0..3 {
+        assert!(
+            authn
+                .jwt_persisted_state_valid(&claims, now())
+                .await
+                .unwrap()
+        );
+    }
+    let revoked = authn
+        .revoke_session(Request::new(authn_pb::RevokeSessionRequest {
+            session_id: first.session_id.clone(),
+            revoke_reason: "verdict_cache_live".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("revoke session")
+        .into_inner();
+    assert_eq!(revoked.revoked_count, 1);
+    assert!(
+        !authn
+            .jwt_persisted_state_valid(&claims, now())
+            .await
+            .unwrap(),
+        "a revocation on this node is seen by the next call"
+    );
+
+    // 2. Revoked without an event on this node (as another broker node would):
+    // refused once the cache lifetime has passed.
+    let second = login("verdict-remote").await;
+    let claims = crate::runtime::security::validate_bearer_token(&security, &second.access_token)
+        .expect("decode bearer");
+    assert!(
+        authn
+            .jwt_persisted_state_valid(&claims, now())
+            .await
+            .unwrap()
+    );
+    let store = PostgresSessionStore::new(pool.clone(), "");
+    let jti = claims.jti.clone().expect("session jti");
+    let hash = hash_secret(&jti, b"live-auth-test-secret");
+    assert!(store.revoke(&hash, now()).await.expect("store revoke"));
+    tokio::time::sleep(std::time::Duration::from_millis(2_300)).await;
+    assert!(
+        !authn
+            .jwt_persisted_state_valid(&claims, now())
+            .await
+            .unwrap(),
+        "a change made elsewhere is seen within the cache lifetime"
+    );
+
+    cleanup_native_auth_db(&pool).await;
+}
