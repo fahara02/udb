@@ -1407,9 +1407,10 @@ CHECKS: tuple[SourceCheck, ...] = (
             "UDB_GENERIC_QUEUE_TIMEOUT_MS=5000",
             "UDB_TENANT_CONN_BUDGET_DEFAULT=80",
             "UDB_TENANT_CONN_QUEUE_TIMEOUT_MS=5000",
-            "UDB_FAIR_TOKENS_PER_SEC=5000",
-            "UDB_FAIR_BURST=10000",
         ),
+        # The benchmark runs the default per-tenant rate (off): a raised rate here
+        # hid a refusal storm the default would have shown.
+        forbidden=("UDB_FAIR_TOKENS_PER_SEC=", "UDB_FAIR_BURST="),
     ),
     SourceCheck(
         "local bench admission headroom",
@@ -1439,9 +1440,8 @@ CHECKS: tuple[SourceCheck, ...] = (
             '$env:UDB_GENERIC_QUEUE_TIMEOUT_MS = "5000"',
             '$env:UDB_TENANT_CONN_BUDGET_DEFAULT = "80"',
             '$env:UDB_TENANT_CONN_QUEUE_TIMEOUT_MS = "5000"',
-            '$env:UDB_FAIR_TOKENS_PER_SEC = "5000"',
-            '$env:UDB_FAIR_BURST = "10000"',
         ),
+        forbidden=("$env:UDB_FAIR_TOKENS_PER_SEC", "$env:UDB_FAIR_BURST"),
     ),
     SourceCheck(
         "local bench launchers source admission headroom",

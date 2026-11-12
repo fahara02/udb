@@ -291,7 +291,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             "security_for_stream.request_context_with_decision(&item_decision_id)",
             "super::native_helpers::execute_stream_batch_item(",
             "crate::runtime::channels::OperationChannel::Write",
-            "runtime.upsert(&manifest, item, item_context)",
+            "runtime.upsert(&manifest, item, item_context.clone())",
             "BatchUpsert",
         ),
     ),
@@ -850,7 +850,7 @@ def run_selftest() -> None:
             root,
             "batch upsert no longer reuses the per-item upsert served path",
             "src/runtime/service/handlers_data.rs",
-            "runtime.upsert(&manifest, item, item_context)",
+            "runtime.upsert(&manifest, item, item_context.clone())",
         )
         expect_failure(
             root,
