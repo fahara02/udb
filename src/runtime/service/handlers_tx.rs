@@ -379,6 +379,7 @@ impl DataBrokerService {
         // applied. One denied mutation refuses the whole transaction.
         let authz_snapshot = self.current_authz_snapshot();
         let authz_security = security.clone();
+        let own_write_runtime = runtime.clone();
         let result = self
             .execute_with_channel(
                 crate::runtime::channels::OperationChannel::Transaction,
@@ -396,6 +397,11 @@ impl DataBrokerService {
             )
             .await;
 
+        if result.is_ok() {
+            // A transaction carries no write receipt: the caller's next default
+            // read on this node goes to the primary (position unknown).
+            own_write_runtime.record_own_write(&response_context, "");
+        }
         match result {
             Ok(statuses) => self.record_grpc(
                 "BeginTx",

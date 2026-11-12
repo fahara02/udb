@@ -2181,7 +2181,7 @@ impl SessionStore for PostgresSessionStore {
         let m = &self.model;
         let session_token_lookup = m.q("session_token_lookup");
         let principal_id_col = m.q("principal_id");
-        let user_id_col = format!("{}::TEXT", m.q("user_id"));
+        let user_id_col = m.q("user_id");
         let principal_id_select = m.select("principal_id");
         let user_id_select = m.text("user_id");
         let service_identity =
@@ -2208,16 +2208,25 @@ impl SessionStore for PostgresSessionStore {
         } else {
             String::new()
         };
+        let (owner, owner_user_id) = session_owner_clause(
+            &principal_id_col,
+            &user_id_col,
+            principal_id,
+            if active_only { 3 } else { 2 },
+        );
         let sql = format!(
             "SELECT {session_token_lookup} AS session_id_hash, {principal_id_select}, {user_id_select}, {service_identity}, {tenant_id_select}, {project_id}, {scopes}, \
                     {roles}, {relationship_version}, {client_fingerprint}, \
                     {created_at_unix}, {updated_at_unix}, {expires_at_unix}, \
                     CASE WHEN {is_active} THEN 0 ELSE COALESCE(EXTRACT(EPOCH FROM {last_active_at})::BIGINT, 1) END AS revoked_at_unix \
-             FROM {rel} WHERE ({principal_id_col} = $1 OR {user_id_col} = $1) {active_clause} ORDER BY {last_active_at} DESC"
+             FROM {rel} WHERE {owner} {active_clause} ORDER BY {last_active_at} DESC"
         );
         let mut query = sqlx::query(&sql).bind(principal_id);
         if active_only {
             query = query.bind(now_unix as i64);
+        }
+        if let Some(user_id) = owner_user_id {
+            query = query.bind(user_id);
         }
         let rows = query
             .fetch_all(&self.pool)
@@ -2241,7 +2250,7 @@ impl SessionStore for PostgresSessionStore {
         let m = &self.model;
         let session_token_lookup = m.q("session_token_lookup");
         let principal_id_col = m.q("principal_id");
-        let user_id_col = format!("{}::TEXT", m.q("user_id"));
+        let user_id_col = m.q("user_id");
         let principal_id_select = m.select("principal_id");
         let user_id_select = m.text("user_id");
         let service_identity =
@@ -2268,48 +2277,97 @@ impl SessionStore for PostgresSessionStore {
         } else {
             String::new()
         };
-        let count_sql = format!(
-            "SELECT COUNT(*)::BIGINT AS total_count FROM {rel} WHERE ({principal_id_col} = $1 OR {user_id_col} = $1) {active_clause}"
-        );
-        let mut count_query = sqlx::query(&count_sql).bind(principal_id);
-        if active_only {
-            count_query = count_query.bind(now_unix as i64);
-        }
-        let total = count_query
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|err| format!("count sessions failed: {err}"))?
-            .try_get::<i64, _>("total_count")
-            .map_err(|err| format!("decode session count failed: {err}"))?
-            .max(0) as usize;
         let (limit_param, offset_param) = if active_only {
             ("$3", "$4")
         } else {
             ("$2", "$3")
         };
+        let (owner, owner_user_id) = session_owner_clause(
+            &principal_id_col,
+            &user_id_col,
+            principal_id,
+            if active_only { 5 } else { 4 },
+        );
         let sql = format!(
             "SELECT {session_token_lookup} AS session_id_hash, {principal_id_select}, {user_id_select}, {service_identity}, {tenant_id_select}, {project_id}, {scopes}, \
                     {roles}, {relationship_version}, {client_fingerprint}, \
                     {created_at_unix}, {updated_at_unix}, {expires_at_unix}, \
-                    CASE WHEN {is_active} THEN 0 ELSE COALESCE(EXTRACT(EPOCH FROM {last_active_at})::BIGINT, 1) END AS revoked_at_unix \
-             FROM {rel} WHERE ({principal_id_col} = $1 OR {user_id_col} = $1) {active_clause} ORDER BY {last_active_at} DESC LIMIT {limit_param} OFFSET {offset_param}"
+                    CASE WHEN {is_active} THEN 0 ELSE COALESCE(EXTRACT(EPOCH FROM {last_active_at})::BIGINT, 1) END AS revoked_at_unix, \
+                    COUNT(*) OVER ()::BIGINT AS total_count \
+             FROM {rel} WHERE {owner} {active_clause} ORDER BY {last_active_at} DESC LIMIT {limit_param} OFFSET {offset_param}"
         );
         let mut query = sqlx::query(&sql).bind(principal_id);
         if active_only {
             query = query.bind(now_unix as i64);
         }
+        query = query.bind(limit as i64).bind(offset as i64);
+        if let Some(user_id) = owner_user_id {
+            query = query.bind(user_id);
+        }
         let rows = query
-            .bind(limit as i64)
-            .bind(offset as i64)
             .fetch_all(&self.pool)
             .await
             .map_err(|err| format!("list sessions failed: {err}"))?;
+        // The page carries the total (one statement). Only a page past the end
+        // has no row to carry it, and then the total is counted on its own.
+        let total = match rows.first() {
+            Some(row) => row
+                .try_get::<i64, _>("total_count")
+                .map_err(|err| format!("decode session count failed: {err}"))?
+                .max(0) as usize,
+            None if offset == 0 => 0,
+            None => {
+                let (count_owner, count_user_id) = session_owner_clause(
+                    &principal_id_col,
+                    &user_id_col,
+                    principal_id,
+                    if active_only { 3 } else { 2 },
+                );
+                let count_sql = format!(
+                    "SELECT COUNT(*)::BIGINT AS total_count FROM {rel} WHERE {count_owner} {active_clause}"
+                );
+                let mut count_query = sqlx::query(&count_sql).bind(principal_id);
+                if active_only {
+                    count_query = count_query.bind(now_unix as i64);
+                }
+                if let Some(user_id) = count_user_id {
+                    count_query = count_query.bind(user_id);
+                }
+                count_query
+                    .fetch_one(&self.pool)
+                    .await
+                    .map_err(|err| format!("count sessions failed: {err}"))?
+                    .try_get::<i64, _>("total_count")
+                    .map_err(|err| format!("decode session count failed: {err}"))?
+                    .max(0) as usize
+            }
+        };
         let items = rows
             .iter()
             .map(session_from_row)
             .collect::<Result<Vec<_>, _>>()
             .map_err(|err| format!("decode sessions failed: {err}"))?;
         Ok((items, total))
+    }
+}
+
+/// The WHERE condition selecting one owner's sessions: by principal id, or by
+/// user id when the caller's id is a UUID. The user id is compared as a UUID
+/// parameter, never by casting the column to text, so both columns' indexes
+/// serve the lookup instead of a scan of every session. Returns the condition
+/// and the user id to bind as `$user_param` (None: no user-id branch).
+fn session_owner_clause(
+    principal_col: &str,
+    user_col: &str,
+    principal_id: &str,
+    user_param: usize,
+) -> (String, Option<uuid::Uuid>) {
+    match uuid::Uuid::parse_str(principal_id.trim()) {
+        Ok(user_id) => (
+            format!("({principal_col} = $1 OR {user_col} = ${user_param})"),
+            Some(user_id),
+        ),
+        Err(_) => (format!("{principal_col} = $1"), None),
     }
 }
 

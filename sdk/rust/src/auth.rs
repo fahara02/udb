@@ -7,13 +7,30 @@
 //! or a day later, far from the code that caused it. [`TokenManager`] persists the
 //! rotated token, which is the whole reason it exists rather than leaving refresh
 //! to callers.
+//!
+//! # Recovery after a broker restart
+//!
+//! A client must outlive the broker it talks to. [`TokenManager::login`] retries
+//! a transient failure (broker unreachable or restarting, overloaded, reply
+//! lost), so a service that starts while the broker restarts still signs in.
+//! When the broker refuses the access token the manager issued before its local
+//! expiry (a restarted broker that lost the session, a revoked session),
+//! [`TokenManager::reject`] marks it, and the next [`TokenManager::access_token`]
+//! renews it: refresh, else sign in again. A [`crate::UdbClient`] built with
+//! [`crate::UdbClient::with_token_manager`] does this itself and repeats the
+//! refused call exactly once. A token renewed moments ago that is refused again
+//! is not renewed again, and while a refused token cannot be renewed, calls are
+//! refused locally with a backoff (1s doubling to 60s) instead of one sign-in
+//! per call.
 
+use std::collections::hash_map::RandomState;
+use std::hash::{BuildHasher, Hasher};
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use tokio::sync::Mutex;
 use tonic::transport::Channel;
-use tonic::Status;
+use tonic::{Code, Status};
 
 use crate::metadata::Metadata;
 use crate::proto::udb::core::authn::services::v1 as authn;
@@ -42,6 +59,120 @@ impl Token {
     }
 }
 
+/// Sign-in attempts [`TokenManager::login`] makes before it gives up on a
+/// transient failure.
+pub const LOGIN_ATTEMPTS: u32 = 3;
+
+/// First wait after a failed attempt; doubles per consecutive failure.
+const RENEW_BACKOFF_BASE: Duration = Duration::from_secs(1);
+/// Longest wait between attempts.
+const RENEW_BACKOFF_CAP: Duration = Duration::from_secs(60);
+/// How soon after renewing a refused token another refusal is taken as final
+/// rather than as a reason to renew again.
+const REJECTED_RENEW_INTERVAL: Duration = Duration::from_secs(5);
+
+/// Whether repeating a failed sign-in can help: the broker was unreachable,
+/// overloaded, or the reply was lost. A refused credential is final.
+fn transient(status: &Status) -> bool {
+    matches!(
+        status.code(),
+        Code::Unavailable | Code::DeadlineExceeded | Code::ResourceExhausted | Code::Aborted
+    )
+}
+
+/// The wait after the n-th consecutive failure: a random time in
+/// `[ceiling/2, ceiling]`, where `ceiling = base * 2^(n-1)`, capped at `limit`.
+fn jittered_backoff(failures: u32, base: Duration, limit: Duration) -> Duration {
+    let mut ceiling = base;
+    let mut i = 1;
+    while i < failures && ceiling < limit {
+        ceiling *= 2;
+        i += 1;
+    }
+    let ceiling = ceiling.min(limit);
+    let half = ceiling / 2;
+    let span = u64::try_from((ceiling - half).as_millis()).unwrap_or(u64::MAX);
+    // A freshly keyed SipHash of nothing: random enough for jitter, with no
+    // dependency on a random-number crate.
+    let random = RandomState::new().build_hasher().finish();
+    half + Duration::from_millis(random % span.saturating_add(1))
+}
+
+/// What the manager knows about tokens the broker refused before their expiry.
+#[derive(Default)]
+struct RefusalState {
+    /// The refused access token; a stored token carrying it is renewed as if
+    /// it were stale.
+    rejected: String,
+    /// When `rejected` was marked.
+    rejected_at: Option<Instant>,
+    /// Consecutive failed renewals of the refused token.
+    failures: u32,
+    /// Until when calls are refused locally after a failed renewal, and with
+    /// what.
+    retry_at: Option<Instant>,
+    last_error: Option<(Code, String)>,
+}
+
+impl RefusalState {
+    /// Whether the broker's refusal of `sent` should be answered by renewing
+    /// the token and repeating the call. `current` is the token the manager
+    /// holds now.
+    fn reject(&mut self, sent: &str, current: &str, now: Instant) -> bool {
+        if sent.is_empty() {
+            return false;
+        }
+        if sent == self.rejected {
+            // Already marked by a concurrent call; the next resolve renews it.
+            return true;
+        }
+        if sent != current {
+            // Not this manager's token, or one already replaced by an
+            // ordinary refresh: nothing to renew.
+            return false;
+        }
+        if let Some(at) = self.rejected_at {
+            if now.saturating_duration_since(at) < REJECTED_RENEW_INTERVAL {
+                // The token renewed moments ago is refused too: renewing
+                // cannot help.
+                return false;
+            }
+        }
+        self.rejected = sent.to_string();
+        self.rejected_at = Some(now);
+        self.renewed();
+        true
+    }
+
+    fn is_rejected(&self, access_token: &str) -> bool {
+        !self.rejected.is_empty() && self.rejected == access_token
+    }
+
+    /// The local refusal while a failed renewal backs off.
+    fn refused_until(&self, now: Instant) -> Option<Status> {
+        match (self.retry_at, &self.last_error) {
+            (Some(at), Some((code, message))) if now < at => Some(Status::new(
+                *code,
+                format!("credential refused by the broker and not yet renewed: {message}"),
+            )),
+            _ => None,
+        }
+    }
+
+    fn renew_failed(&mut self, err: &Status, now: Instant) {
+        self.failures = self.failures.saturating_add(1);
+        self.retry_at =
+            Some(now + jittered_backoff(self.failures, RENEW_BACKOFF_BASE, RENEW_BACKOFF_CAP));
+        self.last_error = Some((err.code(), err.message().to_string()));
+    }
+
+    fn renewed(&mut self) {
+        self.failures = 0;
+        self.retry_at = None;
+        self.last_error = None;
+    }
+}
+
 fn now_unix() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -65,6 +196,11 @@ struct Inner {
     token: Mutex<Token>,
     skew: Duration,
     meta: Metadata,
+    /// The username and password of the last successful login, kept so a
+    /// session the broker lost (a restart) can sign in again when its refresh
+    /// token is refused too. Never printed.
+    sign_in: std::sync::Mutex<Option<(String, String)>>,
+    refusal: std::sync::Mutex<RefusalState>,
 }
 
 /// Hand-written rather than derived: a derived `Debug` would print the stored
@@ -96,8 +232,35 @@ impl TokenManager {
                 token: Mutex::new(Token::default()),
                 skew,
                 meta,
+                sign_in: std::sync::Mutex::new(None),
+                refusal: std::sync::Mutex::new(RefusalState::default()),
             }),
         }
+    }
+
+    // The two std mutexes below are never held across an await: every guard is
+    // a temporary dropped within its statement.
+    fn refusal(&self) -> std::sync::MutexGuard<'_, RefusalState> {
+        self.inner
+            .refusal
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    fn sign_in_credentials(&self) -> Option<(String, String)> {
+        self.inner
+            .sign_in
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+
+    fn remember_sign_in(&self, username: String, password: String) {
+        *self
+            .inner
+            .sign_in
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some((username, password));
     }
 
     /// The currently stored token, without refreshing.
@@ -106,14 +269,44 @@ impl TokenManager {
     }
 
     /// Authenticate with username and password, storing the result.
+    ///
+    /// A transient failure (broker unreachable or restarting, overloaded, reply
+    /// lost) is retried, up to [`LOGIN_ATTEMPTS`] attempts in all with a
+    /// jittered, doubling wait between them. A refused credential is final.
+    /// The username and password are kept in memory so a session the broker
+    /// later loses can sign in again (see [`TokenManager::reject`]).
     pub async fn login(
         &self,
         username: impl Into<String>,
         password: impl Into<String>,
     ) -> Result<Token, Status> {
+        let username = username.into();
+        let password = password.into();
+        let mut last = None;
+        for attempt in 0..LOGIN_ATTEMPTS {
+            if attempt > 0 {
+                let wait = jittered_backoff(attempt, RENEW_BACKOFF_BASE, RENEW_BACKOFF_CAP);
+                tokio::time::sleep(wait).await;
+            }
+            match self.login_rpc(username.clone(), password.clone()).await {
+                Ok(token) => {
+                    *self.inner.token.lock().await = token.clone();
+                    self.remember_sign_in(username, password);
+                    self.refusal().renewed();
+                    return Ok(token);
+                }
+                Err(err) if transient(&err) => last = Some(err),
+                Err(err) => return Err(err),
+            }
+        }
+        Err(last.unwrap_or_else(|| Status::unavailable("login was not attempted")))
+    }
+
+    /// One `Login` round-trip; the caller stores the result.
+    async fn login_rpc(&self, username: String, password: String) -> Result<Token, Status> {
         let mut req = tonic::Request::new(authn::LoginRequest {
-            username: username.into(),
-            password: password.into(),
+            username,
+            password,
             ..Default::default()
         });
         self.inner.meta.apply(&mut req)?;
@@ -129,21 +322,20 @@ impl TokenManager {
             ));
         }
 
-        let token = Token {
+        Ok(Token {
             access_token: resp.access_token,
             refresh_token: resp.refresh_token,
             session_id: resp.session_id,
             expires_at_unix: expiry_from(resp.access_token_expires_in),
-        };
-        *self.inner.token.lock().await = token.clone();
-        Ok(token)
+        })
     }
 
-    /// The access token, refreshing first if it is stale.
+    /// The access token, refreshing first if it is stale or the broker refused it.
     pub async fn access_token(&self) -> Result<String, Status> {
         {
             let token = self.inner.token.lock().await;
-            if token.is_valid(now_unix(), self.inner.skew) {
+            let rejected = self.refusal().is_rejected(&token.access_token);
+            if !rejected && token.is_valid(now_unix(), self.inner.skew) {
                 return Ok(token.access_token.clone());
             }
         }
@@ -153,20 +345,58 @@ impl TokenManager {
     /// Force a refresh. Holding the token lock across the RPC is what makes this
     /// single-flighted: a second caller waits and then observes the new token
     /// rather than presenting the spent one.
+    ///
+    /// A token the broker refused (see [`TokenManager::reject`]) is renewed even
+    /// though it has not expired: refresh, else sign in again with the stored
+    /// login. While such a renewal keeps failing it is retried at most once per
+    /// backoff interval (1s doubling to 60s); calls in between are refused
+    /// locally with the last failure.
     pub async fn refresh(&self) -> Result<Token, Status> {
         let mut stored = self.inner.token.lock().await;
+        let rejected = self.refusal().is_rejected(&stored.access_token);
 
         // Someone refreshed while we waited for the lock.
-        if stored.is_valid(now_unix(), self.inner.skew) {
+        if !rejected && stored.is_valid(now_unix(), self.inner.skew) {
             return Ok(stored.clone());
         }
+        if !rejected {
+            return self.refresh_rpc(&mut stored).await;
+        }
+
+        let refused = self.refusal().refused_until(Instant::now());
+        if let Some(status) = refused {
+            return Err(status);
+        }
+        let result = match self.refresh_rpc(&mut stored).await {
+            Err(err) if err.code() == Code::Unauthenticated => {
+                // The broker lost the session too (a restart): sign in again.
+                match self.sign_in_credentials() {
+                    Some((username, password)) => {
+                        self.login_rpc(username, password).await.inspect(|token| {
+                            *stored = token.clone();
+                        })
+                    }
+                    None => Err(err),
+                }
+            }
+            other => other,
+        };
+        match &result {
+            Ok(_) => self.refusal().renewed(),
+            Err(err) => self.refusal().renew_failed(err, Instant::now()),
+        }
+        result
+    }
+
+    /// One `RefreshToken` round-trip folded into `stored`.
+    async fn refresh_rpc(&self, stored: &mut Token) -> Result<Token, Status> {
         if stored.refresh_token.is_empty() && stored.session_id.is_empty() {
             return Err(Status::unauthenticated(
                 "no refresh token or session id stored; call login() first",
             ));
         }
 
-        let mut req = tonic::Request::new(refresh_request(&stored));
+        let mut req = tonic::Request::new(refresh_request(stored));
         self.inner.meta.apply(&mut req)?;
 
         let resp = {
@@ -174,8 +404,25 @@ impl TokenManager {
             client.refresh_token(req).await?.into_inner()
         };
 
-        apply_refresh(&mut stored, resp);
+        apply_refresh(stored, resp);
         Ok(stored.clone())
+    }
+
+    /// Report that the broker refused `access_token` (UNAUTHENTICATED) before
+    /// its local expiry. Returns true when a repeat of the refused call can
+    /// carry a different, renewed token: the token is this manager's current
+    /// one (or was already marked by a concurrent call), and it was not itself
+    /// renewed less than 5s ago. The next [`TokenManager::access_token`] then
+    /// renews it.
+    ///
+    /// Only for a call that carried this manager's token and is not an
+    /// `AuthnService` call (a refusal there is about the credential in the
+    /// request, not the bearer). [`crate::UdbClient::with_token_manager`] calls
+    /// it for you.
+    pub async fn reject(&self, access_token: &str) -> bool {
+        let current = self.inner.token.lock().await.access_token.clone();
+        self.refusal()
+            .reject(access_token, &current, Instant::now())
     }
 
     /// Metadata carrying the current access token, ready for a data-plane client.
@@ -348,6 +595,101 @@ mod tests {
         };
         assert!(issuer.refresh(refresh_request(&spent)).is_some());
         assert!(issuer.refresh(refresh_request(&spent)).is_none());
+    }
+
+    #[test]
+    fn a_refusal_of_the_current_token_marks_it_for_renewal() {
+        let now = Instant::now();
+        let mut state = RefusalState::default();
+        assert!(state.reject("access-1", "access-1", now));
+        assert!(state.is_rejected("access-1"));
+        assert!(!state.is_rejected("access-2"));
+        // A concurrent call that carried the same token is repeated too.
+        assert!(state.reject("access-1", "access-1", now));
+    }
+
+    // Negative: a token this manager does not hold now (a caller's own, or one
+    // already replaced by an ordinary refresh) is never renewed.
+    #[test]
+    fn a_refusal_of_a_token_the_manager_does_not_hold_is_final() {
+        let mut state = RefusalState::default();
+        assert!(!state.reject("someone-else", "access-1", Instant::now()));
+        assert!(!state.reject("", "", Instant::now()));
+        assert!(!state.is_rejected("access-1"));
+    }
+
+    // Negative: a token renewed moments ago that is refused again is not
+    // renewed again; renewing cannot help, and it must not become a storm.
+    #[test]
+    fn a_renewed_token_refused_within_five_seconds_is_final() {
+        let t0 = Instant::now();
+        let mut state = RefusalState::default();
+        assert!(state.reject("access-1", "access-1", t0));
+        state.renewed();
+        for offset in [0, 1, 4] {
+            assert!(
+                !state.reject("access-2", "access-2", t0 + Duration::from_secs(offset)),
+                "renewed {offset}s ago"
+            );
+        }
+        assert!(state.reject("access-2", "access-2", t0 + Duration::from_secs(6)));
+        assert!(state.is_rejected("access-2"));
+    }
+
+    #[test]
+    fn a_failed_renewal_refuses_locally_with_a_growing_backoff() {
+        let t0 = Instant::now();
+        let mut state = RefusalState::default();
+        assert!(state.reject("access-1", "access-1", t0));
+        assert!(state.refused_until(t0).is_none(), "the first renewal runs");
+
+        let refused = Status::unauthenticated("invalid credential");
+        for failure in 1..=8u32 {
+            state.renew_failed(&refused, t0);
+            let wait = state.retry_at.expect("a backoff") - t0;
+            let ceiling = (RENEW_BACKOFF_BASE * 2u32.pow(failure - 1)).min(RENEW_BACKOFF_CAP);
+            assert!(
+                wait >= ceiling / 2 && wait <= ceiling,
+                "failure {failure}: waited {wait:?}, ceiling {ceiling:?}"
+            );
+            let local = state.refused_until(t0).expect("refused locally");
+            assert_eq!(local.code(), Code::Unauthenticated);
+        }
+        assert!(state.refused_until(t0 + RENEW_BACKOFF_CAP).is_none());
+        state.renewed();
+        assert!(state.refused_until(t0).is_none());
+    }
+
+    #[test]
+    fn only_unreachable_overloaded_or_lost_reply_codes_are_transient() {
+        for code in [
+            Code::Unavailable,
+            Code::DeadlineExceeded,
+            Code::ResourceExhausted,
+            Code::Aborted,
+        ] {
+            assert!(transient(&Status::new(code, "")), "{code:?}");
+        }
+        for code in [
+            Code::Unauthenticated,
+            Code::PermissionDenied,
+            Code::InvalidArgument,
+            Code::Internal,
+        ] {
+            assert!(!transient(&Status::new(code, "")), "{code:?}");
+        }
+    }
+
+    #[test]
+    fn jittered_backoff_stays_within_its_ceiling() {
+        for _ in 0..50 {
+            let first = jittered_backoff(1, RENEW_BACKOFF_BASE, RENEW_BACKOFF_CAP);
+            assert!(first >= Duration::from_millis(500) && first <= RENEW_BACKOFF_BASE);
+            let second = jittered_backoff(2, RENEW_BACKOFF_BASE, RENEW_BACKOFF_CAP);
+            assert!(second >= RENEW_BACKOFF_BASE && second <= Duration::from_secs(2));
+            let capped = jittered_backoff(30, RENEW_BACKOFF_BASE, RENEW_BACKOFF_CAP);
+            assert!(capped >= RENEW_BACKOFF_CAP / 2 && capped <= RENEW_BACKOFF_CAP);
+        }
     }
 
     #[test]

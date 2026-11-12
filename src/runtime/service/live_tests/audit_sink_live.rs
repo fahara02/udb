@@ -380,3 +380,61 @@ async fn live_auth_audit_export_refuses_foreign_shaped_table() {
         .await
         .ok();
 }
+
+/// Two (here eight) first writes racing on a table that does not exist yet. Before
+/// the per-relation advisory lock, `CREATE TABLE IF NOT EXISTS` lost the race with
+/// a `pg_type` unique violation for every session but one, and each loser's audit
+/// export failed. Every export must now succeed and every row must land.
+#[tokio::test]
+#[ignore = "requires live Postgres; UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_audit_first_writes_race_without_losing_an_export -- --ignored --nocapture"]
+async fn live_audit_first_writes_race_without_losing_an_export() {
+    use crate::runtime::service::auth_service::audit_export::{
+        AuditExportSink, PostgresAuditLogSink,
+    };
+
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    let fixture = "udb_system.auth_audit_log_first_write_race";
+    sqlx::query("CREATE SCHEMA IF NOT EXISTS udb_system")
+        .execute(&pool)
+        .await
+        .expect("create udb_system schema");
+    sqlx::query(&format!("DROP TABLE IF EXISTS {fixture} CASCADE"))
+        .execute(&pool)
+        .await
+        .expect("drop stale fixture");
+
+    const WRITERS: usize = 8;
+    let mut tasks = Vec::with_capacity(WRITERS);
+    for n in 0..WRITERS {
+        let pool = pool.clone();
+        tasks.push(tokio::spawn(async move {
+            // A separate sink per writer: each starts un-ensured, like separate
+            // replicas or separate call sites on a cold database.
+            let sink = PostgresAuditLogSink::new(pool).with_relation(fixture);
+            let envelope = serde_json::json!({
+                "event_id": uuid::Uuid::new_v4().to_string(),
+                "actor_tenant": "tenant-race",
+                "actor": format!("writer-{n}"),
+                "operation": "first_write_race",
+            });
+            sink.export("udb.test.first_write_race", &envelope).await
+        }));
+    }
+    for task in tasks {
+        task.await
+            .expect("writer task")
+            .expect("a racing first write must not fail its export");
+    }
+    let rows: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {fixture} WHERE operation = 'first_write_race'"
+    ))
+    .fetch_one(&pool)
+    .await
+    .expect("count rows");
+    assert_eq!(rows, WRITERS as i64, "every racing write landed");
+    sqlx::query(&format!("DROP TABLE IF EXISTS {fixture} CASCADE"))
+        .execute(&pool)
+        .await
+        .ok();
+}

@@ -9,6 +9,7 @@ use Fahara02\UdbLaravel\Exceptions\UdbConfigurationException;
 use Fahara02\UdbLaravel\Exceptions\UdbPolicyBundleSignatureException;
 use Fahara02\UdbLaravel\Exceptions\UdbRpcException;
 use Fahara02\UdbLaravel\Support\AuthzCache;
+use Fahara02\UdbLaravel\Support\ReconnectBackoff;
 use Fahara02\UdbLaravel\Support\TlsCredentials;
 use Udb\Core\Authn\Services\V1\AuthnRequest;
 use Udb\Core\Authn\Services\V1\AuthnResponse;
@@ -515,7 +516,7 @@ class UdbAuthClient
     /** @return array<string,mixed> */
     private function channelOptions(): array
     {
-        return ['credentials' => TlsCredentials::channelCredentials((array) ($this->config['tls'] ?? []))];
+        return ReconnectBackoff::apply(['credentials' => TlsCredentials::channelCredentials((array) ($this->config['tls'] ?? []))]);
     }
 
     /**

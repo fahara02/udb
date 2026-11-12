@@ -162,3 +162,105 @@ function fakeCore(stub) {
     await node_assert_1.strict.rejects(() => core.unary(DATA_BROKER, "MarkSagaReviewed", { idempotency_key: "key-123" }), (err) => err instanceof generatedClient_1.UdbError && err.code === grpc.status.UNAVAILABLE);
     node_assert_1.strict.equal(calls, 1);
 });
+// ── Broker retry_after_ms (rate limit / fair admission / overload) ───────────
+//
+// A RESOURCE_EXHAUSTED refusal carries `retry_after_ms` in the
+// `udb-error-detail-bin` trailer. The retry must wait at least that long,
+// must not sleep past the call's deadline, and a delay longer than
+// `maxRetryAfterMs` (default 10 s) is returned to the caller at once.
+/** Prost-encode an ErrorDetail carrying only field 5 (retry_after_ms) and
+ *  field 4 (retryable = true). */
+function retryAfterTrailer(retryAfterMs) {
+    const varint = (n) => {
+        const out = [];
+        while (n > 0x7f) {
+            out.push((n & 0x7f) | 0x80);
+            n = Math.floor(n / 128);
+        }
+        out.push(n);
+        return out;
+    };
+    return Buffer.from([0x20, 0x01, 0x28, ...varint(retryAfterMs)]);
+}
+function exhausted(retryAfterMs) {
+    const metadata = new grpc.Metadata();
+    metadata.set("udb-error-detail-bin", retryAfterTrailer(retryAfterMs));
+    return Object.assign(new Error("rate limited"), {
+        code: grpc.status.RESOURCE_EXHAUSTED,
+        details: "rate limited",
+        metadata,
+    });
+}
+function rateLimitedCore(failures, retryAfterMs, sleeps, retry = {}) {
+    let calls = 0;
+    const core = fakeCore({
+        ListSagas(_request, _metadata, _options, cb) {
+            calls += 1;
+            if (calls <= failures) {
+                cb(exhausted(retryAfterMs), null);
+                return;
+            }
+            cb(null, { ok: true });
+        },
+    });
+    core.retry.retryableCodes = [grpc.status.UNAVAILABLE, grpc.status.RESOURCE_EXHAUSTED];
+    core.retry.initialBackoffMs = 100;
+    core.retry.maxBackoffMs = 800;
+    Object.assign(core.retry, retry);
+    core.delay = async (ms) => {
+        sleeps.push(ms);
+    };
+    return { core, calls: () => calls };
+}
+(0, node_test_1.test)("retry waits at least the broker's retry_after_ms (repeated 3x)", async () => {
+    for (let run = 0; run < 3; run += 1) {
+        const sleeps = [];
+        const { core, calls } = rateLimitedCore(1, 1200, sleeps);
+        const result = await core.unary(DATA_BROKER, "ListSagas", {});
+        node_assert_1.strict.deepEqual(result, { ok: true });
+        node_assert_1.strict.equal(calls(), 2);
+        node_assert_1.strict.equal(sleeps.length, 1);
+        node_assert_1.strict.ok(sleeps[0] >= 1200, `run ${run}: slept ${sleeps[0]}ms, want >= 1200`);
+    }
+});
+(0, node_test_1.test)("retry_after_ms past the call deadline: no sleep, original error raised", async () => {
+    const sleeps = [];
+    const { core, calls } = rateLimitedCore(1, 5000, sleeps);
+    await node_assert_1.strict.rejects(() => core.unary(DATA_BROKER, "ListSagas", {}, { deadlineMs: 1000 }), (err) => err instanceof generatedClient_1.UdbError &&
+        err.code === grpc.status.RESOURCE_EXHAUSTED &&
+        err.retryAfterMs === 5000 &&
+        Number(err.detail?.retry_after_ms) === 5000);
+    node_assert_1.strict.equal(calls(), 1);
+    node_assert_1.strict.deepEqual(sleeps, []);
+});
+(0, node_test_1.test)("retry_after_ms above maxRetryAfterMs: no sleep, one call, error returned", async () => {
+    const cases = [
+        [90_000, { maxRetryAfterMs: 2500 }],
+        [60_000, {}], // default cap
+    ];
+    for (const [retryAfterMs, retry] of cases) {
+        const sleeps = [];
+        const { core, calls } = rateLimitedCore(1, retryAfterMs, sleeps, retry);
+        await node_assert_1.strict.rejects(() => core.unary(DATA_BROKER, "ListSagas", {}), (err) => err instanceof generatedClient_1.UdbError &&
+            err.code === grpc.status.RESOURCE_EXHAUSTED &&
+            err.retryAfterMs === retryAfterMs &&
+            Number(err.detail?.retry_after_ms) === retryAfterMs);
+        node_assert_1.strict.equal(calls(), 1);
+        node_assert_1.strict.deepEqual(sleeps, []);
+    }
+});
+(0, node_test_1.test)("default maxRetryAfterMs is 10 s and a delay at the cap is waited for", async () => {
+    node_assert_1.strict.equal(generatedClient_1.DEFAULT_RETRY_POLICY.maxRetryAfterMs, 10_000);
+    const sleeps = [];
+    const { core, calls } = rateLimitedCore(1, 10_000, sleeps);
+    node_assert_1.strict.deepEqual(await core.unary(DATA_BROKER, "ListSagas", {}), { ok: true });
+    node_assert_1.strict.equal(calls(), 2);
+    node_assert_1.strict.deepEqual(sleeps, [10_000]);
+});
+(0, node_test_1.test)("UdbError.retryAfterMs is 0 when the broker sent no retry_after_ms", async () => {
+    const sleeps = [];
+    const { core } = rateLimitedCore(0, 0, sleeps);
+    const err = new generatedClient_1.UdbError("x/y", unavailable(), undefined);
+    node_assert_1.strict.equal(err.retryAfterMs, 0);
+    node_assert_1.strict.deepEqual(await core.unary(DATA_BROKER, "ListSagas", {}), { ok: true });
+});

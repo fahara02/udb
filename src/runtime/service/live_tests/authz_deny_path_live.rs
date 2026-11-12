@@ -1286,3 +1286,124 @@ async fn authz_required_mutations_refuse_zero_rows_before_revision_live() {
         "a skipped role delete cannot commit its assignment cascade"
     );
 }
+
+/// Counts full authz snapshot reloads (the only caller of the reload histogram).
+#[derive(Debug, Default)]
+struct ReloadCounter(std::sync::atomic::AtomicUsize);
+
+impl crate::metrics::MetricsRecorder for ReloadCounter {
+    crate::runtime::metrics::noop_required_metrics!();
+    fn observe_policy_reload_seconds(&self, _seconds: f64) {
+        self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+/// The interval refresh reads only the revision fingerprint while nothing
+/// changed, and still reloads in full when any node appends a revision.
+#[tokio::test]
+#[ignore = "requires live Postgres; native CI runs all ignored live proofs"]
+async fn authz_snapshot_refresh_reloads_only_on_a_revision_change_live() {
+    use crate::proto::udb::core::authz::services::v1 as authz_pb;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+    use std::sync::Arc;
+    use std::sync::atomic::Ordering;
+    use tonic::Request;
+
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let tenant = Uuid::new_v4().to_string();
+    let claim = test_claim_context(
+        &Uuid::new_v4().to_string(),
+        &tenant,
+        DEFAULT_PROJECT_ID,
+        &["udb:authz:put-authz-policy"],
+        &[],
+    );
+    let policy = |action: &str| authz_pb::PutAuthzPolicyRequest {
+        policy: Some(authz_pb::AuthzPolicyRecord {
+            id: Uuid::new_v4().to_string(),
+            enabled: true,
+            effect: "allow".to_string(),
+            tenant: tenant.clone(),
+            project: DEFAULT_PROJECT_ID.to_string(),
+            subject: SUBJECT.to_string(),
+            action: action.to_string(),
+            resource: INVOICE.to_string(),
+            purpose: "b11-deny-path".to_string(),
+            required_scopes: vec!["udb:read".to_string()],
+            ..Default::default()
+        }),
+    };
+    let revision_model =
+        native_catalog::native_model("udb.core.authz.entity.v1.AuthzRevision", &["revision_id"]);
+    let revision_rows = || async {
+        sqlx::query_scalar::<_, i64>(&format!("SELECT COUNT(*) FROM {}", revision_model.relation))
+            .fetch_one(&pool)
+            .await
+            .expect("count actual durable authz revisions")
+    };
+    let reloads = Arc::new(ReloadCounter::default());
+    let svc = deny_path_broker().await;
+    let (_, authz, _) = svc.build_auth_services();
+    let authz = authz.with_metrics(reloads.clone());
+    let full_reloads = || reloads.0.load(Ordering::SeqCst);
+
+    authz.warm_shared_snapshot().await;
+    assert_eq!(full_reloads(), 1, "the explicit warm is a full reload");
+
+    // Unchanged path. Suites outside this lock may append revisions at any
+    // time, so a window only counts when the durable revision log did not move
+    // across it; a moved window is retried, never treated as a pass.
+    let mut idle_window_proven = false;
+    for _ in 0..5 {
+        let rows_before = revision_rows().await;
+        authz.warm_shared_snapshot().await;
+        let reloads_before = full_reloads();
+        for _ in 0..3 {
+            authz.refresh_shared_snapshot().await;
+        }
+        let reloads_after = full_reloads();
+        if revision_rows().await == rows_before {
+            assert_eq!(
+                reloads_after, reloads_before,
+                "an unchanged revision must not trigger a full snapshot reload"
+            );
+            idle_window_proven = true;
+            break;
+        }
+    }
+    assert!(
+        idle_window_proven,
+        "the durable revision log never stayed still for one idle window"
+    );
+
+    // Changed path: a second node's mutation appends a revision; this node's
+    // next refresh sees the moved fingerprint and reloads in full.
+    let caller = caller(&tenant, DEFAULT_PROJECT_ID, SUBJECT);
+    svc.authorize(&caller, INVOICE, "Select")
+        .await
+        .expect_err("no grant before the other node's write");
+    let other = deny_path_broker().await;
+    let (_, other_authz, _) = other.build_auth_services();
+    other_authz.warm_shared_snapshot().await;
+    scope_claim_context_for_test(
+        claim,
+        other_authz.put_authz_policy(Request::new(policy("Select"))),
+    )
+    .await
+    .expect("the other node publishes its policy revision");
+    let reloads_before = full_reloads();
+    authz.refresh_shared_snapshot().await;
+    assert!(
+        full_reloads() > reloads_before,
+        "a moved revision must trigger the full reload"
+    );
+    svc.authorize(&caller, INVOICE, "Select")
+        .await
+        .expect("the refreshed snapshot carries the other node's grant");
+    pool.close().await;
+}

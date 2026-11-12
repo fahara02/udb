@@ -1056,7 +1056,9 @@ impl ChannelManager {
         guard
             .iter()
             .map(|(key, bucket)| {
-                let (rate, burst) = self.bucket_settings(OperationChannel::Read);
+                let (rate, burst) = self
+                    .bucket_settings(OperationChannel::Read)
+                    .unwrap_or((bucket.tokens, bucket.tokens));
                 FairAdmissionSnapshot {
                     key: key.clone(),
                     tokens_available: bucket.tokens.max(0.0).floor() as u64,
@@ -1089,7 +1091,9 @@ impl ChannelManager {
             env_part(backend),
             env_part(instance)
         );
-        let (rate, burst) = self.bucket_settings(op);
+        let Some((rate, burst)) = self.bucket_settings(op) else {
+            return Ok(());
+        };
         let weighted_cost =
             (cost.max(1) as f64) / self.fairness_weight(project, tenant, op).max(0.1);
         let mut guard = self
@@ -1119,16 +1123,19 @@ impl ChannelManager {
         bucket.tokens = (bucket.tokens + elapsed * rate).min(burst);
         bucket.last_refill = now;
         if bucket.tokens < weighted_cost {
-            let wait_secs = ((weighted_cost - bucket.tokens) / rate.max(0.001)).ceil() as u64;
+            // The exact time until enough tokens refill, in milliseconds: a
+            // whole-second floor made a call that was short by one token wait 1 s.
+            let wait_ms = (((weighted_cost - bucket.tokens) / rate.max(0.001)) * 1_000.0)
+                .ceil()
+                .max(1.0) as i64;
             let message = format!(
-                "{} fair queue budget exhausted for project '{project}' tenant '{tenant}'; retry after {}s",
+                "{} fair queue budget exhausted for project '{project}' tenant '{tenant}'; retry after {wait_ms} ms",
                 op.as_str(),
-                wait_secs.max(1)
             );
             return Err(crate::runtime::executor_utils::quota_status(
                 "channel",
                 format!("{} fair admission", op.as_str()),
-                wait_secs.max(1) as i64 * 1_000,
+                wait_ms,
                 message,
             ));
         }
@@ -1180,14 +1187,18 @@ impl ChannelManager {
         self.timeout_secs(op)
     }
 
-    fn bucket_settings(&self, op: OperationChannel) -> (f64, f64) {
+    /// The fair token bucket for an operation channel, or `None` when no rate
+    /// is configured. A rate limit is an operator decision: by default a tenant
+    /// is bounded only by the concurrency channels, never refused for calling
+    /// often (a fixed default of 100/s refused a busy single-tenant app's page
+    /// loads and made every refused call wait a whole second to retry).
+    fn bucket_settings(&self, op: OperationChannel) -> Option<(f64, f64)> {
         let rate = self
             .env_config
             .f64_for(&[
                 format!("UDB_FAIR_{}_TOKENS_PER_SEC", op.env_suffix()),
                 "UDB_FAIR_TOKENS_PER_SEC".to_string(),
-            ])
-            .unwrap_or(100.0)
+            ])?
             .max(0.001);
         let burst = self
             .env_config
@@ -1197,7 +1208,7 @@ impl ChannelManager {
             ])
             .unwrap_or(rate * 2.0)
             .max(rate);
-        (rate, burst)
+        Some((rate, burst))
     }
 
     fn fairness_weight(&self, project: &str, tenant: &str, op: OperationChannel) -> f64 {
@@ -1639,6 +1650,66 @@ mod tests {
         assert_eq!(detail.kind, ErrorKind::Quota as i32);
         assert_eq!(detail.retry_after_ms, 100);
         assert_eq!(detail.operation, "read_project_channel_admission");
+    }
+
+    #[tokio::test]
+    async fn without_a_configured_rate_a_tenant_is_never_refused_for_calling_often() {
+        let manager = test_manager_with_env::<0>(8, []);
+        for _ in 0..1_000 {
+            let permit = manager
+                .acquire_fair_with_backpressure(
+                    OperationChannel::Write,
+                    Some("busy-tenant"),
+                    Some("p1"),
+                    Some("postgres"),
+                    Some("primary"),
+                    2,
+                )
+                .await
+                .expect("no rate limit unless the operator sets one");
+            drop(permit);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_refused_call_is_told_the_exact_wait_not_a_whole_second() {
+        let manager = test_manager_with_env(
+            8,
+            [
+                ("UDB_FAIR_READ_TOKENS_PER_SEC", "4"),
+                ("UDB_FAIR_READ_BURST", "4"),
+            ],
+        );
+        // The first call takes the whole burst; the next needs one token, which
+        // refills in 250 ms at 4/s.
+        let _first = manager
+            .acquire_fair_with_backpressure(
+                OperationChannel::Read,
+                Some("t1"),
+                Some("p1"),
+                None,
+                None,
+                4,
+            )
+            .await
+            .expect("burst admits the first call");
+        let refused = manager
+            .acquire_fair_with_backpressure(
+                OperationChannel::Read,
+                Some("t1"),
+                Some("p1"),
+                None,
+                None,
+                1,
+            )
+            .await
+            .unwrap_err();
+        let detail = decode_detail(&refused);
+        assert!(
+            (200..=260).contains(&detail.retry_after_ms),
+            "one token at 4/s refills in ~250 ms, got {}",
+            detail.retry_after_ms
+        );
     }
 
     #[tokio::test]

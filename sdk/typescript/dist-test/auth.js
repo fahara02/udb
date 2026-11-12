@@ -50,6 +50,7 @@ const protoLoader = __importStar(require("@grpc/proto-loader"));
 const crypto = __importStar(require("crypto"));
 const path_1 = __importDefault(require("path"));
 const client_1 = require("./client");
+const generatedClient_1 = require("./generatedClient");
 const protoRoot_1 = require("./protoRoot");
 function buildCredentials(opts) {
     if (opts.tls) {
@@ -188,6 +189,8 @@ function verifyPolicyBundle(signed, secret) {
         return false;
     return crypto.timingSafeEqual(a, b);
 }
+/** Authn RPCs that carry their own credential in the request body. */
+const CREDENTIAL_RPCS = new Set(["Authenticate", "Login", "RefreshToken"]);
 /** Convenience wrapper over AuthnService + AuthzService. The same `UdbMetadata`
  *  used for broker calls is attached to every auth RPC. */
 class UdbAuthClient {
@@ -202,15 +205,73 @@ class UdbAuthClient {
         this.meta = meta;
         this.policyBundleSecret = policyBundleSecret;
     }
-    call(client, method, request) {
+    /** Runs before every call that rides the connection's own credential, so a
+     *  session can renew an expiring bearer first (or refuse locally when it cannot).
+     *  Unset on a plain client and on the `withoutCredentials` renewal view. */
+    callGate;
+    /** Told when the broker refused, as UNAUTHENTICATED, the bearer a gated call
+     *  carried; returns true when the owner marked it for renewal, so the call is
+     *  made once more with the renewed bearer. Unset on the renewal view. */
+    bearerRejected;
+    /** Per-call deadline; set on the renewal view so a lost reply cannot hang a renewal. */
+    deadlineMs;
+    /** When each stub's channel was last kicked to reconnect. */
+    reconnectKickedAt = new Map();
+    async call(client, method, request) {
+        // These carry their credential in the request; they establish or renew one.
+        const gate = CREDENTIAL_RPCS.has(method) ? undefined : this.callGate;
+        if (gate)
+            await gate();
+        const sent = this.meta.bearerToken ?? "";
+        try {
+            return await this.send(client, method, request);
+        }
+        catch (err) {
+            // The broker refused the owned bearer before any handler ran (a restarted
+            // broker, a revoked session): renew it and make the call exactly once more.
+            // AuthnService calls are never repeated; their refusal is about the
+            // credential in the request.
+            if (!gate || client === this.authn || !sent || !this.bearerRejected?.(sent, err))
+                throw err;
+            await gate();
+            return this.send(client, method, request);
+        }
+    }
+    send(client, method, request) {
         return new Promise((resolve, reject) => {
-            client[method](request, (0, client_1.metadata)(this.meta), (err, resp) => {
-                if (err)
+            const done = (err, resp) => {
+                if (err) {
+                    (0, generatedClient_1.kickReconnect)(client, err, this.reconnectKickedAt);
                     reject(err);
+                }
                 else
                     resolve(resp);
-            });
+            };
+            if (this.deadlineMs && this.deadlineMs > 0) {
+                client[method](request, (0, client_1.metadata)(this.meta), { deadline: new Date(Date.now() + this.deadlineMs) }, done);
+            }
+            else {
+                client[method](request, (0, client_1.metadata)(this.meta), done);
+            }
         });
+    }
+    /** Install (or clear) the pre-call credential gate, and the handler for a
+     *  bearer the broker refused (see `call`). */
+    setCallGate(gate, bearerRejected) {
+        this.callGate = gate;
+        this.bearerRejected = bearerRejected;
+    }
+    /** A view of this client that sends no bearer or API key header, for the public
+     *  calls that renew a credential: they carry theirs in the request, and an expired
+     *  or revoked bearer must not ride along. The view never runs the call gate (a
+     *  renewal must not wait on itself) and bounds each call by `deadlineMs`. */
+    withoutCredentials(options = {}) {
+        const view = Object.create(this);
+        view.meta = { ...this.meta, bearerToken: undefined, apiKey: undefined };
+        view.callGate = undefined;
+        view.bearerRejected = undefined;
+        view.deadlineMs = options.deadlineMs ?? this.deadlineMs;
+        return view;
     }
     setCredentials(credentials) {
         if ("bearerToken" in credentials) {

@@ -39,6 +39,11 @@ type apiKeySession struct {
 	bearer     string
 	renewAt    time.Time
 	inflight   *apiKeyRenewalFlight
+	// rejected: the broker refused the current bearer before its expiry. Until
+	// a re-exchange succeeds a failed one refuses calls locally, and wake makes
+	// the background loop retry with backoff instead of one exchange per call.
+	rejected bool
+	wake     chan struct{}
 
 	stop     chan struct{}
 	stopOnce sync.Once
@@ -63,7 +68,7 @@ func (u *Udb) startAPIKeyExchange(ctx context.Context, key string, retry time.Du
 	if retry <= 0 {
 		retry = apiKeyRetryDefault
 	}
-	s := &apiKeySession{key: key, retry: retry, stop: make(chan struct{})}
+	s := &apiKeySession{key: key, retry: retry, stop: make(chan struct{}), wake: make(chan struct{}, 1)}
 	u.apiKey = s
 	exp, err := u.exchangeAPIKey(ctx, s)
 	if err != nil {
@@ -85,10 +90,29 @@ func (u *Udb) startAPIKeyExchange(ctx context.Context, key string, retry time.Du
 			s.mu.Lock()
 			defer s.mu.Unlock()
 			var binding *credentialBindingError
-			if s.refreshErr != nil && (errors.As(s.refreshErr, &binding) || !time.Now().Before(s.expiresAt)) {
+			if s.refreshErr != nil && (errors.As(s.refreshErr, &binding) || s.rejected || !time.Now().Before(s.expiresAt)) {
 				return credentialRefusal(sessionExpired(s.refreshErr))
 			}
 			return nil
+		},
+		current: func() string {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return s.bearer
+		},
+		invalidate: func(bearer string) {
+			// The broker refused this bearer before its local expiry (a
+			// restarted broker, a revoked grant): exchange the key again on the
+			// next call instead of waiting for the renewal boundary.
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			if s.bearer == bearer {
+				s.renewAt, s.rejected = time.Time{}, true
+				select {
+				case s.wake <- struct{}{}:
+				default:
+				}
+			}
 		},
 	})
 	go u.keepAPIKeyBearer(s, exp)
@@ -216,7 +240,7 @@ func (u *Udb) performAPIKeyExchange(ctx context.Context, s *apiKeySession) (time
 	s.expiresAt = exp
 	s.renewAt = time.Now().Add(apiKeyRefreshWait(time.Until(exp)))
 	s.bearer = "Bearer " + res.GetAccessToken()
-	s.refreshErr = nil
+	s.refreshErr, s.rejected = nil, false
 	s.principal = proto.Clone(principal).(*authnv1.Principal)
 	return exp, nil
 }
@@ -232,6 +256,7 @@ func (u *Udb) keepAPIKeyBearer(s *apiKeySession, exp time.Time) {
 		case <-s.stop:
 			return
 		case <-time.After(wait):
+		case <-s.wake:
 		}
 		for failures := 1; ; failures++ {
 			base := context.Background()

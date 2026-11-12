@@ -901,6 +901,26 @@ pub(crate) fn pg_rows_to_json(rows: Vec<PgRow>) -> Result<Vec<JsonValue>, tonic:
         .collect()
 }
 
+/// A pooled connection that sat idle this long is pinged before it is handed
+/// out; one in steady use is handed out as is.
+pub(crate) const PG_PING_AFTER_IDLE: Duration = Duration::from_secs(10);
+
+/// Checkout check for every Postgres pool. Pinging every checkout (sqlx's
+/// default) cost each query a second round trip; a connection that was just
+/// used is known good, so only one that sat idle (where a server restart or a
+/// dropped NAT entry may have killed it) is pinged. A failed ping discards the
+/// connection and the pool opens a fresh one.
+pub(crate) async fn ping_if_idle(
+    conn: &mut sqlx::PgConnection,
+    meta: sqlx::pool::PoolConnectionMetadata,
+) -> Result<bool, sqlx::Error> {
+    use sqlx::Connection;
+    if meta.idle_for < PG_PING_AFTER_IDLE {
+        return Ok(true);
+    }
+    Ok(conn.ping().await.is_ok())
+}
+
 pub(crate) async fn connect_pg_pool_from_config(
     dsn: &str,
     app_name: &str,
@@ -950,7 +970,8 @@ pub(crate) async fn connect_pg_pool_from_config(
         .acquire_timeout(acquire_timeout)
         .idle_timeout(idle_timeout)
         .max_lifetime(max_lifetime)
-        .test_before_acquire(true)
+        .test_before_acquire(false)
+        .before_acquire(|conn, meta| Box::pin(ping_if_idle(conn, meta)))
         .after_connect(|conn, _| {
             Box::pin(async move {
                 // GAP-KEEP: Enable server-side TCP keepalive probes to prevent

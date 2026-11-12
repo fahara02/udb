@@ -32,8 +32,23 @@ use crate::runtime::cdc::journal::{JournalEntry, JournalPosition};
 /// A position in the journal's immutable database commit-prefix order.
 pub(crate) type Watermark = JournalPosition;
 
-/// How often a shared poller scans the journal.
-pub(crate) const JOURNAL_TAIL_POLL: Duration = Duration::from_millis(500);
+/// Default cadence of a shared poller's journal scan.
+pub(crate) const DEFAULT_JOURNAL_TAIL_POLL_MS: u64 = 500;
+const JOURNAL_TAIL_POLL_ENV: &str = "UDB_LIVEQUERY_JOURNAL_POLL_MS";
+
+/// How often a shared poller scans the journal
+/// (`UDB_LIVEQUERY_JOURNAL_POLL_MS`, default 500 ms). An idle scan is one
+/// indexed `(topic, journal_position)` probe that returns no rows. Resolved
+/// once per process.
+pub(crate) fn journal_tail_poll() -> Duration {
+    static MS: OnceLock<u64> = OnceLock::new();
+    Duration::from_millis(*MS.get_or_init(|| {
+        crate::runtime::cdc::resolve_poll_interval_ms(
+            std::env::var(JOURNAL_TAIL_POLL_ENV).ok().as_deref(),
+            DEFAULT_JOURNAL_TAIL_POLL_MS,
+        )
+    }))
+}
 
 /// Batches a slow subscriber may fall behind before it lags; a lagged
 /// subscriber catches up from the journal itself, so this bounds memory, not
@@ -167,7 +182,8 @@ async fn run_feed(
 ) {
     let (topic, tenant_id, project_id) = (&key.0, &key.1, &key.2);
     let mut wakes_open = true;
-    let mut ticker = interval_at(Instant::now() + JOURNAL_TAIL_POLL, JOURNAL_TAIL_POLL);
+    let poll = journal_tail_poll();
+    let mut ticker = interval_at(Instant::now() + poll, poll);
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
     loop {
         tokio::select! {

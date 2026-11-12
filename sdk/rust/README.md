@@ -202,6 +202,15 @@ let mut udb = UdbClient::connect("http://127.0.0.1:50051", meta).await?;
 
 `TokenManager`'s `Debug` redacts the stored tokens.
 
+To outlive a broker restart, let the client carry the manager's token instead of
+a copy: `udb.with_token_manager(tokens.clone())`. Every call then attaches the
+current token, and when the broker refuses it before its expiry (a restarted
+broker that lost the session, a revoked session) the client renews it — refresh,
+else sign in again — and repeats the refused call exactly once. A token renewed
+moments ago that is refused again fails `Unauthenticated`, and a credential the
+broker no longer accepts is refused locally with a backoff, never one sign-in per
+call. `login` retries a broker that is unreachable or restarting (3 attempts).
+
 ## Typed errors, and retries that will not double-charge you
 
 Failures decode the broker's `udb-error-detail-bin` trailer into `UdbError`, so

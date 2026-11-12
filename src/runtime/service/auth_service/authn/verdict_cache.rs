@@ -19,7 +19,7 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use sha2::{Digest, Sha256};
@@ -29,14 +29,25 @@ use crate::runtime::security::SecurityClaims;
 
 /// Default lifetime of a remembered verdict.
 const DEFAULT_TTL_MS: u64 = 2_000;
-/// Entries kept at most; past this the cache is emptied, never grown.
+/// Entries kept at most; past this a shard is emptied, never grown.
 const MAX_ENTRIES: usize = 50_000;
+/// Independent locks the entries are spread over, so parallel calls of many
+/// users do not queue on one lock.
+const SHARDS: usize = 16;
 
 pub(super) type Key = [u8; 32];
+
+/// One verdict computation at a time per key: parallel calls of one session
+/// that all miss (a page load right after the entry expired) wait for the
+/// first one and are served its result, instead of each asking the store.
+pub(super) type Gate = Arc<tokio::sync::Mutex<()>>;
 
 struct Entry {
     stored_at: Instant,
     generation: u64,
+    /// The cluster-wide auth-state version the verdict was computed under
+    /// (`None` when it could not be read).
+    version: Option<i64>,
     state: JwtPersistedState,
 }
 
@@ -44,7 +55,8 @@ struct Entry {
 pub(super) struct VerdictCache {
     ttl: Duration,
     generation: AtomicU64,
-    entries: Mutex<HashMap<Key, Entry>>,
+    shards: [Mutex<HashMap<Key, Entry>>; SHARDS],
+    inflight: [Mutex<HashMap<Key, Gate>>; SHARDS],
 }
 
 impl VerdictCache {
@@ -52,8 +64,35 @@ impl VerdictCache {
         Self {
             ttl,
             generation: AtomicU64::new(0),
-            entries: Mutex::new(HashMap::new()),
+            shards: std::array::from_fn(|_| Mutex::new(HashMap::new())),
+            inflight: std::array::from_fn(|_| Mutex::new(HashMap::new())),
         }
+    }
+
+    /// The gate every computation of this key's verdict holds.
+    pub(super) fn gate(&self, key: &Key) -> Gate {
+        let shard = &self.inflight[usize::from(key[0]) % SHARDS];
+        match shard.lock() {
+            Ok(mut map) => map.entry(*key).or_default().clone(),
+            Err(_) => Gate::default(),
+        }
+    }
+
+    /// Forget the gate once no other call holds or waits on it.
+    pub(super) fn release(&self, key: &Key, gate: Gate) {
+        let shard = &self.inflight[usize::from(key[0]) % SHARDS];
+        if let Ok(mut map) = shard.lock()
+            && let Some(current) = map.get(key)
+            && Arc::ptr_eq(current, &gate)
+            && Arc::strong_count(&gate) == 2
+        {
+            map.remove(key);
+        }
+    }
+
+    fn shard(&self, key: &Key) -> &Mutex<HashMap<Key, Entry>> {
+        // The key is a SHA-256 digest: its first byte is uniformly spread.
+        &self.shards[usize::from(key[0]) % SHARDS]
     }
 
     /// The current generation, read before computing a verdict: a verdict
@@ -68,14 +107,21 @@ impl VerdictCache {
         self.generation.fetch_add(1, Ordering::AcqRel);
     }
 
-    pub(super) fn get(&self, key: &Key) -> Option<JwtPersistedState> {
+    /// A remembered verdict, served only when it was computed under the same
+    /// auth-state version, in this node's current event generation, within the
+    /// lifetime.
+    pub(super) fn get(&self, key: &Key, version: Option<i64>) -> Option<JwtPersistedState> {
         if self.ttl.is_zero() {
             return None;
         }
         let current = self.generation();
-        let mut map = self.entries.lock().ok()?;
+        let mut map = self.shard(key).lock().ok()?;
         match map.get(key) {
-            Some(entry) if entry.generation == current && entry.stored_at.elapsed() < self.ttl => {
+            Some(entry)
+                if entry.generation == current
+                    && entry.version == version
+                    && entry.stored_at.elapsed() < self.ttl =>
+            {
                 Some(entry.state.clone())
             }
             Some(_) => {
@@ -86,14 +132,20 @@ impl VerdictCache {
         }
     }
 
-    pub(super) fn put(&self, key: Key, generation: u64, state: JwtPersistedState) {
+    pub(super) fn put(
+        &self,
+        key: Key,
+        generation: u64,
+        version: Option<i64>,
+        state: JwtPersistedState,
+    ) {
         if self.ttl.is_zero() || generation != self.generation() {
             return;
         }
-        let Ok(mut map) = self.entries.lock() else {
+        let Ok(mut map) = self.shard(&key).lock() else {
             return;
         };
-        if map.len() >= MAX_ENTRIES {
+        if map.len() >= MAX_ENTRIES / SHARDS {
             map.clear();
         }
         map.insert(
@@ -101,6 +153,7 @@ impl VerdictCache {
             Entry {
                 stored_at: Instant::now(),
                 generation,
+                version,
                 state,
             },
         );
@@ -176,15 +229,16 @@ mod tests {
         cache.put(
             key,
             cache.generation(),
+            None,
             JwtPersistedState::Valid { user: None },
         );
         assert!(matches!(
-            cache.get(&key),
+            cache.get(&key, None),
             Some(JwtPersistedState::Valid { .. })
         ));
         cache.invalidate();
         assert!(
-            cache.get(&key).is_none(),
+            cache.get(&key, None).is_none(),
             "an auth event drops the remembered verdict"
         );
     }
@@ -195,9 +249,9 @@ mod tests {
         let key = key(&claims("22222222-2222-2222-2222-222222222222", "sess_b"));
         let before = cache.generation();
         cache.invalidate();
-        cache.put(key, before, JwtPersistedState::Valid { user: None });
+        cache.put(key, before, None, JwtPersistedState::Valid { user: None });
         assert!(
-            cache.get(&key).is_none(),
+            cache.get(&key, None).is_none(),
             "a verdict read before the event is stale"
         );
     }
@@ -209,12 +263,13 @@ mod tests {
         cache.put(
             key,
             cache.generation(),
+            None,
             JwtPersistedState::Valid { user: None },
         );
-        assert!(cache.get(&key).is_some());
+        assert!(cache.get(&key, None).is_some());
         std::thread::sleep(Duration::from_millis(60));
         assert!(
-            cache.get(&key).is_none(),
+            cache.get(&key, None).is_none(),
             "an expired verdict is asked again"
         );
     }
@@ -226,9 +281,10 @@ mod tests {
         cache.put(
             key,
             cache.generation(),
+            None,
             JwtPersistedState::Valid { user: None },
         );
-        assert!(cache.get(&key).is_none());
+        assert!(cache.get(&key, None).is_none());
     }
 
     #[test]
@@ -244,10 +300,53 @@ mod tests {
     }
 
     #[test]
+    fn a_verdict_is_served_only_under_the_auth_state_version_it_was_computed_under() {
+        let cache = cache();
+        let key = key(&claims("88888888-8888-8888-8888-888888888888", "sess_h"));
+        cache.put(
+            key,
+            cache.generation(),
+            Some(41),
+            JwtPersistedState::Valid { user: None },
+        );
+        assert!(cache.get(&key, Some(41)).is_some());
+        assert!(
+            cache.get(&key, Some(42)).is_none(),
+            "a change anywhere in the cluster moves the version and drops the verdict"
+        );
+        assert!(
+            cache.get(&key, Some(41)).is_none(),
+            "a verdict seen as stale once is gone"
+        );
+    }
+
+    #[test]
+    fn parallel_misses_of_one_key_share_one_gate_until_the_last_releases() {
+        let cache = cache();
+        let key = key(&claims("99999999-9999-9999-9999-999999999999", "sess_i"));
+        let first = cache.gate(&key);
+        let second = cache.gate(&key);
+        assert!(Arc::ptr_eq(&first, &second), "one gate per key");
+        cache.release(&key, first);
+        let third = cache.gate(&key);
+        assert!(
+            Arc::ptr_eq(&second, &third),
+            "a gate still held is kept for the next caller"
+        );
+        cache.release(&key, second);
+        cache.release(&key, third);
+        let fresh = cache.gate(&key);
+        assert_eq!(Arc::strong_count(&fresh), 2, "a released gate is forgotten");
+    }
+
+    #[test]
     fn a_rejected_verdict_is_remembered_too() {
         let cache = cache();
         let key = key(&claims("55555555-5555-5555-5555-555555555555", "sess_e"));
-        cache.put(key, cache.generation(), JwtPersistedState::Rejected);
-        assert!(matches!(cache.get(&key), Some(JwtPersistedState::Rejected)));
+        cache.put(key, cache.generation(), None, JwtPersistedState::Rejected);
+        assert!(matches!(
+            cache.get(&key, None),
+            Some(JwtPersistedState::Rejected)
+        ));
     }
 }

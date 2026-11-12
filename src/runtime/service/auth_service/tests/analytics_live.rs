@@ -189,6 +189,11 @@ async fn live_postgres_analytics_executor_and_reconciliation_queries() {
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
     let svc = analytics_service(pool.clone());
+    // Monthly partitions exist only around the current month, so the seeded
+    // days are the first two of this month rather than fixed dates that age out.
+    let month = chrono::Utc::now().format("%Y-%m").to_string();
+    let day_one = format!("{month}-01");
+    let day_two = format!("{month}-02");
 
     let eps = crate::runtime::native_catalog::native_model(
         "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -224,7 +229,7 @@ async fn live_postgres_analytics_executor_and_reconciliation_queries() {
         rate = eps.q("success_rate"),
         capacity = eps.q("avg_capacity_utilisation"),
     ))
-    .bind("2026-06-01")
+    .bind(day_one.as_str())
     .bind("executor-live")
     .bind("projection")
     .execute(&pool)
@@ -235,8 +240,8 @@ async fn live_postgres_analytics_executor_and_reconciliation_queries() {
         .get_executor_performance(Request::new(analytics_pb::GetExecutorPerformanceRequest {
             executor_identity: "executor-live".to_string(),
             workload_kind: "projection".to_string(),
-            date_from: "2026-06-01".to_string(),
-            date_to: "2026-06-01".to_string(),
+            date_from: day_one.clone(),
+            date_to: day_one.clone(),
         }))
         .await
         .expect("get executor performance")
@@ -260,8 +265,8 @@ async fn live_postgres_analytics_executor_and_reconciliation_queries() {
         ],
     );
     for (date, total, exact, avg_ms) in [
-        ("2026-06-01", 10i64, 8i64, 30.0),
-        ("2026-06-02", 20i64, 10i64, 50.0),
+        (day_one.as_str(), 10i64, 8i64, 30.0),
+        (day_two.as_str(), 20i64, 10i64, 50.0),
     ] {
         sqlx::query(&format!(
             "INSERT INTO {rel} ({summary_date}, {total}, {exact}, {partial}, {hard}, {low_conf}, {avg_ms}, {rate}, {confidence}) \
@@ -289,8 +294,8 @@ async fn live_postgres_analytics_executor_and_reconciliation_queries() {
     let recon = svc
         .get_reconciliation_analytics(Request::new(
             analytics_pb::GetReconciliationAnalyticsRequest {
-                date_from: "2026-06-01".to_string(),
-                date_to: "2026-06-02".to_string(),
+                date_from: day_one.clone(),
+                date_to: day_two.clone(),
             },
         ))
         .await

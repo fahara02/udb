@@ -1130,6 +1130,12 @@ const BG_REFRESH_LIFETIME_FRACTION = 0.8; // renew at 80% of a known token lifet
 const RENEWAL_ATTEMPTS = 3; // attempts per renewal before it is reported as failed
 const RENEWAL_BACKOFF_MS = 1_000; // first jittered wait between renewal attempts
 const RENEWAL_TIMEOUT_MS = 30_000; // bound on one renewal attempt (a lost reply must not hang it)
+// How soon after renewing a bearer the broker refused another refusal is taken as
+// final rather than as a reason to renew again (renewing cannot help).
+const REJECTED_RENEW_INTERVAL_MS = 5_000;
+// AuthnService calls are never repeated after a refusal: it is about the
+// credential in the request, not the bearer the call carried.
+const AUTHN_SERVICE = "udb.core.authn.services.v1.AuthnService";
 
 /** The session can no longer authorize calls: its bearer expired and no renewal
  *  succeeded, or a renewal verified as a different identity. Calls fail locally
@@ -1175,6 +1181,13 @@ function isTransientRenewalError(err: unknown): boolean {
   if (typeof code === "number") return TRANSIENT_GRPC_CODES.has(code);
   const message = err instanceof Error ? err.message : String(err);
   return !/invalid|revoked|reuse|expired|unauthenticated|permission|denied/i.test(message);
+}
+
+/** Whether a failed sign-in may succeed when repeated: the broker was unreachable
+ *  or restarting, overloaded, or the reply was lost. A refused credential is final. */
+function isTransientLoginError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  return typeof code === "number" && TRANSIENT_GRPC_CODES.has(code);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -1356,6 +1369,13 @@ export class UdbProject {
   private refreshRejected: Error | null = null;
   /** Epoch ms before which a call does not start another renewal after a failed one. */
   private renewalRetryAt = 0;
+  /** An access token the broker refused before its local expiry (a restarted broker
+   *  that lost the session, a revoked session): a stored token carrying it is renewed
+   *  as if it were stale, and while it cannot be renewed calls are refused locally. */
+  private rejectedBearer = "";
+  /** The last bearer renewed because the broker refused it, and when. */
+  private lastRejected = "";
+  private lastRejectedAt = 0;
   /** The last error passed to `onRefreshError` (the same failure is reported once). */
   private notifiedRefreshError: Error | null = null;
   /** Wait between renewal attempts; a field so tests can shorten it. */
@@ -1453,12 +1473,25 @@ export class UdbProject {
     const udb = new UdbProject({ ...rest, tenantId: code || "default" } as UdbProjectConfig);
     udb.tenantState.tenantCode = code;
     try {
-      await udb.loginAndAdoptTenant({
-        username,
-        password,
-        tenant_hint: code,
-        project_hint: rest.projectId ?? "",
-      });
+      // A broker that is unreachable or restarting gets up to RENEWAL_ATTEMPTS
+      // sign-in attempts with jittered backoff, the same policy as the
+      // service-account key exchange. A refused credential is final.
+      for (let attempt = 0; ; attempt += 1) {
+        if (attempt > 0) {
+          await sleep(jitteredBackoffMs(attempt, udb.renewalBackoffMs ?? RENEWAL_BACKOFF_MS, BG_REFRESH_MAX_BACKOFF_MS));
+        }
+        try {
+          await udb.loginAndAdoptTenant({
+            username,
+            password,
+            tenant_hint: code,
+            project_hint: rest.projectId ?? "",
+          });
+          break;
+        } catch (err) {
+          if (attempt + 1 >= RENEWAL_ATTEMPTS || !isTransientLoginError(err)) throw err;
+        }
+      }
       const principal = udb.verifiedPrincipal;
       if (!principal) throw new Error("udb: connectEnterprise: no principal returned");
       udb.tenantState.adopt(principal.tenant_id ?? "");
@@ -1573,7 +1606,10 @@ export class UdbProject {
     this.installCredentialGate(this.core);
     if (this.authGenerated) this.installCredentialGate(this.authGenerated.core);
     if (this.webrtcGenerated) this.installCredentialGate(this.webrtcGenerated.core);
-    this.auth.setCallGate(() => this.ensureCallCredential());
+    this.auth.setCallGate(
+      () => this.ensureCallCredential(),
+      (sent, err) => this.bearerRejected(sent, err),
+    );
   }
 
   /** The core native-service calls ride: the control-plane target when it differs
@@ -2019,7 +2055,9 @@ export class UdbProject {
       // Another caller may have finished a renewal since this one read the store.
       const current = await this.tokenStore.load();
       if (!current) return null;
-      if (current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt) return current;
+      if (!this.isRejected(current) && (current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt)) {
+        return current;
+      }
       try {
         return await withTimeout(this.renewOnce(current), this.renewalTimeoutMs ?? RENEWAL_TIMEOUT_MS);
       } catch (err) {
@@ -2039,7 +2077,7 @@ export class UdbProject {
       const tok = await this.renewWithRetry(skewMs);
       this.refreshFailures = 0;
       this.renewalRetryAt = 0;
-      if (tok && (tok.expiresAt === 0 || Date.now() < tok.expiresAt)) {
+      if (tok && !this.isRejected(tok) && (tok.expiresAt === 0 || Date.now() < tok.expiresAt)) {
         this.poisoned = false;
         this.lastRefreshError = null;
         this.notifiedRefreshError = null;
@@ -2051,8 +2089,8 @@ export class UdbProject {
       this.refreshFailures = (this.refreshFailures ?? 0) + 1;
       this.renewalRetryAt = Date.now() + jitteredBackoffMs(this.refreshFailures, BG_REFRESH_MIN_MS, BG_REFRESH_MAX_BACKOFF_MS);
       const tok = await Promise.resolve(this.tokenStore.load()).catch(() => null);
-      if (!tok || (tok.expiresAt > 0 && Date.now() >= tok.expiresAt)) {
-        // Fail closed: drop the dead bearer so no call goes out with it.
+      if (!tok || this.isRejected(tok) || (tok.expiresAt > 0 && Date.now() >= tok.expiresAt)) {
+        // Fail closed: drop the dead (or refused) bearer so no call goes out with it.
         this.poisoned = true;
         this.clearBearerCredentials();
       }
@@ -2094,24 +2132,61 @@ export class UdbProject {
       return;
     }
     const tok = await this.tokenStore.load();
-    if (!tok || !tok.expiresAt) return;
+    if (!tok) return;
+    // A bearer the broker refused is renewed whatever its expiry. While it cannot
+    // be renewed the call is refused here; the background refresher retries with
+    // backoff, so a refused credential never turns into a sign-in per call.
+    const rejected = this.isRejected(tok);
+    if (rejected && this.poisoned) throw new SessionExpiredError(this.lastRefreshError ?? undefined);
+    if (!rejected && !tok.expiresAt) return;
     const skew = refreshSkewMs(tok);
-    if (Date.now() + skew < tok.expiresAt) return;
+    if (!rejected && Date.now() + skew < tok.expiresAt) return;
     if (!this.refreshInFlight && (this.renewalRetryAt ?? 0) > Date.now()) {
       // A renewal just failed; the background refresher owns the next attempt.
-      if (Date.now() < tok.expiresAt) return;
+      if (!rejected && Date.now() < tok.expiresAt) return;
       throw new SessionExpiredError(this.lastRefreshError ?? undefined);
     }
     let renewed: StoredToken | null;
     try {
       renewed = await this.refreshIfNeeded(skew);
     } catch (err) {
-      if (!(err instanceof CredentialBindingError) && Date.now() < tok.expiresAt) return;
+      if (!rejected && !(err instanceof CredentialBindingError) && Date.now() < tok.expiresAt) return;
       throw new SessionExpiredError(err);
     }
-    if (!renewed || (renewed.expiresAt > 0 && Date.now() >= renewed.expiresAt)) {
+    if (!renewed || this.isRejected(renewed) || (renewed.expiresAt > 0 && Date.now() >= renewed.expiresAt)) {
       throw new SessionExpiredError(this.lastRefreshError ?? undefined);
     }
+  }
+
+  /** Whether the broker refused `tok`'s access token before its local expiry. */
+  private isRejected(tok: StoredToken | null | undefined): boolean {
+    return Boolean(this.rejectedBearer) && tok?.accessToken === this.rejectedBearer;
+  }
+
+  /** The broker answered UNAUTHENTICATED to a call that carried `sent`. Returns true
+   *  when `sent` is the bearer this connection owns (a `connectEnterprise` session,
+   *  an exchanged API key) and it is now marked for renewal, so the call may be made
+   *  once more with the renewed bearer. The broker refuses authentication before any
+   *  handler runs, so the repeat cannot apply a write twice. A bearer the connection
+   *  does not own (a configured bearer, an `asUser` bearer) is never renewed, and a
+   *  bearer renewed moments ago that is refused again is not renewed again. */
+  private bearerRejected(sent: string, err: unknown): boolean {
+    if (!sent || (err as { code?: unknown } | null)?.code !== grpc.status.UNAUTHENTICATED) return false;
+    // A local refusal never reached the broker.
+    if (err instanceof SessionExpiredError) return false;
+    if (this.closed || this.credentialTerminal) return false;
+    if (!RETAINED_LOGINS.has(this) && !RETAINED_API_KEYS.has(this)) return false;
+    // Already marked by a concurrent call; its renewal is shared.
+    if (sent === this.lastRejected) return true;
+    // Not the owner's bearer, or one an ordinary refresh already replaced.
+    if (sent !== this.sharedMeta?.bearerToken) return false;
+    if (this.lastRejectedAt && Date.now() - this.lastRejectedAt < REJECTED_RENEW_INTERVAL_MS) return false;
+    this.lastRejected = sent;
+    this.lastRejectedAt = Date.now();
+    this.rejectedBearer = sent;
+    // Wake the background refresher, so a renewal that fails is retried with backoff.
+    if (this.refreshTimer) this.armTimer(0);
+    return true;
   }
 
   /** The synchronous check streaming calls get: refuse a session already known dead. */
@@ -2126,7 +2201,16 @@ export class UdbProject {
     const unary = core.unary.bind(core);
     core.unary = (async (fullName: string, method: string, request: any, call?: CallOptions) => {
       await this.ensureCallCredential(call);
-      return unary(fullName, method, request, call);
+      const sent = delegatesBearer(call) ? "" : (core.opts?.bearerToken ?? "");
+      try {
+        return await unary(fullName, method, request, call);
+      } catch (err) {
+        // The broker refused the owned bearer this call carried (a restarted broker,
+        // a revoked session): renew it and make the call exactly once more.
+        if (fullName === AUTHN_SERVICE || !this.bearerRejected(sent, err)) throw err;
+        await this.ensureCallCredential(call);
+        return unary(fullName, method, request, call);
+      }
     }) as UdbCore["unary"];
     for (const name of ["serverStream", "clientStream", "bidiStream"] as const) {
       const original = (core as any)[name].bind(core);
@@ -2218,7 +2302,8 @@ export class UdbProject {
     if (this.credentialTerminal) throw this.credentialTerminal;
     const current = await this.tokenStore.load();
     if (!current) return null;
-    const fresh = current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt;
+    const fresh =
+      !this.isRejected(current) && (current.expiresAt === 0 || Date.now() + skewMs < current.expiresAt);
     if (fresh) return current;
     if (!this.refreshInFlight) {
       this.refreshInFlight = (async () => {
@@ -2265,6 +2350,9 @@ export class UdbProject {
           delay = tok.expiresAt - refreshSkewMs(tok) - Date.now();
           if (delay < BG_REFRESH_MIN_MS) delay = BG_REFRESH_MIN_MS;
         }
+        // A bearer the broker refused is renewed as soon as the backoff allows.
+        const rejected = this.isRejected(tok);
+        if (rejected) delay = BG_REFRESH_MIN_MS;
         // Jittered exponential backoff across consecutive failures (1s, 2s, 4s …
         // 60s), recorded by the failed renewal, so a failing refresh/re-exchange is
         // retried without hot-looping and many clients do not retry in lockstep.
@@ -2278,7 +2366,7 @@ export class UdbProject {
         }
         // While poisoned, back off from the 1s floor so a permanently-dead token
         // doesn't hot-loop the refresh RPC.
-        if (this.poisoned && delay < BG_REFRESH_RETRY_MS) delay = BG_REFRESH_RETRY_MS;
+        if (this.poisoned && !rejected && delay < BG_REFRESH_RETRY_MS) delay = BG_REFRESH_RETRY_MS;
         this.armTimer(delay);
       })
       .catch(() => this.armTimer(BG_REFRESH_RETRY_MS));
@@ -2301,7 +2389,7 @@ export class UdbProject {
       // The renewal records its own outcome (failure count, poison, callback).
       await this.refreshIfNeeded(refreshSkewMs(before));
       const tok = await this.tokenStore.load();
-      if (tok && (tok.expiresAt === 0 || Date.now() < tok.expiresAt) && !this.refreshRejected) {
+      if (tok && !this.isRejected(tok) && (tok.expiresAt === 0 || Date.now() < tok.expiresAt) && !this.refreshRejected) {
         this.refreshFailures = 0;
         this.poisoned = false;
         this.lastRefreshError = null;

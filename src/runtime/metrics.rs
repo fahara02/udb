@@ -1115,6 +1115,9 @@ impl PrometheusMetrics {
             Box::new(livequery_active_streams.clone()),
             Box::new(livequery_journal_scans.clone()),
             Box::new(vector_hybrid_fallbacks().clone()),
+            Box::new(auth_resolve_seconds().clone()),
+            Box::new(rpc_total_seconds().clone()),
+            Box::new(metering_events_lost().clone()),
         ] {
             registry.register(collector)?;
         }
@@ -1363,6 +1366,66 @@ pub(crate) fn vector_hybrid_fallbacks() -> &'static prometheus::IntCounter {
         .expect("udb_vector_hybrid_fallback_total is a valid metric name")
     })
 }
+
+/// Time the credential layer spends resolving a caller (bearer verification and
+/// its live-state check, API key, client certificate) before the handler runs.
+/// `udb_grpc_duration_seconds` starts inside the handler, so without this the
+/// cost of authenticating a call is invisible. Process global: the layer holds
+/// no `MetricsRecorder` handle.
+pub(crate) fn auth_resolve_seconds() -> &'static prometheus::HistogramVec {
+    static H: std::sync::OnceLock<prometheus::HistogramVec> = std::sync::OnceLock::new();
+    H.get_or_init(|| {
+        prometheus::HistogramVec::new(
+            prometheus::HistogramOpts::new(
+                "udb_auth_resolve_seconds",
+                "Time spent authenticating a call before its handler runs, by credential kind",
+            )
+            .buckets(LATENCY_BUCKETS.to_vec()),
+            &["credential"],
+        )
+        .expect("udb_auth_resolve_seconds is a valid metric")
+    })
+}
+
+/// Whole-call time as the caller's connection sees it (credential resolution,
+/// method security, admission and the handler), to the response headers, by
+/// gRPC method path. The method set is fixed by the served protos.
+pub(crate) fn rpc_total_seconds() -> &'static prometheus::HistogramVec {
+    static H: std::sync::OnceLock<prometheus::HistogramVec> = std::sync::OnceLock::new();
+    H.get_or_init(|| {
+        prometheus::HistogramVec::new(
+            prometheus::HistogramOpts::new(
+                "udb_rpc_total_seconds",
+                "Whole-call time including authentication and admission, by gRPC method",
+            )
+            .buckets(LATENCY_BUCKETS.to_vec()),
+            &["method"],
+        )
+        .expect("udb_rpc_total_seconds is a valid metric")
+    })
+}
+
+/// Usage-metering events that were not stored, by reason (`queue_full`,
+/// `write_failed`). Usage reads under-count by exactly this many.
+pub(crate) fn metering_events_lost() -> &'static prometheus::IntCounterVec {
+    static C: std::sync::OnceLock<prometheus::IntCounterVec> = std::sync::OnceLock::new();
+    C.get_or_init(|| {
+        prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_metering_events_lost_total",
+                "Usage-metering events not stored, by reason",
+            ),
+            &["reason"],
+        )
+        .expect("udb_metering_events_lost_total is a valid metric")
+    })
+}
+
+/// Latency buckets for per-call timers: fine below 10 ms, where a healthy call
+/// lives, out to the multi-second stalls worth catching.
+const LATENCY_BUCKETS: [f64; 14] = [
+    0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+];
 
 fn cdc_topic_label(topic: &str) -> &'static str {
     let topic = topic.trim();
@@ -2197,3 +2260,49 @@ mod tests {
         );
     }
 }
+
+/// No-op bodies for every [`MetricsRecorder`] method without a default, for a
+/// test recorder that counts only the signals it asserts on:
+/// `impl MetricsRecorder for Counter { noop_required_metrics!(); fn ... }`.
+#[cfg(test)]
+macro_rules! noop_required_metrics {
+    () => {
+        fn inc_runs_total(&self, _: &str) {}
+        fn inc_operations_total(&self, _: &str, _: &str, _: &str) {}
+        fn observe_file_duration(&self, _: &str, _: f64) {}
+        fn set_blocked_operations(&self, _: &str, _: &str, _: i64) {}
+        fn inc_lint_warnings(&self, _: &str) {}
+        fn observe_run_duration(&self, _: &str, _: f64) {}
+        fn set_pending_files(&self, _: i64) {}
+        fn set_cdc_is_leader(&self, _: &str, _: bool) {}
+        fn inc_cdc_wal_messages_received_total(&self) {}
+        fn inc_cdc_events_published_total(&self, _: &str) {}
+        fn inc_cdc_errors_total(&self, _: &str) {}
+        fn set_cdc_lag_seconds(&self, _: f64) {}
+        fn set_cdc_outbox_depth(&self, _: i64) {}
+        fn set_cdc_dlq_depth(&self, _: i64) {}
+        fn observe_cdc_publish_duration_seconds(&self, _: f64) {}
+        fn inc_cdc_dlq_replayed_total(&self) {}
+        fn inc_cdc_duplicate_skipped_total(&self) {}
+        fn set_saga_active(&self, _: i64) {}
+        fn inc_saga_compensated_total(&self) {}
+        fn inc_saga_failed_compensations_total(&self) {}
+        fn observe_saga_duration_seconds(&self, _: f64) {}
+        fn set_projection_tasks_pending(&self, _: &str, _: &str, _: &str, _: i64) {}
+        fn inc_projection_tasks_completed_total(&self, _: &str, _: &str, _: &str) {}
+        fn inc_projection_tasks_failed_total(&self, _: &str, _: &str, _: &str) {}
+        fn observe_projection_lag_seconds(&self, _: &str, _: &str, _: &str, _: f64) {}
+        fn inc_projection_reconciliation_repairs_total(&self, _: &str, _: &str) {}
+        fn set_projection_oldest_pending_age_seconds(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+            _: &str,
+            _: f64,
+        ) {
+        }
+    };
+}
+#[cfg(test)]
+pub(crate) use noop_required_metrics;

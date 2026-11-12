@@ -6,10 +6,12 @@
 //! always taken from the VERIFIED claim, never the request body.
 //!
 //! Doctrine (Phase 9):
-//! - **Metering NEVER fails the metered request.** The ingest seam
-//!   [`admission::record_usage`] is a single cheap INSERT that log-and-swallows on
-//!   error and returns `Ok(())` — it is the seam the leader calls from the
-//!   admission hook (`native_helpers::admit_on`).
+//! - **Metering NEVER fails or slows the metered request.** The ingest seam
+//!   [`admission::record_usage`] (called from the admission hook,
+//!   `native_helpers::admit_on`) queues the event and returns at once; a
+//!   background writer stores queued events in batches, one statement per tenant
+//!   per flush (250 ms). Lost events (full queue, failed flush) are counted and
+//!   reported loudly, never silently.
 //! - **Durable, not in-memory.** Usage is summed from durable rows (a counter in
 //!   RAM lies across restarts and replicas). CheckQuota is PURE aggregation: a
 //!   windowed durable SUM compared against the rule limit via the deterministic

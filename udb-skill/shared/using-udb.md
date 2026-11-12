@@ -312,7 +312,7 @@ there but I'm still denied." Migrate those to `policy_rules` (Surface 1).
 
 Pick the developer's language. Default data target `localhost:50051` (plaintext
 in dev). **Set `authTarget` too whenever the app uses auth/native services.**
-Current published baseline is **UDB 0.6.14** with wire protocol **1.0.0**; keep
+Current published baseline is **UDB 0.6.15** with wire protocol **1.0.0**; keep
 the broker and SDK package on the same product version unless deliberately
 testing compatibility. The platform-service wave (Vault, Metering, Scheduler,
 Search, Webhook, Workflow, Lock, LiveQuery, Config, Backup, Embedding) and the
@@ -336,7 +336,7 @@ Inserting a new row*).
 
 ### TypeScript / Node — `@udb_plus/sdk`
 ```bash
-npm i @udb_plus/sdk@0.6.14
+npm i @udb_plus/sdk@0.6.15
 ```
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -358,7 +358,7 @@ Adapters for Express / Fastify / Next.js under `adapters/`.
 
 ### Python — `udb-client`
 ```bash
-pip install udb-client==0.6.14        # or: pip install "udb-client[pydantic]==0.6.14"
+pip install udb-client==0.6.15        # or: pip install "udb-client[pydantic]==0.6.15"
 ```
 ```python
 from udb_client import Metadata, UdbClient, decode_records
@@ -379,7 +379,7 @@ has `set_credentials()` hot-swap, and `login_and_adopt_tenant(user, pass)`.
 
 ### Go — `github.com/fahara02/udb/sdk/go`
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.6.14
+go get github.com/fahara02/udb/sdk/go@v0.6.15
 ```
 ```go
 cfg := udbclient.Config{Target: "localhost:50051", AuthTarget: "localhost:50061",
@@ -409,7 +409,7 @@ hot-swap.
 
 ### C# — `Udb.Client`
 ```bash
-dotnet add package Udb.Client --version 0.6.14
+dotnet add package Udb.Client --version 0.6.15
 ```
 ```csharp
 var meta = new UdbMetadata(TenantId:"acme", Purpose:"web.request",
@@ -421,7 +421,7 @@ var rows = await udb.SelectAsync(new SelectRequest { MessageType="shop.v1.Custom
 
 ### PHP / Laravel — `fahara02/udb-laravel`
 ```bash
-composer require fahara02/udb-laravel:^0.6.14   # needs PHP 8.1+, grpc PECL ext
+composer require fahara02/udb-laravel:^0.6.15   # needs PHP 8.1+, grpc PECL ext
 ```
 ```php
 $client = new UdbClient(['endpoint' => '127.0.0.1:50051', 'tls' => ['enabled' => false]]);
@@ -1526,8 +1526,12 @@ they need `UDB_AUTH_TARGET` (or `UDB_GRPC_TARGET`) and an admin bearer in
   (60 s, or idle TTL/10), so parallel calls of one user never queue on the
   session row. `UDB_SESSION_TTL_SECONDS` (86400) / `UDB_SESSION_IDLE_TTL_SECONDS` (3600).
 - `UDB_AUTH_VERDICT_CACHE_MS` (default 2000) — a broker remembers a bearer's
-  live-state verdict this long; a revocation on the same node is immediate, one
-  on another node lands within this time; `0` = check live state every call.
+  live-state verdict at most this long, and only while the trigger-maintained
+  `udb_authn.udb_auth_state_version` sequence is unchanged; triggers publish it
+  at commit to every node, so a revocation or suspension on any node (or in SQL)
+  is refused within milliseconds with no per-call database read; `0` = check
+  live state every call; `UDB_AUTH_STATE_READ_PER_CALL=true` = read the sequence
+  on every call (no delivery window, one statement per call).
 - `UDB_PASSWORD_HASH_SECRET` — keyed HMAC for native passwords; must be the SAME
   value at bootstrap and at serve, or login can't verify. Falls back to
   `UDB_SESSION_HASH_SECRET`.

@@ -8,11 +8,11 @@
 //! topics. This module is the bridge that turns those previously-dead event
 //! protos into real Kafka traffic.
 //!
-//! Emission is best-effort relative to the mutation (the mutation has already
-//! committed when we enqueue): an enqueue failure is logged, never fails the
-//! RPC. A fully transactional outbox (mutation + enqueue in one tx) is tracked
-//! as a hardening follow-up; the wire contract here is already what the CDC
-//! tailer and Spark consumers expect.
+//! Two paths: `emit` writes after the mutation has committed (an enqueue
+//! failure is logged, never fails the RPC); `write_in_tx` writes the outbox row
+//! and the durable `auth_audit_log` row on the mutation's own transaction, so
+//! all three commit together or the mutation fails. The outbox lag gauge is
+//! sampled by a background timer, never per event.
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -741,6 +741,49 @@ pub(crate) struct OutboxAuthEventSink {
     export_sinks: Vec<Arc<dyn super::audit_export::AuditExportSink>>,
     /// Records `audit_sink_failures` so a degraded export pipeline is alertable.
     metrics: Arc<dyn crate::metrics::MetricsRecorder>,
+    /// True once [`Self::with_metrics`] wired a real recorder; the background
+    /// lag sampler only runs when there is a gauge to feed.
+    metrics_wired: bool,
+    /// How often the background task samples the auth outbox lag gauge.
+    lag_sample_interval: std::time::Duration,
+    /// Set once the background lag sampler has been spawned for this sink.
+    lag_sampler_started: std::sync::atomic::AtomicBool,
+    /// The sampler holds only a weak handle to this; it exits once the sink is
+    /// dropped.
+    alive: Arc<()>,
+}
+
+/// Default period of the background auth outbox lag sample. The lag gauge is an
+/// operator signal, not a per-request fact, so it is sampled on this timer and
+/// never on the request path.
+const AUTH_OUTBOX_LAG_SAMPLE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// One sample of the auth outbox lag (age of the oldest un-relayed auth event)
+/// into the `udb_auth_outbox_lag_seconds` gauge. Runs on the background sampler
+/// only, on the sink's own pool, never on a request's connection.
+async fn sample_auth_outbox_lag(
+    pool: &sqlx::PgPool,
+    outbox_relation: &str,
+    metrics: &dyn crate::metrics::MetricsRecorder,
+) {
+    let sql = format!(
+        "SELECT COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(created_at))), 0)::DOUBLE PRECISION \
+         FROM {rel} \
+         WHERE delivery_state IN ('pending', 'publishing') \
+           AND (topic LIKE 'udb.authn.%' \
+                OR topic LIKE 'udb.authz.%' \
+                OR topic LIKE 'udb.apikey.%' \
+                OR topic LIKE 'udb.idp.%' \
+                OR topic LIKE 'udb.ops.%')",
+        rel = outbox_relation
+    );
+    match sqlx::query_scalar::<_, f64>(&sql).fetch_one(pool).await {
+        Ok(seconds) => metrics.set_auth_outbox_lag_seconds(seconds.max(0.0)),
+        Err(err) => tracing::warn!(
+            error = %err,
+            "failed to sample auth outbox lag"
+        ),
+    }
 }
 
 impl OutboxAuthEventSink {
@@ -752,7 +795,41 @@ impl OutboxAuthEventSink {
             outbox_relation: outbox_relation.into(),
             export_sinks: Vec::new(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
+            metrics_wired: false,
+            lag_sample_interval: AUTH_OUTBOX_LAG_SAMPLE_INTERVAL,
+            lag_sampler_started: std::sync::atomic::AtomicBool::new(false),
+            alive: Arc::new(()),
         }
+    }
+
+    /// Start the background lag sampler once per sink. It sleeps first, then
+    /// samples, so emitting an event never waits on (or triggers) the lag query.
+    /// No-op without a wired metrics recorder or outside a Tokio runtime.
+    fn ensure_lag_sampler(&self) {
+        use std::sync::atomic::Ordering;
+        if !self.metrics_wired || self.lag_sampler_started.load(Ordering::Acquire) {
+            return;
+        }
+        let Ok(handle) = tokio::runtime::Handle::try_current() else {
+            return;
+        };
+        if self.lag_sampler_started.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        let pool = self.pool.clone();
+        let relation = self.outbox_relation.clone();
+        let metrics = self.metrics.clone();
+        let alive = Arc::downgrade(&self.alive);
+        let every = self.lag_sample_interval;
+        handle.spawn(async move {
+            loop {
+                tokio::time::sleep(every).await;
+                if alive.upgrade().is_none() {
+                    break;
+                }
+                sample_auth_outbox_lag(&pool, &relation, metrics.as_ref()).await;
+            }
+        });
     }
 
     /// Attach the configured immutable-export sinks (Phase L3 task2).
@@ -770,6 +847,7 @@ impl OutboxAuthEventSink {
         metrics: Arc<dyn crate::metrics::MetricsRecorder>,
     ) -> Self {
         self.metrics = metrics;
+        self.metrics_wired = true;
         self
     }
 
@@ -885,30 +963,6 @@ impl OutboxAuthEventSink {
         .map_err(|e| format!("auth outbox enqueue failed for topic {}: {e}", event.topic))?;
         Ok(envelope)
     }
-
-    async fn record_auth_outbox_lag<'c, E>(&self, executor: E)
-    where
-        E: sqlx::Executor<'c, Database = sqlx::Postgres>,
-    {
-        let sql = format!(
-            "SELECT COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(created_at))), 0)::DOUBLE PRECISION \
-             FROM {rel} \
-             WHERE delivery_state IN ('pending', 'publishing') \
-               AND (topic LIKE 'udb.authn.%' \
-                    OR topic LIKE 'udb.authz.%' \
-                    OR topic LIKE 'udb.apikey.%' \
-                    OR topic LIKE 'udb.idp.%' \
-                    OR topic LIKE 'udb.ops.%')",
-            rel = self.outbox_relation
-        );
-        match sqlx::query_scalar::<_, f64>(&sql).fetch_one(executor).await {
-            Ok(seconds) => self.metrics.set_auth_outbox_lag_seconds(seconds.max(0.0)),
-            Err(err) => tracing::warn!(
-                error = %err,
-                "failed to sample auth outbox lag"
-            ),
-        }
-    }
 }
 
 #[async_trait]
@@ -919,7 +973,9 @@ impl AuthEventSink for OutboxAuthEventSink {
         // handler that needs the event atomic with its mutation calls
         // `write_outbox_row` with its own transaction instead of the sink.
         let envelope = self.write_outbox_row(&self.pool, &event).await?;
-        self.record_auth_outbox_lag(&self.pool).await;
+        // The lag gauge is fed by a background timer, not by this call: the
+        // request path pays only for the writes the event needs.
+        self.ensure_lag_sampler();
         // Phase L3 task2: fan the already-redacted envelope out to the additional
         // immutable export sinks. The outbox write above is the durability
         // anchor, so an export-sink failure is recorded (audit_sink_failures)
@@ -939,20 +995,50 @@ impl AuthEventSink for OutboxAuthEventSink {
         conn: &mut sqlx::PgConnection,
         event: AuthEvent,
     ) -> Result<(), String> {
-        // Atomic path: persist ONLY the durable outbox row on the caller's
-        // transaction connection so it commits with the mutation. Export-sink
-        // fan-out is skipped here (post-durability; the CDC relay forwards the
-        // committed row).
+        // Atomic path: the outbox row and, when the durable Postgres audit table
+        // is configured, its `auth_audit_log` row are written on the caller's
+        // transaction connection, so the mutation, its event and its audit
+        // record commit or roll back together. Before this, a transactional
+        // event never reached `auth_audit_log` at all.
         //
-        // The lag-metric sample is DELIBERATELY NOT run on this connection: it is
-        // a best-effort observability query, and ANY failure of it on the tx
-        // connection (a schema/shape mismatch, a transient error) aborts the
-        // caller's transaction in Postgres — silently turning the subsequent
-        // commit into a rollback that drops the mutation AND this outbox row while
-        // the handler still returns Ok. Lag is sampled off-tx by the `emit` path
-        // and the background poller instead.
-        self.write_outbox_row(&mut *conn, &event).await?;
+        // An audit write failure is returned (the handler aborts the
+        // transaction): a committed mutation with no audit row is the one
+        // outcome this path must never produce. It is also counted
+        // (`audit_sink_failures`) and logged so the refusal is visible.
+        //
+        // Sinks without a transactional store (stdout, file, webhook) cannot join
+        // the transaction and are not run here; the CDC relay forwards the
+        // committed outbox row.
+        //
+        // The lag-metric sample is DELIBERATELY NOT run on this connection: ANY
+        // failure of an observability query on the tx connection aborts the
+        // caller's transaction in Postgres. Lag is sampled by the background
+        // timer only.
+        let envelope = self.write_outbox_row(&mut *conn, &event).await?;
+        for sink in &self.export_sinks {
+            if let Some(Err(err)) = sink.export_in_tx(&mut *conn, event.topic, &envelope).await {
+                self.metrics.record_audit_sink_failure(sink.name());
+                tracing::error!(sink = sink.name(), topic = event.topic, error = %err,
+                    "auth audit write inside the transaction failed; the mutation is refused");
+                return Err(format!(
+                    "auth audit write to {} failed for topic {}: {err}",
+                    sink.name(),
+                    event.topic
+                ));
+            }
+        }
+        self.ensure_lag_sampler();
         Ok(())
+    }
+}
+
+#[cfg(test)]
+impl OutboxAuthEventSink {
+    /// Override the background lag-sample period (tests use a short one to see
+    /// a sample land, or a very long one to prove no sample is taken).
+    pub(crate) fn with_lag_sample_interval(mut self, every: std::time::Duration) -> Self {
+        self.lag_sample_interval = every;
+        self
     }
 }
 
@@ -1289,6 +1375,34 @@ mod tests {
         assert!(
             validate_native_compliance("billing.invoice.created", "", "", "", "", false).is_ok()
         );
+    }
+
+    #[tokio::test]
+    async fn lag_sampler_runs_in_background_only_when_metrics_are_wired() {
+        // A lazy pool never connects unless a query runs; the hour-long period
+        // keeps the spawned sampler asleep for the whole test.
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://udb:udb@127.0.0.1:1/udb")
+            .expect("lazy pool");
+        let every = std::time::Duration::from_secs(3600);
+        use std::sync::atomic::Ordering;
+
+        // No recorder wired: nothing to feed, so no sampler is started.
+        let bare = OutboxAuthEventSink::new(pool.clone(), "s.outbox_events")
+            .with_lag_sample_interval(every);
+        bare.ensure_lag_sampler();
+        assert!(!bare.lag_sampler_started.load(Ordering::Acquire));
+
+        // Recorder wired: exactly one sampler, however many events are emitted.
+        let wired = OutboxAuthEventSink::new(pool, "s.outbox_events")
+            .with_metrics(Arc::new(crate::metrics::NoopMetrics))
+            .with_lag_sample_interval(every);
+        for _ in 0..3 {
+            wired.ensure_lag_sampler();
+        }
+        assert!(wired.lag_sampler_started.load(Ordering::Acquire));
+        // The sampler holds only a weak handle, so dropping the sink stops it.
+        assert_eq!(Arc::strong_count(&wired.alive), 1);
     }
 
     #[test]

@@ -269,7 +269,7 @@ var File_udb_core_apikey_entity_v1_api_key_proto protoreflect.FileDescriptor
 
 const file_udb_core_apikey_entity_v1_api_key_proto_rawDesc = "" +
 	"\n" +
-	"'udb/core/apikey/entity/v1/api_key.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xdd\x1e\n" +
+	"'udb/core/apikey/entity/v1/api_key.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xac\x1f\n" +
 	"\x06ApiKey\x12@\n" +
 	"\x06key_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06key_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05keyId\x12\x84\x01\n" +
@@ -351,9 +351,10 @@ const file_udb_core_apikey_entity_v1_api_key_proto_rawDesc = "" +
 	"\x16allowed_resources_json\x18\x18 \x01(\tBx\x82\xb7\x18t\n" +
 	"\x16allowed_resources_json\x12\x05JSONB\x18\x01:\v'[]'::jsonbZBOptional resource allowlist; empty delegates to policy engine onlyx\x01R\x14allowedResourcesJson\x12i\n" +
 	"\rmetadata_json\x18\x19 \x01(\tBD\x82\xb7\x18@\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x17Non-secret key metadatax\x01R\fmetadataJson:\xc6\b\xfa\xb6\x18\xa4\a\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x17Non-secret key metadatax\x01R\fmetadataJson:\x95\t\xfa\xb6\x18\xf3\a\n" +
 	"\bapi_keys\x12\tudb_authn\x18\x04 \x01*4Machine-to-machine API keys for integration accounts0\x018\x01\x8a\x016\n" +
-	"\x0fidx_apikey_hash\x12\x05BTREE:\x12deleted_at IS NULLZ\bkey_hash\x9a\x01\x11\n" +
+	"\x0fidx_apikey_hash\x12\x05BTREE:\x12deleted_at IS NULLZ\bkey_hash\x8a\x01L\n" +
+	"\x1didx_api_keys_service_identity\x12\x05BTREEZ$(metadata_json->>'service_identity')\x9a\x01\x11\n" +
 	"\apg_trgm\x12\x06public\xaa\x01R\n" +
 	"\x1dtrg_api_keys_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"\x1cudb_authn.touch_updated_at()*\x03ROW\xaa\x01P\n" +
 	"\x18trg_apikey_hash_required\x12\x06BEFORE\x1a\x06INSERT\"\x1fudb_authn.assert_api_key_hash()*\x03ROW\xc2\x01\xda\x01\n" +

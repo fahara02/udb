@@ -176,22 +176,18 @@ pub(crate) async fn increment(
 ) -> Result<IncrementOutcome, Status> {
     let mut conn = connect(client).await?;
     let full = data_key(tenant, namespace, key);
-    let meta = load_meta(&mut conn, tenant, namespace).await?;
-    let max_bytes = effective_max_bytes(meta.max_bytes);
-    // Same TTL resolution as `set`, applied only when this call creates the key.
-    let ttl = if ttl_seconds_if_created > 0 {
-        ttl_seconds_if_created
-    } else {
-        meta.default_ttl_seconds.max(0)
-    };
-    let (status, value, created, ttl_remaining): (i64, i64, i64, i64) =
+    // One round trip: the script reads the namespace meta itself (budget and
+    // default TTL, the same resolution as `set`), so the caller's TTL is sent
+    // as given and the default budget stands when the namespace declares none.
+    let (status, value, created, ttl_remaining, max_bytes): (i64, i64, i64, i64, i64) =
         redis::Script::new(BUDGETED_INCREMENT_LUA)
             .key(&full)
             .key(bytes_counter_key(tenant, namespace))
+            .key(meta_key(tenant, namespace))
             .arg(delta)
             .arg(max.max(0))
-            .arg(ttl)
-            .arg(max_bytes)
+            .arg(ttl_seconds_if_created.max(0))
+            .arg(effective_max_bytes(0))
             .invoke_async(&mut conn)
             .await
             .map_err(|err| map_err("budgeted INCRBY", err))?;

@@ -216,8 +216,8 @@ runs:
         echo "UDB_GENERIC_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
         echo "UDB_TENANT_CONN_BUDGET_DEFAULT=80" >> "$env_file"
         echo "UDB_TENANT_CONN_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
-        echo "UDB_FAIR_TOKENS_PER_SEC=5000" >> "$env_file"
-        echo "UDB_FAIR_BURST=10000" >> "$env_file"
+        # No UDB_FAIR_* rate: the benchmark runs the default, which refuses no
+        # tenant for calling often (a raised rate here hid a refusal storm).
 
         # Audit sink + secrets (JWT/encryption/session/hash). Test fixtures only.
         # The URL setting is an HTTP endpoint. Use the actual file exporter and

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
+	cachev1 "github.com/fahara02/udb/sdk/go/gen/udb/core/cache/services/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	servicesv1 "github.com/fahara02/udb/sdk/go/gen/udb/services/v1"
 	"google.golang.org/grpc"
@@ -149,7 +150,7 @@ func TestLiveLatencyProfile(t *testing.T) {
 		Notes: []string{
 			"Every read uses the same owned record/identity and persistent served channels",
 			"Warmup is excluded; every measured attempt is retained",
-			"Statistics describe this run and have no hard latency pass threshold",
+			"The idle and login-burst phases have no hard latency threshold; the page-load phase fails over its p95 budget (UDB_LIVE_PAGE_P95_BUDGET_MS, default 250) and, with UDB_LIVE_DB_DSN set, over its database transactions per call (UDB_LIVE_PAGE_XACT_BUDGET, default 2)",
 			"Login overlap counts are client in-flight calls, not measured server KDF concurrency",
 			"Core PostgreSQL histograms exclude authn durable-store SQL and SQLx protocol pings; complete query counts require database diagnostics",
 			"Optional cgroup counters describe the visible mount-root group; absent counters remain absent rather than implying zero throttling",
@@ -210,6 +211,107 @@ func TestLiveLatencyProfile(t *testing.T) {
 	burst.Statistics = liveLatencyStatistics(burst.Attempts)
 	burst.LoginStatistics = liveLatencyStatistics(burst.LoginAttempts)
 	report.Phases = append(report.Phases, burst)
+
+	// Page load: what one signed-in user's page does to the broker. A gateway
+	// authenticates and counts the request, then the route fans out data and
+	// cache reads, all on the same session at once. This phase has a hard
+	// budget: calls of one session must run in parallel, never queue behind
+	// each other (a per-session row lock or a per-tenant rate limit did).
+	// Database work per call: transactions counted over the page load, minus
+	// what the idle broker runs in the same time (its background loops).
+	// PostgreSQL publishes a backend's counters up to ~10 s late, so each
+	// reading waits for the previous activity to be published first.
+	xactDSN := os.Getenv("UDB_LIVE_DB_DSN")
+	var xactIdlePerSec float64
+	var xactBefore int64
+	xactReady := false
+	if xactDSN != "" {
+		time.Sleep(liveLatencyXactSettle)
+		if idleStart, ok := liveLatencyXacts(xactDSN); ok {
+			time.Sleep(liveLatencyXactSettle)
+			if idleEnd, ok := liveLatencyXacts(xactDSN); ok {
+				xactIdlePerSec = float64(idleEnd-idleStart) / liveLatencyXactSettle.Seconds()
+				xactBefore, xactReady = idleEnd, true
+			}
+		}
+		if !xactReady {
+			t.Errorf("page load: could not read database transaction counts with psql (UDB_LIVE_DB_DSN is set)")
+		}
+	}
+	pageStarted := time.Now()
+	page := liveLatencyPhase{Name: "page_load", Before: liveLatencySnapshot(ctx)}
+	pageCalls := append([]liveLatencyRead{}, reads[0],
+		liveLatencyRead{"AuthnService/Authenticate", func(callCtx context.Context) error {
+			who, callErr := NewAuthClient(authConn, meta).AuthenticateBearer(callCtx, login.GetAccessToken())
+			if callErr == nil && who.GetPrincipal().GetUserId() != meta.UserID {
+				return errors.New("profile_authenticate_identity_changed")
+			}
+			return callErr
+		}},
+		liveLatencyRead{"CacheService/Increment", func(callCtx context.Context) error {
+			return authGen.InvokeUnary(callCtx, "/udb.core.cache.services.v1.CacheService/Increment",
+				&cachev1.IncrementRequest{TenantId: tenant, Namespace: "latency-profile", Key: recordID, Delta: 1},
+				&cachev1.IncrementResponse{})
+		}},
+		liveLatencyRead{"CacheService/Get", func(callCtx context.Context) error {
+			return authGen.InvokeUnary(callCtx, "/udb.core.cache.services.v1.CacheService/Get",
+				&cachev1.GetRequest{TenantId: tenant, Namespace: "latency-profile", Key: recordID},
+				&cachev1.GetResponse{})
+		}},
+	)
+	const pageRounds, pageCallsPerRound = 5, 50
+	for round := 0; round < pageRounds; round++ {
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		wg.Add(pageCallsPerRound)
+		for i := 0; i < pageCallsPerRound; i++ {
+			read := pageCalls[i%len(pageCalls)]
+			go func() {
+				defer wg.Done()
+				attempt := liveLatencyCall(ctx, read, &active)
+				mu.Lock()
+				page.Attempts = append(page.Attempts, attempt)
+				mu.Unlock()
+			}()
+		}
+		wg.Wait()
+	}
+	page.After = liveLatencySnapshot(ctx)
+	page.Statistics = liveLatencyStatistics(page.Attempts)
+	report.Phases = append(report.Phases, page)
+	if xactReady {
+		time.Sleep(liveLatencyXactSettle)
+		if xactAfter, ok := liveLatencyXacts(xactDSN); ok {
+			background := xactIdlePerSec * time.Since(pageStarted).Seconds()
+			perCall := math.Max(0, float64(xactAfter-xactBefore)-background) / float64(len(page.Attempts))
+			report.PageTransactionsPerCall = &perCall
+			xactBudget := 2.0
+			if raw := os.Getenv("UDB_LIVE_PAGE_XACT_BUDGET"); raw != "" {
+				if parsed, parseErr := strconv.ParseFloat(raw, 64); parseErr == nil && parsed > 0 {
+					xactBudget = parsed
+				}
+			}
+			t.Logf("page load: %.2f database transactions per call (budget %.1f, idle background %.1f/s)", perCall, xactBudget, xactIdlePerSec)
+			if perCall > xactBudget {
+				t.Errorf("page load: %.2f database transactions per call is over the budget of %.1f; a call gained a round trip", perCall, xactBudget)
+			}
+		} else {
+			t.Errorf("page load: could not read database transaction counts after the page load")
+		}
+	}
+	pageBudgetMS := 250.0
+	if raw := os.Getenv("UDB_LIVE_PAGE_P95_BUDGET_MS"); raw != "" {
+		if parsed, parseErr := strconv.ParseFloat(raw, 64); parseErr == nil && parsed > 0 {
+			pageBudgetMS = parsed
+		}
+	}
+	for name, stat := range page.Statistics {
+		if stat.P95MS > pageBudgetMS {
+			t.Errorf("page load: %s p95 %.1f ms is over the %.0f ms budget for %d parallel calls of one session",
+				name, stat.P95MS, pageBudgetMS, pageCallsPerRound)
+		}
+	}
+
 	output := os.Getenv("UDB_LIVE_LATENCY_REPORT")
 	if output == "" {
 		output = filepath.Join("..", "..", "..", "bench-output", "latency-profile.json")
@@ -228,7 +330,34 @@ func TestLiveLatencyProfile(t *testing.T) {
 			}
 		}
 	}
-	t.Logf("latency profile recorded two phases, %d reads per RPC per phase, %d bounded login attempts", report.SamplesPerRead, len(burst.LoginAttempts))
+	t.Logf("latency profile recorded three phases, %d reads per RPC per phase, %d bounded login attempts", report.SamplesPerRead, len(burst.LoginAttempts))
+}
+
+// How long PostgreSQL may take to publish a backend's transaction counters.
+const liveLatencyXactSettle = 11 * time.Second
+
+// Transactions committed or rolled back so far in the broker's database,
+// summed over every server in the comma-separated DSN list (primary and
+// read replicas).
+func liveLatencyXacts(dsns string) (int64, bool) {
+	var total int64
+	for _, dsn := range strings.Split(dsns, ",") {
+		dsn = strings.TrimSpace(dsn)
+		if dsn == "" {
+			continue
+		}
+		out, err := exec.Command("psql", dsn, "-Atqc",
+			"SELECT xact_commit + xact_rollback FROM pg_stat_database WHERE datname = current_database()").Output()
+		if err != nil {
+			return 0, false
+		}
+		value, err := strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
+		if err != nil {
+			return 0, false
+		}
+		total += value
+	}
+	return total, true
 }
 
 type liveLatencyRead struct {
@@ -276,8 +405,11 @@ type liveLatencyReport struct {
 	LoginConcurrency    int                `json:"login_concurrency"`
 	LoginCallsPerWorker int                `json:"login_calls_per_worker"`
 	Phases              []liveLatencyPhase `json:"phases"`
-	Omissions           []string           `json:"omissions"`
-	Notes               []string           `json:"notes"`
+	// Database transactions the broker ran per page-load call, net of what the
+	// idle broker runs in the same time. Absent when UDB_LIVE_DB_DSN is unset.
+	PageTransactionsPerCall *float64 `json:"page_transactions_per_call,omitempty"`
+	Omissions               []string `json:"omissions"`
+	Notes                   []string `json:"notes"`
 }
 
 func liveLatencyCall(ctx context.Context, read liveLatencyRead, active *atomic.Int64) liveLatencyAttempt {

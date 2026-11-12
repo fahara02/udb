@@ -72,6 +72,12 @@ const DEFAULT_BATCH_LIMIT: i64 = 500;
 const DEFAULT_INTERVAL_SECS: u64 = 300;
 /// Epoch watermark for the first-ever run (RFC3339, bound as `timestamptz`).
 const EPOCH_WATERMARK: &str = "1970-01-01T00:00:00Z";
+/// Default settle lag: rows newer than this are left for a later tick even when no
+/// open transaction is visible (see [`settled_upper_bound`]).
+const DEFAULT_SETTLE_SECS: u64 = 30;
+/// Log when the export is held back this far behind the clock by an open
+/// transaction, so a stuck `idle in transaction` session is visible.
+const HELD_BACK_WARN_SECS: f64 = 600.0;
 
 /// Resolved-once configuration for the export worker. All env reads happen in
 /// [`EvidenceExportConfig::from_env`] (the single startup-config boundary for
@@ -91,6 +97,11 @@ pub struct EvidenceExportConfig {
     pub batch_limit: i64,
     /// Export cadence.
     pub interval: Duration,
+    /// How far behind the clock the export window always stays
+    /// (`UDB_COMPLIANCE_EVIDENCE_SETTLE_SECS`, default 30). On top of this the
+    /// window never passes the start of any transaction still open on the
+    /// database; this lag covers sessions the exporter's role cannot see.
+    pub settle: Duration,
     /// Whether the scheduled export runs at all. OFF unless explicitly enabled
     /// (`UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED=true`): the export writes the
     /// whole audit history into an object bucket, which an operator must opt
@@ -140,6 +151,11 @@ impl EvidenceExportConfig {
                 .filter(|value| *value > 0)
                 .unwrap_or(DEFAULT_INTERVAL_SECS),
         );
+        let settle = Duration::from_secs(
+            read("UDB_COMPLIANCE_EVIDENCE_SETTLE_SECS")
+                .and_then(|value| value.parse::<u64>().ok())
+                .unwrap_or(DEFAULT_SETTLE_SECS),
+        );
         let enabled = flag_enabled(read("UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED").as_deref());
         Self {
             backend,
@@ -148,6 +164,7 @@ impl EvidenceExportConfig {
             project,
             batch_limit,
             interval,
+            settle,
             enabled,
         }
     }
@@ -425,12 +442,8 @@ fn render_evidence_manifest(
 }
 
 /// Lazily self-create the durable export-state relation (no migration ordering),
-/// mirroring `PostgresAuditLogSink::ensure_table`.
+/// mirroring `PostgresAuditLogSink::ensure_table`, serialized per relation.
 async fn ensure_state_table(pool: &PgPool) -> Result<(), String> {
-    sqlx::query("CREATE SCHEMA IF NOT EXISTS udb_system")
-        .execute(pool)
-        .await
-        .map_err(|err| format!("ensure udb_system schema failed: {err}"))?;
     let sql = format!(
         "CREATE TABLE IF NOT EXISTS {rel} ( \
              worker VARCHAR(160) PRIMARY KEY, \
@@ -443,12 +456,58 @@ async fn ensure_state_table(pool: &PgPool) -> Result<(), String> {
         rel = EVIDENCE_STATE_RELATION,
         genesis = EVIDENCE_CHAIN_GENESIS
     );
-    sqlx::query(&sql)
-        .execute(pool)
-        .await
-        .map(|_| ())
-        .map_err(|err| format!("ensure {EVIDENCE_STATE_RELATION} failed: {err}"))
+    crate::runtime::core::audit::run_audit_ddl_serialized(
+        pool,
+        EVIDENCE_STATE_RELATION,
+        &["CREATE SCHEMA IF NOT EXISTS udb_system".to_string(), sql],
+    )
+    .await
 }
+
+/// The newest `occurred_at` the export may take this tick: the earlier of
+/// `clock - settle` and the start of the oldest transaction still open on this
+/// database.
+///
+/// `occurred_at` is `DEFAULT NOW()`, which is the WRITING transaction's start
+/// time, not its commit time. Two writers that start at t1 < t2 can commit in the
+/// order t2, t1; an export that read in between saw only the t2 row, advanced its
+/// watermark past t1, and never exported the t1 row once it committed. A row from
+/// a transaction still open has `occurred_at >= that transaction's xact_start`,
+/// and a transaction that has not started yet will stamp a later time, so every
+/// row below this bound is already committed and visible to the NEXT statement.
+/// The bound is read in its own statement BEFORE the window query for exactly
+/// that reason. Returns the bound and how far behind the clock it is (seconds).
+async fn settled_upper_bound(pool: &PgPool, settle: Duration) -> Result<(String, f64), String> {
+    let row = sqlx::query(SETTLED_UPPER_BOUND_SQL)
+        .bind(settle.as_secs_f64())
+        .fetch_one(pool)
+        .await
+        .map_err(|err| format!("read evidence export upper bound failed: {err}"))?;
+    let bound: String = row
+        .try_get("bound")
+        .map_err(|err| format!("decode evidence export upper bound failed: {err}"))?;
+    let lag: f64 = row.try_get("lag_secs").unwrap_or_default();
+    Ok((bound, lag))
+}
+
+/// See [`settled_upper_bound`]. Only client backends on this database count:
+/// autovacuum and other background workers never write audit rows, and counting
+/// them would stall the export for nothing.
+const SETTLED_UPPER_BOUND_SQL: &str = "WITH b AS ( \
+         SELECT LEAST( \
+             clock_timestamp() - make_interval(secs => $1::float8), \
+             COALESCE( \
+                 (SELECT MIN(xact_start) FROM pg_stat_activity \
+                   WHERE datname = current_database() \
+                     AND backend_type = 'client backend' \
+                     AND xact_start IS NOT NULL \
+                     AND pid <> pg_backend_pid()), \
+                 'infinity'::timestamptz) \
+         ) AS bound \
+     ) \
+     SELECT bound::text AS bound, \
+            EXTRACT(EPOCH FROM clock_timestamp() - bound)::float8 AS lag_secs \
+     FROM b";
 
 /// Load a source's high-water mark + carried chain head. A missing row (first
 /// run) yields the genesis/epoch default.
@@ -517,8 +576,10 @@ async fn save_state(
 /// (text tie-break); the general audit table by its BIGSERIAL `audit_id`
 /// (numeric tie-break), with its columns mapped onto the evidence record shape
 /// (`user_id` → actor, `resource_uri` → target, `purpose` → operation). Stable
-/// `(occurred_at, id)` ordering keeps the chain reproducible. `relation` is
-/// pre-validated. Pure — unit-tested.
+/// `(occurred_at, id)` ordering keeps the chain reproducible. `$4` is the
+/// [`settled_upper_bound`]: nothing at or past it is read, because a transaction
+/// still open may yet commit a row below the rows already visible there.
+/// `relation` is pre-validated. Pure — unit-tested.
 fn audit_window_sql(kind: EvidenceSourceKind, relation: &str) -> String {
     match kind {
         EvidenceSourceKind::AuthAudit => format!(
@@ -526,8 +587,9 @@ fn audit_window_sql(kind: EvidenceSourceKind, relation: &str) -> String {
                     target_resource, operation, outcome, reason_code, \
                     occurred_at::text AS occurred_at, envelope::text AS envelope \
              FROM {relation} \
-             WHERE occurred_at > $1::timestamptz \
-                OR (occurred_at = $1::timestamptz AND event_id::text > $2) \
+             WHERE (occurred_at > $1::timestamptz \
+                    OR (occurred_at = $1::timestamptz AND event_id::text > $2)) \
+               AND occurred_at < $4::timestamptz \
              ORDER BY occurred_at ASC, event_id ASC \
              LIMIT $3"
         ),
@@ -537,29 +599,33 @@ fn audit_window_sql(kind: EvidenceSourceKind, relation: &str) -> String {
                     '' AS outcome, '' AS reason_code, \
                     occurred_at::text AS occurred_at, '' AS envelope \
              FROM {relation} \
-             WHERE occurred_at > $1::timestamptz \
-                OR (occurred_at = $1::timestamptz \
-                    AND audit_id > COALESCE(NULLIF($2, '')::BIGINT, 0)) \
+             WHERE (occurred_at > $1::timestamptz \
+                    OR (occurred_at = $1::timestamptz \
+                        AND audit_id > COALESCE(NULLIF($2, '')::BIGINT, 0))) \
+               AND occurred_at < $4::timestamptz \
              ORDER BY occurred_at ASC, audit_id ASC \
              LIMIT $3"
         ),
     }
 }
 
-/// Drain one source's audit window past `state`'s watermark, reusing the
-/// canonical envelope for each row.
+/// Drain one source's audit window past `state`'s watermark and below
+/// `upper_bound` (from [`settled_upper_bound`]), reusing the canonical envelope
+/// for each row.
 async fn collect_records(
     pool: &PgPool,
     source: &EvidenceSource,
     state: &EvidenceState,
     project: &str,
     limit: i64,
+    upper_bound: &str,
 ) -> Result<Vec<EvidenceRecord>, String> {
     let sql = audit_window_sql(source.kind, &source.relation);
     let rows = sqlx::query(&sql)
         .bind(&state.last_occurred_at)
         .bind(&state.last_event_id)
         .bind(limit)
+        .bind(upper_bound)
         .fetch_all(pool)
         .await
         .map_err(|err| format!("query audit window {} failed: {err}", source.relation))?;
@@ -664,8 +730,27 @@ async fn export_source_once(
     }
 
     let state = load_state(pool, &source.state_key).await?;
-    let records =
-        collect_records(pool, source, &state, &config.project, config.batch_limit).await?;
+    // Read BEFORE the window query: see `settled_upper_bound`.
+    let (upper_bound, held_back_secs) = settled_upper_bound(pool, config.settle).await?;
+    if held_back_secs > HELD_BACK_WARN_SECS {
+        tracing::warn!(
+            relation = %source.relation,
+            held_back_secs,
+            upper_bound = %upper_bound,
+            "compliance evidence export is held back by a long-open transaction on this \
+             database (pg_stat_activity.xact_start); newer rows wait until it ends so none \
+             is skipped"
+        );
+    }
+    let records = collect_records(
+        pool,
+        source,
+        &state,
+        &config.project,
+        config.batch_limit,
+        &upper_bound,
+    )
+    .await?;
     if records.is_empty() {
         return Ok(0);
     }
@@ -939,6 +1024,7 @@ mod tests {
             project: "default".to_string(),
             batch_limit: 500,
             interval: Duration::from_secs(300),
+            settle: Duration::from_secs(30),
             enabled: true,
         };
         let manifest = render_evidence_manifest(
@@ -1026,6 +1112,26 @@ mod tests {
         );
     }
 
+    /// Both windows stop below the settled upper bound (`$4`), and the bound is
+    /// ANDed with the whole watermark disjunction, not just its second arm.
+    #[test]
+    fn audit_windows_stop_below_the_settled_upper_bound() {
+        for kind in [EvidenceSourceKind::AuthAudit, EvidenceSourceKind::DataAudit] {
+            let sql = audit_window_sql(kind, "udb_system.audit_log");
+            assert!(sql.contains("AND occurred_at < $4::timestamptz"), "{sql}");
+            assert!(
+                sql.contains("WHERE (occurred_at > $1::timestamptz"),
+                "{sql}"
+            );
+        }
+        // The bound counts open transactions on this database only, never the
+        // exporter's own session, and never background workers.
+        assert!(SETTLED_UPPER_BOUND_SQL.contains("MIN(xact_start) FROM pg_stat_activity"));
+        assert!(SETTLED_UPPER_BOUND_SQL.contains("datname = current_database()"));
+        assert!(SETTLED_UPPER_BOUND_SQL.contains("pid <> pg_backend_pid()"));
+        assert!(SETTLED_UPPER_BOUND_SQL.contains("backend_type = 'client backend'"));
+    }
+
     #[test]
     fn data_audit_window_maps_the_sink_columns() {
         let sql = audit_window_sql(EvidenceSourceKind::DataAudit, "udb_system.audit_log");
@@ -1082,7 +1188,10 @@ mod tests {
             .expect("reset watermark");
 
         let state = load_state(&pool, &source.state_key).await.expect("state");
-        let first = collect_records(&pool, &source, &state, "default", 2)
+        let (bound, _) = settled_upper_bound(&pool, Duration::ZERO)
+            .await
+            .expect("upper bound");
+        let first = collect_records(&pool, &source, &state, "default", 2, &bound)
             .await
             .expect("first window");
         assert_eq!(first.len(), 2);
@@ -1105,7 +1214,7 @@ mod tests {
         .expect("save watermark");
         let resumed = load_state(&pool, &source.state_key).await.expect("state");
         assert_eq!(resumed.chain_head, head);
-        let rest = collect_records(&pool, &source, &resumed, "default", 10)
+        let rest = collect_records(&pool, &source, &resumed, "default", 10, &bound)
             .await
             .expect("second window");
         assert_eq!(rest.len(), 1, "resumes after the last exported row");
@@ -1115,5 +1224,112 @@ mod tests {
             .execute(&pool)
             .await
             .expect("drop general audit table");
+    }
+
+    /// The skipped-row defect against real Postgres. Transaction A writes its
+    /// audit row first (so its `occurred_at` is earlier) but commits LAST; a later
+    /// row commits in between. The old window exported the later row, moved the
+    /// watermark past A's timestamp, and A's row was never exported. The settled
+    /// bound keeps the window below A's start while A is open, so after A commits
+    /// both rows export, in order, and nothing is skipped.
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with cargo test --lib live_evidence_export_does_not_skip_a_row_committed_out_of_order -- --ignored --nocapture"]
+    async fn live_evidence_export_does_not_skip_a_row_committed_out_of_order() {
+        use crate::runtime::service::live_tests::support::{
+            live_native_service_db_lock, live_pg_pool,
+        };
+        let _guard = live_native_service_db_lock().lock().await;
+        let pool = live_pg_pool().await;
+        let relation = "udb_system.evidence_inflight_audit";
+        sqlx::raw_sql(
+            "CREATE SCHEMA IF NOT EXISTS udb_system; \
+             DROP TABLE IF EXISTS udb_system.evidence_inflight_audit; \
+             CREATE TABLE udb_system.evidence_inflight_audit ( \
+                 audit_id BIGSERIAL PRIMARY KEY, \
+                 event_type VARCHAR(80) NOT NULL DEFAULT '', \
+                 tenant_id VARCHAR(64) NOT NULL DEFAULT '', \
+                 user_id VARCHAR(200) NOT NULL DEFAULT '', \
+                 correlation_id VARCHAR(120) NOT NULL DEFAULT '', \
+                 purpose VARCHAR(120) NOT NULL DEFAULT '', \
+                 resource_uri VARCHAR(400) NOT NULL DEFAULT '', \
+                 checksum_sha256 VARCHAR(80) NOT NULL DEFAULT '', \
+                 occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW());",
+        )
+        .execute(&pool)
+        .await
+        .expect("create in-flight audit fixture");
+        let source = evidence_sources("p", Some(relation))
+            .pop()
+            .expect("data audit source");
+        let fresh = EvidenceState::default();
+        let insert = |purpose: &'static str| {
+            format!(
+                "INSERT INTO {relation} (event_type, tenant_id, user_id, purpose) \
+                 VALUES ('data.upsert', 't1', 'u1', '{purpose}')"
+            )
+        };
+
+        // A: writes first, stays open.
+        let mut held = pool.begin().await.expect("begin A");
+        sqlx::query(&insert("held"))
+            .execute(&mut *held)
+            .await
+            .expect("insert A");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        // B: starts later, commits first.
+        sqlx::query(&insert("later"))
+            .execute(&pool)
+            .await
+            .expect("insert B");
+
+        // The defect, reproduced: an unbounded read sees only B, so a watermark
+        // advanced to B's timestamp would sit past A's.
+        let unbounded = collect_records(&pool, &source, &fresh, "default", 10, "infinity")
+            .await
+            .expect("unbounded window");
+        let ops: Vec<&str> = unbounded.iter().map(|r| r.operation.as_str()).collect();
+        assert_eq!(ops, vec!["later"], "precondition: B visible, A not yet");
+
+        // The fix: while A is open the window stops below A's start, so B is not
+        // exported ahead of A.
+        let (bound, _) = settled_upper_bound(&pool, Duration::ZERO)
+            .await
+            .expect("bound while A open");
+        let while_open = collect_records(&pool, &source, &fresh, "default", 10, &bound)
+            .await
+            .expect("bounded window while A open");
+        assert!(
+            while_open.is_empty(),
+            "nothing may export past an open transaction's start, got {:?}",
+            while_open.iter().map(|r| &r.operation).collect::<Vec<_>>()
+        );
+
+        held.commit().await.expect("commit A");
+        // Wait out any other session's open transaction (a parallel test binary)
+        // rather than asserting on a bound it holds back.
+        let mut after = Vec::new();
+        for _ in 0..50 {
+            let (bound, _) = settled_upper_bound(&pool, Duration::ZERO)
+                .await
+                .expect("bound after A commits");
+            after = collect_records(&pool, &source, &fresh, "default", 10, &bound)
+                .await
+                .expect("bounded window after A commits");
+            if after.len() == 2 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        let ops: Vec<&str> = after.iter().map(|r| r.operation.as_str()).collect();
+        assert_eq!(
+            ops,
+            vec!["held", "later"],
+            "both rows export, in occurred_at order, none skipped"
+        );
+
+        sqlx::raw_sql("DROP TABLE IF EXISTS udb_system.evidence_inflight_audit")
+            .execute(&pool)
+            .await
+            .expect("drop in-flight audit fixture");
     }
 }

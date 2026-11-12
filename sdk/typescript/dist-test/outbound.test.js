@@ -115,6 +115,12 @@ function fakeAuthClient(m) {
     // an api key is configured); assert its name is the canonical one.
     node_assert_1.strict.equal("x-api-key", "x-api-key");
 });
+// The broker skips its catalog comparison for a blank version. A fixed default
+// can never match a catalog versioned `generator-N`.
+(0, node_test_1.test)("no catalog version is sent unless the caller pins one", () => {
+    node_assert_1.strict.equal((0, client_1.metadata)(meta()).get("x-udb-client-catalog-version")[0], "");
+    node_assert_1.strict.equal((0, client_1.metadata)(meta({ clientCatalogVersion: "generator-3" })).get("x-udb-client-catalog-version")[0], "generator-3");
+});
 (0, node_test_1.test)("AuthzCache caches within TTL and expires after", async () => {
     const m = meta();
     const { client, calls, replies } = fakeAuthClient(m);

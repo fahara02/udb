@@ -271,13 +271,15 @@ async fn live_admission_metering_does_not_block_on_an_exhausted_pool() {
         );
     }
     let tenant = Uuid::new_v4().to_string();
-    tokio::time::timeout(
-        Duration::from_secs(5),
-        record_usage(&pool, &tenant, "", "cache.set", "request", 1, 0),
-    )
-    .await
-    .expect("best-effort telemetry must finish before pool acquisition's 10s deadline")
-    .expect("telemetry is fail-open");
+    let started = std::time::Instant::now();
+    record_usage(&pool, &tenant, "", "cache.set", "request", 1, 0)
+        .await
+        .expect("telemetry is fail-open");
+    assert!(
+        started.elapsed() < Duration::from_millis(50),
+        "the metered request must not wait for its usage row: {:?}",
+        started.elapsed()
+    );
     drop(held);
     tokio::time::timeout(
         Duration::from_secs(5),
@@ -286,16 +288,78 @@ async fn live_admission_metering_does_not_block_on_an_exhausted_pool() {
     .await
     .expect("strict metering resumes when the pool is available")
     .expect("strict durable write");
-    let rows: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM udb_metering.usage_events WHERE tenant_id=$1")
-            .bind(&tenant)
-            .fetch_one(&pool)
-            .await
-            .expect("read durable usage");
-    assert_eq!(
-        rows, 1,
-        "the timed-out admission must not later write behind the strict write"
+    // The queued admission event is stored by the background writer once the
+    // pool has room: not lost, not written in the request.
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        let rows: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM udb_metering.usage_events WHERE tenant_id=$1")
+                .bind(&tenant)
+                .fetch_one(&pool)
+                .await
+                .expect("read durable usage");
+        if rows == 2 {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the queued admission event was never stored (rows={rows})"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+/// Many metered calls become a few batched statements, and every one is stored.
+#[tokio::test]
+#[ignore = "requires live Postgres; CI runs every ignored lib test"]
+async fn live_admission_metering_batches_parallel_calls_without_loss() {
+    let (pool, _svc, _, _) = live_metering_fixture().await;
+    let tenant = Uuid::new_v4().to_string();
+    let other = Uuid::new_v4().to_string();
+    let started = std::time::Instant::now();
+    let mut calls = Vec::new();
+    for i in 0..400 {
+        let pool = pool.clone();
+        let tenant = if i % 4 == 0 {
+            other.clone()
+        } else {
+            tenant.clone()
+        };
+        calls.push(tokio::spawn(async move {
+            record_usage(&pool, &tenant, "p", "cache.write", "request", 2, 0)
+                .await
+                .expect("fail-open")
+        }));
+    }
+    for call in calls {
+        call.await.expect("join");
+    }
+    assert!(
+        started.elapsed() < Duration::from_millis(500),
+        "400 metered calls must not wait on the database: {:?}",
+        started.elapsed()
     );
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        let (a, b): (i64, i64) = sqlx::query_as(
+            "SELECT COALESCE(SUM(quantity) FILTER (WHERE tenant_id=$1),0)::BIGINT, \
+                    COALESCE(SUM(quantity) FILTER (WHERE tenant_id=$2),0)::BIGINT \
+             FROM udb_metering.usage_events WHERE tenant_id IN ($1,$2)",
+        )
+        .bind(&tenant)
+        .bind(&other)
+        .fetch_one(&pool)
+        .await
+        .expect("read durable usage");
+        if a == 600 && b == 200 {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "every queued event is stored under its own tenant (got {a}/{b}, want 600/200)"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
 }
 
 #[tokio::test]

@@ -1386,6 +1386,100 @@ live!(
     }
 );
 
+/// The `note` of row `a`, read through `svc` with the given consistency token
+/// (blank = the caller names no consistency).
+async fn note_of_a(svc: &DataBrokerService, tenant: &str, consistency: &str) -> String {
+    let request = crate::proto::SelectRequest {
+        context: Some(crate::proto::RequestContext {
+            tenant_id: tenant.to_string(),
+            consistency: consistency.to_string(),
+            ..Default::default()
+        }),
+        message_type: MSG.to_string(),
+        filter: json_to_struct(&json!({"id": "a"})),
+        ..Default::default()
+    };
+    let set = svc
+        .select(with_ctx(request, tenant))
+        .await
+        .expect("a read")
+        .into_inner();
+    let row: serde_json::Value = serde_json::from_slice(&set.records_json[0]).expect("a JSON row");
+    row["note"].as_str().unwrap_or_default().to_string()
+}
+
+live!(
+    default_reads_use_the_replica_and_still_see_the_callers_own_write_live,
+    {
+        let fx = fixture!(", note TEXT", vec![typed("note", "TEXT")]);
+        fx.upsert("a", json!({"note": "on primary"}))
+            .await
+            .expect("seed");
+        // A second database stands in for a replica. It is not in recovery, so it
+        // reports no replay lag (eligible) and no replay LSN (it can never prove
+        // it holds a write — exactly a replica that has not caught up).
+        let dsn = dp_live_pg_dsn().expect("dsn");
+        let database = format!("udb_ct_replica_{}", Uuid::new_v4().simple());
+        sqlx::raw_sql(&format!("CREATE DATABASE \"{database}\""))
+            .execute(&fx.pool)
+            .await
+            .expect("a database for the replica");
+        let (base, _) = dsn.rsplit_once('/').expect("a DSN with a database");
+        let replica_dsn = format!("{base}/{database}");
+        let replica = dp_pool(&replica_dsn).await;
+        sqlx::raw_sql(&format!(
+            "CREATE SCHEMA \"{schema}\"; \
+         CREATE TABLE \"{schema}\".rows (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, note TEXT); \
+         INSERT INTO \"{schema}\".rows VALUES ('a', '{tenant}', 'on replica')",
+            schema = fx.schema,
+            tenant = fx.tenant,
+        ))
+        .execute(&replica)
+        .await
+        .expect("the replica's copy");
+        let svc = super::data_plane_live::dp_service_with(&dsn, fx.manifest.clone(), |cfg| {
+            cfg.pg_replica_dsns = vec![replica_dsn.clone()];
+        })
+        .await;
+
+        // 1. Nothing named: the replica serves the read.
+        assert_eq!(note_of_a(&svc, &fx.tenant, "").await, "on replica");
+        // 2. Explicit strong stays on the primary.
+        assert_eq!(note_of_a(&svc, &fx.tenant, "strong").await, "on primary");
+
+        // 3. The caller writes through this broker; its next default read must
+        //    not see older data. The replica cannot prove it replayed the write,
+        //    so after the short own-write wait the primary serves it.
+        super::data_plane_live::served_upsert(
+            &svc,
+            &fx.tenant,
+            MSG,
+            fx.row("a", json!({"note": "written"})),
+            "",
+        )
+        .await
+        .expect("a write through the replica-configured broker");
+        assert_eq!(note_of_a(&svc, &fx.tenant, "").await, "written");
+
+        // 4. The opt-out keeps default reads on the primary.
+        let primary_only =
+            super::data_plane_live::dp_service_with(&dsn, fx.manifest.clone(), |cfg| {
+                cfg.pg_replica_dsns = vec![replica_dsn.clone()];
+                cfg.pg_replica_default_reads = Some(false);
+            })
+            .await;
+        assert_eq!(note_of_a(&primary_only, &fx.tenant, "").await, "written");
+
+        drop(svc);
+        drop(primary_only);
+        replica.close().await;
+        let _ = sqlx::raw_sql(&format!("DROP DATABASE \"{database}\" WITH (FORCE)"))
+            .execute(&fx.pool)
+            .await;
+        fx.finish().await;
+    }
+);
+
 // ── Audited cross-tenant reads ─────────────────────────────────────────────
 
 fn cross_tenant_request(target: &str, reason: &str) -> Request<crate::proto::SelectRequest> {

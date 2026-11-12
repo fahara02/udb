@@ -30,7 +30,9 @@ use serde_json::Value;
 
 /// One configured immutable-export destination for already-redacted compliance
 /// envelopes. Implementations MUST be non-blocking-safe (they run on the request
-/// path) and MUST NOT mutate the envelope.
+/// path) and MUST NOT mutate the envelope. A sink backed by Postgres also
+/// implements [`AuditExportSink::export_in_tx`] so an event written inside a
+/// transaction reaches it in that same transaction.
 #[async_trait]
 pub(crate) trait AuditExportSink: Send + Sync {
     /// Stable label used in logs and the `audit_sink_failures{sink=...}` metric.
@@ -40,6 +42,19 @@ pub(crate) trait AuditExportSink: Send + Sync {
     /// `envelope` is the fully-built compliance envelope JSON (already scrubbed
     /// of credential-shaped keys by the outbox sink).
     async fn export(&self, topic: &str, envelope: &Value) -> Result<(), String>;
+
+    /// Write one envelope on the caller's open Postgres transaction, so the
+    /// export commits (or rolls back) with the mutation and its outbox row.
+    /// Returns `None` when this sink has no transactional store (stdout, file,
+    /// webhook): those cannot join a database transaction.
+    async fn export_in_tx(
+        &self,
+        _conn: &mut sqlx::PgConnection,
+        _topic: &str,
+        _envelope: &Value,
+    ) -> Option<Result<(), String>> {
+        None
+    }
 }
 
 /// Append-only Postgres audit table, independent of the outbox. The table is
@@ -75,11 +90,9 @@ impl PostgresAuditLogSink {
     /// `CREATE SCHEMA`/`CREATE TABLE IF NOT EXISTS` for the durable audit log.
     /// Idempotent. The leading `CREATE SCHEMA IF NOT EXISTS udb_system` makes the
     /// sink fully self-creating even on a fresh database with no migration run.
+    /// Serialized per relation (advisory lock + collision retry), so two first
+    /// writes racing on a cold database cannot both CREATE and fail one export.
     pub(crate) async fn ensure_table(&self) -> Result<(), String> {
-        sqlx::query("CREATE SCHEMA IF NOT EXISTS udb_system")
-            .execute(&self.pool)
-            .await
-            .map_err(|e| format!("ensure udb_system schema failed: {e}"))?;
         let sql = format!(
             "CREATE TABLE IF NOT EXISTS {rel} ( \
                  audit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), \
@@ -101,10 +114,12 @@ impl PostgresAuditLogSink {
              )",
             rel = self.relation
         );
-        sqlx::query(&sql)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| format!("ensure auth_audit_log table failed: {e}"))?;
+        crate::runtime::core::audit::run_audit_ddl_serialized(
+            &self.pool,
+            &self.relation,
+            &["CREATE SCHEMA IF NOT EXISTS udb_system".to_string(), sql],
+        )
+        .await?;
         // Same hole as the data-plane sink had: `CREATE TABLE IF NOT EXISTS` is a
         // no-op against a pre-existing relation of ANY shape, so it proved the
         // table was creatable and never that the 14 columns the INSERT below binds
@@ -117,6 +132,59 @@ impl PostgresAuditLogSink {
             &AUTH_AUDIT_BOUND_COLUMNS,
         )
         .await
+    }
+
+    /// Lazy self-create: the durable audit table has no migration, so create
+    /// the schema + table on first write (idempotent `IF NOT EXISTS`). Guarded
+    /// by a flag so the DDL runs at most once per sink, not on every export.
+    /// Always runs on the sink's own pool, never on a caller's transaction.
+    async fn ensure_once(&self) -> Result<(), String> {
+        if !self.ensured.load(Ordering::Acquire) {
+            self.ensure_table().await?;
+            self.ensured.store(true, Ordering::Release);
+        }
+        Ok(())
+    }
+
+    /// The one INSERT both the standalone and the transactional export use, so
+    /// the bound columns cannot drift between the two paths.
+    async fn insert_row<'c, E>(
+        &self,
+        executor: E,
+        topic: &str,
+        envelope: &Value,
+    ) -> Result<(), String>
+    where
+        E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+    {
+        let s = |k: &str| envelope.get(k).and_then(Value::as_str).unwrap_or("");
+        let event_id = s("event_id");
+        let sql = format!(
+            "INSERT INTO {rel} \
+                 (event_id, event_type, tenant_id, actor, target_resource, operation, outcome, \
+                  reason_code, correlation_id, trace_id, decision_id, source_ip, redaction_version, envelope) \
+             VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::JSONB)",
+            rel = self.relation
+        );
+        sqlx::query(&sql)
+            .bind(event_id)
+            .bind(topic)
+            .bind(s("actor_tenant"))
+            .bind(s("actor"))
+            .bind(s("target_resource"))
+            .bind(s("operation"))
+            .bind(s("outcome"))
+            .bind(s("reason_code"))
+            .bind(s("correlation_id"))
+            .bind(s("trace_id"))
+            .bind(s("decision_id"))
+            .bind(s("source_ip"))
+            .bind(s("redaction_profile"))
+            .bind(envelope.to_string())
+            .execute(executor)
+            .await
+            .map(|_| ())
+            .map_err(|e| format!("auth audit-log insert failed: {e}"))
     }
 }
 
@@ -146,41 +214,22 @@ impl AuditExportSink for PostgresAuditLogSink {
     }
 
     async fn export(&self, topic: &str, envelope: &Value) -> Result<(), String> {
-        // Lazy self-create: the durable audit table has no migration, so create
-        // the schema + table on first write (idempotent `IF NOT EXISTS`). Guarded
-        // by a flag so the DDL runs at most once per sink, not on every export.
-        if !self.ensured.load(Ordering::Acquire) {
-            self.ensure_table().await?;
-            self.ensured.store(true, Ordering::Release);
+        self.ensure_once().await?;
+        self.insert_row(&self.pool, topic, envelope).await
+    }
+
+    async fn export_in_tx(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        topic: &str,
+        envelope: &Value,
+    ) -> Option<Result<(), String>> {
+        // The DDL guard runs on the pool, not on `conn`: a failed DDL statement
+        // on the caller's connection would abort its transaction.
+        if let Err(err) = self.ensure_once().await {
+            return Some(Err(err));
         }
-        let s = |k: &str| envelope.get(k).and_then(Value::as_str).unwrap_or("");
-        let event_id = s("event_id");
-        let sql = format!(
-            "INSERT INTO {rel} \
-                 (event_id, event_type, tenant_id, actor, target_resource, operation, outcome, \
-                  reason_code, correlation_id, trace_id, decision_id, source_ip, redaction_version, envelope) \
-             VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::JSONB)",
-            rel = self.relation
-        );
-        sqlx::query(&sql)
-            .bind(event_id)
-            .bind(topic)
-            .bind(s("actor_tenant"))
-            .bind(s("actor"))
-            .bind(s("target_resource"))
-            .bind(s("operation"))
-            .bind(s("outcome"))
-            .bind(s("reason_code"))
-            .bind(s("correlation_id"))
-            .bind(s("trace_id"))
-            .bind(s("decision_id"))
-            .bind(s("source_ip"))
-            .bind(s("redaction_profile"))
-            .bind(envelope.to_string())
-            .execute(&self.pool)
-            .await
-            .map(|_| ())
-            .map_err(|e| format!("auth audit-log insert failed: {e}"))
+        Some(self.insert_row(&mut *conn, topic, envelope).await)
     }
 }
 

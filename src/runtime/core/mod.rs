@@ -103,6 +103,10 @@ pub struct RuntimeInitReport {
     pub qdrant_configured: bool,
     pub s3_configured: bool,
     pub encryption_configured: bool,
+    /// Why a configured encryption key source (static key or Vault export)
+    /// failed to load, leaving encryption-at-rest off. `None` when a key loaded
+    /// or none was configured. The fail-closed startup gate names it.
+    pub encryption_load_error: Option<String>,
     pub mongodb_configured: bool,
     pub neo4j_configured: bool,
     pub clickhouse_configured: bool,
@@ -1212,6 +1216,34 @@ impl PgRequestConnection {
         self.context_is_clear = true;
         Ok(())
     }
+
+    /// Hand the connection back once the caller has its answer: the RESET runs
+    /// on a task that owns the connection, so the read does not wait one more
+    /// round trip for it. The connection reaches the pool only after a
+    /// completed RESET; a failed or cancelled one discards it (see `Drop`),
+    /// exactly as an inline reset does.
+    pub(crate) fn release_in_background(mut self, context: &RequestContext) {
+        if self.context_is_clear {
+            return;
+        }
+        let Some(sql) = reset_request_local_settings_sql(context) else {
+            self.context_is_clear = true;
+            return;
+        };
+        let Ok(runtime) = tokio::runtime::Handle::try_current() else {
+            // No runtime to run the RESET on: Drop discards the dirty session.
+            return;
+        };
+        runtime.spawn(async move {
+            let mut this = self;
+            if let Ok(connection) = this.pooled_mut() {
+                let executor: &mut sqlx::PgConnection = &mut **connection;
+                if executor.execute(sql.as_str()).await.is_ok() {
+                    this.context_is_clear = true;
+                }
+            }
+        });
+    }
 }
 
 impl Drop for PgRequestConnection {
@@ -1257,21 +1289,9 @@ pub(crate) async fn reset_request_local_settings_conn(
     conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>,
     context: &RequestContext,
 ) -> Result<(), tonic::Status> {
-    let settings = request_local_setting_pairs(context);
-    if settings.is_empty() {
+    let Some(sql) = reset_request_local_settings_sql(context) else {
         return Ok(());
-    }
-    // `RESET app.current_tenant_id;` is the correct inverse of a GUC set via
-    // `set_config(name, value, false)` — it restores the role/server default
-    // (effectively unset for our custom `app.*` namespace). Batch all RESETs
-    // into one statement to keep teardown a single round-trip. Keys are fixed
-    // identifiers from `session_context_pairs` (no user input), so direct
-    // interpolation is injection-safe.
-    let mut sql = String::with_capacity(settings.len() * 32);
-    for (key, _) in &settings {
-        use std::fmt::Write as _;
-        let _ = write!(sql, "RESET {key}; ");
-    }
+    };
     // IMPORTANT: run the multi-statement RESET string via `Executor::execute`
     // with a raw `&str` (the SIMPLE query protocol), which DOES support several
     // `;`-separated statements in one round-trip. The prepared/extended path
@@ -1286,6 +1306,27 @@ pub(crate) async fn reset_request_local_settings_conn(
         )
     })?;
     Ok(())
+}
+
+/// The one simple-protocol statement string that RESETs every request GUC
+/// `context` installs; None when it installs none.
+fn reset_request_local_settings_sql(context: &RequestContext) -> Option<String> {
+    let settings = request_local_setting_pairs(context);
+    if settings.is_empty() {
+        return None;
+    }
+    // `RESET app.current_tenant_id;` is the correct inverse of a GUC set via
+    // `set_config(name, value, false)` — it restores the role/server default
+    // (effectively unset for our custom `app.*` namespace). Batch all RESETs
+    // into one statement to keep teardown a single round-trip. Keys are fixed
+    // identifiers from `session_context_pairs` (no user input), so direct
+    // interpolation is injection-safe.
+    let mut sql = String::with_capacity(settings.len() * 32);
+    for (key, _) in &settings {
+        use std::fmt::Write as _;
+        let _ = write!(sql, "RESET {key}; ");
+    }
+    Some(sql)
 }
 
 #[allow(clippy::items_after_test_module)]
@@ -1463,6 +1504,38 @@ mod rls_conn_leak_tests {
             [("filter", "injected invalid read input")],
         ))?;
         conn.reset_context(context).await
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live Postgres; runs in the CI --ignored native live step"]
+    async fn rls_background_release_returns_the_same_clean_connection_live() {
+        let Some(dsn) = cancellation_live_dsn() else {
+            return;
+        };
+        let pool = cancellation_pool(&dsn).await;
+        let context = cancellation_context();
+        let initial_pid = acquire_clean_connection(&pool, &context).await;
+        for _ in 0..5 {
+            let mut conn =
+                PgRequestConnection::new(pool.acquire().await.expect("acquire for read"));
+            conn.install_context(&context)
+                .await
+                .expect("install context");
+            assert!(
+                !request_settings(
+                    conn.connection_mut().expect("guard owns connection"),
+                    &context
+                )
+                .await
+                .iter()
+                .all(|(_, value)| value.is_empty()),
+                "the request context must be installed before the read"
+            );
+            conn.release_in_background(&context);
+            // The single slot comes back only after the background RESET: the
+            // next user gets the same physical connection with no request GUC.
+            assert_eq!(acquire_clean_connection(&pool, &context).await, initial_pid);
+        }
     }
 
     #[tokio::test]

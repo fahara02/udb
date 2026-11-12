@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	"google.golang.org/grpc/codes"
@@ -26,6 +28,10 @@ type credentialResolver func(context.Context, string) (context.Context, error)
 type credentialProvider struct {
 	resolve func(context.Context) (string, error)
 	refusal func() error
+	// current is the bearer resolve would attach now; invalidate marks a bearer
+	// the broker refused so the next resolve renews it (see reconnect.go).
+	current    func() string
+	invalidate func(bearer string)
 }
 
 // A connected identity cannot change implicitly. In particular, a successfully
@@ -70,6 +76,11 @@ type credentialOwner struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	provider atomic.Pointer[credentialProvider]
+
+	// rejectMu guards the last bearer renewed because the broker refused it.
+	rejectMu       sync.Mutex
+	lastRejected   string
+	lastRejectedAt time.Time
 }
 
 type credentialRecoveryKey struct{}
@@ -88,6 +99,8 @@ func newCredentialOwner(u *Udb) *credentialOwner {
 	ctx, cancel := context.WithCancel(context.Background())
 	o := &credentialOwner{u: u, ctx: ctx, cancel: cancel}
 	u.Generated.setCredentialResolver(o.prepare)
+	rejected := o.bearerRejected
+	u.Generated.bearerRejected.Store(&rejected)
 	return o
 }
 

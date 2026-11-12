@@ -441,6 +441,15 @@ impl SecurityConfig {
             )
             .err()
             .unwrap_or_default();
+        // A durable auth-plane export or SIEM URL satisfies the gate above, but it
+        // does not cover data-plane mutations: an explicit non-durable data-plane
+        // sink (`UDB_AUDIT_SINK=stdout`) is its own violation. `serve()` repeats
+        // this against the fully-resolved (YAML + env) sink config.
+        if let Some(violation) = crate::runtime::core::audit::data_plane_audit_durability_violation(
+            &crate::runtime::config::AuditSinkConfig::from_env(),
+        ) {
+            errors.push(violation);
+        }
         // The dev default-allow escape hatch is an explicit misconfiguration in
         // production: refuse it (startup aborts via `hardened_startup_violations`)
         // rather than silently ignoring the operator's flag. Keyed on an explicit
@@ -3393,40 +3402,41 @@ pub fn turn_rest_credential(secret: &[u8], principal: &str, expiry_unix: i64) ->
 /// OWN dedicated `UDB_TURN_SECRET` — never the data-at-rest master key
 /// (`UDB_ENCRYPTION_KEY`): the TURN secret is shared with the coturn server, so
 /// reusing the master key would hand it to a third component. **Fails closed in
-/// production** ([`SecurityConfig::is_production`], i.e. `UDB_ENV=production`
-/// or the hardened TLS + service-identity posture): a missing secret returns
-/// `None`, so callers advertise STUN only / reject credential minting rather
-/// than minting against a well-known dev secret. Outside production a fixed dev
-/// secret is used (with a warning) so local flows work without configuration.
+/// any fail-closed posture** ([`fail_closed_mode`]: `UDB_ENV=production`, the
+/// hardened TLS + service-identity posture, `UDB_FAIL_CLOSED` or
+/// `UDB_ENTERPRISE_AUDIT`): a missing secret returns `None`, so callers
+/// advertise STUN only / reject credential minting rather than minting against
+/// a well-known dev secret. Otherwise a fixed dev secret is used (with a
+/// warning) so local flows work without configuration.
 /// Shared by the native WebRTC `TurnService` and the ws:// signalling bridge.
 pub fn resolve_turn_secret() -> Option<Vec<u8>> {
     resolve_turn_secret_with(
         std::env::var("UDB_TURN_SECRET").ok().as_deref(),
-        SecurityConfig::current().is_production(),
+        fail_closed_mode(),
     )
 }
 
 /// The pure TURN-secret decision behind [`resolve_turn_secret`]: an explicit
-/// non-blank `turn_secret` wins; otherwise production yields `None` (fail
-/// closed) and non-production the dev fallback. There is deliberately no
-/// master-key fallback. Unit-tested without touching the process environment.
+/// non-blank `turn_secret` wins; otherwise a fail-closed posture yields `None`
+/// and a dev posture the dev fallback. There is deliberately no master-key
+/// fallback. Unit-tested without touching the process environment.
 pub(crate) fn resolve_turn_secret_with(
     turn_secret: Option<&str>,
-    is_production: bool,
+    fail_closed: bool,
 ) -> Option<Vec<u8>> {
     if let Some(secret) = turn_secret.filter(|s| !s.trim().is_empty()) {
         return Some(secret.trim().as_bytes().to_vec());
     }
-    if is_production {
+    if fail_closed {
         tracing::warn!(
             "no TURN secret configured (set UDB_TURN_SECRET); TURN credential minting \
-             is disabled in production (failing closed)"
+             is disabled in a fail-closed posture"
         );
         None
     } else {
         tracing::warn!(
-            "no TURN secret configured; using a non-production dev fallback secret \
-             (set UDB_TURN_SECRET; production fails closed)"
+            "no TURN secret configured; using a dev fallback secret (set \
+             UDB_TURN_SECRET; fail-closed and production postures refuse the fallback)"
         );
         Some(b"udb-dev-turn-secret".to_vec())
     }

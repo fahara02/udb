@@ -207,6 +207,14 @@ fn increment_is_a_single_bounded_atomic_script() {
         .expect("byte counter charge");
     assert!(bound < write && write < measure && measure < expire && expire < charge);
     assert!(!script.contains("KEYS'"), "never the KEYS command");
+    // The namespace meta (budget, default TTL) is read inside the script, so
+    // an Increment is one Redis round trip, and the budget it enforces is the
+    // one it read in the same atomic step.
+    let meta = script
+        .find("redis.call('GET', KEYS[3])")
+        .expect("meta read in the script");
+    assert!(meta < bound, "meta resolved before any check or write");
+    assert!(script.contains("used + len_delta > max_bytes"));
 }
 
 /// Prefix sweeps MUST use SCAN, never KEYS, and the data-key match pattern is

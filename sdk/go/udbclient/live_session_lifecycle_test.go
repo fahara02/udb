@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"reflect"
 	"slices"
 	"strings"
@@ -682,5 +683,76 @@ func liveG1ExerciseTransactionStream(t *testing.T, ctx context.Context, sess *En
 	}
 	if !committed {
 		t.Fatal("transaction stream did not return COMMITTED")
+	}
+}
+
+// TestLiveBrokerRestartRecovery proves a Go client outlives a broker restart
+// without being recreated: the same ConnectEnterprise session reconnects and
+// keeps working on the data plane and the native control plane. It runs when
+// UDB_LIVE_BROKER_RESTART_CMD names a command (run with sh -c) that restarts
+// the broker on the same addresses and KEEPS its database (sessions, users and
+// tenant ids survive); a reset that recreates the database is a different
+// scenario. While the broker is down a call may fail UNAVAILABLE; any other
+// failure, or no recovery within 90s, fails the test.
+func TestLiveBrokerRestartRecovery(t *testing.T) {
+	restart := strings.TrimSpace(os.Getenv("UDB_LIVE_BROKER_RESTART_CMD"))
+	if os.Getenv("UDB_LIVE_SDK_TESTS") != "1" || restart == "" {
+		t.Skip("requires a live broker and UDB_LIVE_BROKER_RESTART_CMD")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	defer cancel()
+	sess, err := ConnectEnterprise(ctx, EnterpriseConfig{
+		Target: requiredLiveEnv(t, "UDB_GRPC_TARGET"), AuthTarget: requiredLiveEnv(t, "UDB_AUTH_GRPC_TARGET"),
+		Username: requiredLiveEnv(t, "UDB_LIVE_USERNAME"), Password: requiredLiveEnv(t, "UDB_LIVE_PASSWORD"),
+		TenantCode: requiredLiveEnv(t, "UDB_LIVE_TENANT"), ProjectID: requiredLiveEnv(t, "UDB_LIVE_PROJECT"),
+		Purpose: "go.live.broker-restart", Deadline: 5 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("ConnectEnterprise: code=%s", status.Code(err))
+	}
+	defer sess.Close()
+	probes := []struct {
+		name string
+		call func(context.Context) error
+	}{
+		{"data GetCapabilities", func(ctx context.Context) error {
+			_, err := sess.Data.Broker.GetCapabilities(sess.DataContext(ctx), &entityv1.CapabilitiesRequest{})
+			return err
+		}},
+		{"native ValidateSession", func(ctx context.Context) error {
+			_, err := sess.Auth.ValidateSession(sess.NativeContext(ctx), sess.Bearer())
+			return err
+		}},
+	}
+	for _, p := range probes {
+		if err := p.call(ctx); err != nil {
+			t.Fatalf("before restart, %s: code=%s", p.name, status.Code(err))
+		}
+	}
+
+	cmd := exec.CommandContext(ctx, "sh", "-c", restart)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("UDB_LIVE_BROKER_RESTART_CMD: %v", err)
+	}
+
+	for _, p := range probes {
+		deadline := time.Now().Add(90 * time.Second)
+		for {
+			err := p.call(ctx)
+			if err == nil {
+				break
+			}
+			if status.Code(err) != codes.Unavailable {
+				t.Fatalf("after restart, %s on the same session: code=%s err=%v", p.name, status.Code(err), err)
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("after restart, %s stayed UNAVAILABLE for 90s: %v", p.name, err)
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+	if err := sess.RefreshErr(); err != nil {
+		t.Fatalf("session reports a credential failure after the restart: %v", err)
 	}
 }

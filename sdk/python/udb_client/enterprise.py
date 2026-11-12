@@ -38,6 +38,14 @@ from ._credentials import (
     identity_from_principal,
     without_credentials,
 )
+from ._reconnect import (
+    BACKOFF_CAP_S,
+    LOGIN_ATTEMPTS,
+    LOGIN_BACKOFF_S,
+    WakeableStop,
+    jittered_backoff,
+    transient_login_error,
+)
 from .exceptions import UdbConfigurationError, UdbError
 from .metadata import Metadata
 from .project import UdbAsyncProject, UdbConfig, UdbProject
@@ -205,10 +213,18 @@ class EnterpriseSession(UdbProject):
         self._flight: RenewalFlight | None = None
         self._needs_recovery = False
         self._terminal_error: BaseException | None = None
-        self._stop_refresh = threading.Event()
+        # An access token the broker refused before its local expiry (a restarted
+        # broker that lost the session, a revoked session): it is renewed as if it
+        # were stale, and while it cannot be renewed calls are refused locally.
+        self._rejected = ""
+        # Consecutive background renewal failures (drives the 1s..60s backoff).
+        self._refresh_failures = 0
+        # Wakes the refresher early: when the broker refused the bearer, and on close.
+        self._wake_refresh = threading.Event()
+        self._stop_refresh = WakeableStop(self._wake_refresh)
         self._refresh_thread: threading.Thread | None = None
         try:
-            token, principal = self._login_and_verify()
+            token, principal = self._login_with_retry()
             self.tenant_state = TenantState(tenant_code=config.tenant_code)
             self.tenant_state.adopt(principal.tenant_id)
             self._adopt_principal(principal, token)
@@ -278,6 +294,19 @@ class EnterpriseSession(UdbProject):
             raise UdbError("udb: verified Login bearer is empty or expired")
         return token, verified.principal
 
+    def _login_with_retry(self) -> tuple[_Token, Any]:
+        """The first sign-in. A broker that is unreachable or restarting gets up to
+        LOGIN_ATTEMPTS attempts with jittered backoff, like a renewal; a refused
+        credential is final."""
+        for attempt in range(1, LOGIN_ATTEMPTS + 1):
+            try:
+                return self._login_and_verify()
+            except Exception as exc:  # noqa: BLE001 - only a transient failure is repeated
+                if attempt >= LOGIN_ATTEMPTS or not transient_login_error(exc):
+                    raise
+            time.sleep(jittered_backoff(attempt, LOGIN_BACKOFF_S, BACKOFF_CAP_S))
+        raise AssertionError("unreachable")
+
     def _check_renewed_principal(self, principal: Any) -> None:
         check_renewed_principal(principal, self._principal, self._pinned, self._metadata)
 
@@ -320,7 +349,7 @@ class EnterpriseSession(UdbProject):
         with self._state_lock:
             if self._terminal_error is not None:
                 raise self._terminal_error
-            if not force and self._token.valid(self._clock(), self.refresh_skew):
+            if not force and self._usable(self._token, self.refresh_skew):
                 return
             running = self._flight
             flight = running or RenewalFlight()
@@ -390,30 +419,71 @@ class EnterpriseSession(UdbProject):
         # A transient failure while the bearer is still valid must not fail closed.
         with self._state_lock:
             self._last_refresh_error = error
-            self._poisoned = isinstance(
-                error, UdbCredentialBindingError
-            ) or not self._token.valid(self._clock(), 0)
+            self._poisoned = (
+                isinstance(error, UdbCredentialBindingError)
+                or not self._token.valid(self._clock(), 0)
+                or self._is_rejected(self._token)
+            )
 
     def _next_refresh_wait(self) -> float:
         with self._state_lock:
             token = self._token
-        if token.expires_at is None:
-            return _REFRESH_IDLE_S
-        wait = token.expires_at - token.refresh_skew(self.refresh_skew) - self._clock()
-        return wait if wait > 0 else _REFRESH_MIN_S
+            rejected = self._is_rejected(token)
+            failures = self._refresh_failures
+        if rejected:
+            wait = _REFRESH_MIN_S
+        elif token.expires_at is None:
+            wait = _REFRESH_IDLE_S
+        else:
+            wait = token.expires_at - token.refresh_skew(self.refresh_skew) - self._clock()
+            wait = wait if wait > 0 else _REFRESH_MIN_S
+        if failures > 0:
+            # Back off 1s, 2s, 4s .. 60s across consecutive failures, never hot-looping.
+            wait = max(wait, jittered_backoff(failures, _REFRESH_MIN_S, BACKOFF_CAP_S))
+        return wait
 
     def _refresh_loop(self) -> None:
-        while not self._stop_refresh.wait(self._next_refresh_wait()):
+        while True:
+            self._wake_refresh.wait(self._next_refresh_wait())
+            self._wake_refresh.clear()
+            if self._stop_refresh.is_set():
+                return
             try:
                 self.refresh_if_needed()
                 self._publish_bearer()
             except Exception as exc:  # noqa: BLE001 - the loop must keep running
+                with self._state_lock:
+                    self._refresh_failures += 1
                 self._record_credential_error(exc)
+            else:
+                with self._state_lock:
+                    self._refresh_failures = 0
 
     def _start_refresh_loop(self) -> None:
         thread = threading.Thread(target=self._refresh_loop, name="udb-enterprise-refresh", daemon=True)
         self._refresh_thread = thread
         thread.start()
+
+    # ── a bearer the broker refused ───────────────────────────────────────
+    def _usable(self, token: _Token, skew: float) -> bool:
+        return token.valid(self._clock(), skew) and not self._is_rejected(token)
+
+    def _is_rejected(self, token: _Token) -> bool:
+        return bool(self._rejected) and token.access_token == self._rejected
+
+    def _owned_bearer(self) -> str:
+        with self._state_lock:
+            return self._bearer
+
+    def _invalidate_bearer(self, sent: str) -> None:
+        """Mark ``sent`` refused: the next call renews it (refresh, else sign in
+        again) and the refresher is woken, so a renewal that fails is retried with
+        backoff rather than once per call."""
+        with self._state_lock:
+            if self._bearer != sent:
+                return
+            self._rejected = self._token.access_token
+        self._wake_refresh.set()
 
     # ── what calls use ────────────────────────────────────────────────────
     def _credential_refusal(self) -> BaseException | None:

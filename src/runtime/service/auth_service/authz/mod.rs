@@ -782,19 +782,62 @@ fn tenant_from_domain(tenant_id: &str, domain: &str) -> String {
 }
 
 fn tuple_condition_expired(condition: &str, now: u64) -> bool {
+    tuple_condition_expiry(condition).is_some_and(|expires_at| expires_at <= now)
+}
+
+/// The positive `expires_at_unix` a tuple condition carries, if any.
+fn tuple_condition_expiry(condition: &str) -> Option<u64> {
     if condition.trim().is_empty() {
-        return false;
+        return None;
     }
-    let Ok(value) = serde_json::from_str::<serde_json::Value>(condition) else {
-        return false;
-    };
-    let Some(expires_at) = value
+    let value = serde_json::from_str::<serde_json::Value>(condition).ok()?;
+    let expires_at = value
         .get("expires_at_unix")
-        .and_then(serde_json::Value::as_i64)
-    else {
-        return false;
+        .and_then(serde_json::Value::as_i64)?;
+    u64::try_from(expires_at).ok().filter(|at| *at > 0)
+}
+
+/// The earlier of two optional expiry instants (unix seconds).
+fn earliest_expiry(current: Option<u64>, candidate: Option<u64>) -> Option<u64> {
+    match (current, candidate) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    }
+}
+
+/// What the last FULL durable snapshot load saw.
+#[derive(Debug, Clone)]
+struct LoadedSnapshotRevision {
+    /// Durable authz revision fingerprint the load was consistent with.
+    fingerprint: String,
+    full_loaded_at: Instant,
+    /// Earliest future expiry (unix seconds) among the loaded role bindings and
+    /// tuples: past it the snapshot still holds a grant the store no longer
+    /// serves, with no revision append to signal it.
+    next_expiry_unix: Option<u64>,
+}
+
+/// Whether a timed refresh must re-read the whole snapshot rather than confirm
+/// it with the revision read it already made. Pure for testing.
+///
+/// Full reload when: nothing was fully loaded yet; the durable fingerprint is
+/// unknown or moved; a loaded grant has expired since; or the full load is
+/// older than `max_age` (`0` disables the cheap path entirely).
+fn snapshot_needs_full_reload(
+    loaded: Option<&LoadedSnapshotRevision>,
+    durable_fingerprint: &str,
+    now_unix: u64,
+    max_age: Duration,
+) -> bool {
+    let Some(loaded) = loaded else {
+        return true;
     };
-    expires_at > 0 && (expires_at as u64) <= now
+    durable_fingerprint.is_empty()
+        || loaded.fingerprint != durable_fingerprint
+        || loaded
+            .next_expiry_unix
+            .is_some_and(|expires_at| expires_at <= now_unix)
+        || loaded.full_loaded_at.elapsed() >= max_age
 }
 
 /// Item 81: enrich a `ResourceRef` with the concrete manifest schema/table/store
@@ -1060,6 +1103,14 @@ pub struct AuthzServiceImpl {
     /// cannot overwrite the snapshot published by a completed mutation.
     snapshot_reload_lock: Arc<tokio::sync::Mutex<()>>,
     snapshot_ttl: Duration,
+    /// What the last FULL durable load saw (revision fingerprint, earliest
+    /// pending grant expiry, when). A timed refresh reads only the revision
+    /// fingerprint and skips the full reload while it still matches.
+    snapshot_revision: Arc<Mutex<Option<LoadedSnapshotRevision>>>,
+    /// Upper bound on how long the cheap revision check may stand in for a full
+    /// reload (`UDB_AUTHZ_SNAPSHOT_FULL_RELOAD_SECS`; `0` = always full reload).
+    /// Covers writes that bypass the revision fence (restore, raw SQL).
+    snapshot_full_reload_max_age: Duration,
     pg_pool: Option<PgPool>,
     event_sink: Arc<dyn AuthEventSink>,
     /// Records authz metrics (deny count). Defaults to a no-op; production wires
@@ -1091,6 +1142,8 @@ impl AuthzServiceImpl {
             snapshot_loaded_at: Arc::new(Mutex::new(Some(Instant::now()))),
             snapshot_reload_lock: Arc::new(tokio::sync::Mutex::new(())),
             snapshot_ttl: authz_snapshot_ttl(),
+            snapshot_revision: Arc::new(Mutex::new(None)),
+            snapshot_full_reload_max_age: authz_snapshot_full_reload_max_age(),
             pg_pool: None,
             event_sink: events::noop_sink(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
@@ -1106,6 +1159,8 @@ impl AuthzServiceImpl {
             snapshot_loaded_at: Arc::new(Mutex::new(None)),
             snapshot_reload_lock: Arc::new(tokio::sync::Mutex::new(())),
             snapshot_ttl: authz_snapshot_ttl(),
+            snapshot_revision: Arc::new(Mutex::new(None)),
+            snapshot_full_reload_max_age: authz_snapshot_full_reload_max_age(),
             pg_pool: None,
             event_sink: events::noop_sink(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
@@ -1130,8 +1185,11 @@ impl AuthzServiceImpl {
 
     /// Per-tenant fair admission for the hot authz decision RPCs, keyed by the
     /// VALIDATED caller tenant (never an unverified body field). Acquires the
-    /// `Admin` (control-plane) channel budget scoped to the tenant so one tenant
-    /// cannot exhaust the shared PG pool / snapshot path with authz checks. The
+    /// `Read` channel budget scoped to the tenant: a decision is an in-memory
+    /// snapshot read made once per gateway request, so it shares the read
+    /// channel's concurrency and short queue. (It used the `Admin` channel: 20
+    /// concurrent calls broker-wide and no queue, so a busy page's 21st check was
+    /// refused at once and retried a second later.) The
     /// returned [`ChannelPermit`] MUST be held across the decision (drop =
     /// release). `None` channels (bare/test construction — no runtime wired) admit
     /// without a permit, since there is no shared admission budget to starve.
@@ -1142,7 +1200,7 @@ impl AuthzServiceImpl {
         let Some(channels) = self.channels.as_ref() else {
             return Ok(None);
         };
-        let op = OperationChannel::Admin;
+        let op = OperationChannel::Read;
         // Local tenant hash for the metric label (the parent module's
         // `tenant_hash_label` is private to `service/mod.rs`); never logs the raw
         // tenant id.
@@ -1238,12 +1296,34 @@ impl AuthzServiceImpl {
     /// (auth_fix.md Block 1, Decision A). GAP-36 posture: `current_snapshot`
     /// only `store()`s on a successful load, so a reload error leaves the last
     /// good snapshot in place — we just log it, never blank the cell.
+    ///
+    /// Always a FULL reload: callers use it right after a write that may not
+    /// have gone through the revision fence. The interval warmer uses
+    /// [`Self::refresh_shared_snapshot`] instead.
     pub(crate) async fn warm_shared_snapshot(&self) {
         self.invalidate_snapshot_cache();
+        if let Ok(mut guard) = self.snapshot_revision.lock() {
+            *guard = None;
+        }
         if let Err(err) = self.current_snapshot().await {
             tracing::warn!(
                 error = %err,
                 "authz snapshot warm reload failed; retaining last good snapshot"
+            );
+        }
+    }
+
+    /// The interval warmer's refresh: one small revision read, and the full
+    /// policy/role/tuple reload only when the durable revision moved, a loaded
+    /// grant has since expired, or the last full load is older than
+    /// `UDB_AUTHZ_SNAPSHOT_FULL_RELOAD_SECS`. Same retain-last-good posture as
+    /// [`Self::warm_shared_snapshot`].
+    pub(crate) async fn refresh_shared_snapshot(&self) {
+        self.invalidate_snapshot_cache();
+        if let Err(err) = self.current_snapshot().await {
+            tracing::warn!(
+                error = %err,
+                "authz snapshot refresh failed; retaining last good snapshot"
             );
         }
     }
@@ -1830,10 +1910,17 @@ impl AuthzServiceImpl {
         Ok(format!("{:x}", hasher.finalize()))
     }
 
-    async fn load_snapshot_from_postgres(&self) -> Result<Option<AuthzSnapshot>, Status> {
+    /// Load the full durable snapshot plus the earliest FUTURE expiry among the
+    /// loaded role bindings and tuples (unix seconds): the moment this snapshot
+    /// stops matching the store without any write, so a timed refresh must not
+    /// skip the full reload past it.
+    async fn load_snapshot_from_postgres(
+        &self,
+    ) -> Result<Option<(AuthzSnapshot, Option<u64>)>, Status> {
         let Some(pool) = &self.pg_pool else {
             return Ok(None);
         };
+        let mut next_expiry_unix: Option<u64> = None;
         let policy = self.policies_model();
         let binding = self.user_roles_model();
         let role = self.roles_model();
@@ -1877,7 +1964,8 @@ impl AuthzServiceImpl {
 
         let binding_rows = sqlx::query(&format!(
             "SELECT ur.{user_id}::TEXT AS subject, COALESCE(NULLIF(r.{role_code}, ''), NULLIF(r.{name}, ''), ur.{role_id}::TEXT) AS role, ur.{tenant_id} AS tenant, COALESCE(r.{project_id}, '') AS project, \
-                    COALESCE(r.{is_system}, FALSE) AS role_is_system, COALESCE(r.{role_tenant_id}, '') AS role_tenant, COALESCE(r.{role_scope_type}, '') AS role_scope_type \
+                    COALESCE(r.{is_system}, FALSE) AS role_is_system, COALESCE(r.{role_tenant_id}, '') AS role_tenant, COALESCE(r.{role_scope_type}, '') AS role_scope_type, \
+                    CEIL(EXTRACT(EPOCH FROM ur.{expires_at}))::BIGINT AS expires_unix \
              FROM {binding_rel} ur \
              LEFT JOIN {role_rel} r ON r.{role_role_id} = ur.{role_id} \
              WHERE (ur.{expires_at} IS NULL OR ur.{expires_at} > NOW()) \
@@ -1906,6 +1994,16 @@ impl AuthzServiceImpl {
         })?;
         let mut role_bindings = Vec::with_capacity(binding_rows.len());
         for row in binding_rows {
+            let expires_unix: Option<i64> = row.try_get("expires_unix").map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "decode_role_binding_expiry",
+                    &err,
+                )
+            })?;
+            next_expiry_unix = earliest_expiry(
+                next_expiry_unix,
+                expires_unix.and_then(|value| u64::try_from(value).ok()),
+            );
             let role: String = row.try_get("role").map_err(|err| {
                 crate::runtime::executor_utils::sqlx_error_to_status("decode_role_binding", &err)
             })?;
@@ -2050,6 +2148,8 @@ impl AuthzServiceImpl {
             if tuple_condition_expired(&condition, now) {
                 continue;
             }
+            next_expiry_unix =
+                earliest_expiry(next_expiry_unix, tuple_condition_expiry(&condition));
             let role: String = row.try_get("role").map_err(|err| {
                 crate::runtime::executor_utils::sqlx_error_to_status("decode_grouping_tuple", &err)
             })?;
@@ -2111,6 +2211,8 @@ impl AuthzServiceImpl {
             if tuple_condition_expired(&condition, now) {
                 continue;
             }
+            next_expiry_unix =
+                earliest_expiry(next_expiry_unix, tuple_condition_expiry(&condition));
             tuples.push(RelationshipTuple {
                 subject: row.try_get("subject").map_err(|err| {
                     crate::runtime::executor_utils::sqlx_error_to_status(
@@ -2145,7 +2247,7 @@ impl AuthzServiceImpl {
             });
         }
 
-        Ok(Some(AuthzSnapshot {
+        let snapshot = AuthzSnapshot {
             // Content-addressed versions (not count-only): any in-place policy/
             // tuple edit changes the version even when the row count is unchanged,
             // so SDK-cached bundles and cross-node snapshot caches invalidate
@@ -2161,7 +2263,8 @@ impl AuthzServiceImpl {
             // hardcoded false, `UDB_ABAC_DEFAULT_ALLOW=true` would silently stop
             // working the moment the first reload replaced the initial snapshot.
             default_allow: abac_default_allow_env(),
-        }))
+        };
+        Ok(Some((snapshot, next_expiry_unix)))
     }
 
     fn snapshot_cache_is_fresh(&self) -> bool {
@@ -2193,10 +2296,42 @@ impl AuthzServiceImpl {
         // authz reload path. The histogram + recorder already exist; this is the
         // missing call site. Covers the real DB round-trip + decode in
         // `load_snapshot_from_postgres`.
+        //
+        // Cheap path first: one revision read. While it matches what the last
+        // full load saw (and no loaded grant has expired since, and the full
+        // load is younger than the safety bound) the snapshot IS the durable
+        // state, so confirm it instead of re-reading every policy/role/tuple.
+        let mut probed_revision = None;
+        if self.pg_pool.is_some() {
+            let durable = self.authz_revision_fingerprint().await?;
+            let full_reload = self
+                .snapshot_revision
+                .lock()
+                .map(|guard| {
+                    snapshot_needs_full_reload(
+                        guard.as_ref(),
+                        &durable,
+                        now_unix(),
+                        self.snapshot_full_reload_max_age,
+                    )
+                })
+                .unwrap_or(true);
+            if !full_reload {
+                if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
+                    *guard = Some(Instant::now());
+                }
+                crate::runtime::authz::record_snapshot_reload_success();
+                return Ok(self.snapshot.load_full());
+            }
+            probed_revision = Some(durable);
+        }
         let mut revision_retries = 0;
         loop {
             let reload_started = Instant::now();
-            let revision_before = self.authz_revision_fingerprint().await?;
+            let revision_before = match probed_revision.take() {
+                Some(revision) => revision,
+                None => self.authz_revision_fingerprint().await?,
+            };
             let loaded = self.load_snapshot_from_postgres().await?;
             let revision_after = self.authz_revision_fingerprint().await?;
             self.metrics
@@ -2213,10 +2348,17 @@ impl AuthzServiceImpl {
                     "authz revision changed while loading snapshot; retry snapshot load",
                 ));
             }
-            if let Some(snapshot) = loaded {
+            if let Some((snapshot, next_expiry_unix)) = loaded {
                 self.snapshot.store(Arc::new(snapshot));
                 if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
                     *guard = Some(Instant::now());
+                }
+                if let Ok(mut guard) = self.snapshot_revision.lock() {
+                    *guard = Some(LoadedSnapshotRevision {
+                        fingerprint: revision_after.clone(),
+                        full_loaded_at: Instant::now(),
+                        next_expiry_unix,
+                    });
                 }
                 // Staleness bound: the data plane fails closed once the last good
                 // durable load is older than UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS.
@@ -2245,6 +2387,26 @@ fn resolve_snapshot_ttl_secs(canonical: Option<&str>, alias: Option<&str>) -> u6
         .max(1)
 }
 
+/// Default bound on how long an unchanged revision fingerprint may stand in for
+/// a full authz snapshot reload. Writes that skip the revision fence (tenant
+/// restore, raw SQL against the authz tables) are picked up within this bound.
+const DEFAULT_SNAPSHOT_FULL_RELOAD_SECS: u64 = 60;
+
+/// Parse `UDB_AUTHZ_SNAPSHOT_FULL_RELOAD_SECS`; `0` means every refresh is a
+/// full reload (the pre-0.6.15 behavior). Pure for testability.
+fn resolve_snapshot_full_reload_secs(raw: Option<&str>) -> u64 {
+    raw.and_then(|v| v.trim().parse::<u64>().ok())
+        .unwrap_or(DEFAULT_SNAPSHOT_FULL_RELOAD_SECS)
+}
+
+fn authz_snapshot_full_reload_max_age() -> Duration {
+    Duration::from_secs(resolve_snapshot_full_reload_secs(
+        std::env::var("UDB_AUTHZ_SNAPSHOT_FULL_RELOAD_SECS")
+            .ok()
+            .as_deref(),
+    ))
+}
+
 fn authz_snapshot_ttl() -> Duration {
     let canonical = std::env::var("UDB_AUTHZ_SNAPSHOT_TTL_SECS").ok();
     let alias = std::env::var("UDB_ABAC_REFRESH_SECS").ok();
@@ -2267,6 +2429,129 @@ mod c13_snapshot_ttl_tests {
         assert_eq!(resolve_snapshot_ttl_secs(Some("30"), Some("45")), 30);
         assert_eq!(resolve_snapshot_ttl_secs(None, None), 5);
         assert_eq!(resolve_snapshot_ttl_secs(Some("0"), None), 1);
+    }
+}
+
+#[cfg(test)]
+mod snapshot_refresh_plan_tests {
+    use super::{
+        LoadedSnapshotRevision, earliest_expiry, resolve_snapshot_full_reload_secs,
+        snapshot_needs_full_reload, tuple_condition_expired, tuple_condition_expiry,
+    };
+    use std::time::{Duration, Instant};
+
+    const MAX_AGE: Duration = Duration::from_secs(60);
+
+    fn loaded(
+        fingerprint: &str,
+        age: Duration,
+        next_expiry: Option<u64>,
+    ) -> LoadedSnapshotRevision {
+        LoadedSnapshotRevision {
+            fingerprint: fingerprint.to_string(),
+            full_loaded_at: Instant::now()
+                .checked_sub(age)
+                .expect("test instant in range"),
+            next_expiry_unix: next_expiry,
+        }
+    }
+
+    #[test]
+    fn unchanged_revision_skips_the_full_reload() {
+        let state = loaded("rev-a", Duration::from_secs(5), None);
+        assert!(!snapshot_needs_full_reload(
+            Some(&state),
+            "rev-a",
+            1_000,
+            MAX_AGE
+        ));
+        // A pending expiry still in the future does not force a reload.
+        let state = loaded("rev-a", Duration::from_secs(5), Some(2_000));
+        assert!(!snapshot_needs_full_reload(
+            Some(&state),
+            "rev-a",
+            1_000,
+            MAX_AGE
+        ));
+    }
+
+    #[test]
+    fn moved_or_unknown_revision_forces_a_full_reload() {
+        let state = loaded("rev-a", Duration::from_secs(5), None);
+        assert!(snapshot_needs_full_reload(
+            Some(&state),
+            "rev-b",
+            1_000,
+            MAX_AGE
+        ));
+        assert!(snapshot_needs_full_reload(Some(&state), "", 1_000, MAX_AGE));
+        assert!(snapshot_needs_full_reload(None, "rev-a", 1_000, MAX_AGE));
+    }
+
+    #[test]
+    fn an_expired_loaded_grant_forces_a_full_reload() {
+        let state = loaded("rev-a", Duration::from_secs(5), Some(1_000));
+        assert!(snapshot_needs_full_reload(
+            Some(&state),
+            "rev-a",
+            1_000,
+            MAX_AGE
+        ));
+        assert!(snapshot_needs_full_reload(
+            Some(&state),
+            "rev-a",
+            1_001,
+            MAX_AGE
+        ));
+    }
+
+    #[test]
+    fn the_full_reload_bound_caps_the_cheap_path() {
+        let state = loaded("rev-a", Duration::from_secs(61), None);
+        assert!(snapshot_needs_full_reload(
+            Some(&state),
+            "rev-a",
+            1_000,
+            MAX_AGE
+        ));
+        // `0` disables the cheap path: every refresh is a full reload.
+        let state = loaded("rev-a", Duration::ZERO, None);
+        assert!(snapshot_needs_full_reload(
+            Some(&state),
+            "rev-a",
+            1_000,
+            Duration::ZERO
+        ));
+    }
+
+    #[test]
+    fn full_reload_bound_env_parses_with_a_speed_first_default() {
+        assert_eq!(resolve_snapshot_full_reload_secs(None), 60);
+        assert_eq!(resolve_snapshot_full_reload_secs(Some(" 300 ")), 300);
+        assert_eq!(resolve_snapshot_full_reload_secs(Some("0")), 0);
+        assert_eq!(resolve_snapshot_full_reload_secs(Some("soon")), 60);
+    }
+
+    #[test]
+    fn tuple_expiry_extraction_matches_the_expired_filter() {
+        assert_eq!(
+            tuple_condition_expiry(r#"{"expires_at_unix":1700}"#),
+            Some(1700)
+        );
+        assert_eq!(tuple_condition_expiry(r#"{"expires_at_unix":0}"#), None);
+        assert_eq!(tuple_condition_expiry(r#"{"expires_at_unix":-5}"#), None);
+        assert_eq!(tuple_condition_expiry(""), None);
+        assert_eq!(tuple_condition_expiry("not json"), None);
+        assert!(tuple_condition_expired(r#"{"expires_at_unix":1700}"#, 1700));
+        assert!(!tuple_condition_expired(
+            r#"{"expires_at_unix":1700}"#,
+            1699
+        ));
+        assert!(!tuple_condition_expired(r#"{"expires_at_unix":-5}"#, 1700));
+        assert_eq!(earliest_expiry(None, Some(9)), Some(9));
+        assert_eq!(earliest_expiry(Some(4), Some(9)), Some(4));
+        assert_eq!(earliest_expiry(Some(4), None), Some(4));
+        assert_eq!(earliest_expiry(None, None), None);
     }
 }
 

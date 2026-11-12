@@ -58,6 +58,7 @@ on:
       - "scripts/validate_benchmark_publication.py"
       - "scripts/locate_benchmark_report.py"
       - "scripts/bootstrap_benchmark_project_catalog.py"
+      - "scripts/restart_bench_broker.py"
       - "scripts/prepare-benchmark-fixtures.py"
       - "scripts/provision-service-account-live.py"
       - "scripts/run-plan-benchmark.sh"
@@ -173,6 +174,7 @@ on:
       - "scripts/validate_benchmark_publication.py"
       - "scripts/locate_benchmark_report.py"
       - "scripts/bootstrap_benchmark_project_catalog.py"
+      - "scripts/restart_bench_broker.py"
       - "scripts/prepare-benchmark-fixtures.py"
       - "scripts/provision-service-account-live.py"
       - "scripts/run-plan-benchmark.sh"
@@ -279,6 +281,7 @@ jobs:
           node --check scripts/check-ci-runner-evidence.mjs
           node scripts/check-ci-runner-evidence.mjs --selftest
           python3 -m py_compile scripts/bootstrap_benchmark_project_catalog.py
+          python3 -m py_compile scripts/restart_bench_broker.py
           python3 -m py_compile scripts/prepare-benchmark-fixtures.py
           python3 -m py_compile scripts/provision-service-account-live.py
           python3 scripts/error_detail_served_smoke.py --selftest

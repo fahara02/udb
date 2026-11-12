@@ -11,6 +11,12 @@ use sqlx::PgPool;
 /// waiters when a deployment has many configured replicas.
 const MAX_CONCURRENT_REPLICA_HEALTH_PROBES: usize = 4;
 
+/// How long a default read waits for the chosen replica to replay the
+/// caller's own last write before the primary serves it instead. Short on
+/// purpose: the primary always has the write, so waiting longer only adds
+/// latency. Capped at the lag bound.
+const OWN_WRITE_FENCE_WAIT: Duration = Duration::from_millis(250);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PgReplicaStrategy {
     RoundRobin,
@@ -64,6 +70,10 @@ pub struct PgReplicaPool {
     latency_millis: Arc<AtomicU64>,
     last_failure_unix_ms: Arc<AtomicU64>,
     last_error: Arc<RwLock<Option<String>>>,
+    /// Highest WAL byte position this replica was seen to have replayed (0:
+    /// not yet seen). Replay only moves forward, so a read fenced at or below
+    /// it needs no further check on the replica.
+    replayed_position: Arc<AtomicU64>,
 }
 
 impl PgReplicaPool {
@@ -76,7 +86,14 @@ impl PgReplicaPool {
             latency_millis: Arc::new(AtomicU64::new(0)),
             last_failure_unix_ms: Arc::new(AtomicU64::new(0)),
             last_error: Arc::new(RwLock::new(None)),
+            replayed_position: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    /// Whether this replica was already seen to have replayed WAL position
+    /// `position`.
+    fn replayed_at_least(&self, position: u64) -> bool {
+        position > 0 && self.replayed_position.load(Ordering::Acquire) >= position
     }
 
     pub fn label(&self) -> &str {
@@ -150,6 +167,12 @@ pub struct PgReplicaManager {
     query_total: Arc<AtomicU64>,
     fallback_total: Arc<AtomicU64>,
     health_refresh: Arc<tokio::sync::Mutex<()>>,
+    /// Serve reads that name no consistency from a replica (bounded by
+    /// `max_lag`, failing over to the primary). `UDB_PG_REPLICA_DEFAULT_READS`.
+    default_reads: bool,
+    /// Per-caller last-write positions on this node, so a caller's default
+    /// read never sees data older than its own write.
+    own_writes: Arc<crate::runtime::consistency::OwnWriteFences>,
 }
 
 impl Default for PgReplicaManager {
@@ -169,6 +192,10 @@ impl PgReplicaManager {
             query_total: Arc::new(AtomicU64::new(0)),
             fallback_total: Arc::new(AtomicU64::new(0)),
             health_refresh: Arc::new(tokio::sync::Mutex::new(())),
+            default_reads: false,
+            own_writes: Arc::new(crate::runtime::consistency::OwnWriteFences::new(
+                Duration::from_secs(3),
+            )),
         }
     }
 
@@ -187,7 +214,64 @@ impl PgReplicaManager {
             query_total: Arc::new(AtomicU64::new(0)),
             fallback_total: Arc::new(AtomicU64::new(0)),
             health_refresh: Arc::new(tokio::sync::Mutex::new(())),
+            default_reads: true,
+            own_writes: Arc::new(crate::runtime::consistency::OwnWriteFences::new(
+                max_lag.saturating_mul(2),
+            )),
         }
+    }
+
+    /// Configure the replica-default read path: `enabled` mirrors
+    /// `UDB_PG_REPLICA_DEFAULT_READS` (default on); `own_write_ttl` is how long
+    /// this node remembers a caller's last write position. It must cover the
+    /// lag bound PLUS the health-probe interval, because a replica's lag is
+    /// only re-measured once per probe.
+    pub fn with_default_reads(mut self, enabled: bool, own_write_ttl: Duration) -> Self {
+        self.default_reads = enabled;
+        self.own_writes = Arc::new(crate::runtime::consistency::OwnWriteFences::new(
+            own_write_ttl.max(self.max_lag),
+        ));
+        self
+    }
+
+    /// The configured lag bound for replica reads.
+    pub fn max_lag(&self) -> Duration {
+        self.max_lag
+    }
+
+    /// True when a read that names no consistency is served replica-bounded:
+    /// at least one replica, a routing strategy other than `primary_only`, and
+    /// no `UDB_PG_REPLICA_DEFAULT_READS=false` opt-out.
+    pub fn replica_default_reads(&self) -> bool {
+        self.default_reads
+            && !self.replicas.is_empty()
+            && self.strategy != PgReplicaStrategy::PrimaryOnly
+    }
+
+    /// The default-read policy for requests that name no consistency.
+    pub fn default_read_policy(&self) -> crate::runtime::consistency::DefaultReadPolicy {
+        let max_lag_ms = self.max_lag.as_millis() as u64;
+        crate::runtime::consistency::DefaultReadPolicy {
+            replica_default: self.replica_default_reads(),
+            max_lag_ms,
+            own_write_wait_ms: OWN_WRITE_FENCE_WAIT.as_millis().min(max_lag_ms as u128) as u64,
+        }
+    }
+
+    /// Remember a successful write by `caller_key` (no-op when default reads
+    /// are off: nothing reads the map then).
+    pub fn record_own_write(&self, caller_key: &str, source_lsn: &str) {
+        if self.replica_default_reads() {
+            self.own_writes.record(caller_key, source_lsn);
+        }
+    }
+
+    /// The fence `caller_key`'s next default read must honour.
+    pub fn own_write_fence(&self, caller_key: &str) -> crate::runtime::consistency::OwnWriteFence {
+        if !self.replica_default_reads() {
+            return crate::runtime::consistency::OwnWriteFence::None;
+        }
+        self.own_writes.lookup(caller_key)
     }
 
     pub fn len(&self) -> usize {
@@ -214,6 +298,14 @@ impl PgReplicaManager {
     }
 
     pub fn choose_pool_with_max_lag(&self, max_lag_override: Option<Duration>) -> Option<PgPool> {
+        self.choose_replica_with_max_lag(max_lag_override)
+            .map(PgReplicaPool::pool)
+    }
+
+    fn choose_replica_with_max_lag(
+        &self,
+        max_lag_override: Option<Duration>,
+    ) -> Option<&PgReplicaPool> {
         if self.strategy == PgReplicaStrategy::PrimaryOnly || self.replicas.is_empty() {
             return None;
         }
@@ -251,7 +343,7 @@ impl PgReplicaManager {
         }?;
 
         self.query_total.fetch_add(1, Ordering::Relaxed);
-        Some(selected.pool())
+        Some(selected)
     }
 
     /// 6.4 REPLICA_BOUNDED routing: select a read replica whose lag is
@@ -273,6 +365,21 @@ impl PgReplicaManager {
         min_lsn: Option<&str>,
         max_staleness: Duration,
     ) -> BoundedReplicaRead {
+        self.choose_bounded_replica_with_fence_wait(min_lsn, max_staleness, max_staleness)
+            .await
+    }
+
+    /// [`Self::choose_bounded_replica`] with a separate budget for the LSN
+    /// wait: the replica is still chosen within `max_staleness` lag, but the
+    /// wait for it to replay `min_lsn` gives up after `fence_wait` and the
+    /// read fails over to the primary. A default read uses a short
+    /// `fence_wait` for the caller's own write, since the primary has it.
+    pub async fn choose_bounded_replica_with_fence_wait(
+        &self,
+        min_lsn: Option<&str>,
+        max_staleness: Duration,
+        fence_wait: Duration,
+    ) -> BoundedReplicaRead {
         use crate::runtime::consistency::StaleReadWarning;
         let budget_ms = max_staleness.as_millis() as u64;
 
@@ -280,7 +387,7 @@ impl PgReplicaManager {
         // eligible replica ⇒ fail over to the primary, attaching a
         // `ReplicaLagExceeded` warning so the caller never serves the
         // failed-over read silently.
-        let Some(pool) = self.choose_pool_with_max_lag(Some(max_staleness)) else {
+        let Some(replica) = self.choose_replica_with_max_lag(Some(max_staleness)) else {
             self.fallback_total.fetch_add(1, Ordering::Relaxed);
             let (instance, lag_ms) = self.least_lagged_report();
             return BoundedReplicaRead::FailoverToPrimary(StaleReadWarning::ReplicaLagExceeded {
@@ -292,8 +399,14 @@ impl PgReplicaManager {
 
         // Step 2: with no LSN fence, lag-bounded selection IS the contract.
         let Some(target_lsn) = min_lsn.map(str::trim).filter(|lsn| !lsn.is_empty()) else {
-            return BoundedReplicaRead::Replica(pool);
+            return BoundedReplicaRead::Replica(replica.pool());
         };
+        // A replay position already seen at or past the fence answers it
+        // without a query: the many reads of one page after a write share a
+        // single check instead of each asking the replica.
+        if pg_lsn_position(target_lsn).is_some_and(|target| replica.replayed_at_least(target)) {
+            return BoundedReplicaRead::Replica(replica.pool());
+        }
 
         // Step 3: wait on the replica's REAL applied LSN, failing over on
         // timeout or any error (malformed token, lost connection). The fence
@@ -301,8 +414,15 @@ impl PgReplicaManager {
         // wall clock; on failover we attach a `FenceTimedOut` warning so the
         // primary-served result is never returned silently.
         let started = Instant::now();
-        match wait_for_replica_replay_lsn(&pool, target_lsn, max_staleness).await {
-            Ok(true) => BoundedReplicaRead::Replica(pool),
+        match wait_for_replica_replay_lsn(
+            &replica.pool,
+            target_lsn,
+            fence_wait,
+            Some(&replica.replayed_position),
+        )
+        .await
+        {
+            Ok(true) => BoundedReplicaRead::Replica(replica.pool()),
             _ => {
                 self.fallback_total.fetch_add(1, Ordering::Relaxed);
                 let (instance, _) = self.least_lagged_report();
@@ -542,6 +662,7 @@ async fn wait_for_replica_replay_lsn(
     pool: &PgPool,
     target_lsn: &str,
     timeout: Duration,
+    replayed: Option<&AtomicU64>,
 ) -> Result<bool, sqlx::Error> {
     let started = Instant::now();
     let Some(deadline) = started.checked_add(timeout).filter(|_| !timeout.is_zero()) else {
@@ -553,15 +674,24 @@ async fn wait_for_replica_replay_lsn(
     tokio::time::timeout_at(tokio::time::Instant::from_std(deadline), async {
         loop {
             let mut connection = ReplicaQueryConnection::new(pool.acquire().await?);
-            let result: Result<bool, sqlx::Error> = sqlx::query_scalar(
-                "SELECT COALESCE($1::pg_lsn <= pg_last_wal_replay_lsn(), false)",
+            // The replay position comes back as a byte count computed by the
+            // server, so it is remembered without parsing the LSN text.
+            let result: Result<(bool, Option<String>), sqlx::Error> = sqlx::query_as(
+                "SELECT COALESCE($1::pg_lsn <= replayed, false), (replayed - '0/0'::pg_lsn)::TEXT \
+                 FROM (SELECT pg_last_wal_replay_lsn() AS replayed) AS replica",
             )
             .bind(target_lsn)
             .fetch_one(connection.connection_mut()?)
             .await;
             connection.query_completed = true;
             drop(connection);
-            let cleared = result?;
+            let (cleared, position) = result?;
+            if let (Some(replayed), Some(position)) = (
+                replayed,
+                position.and_then(|text| text.trim().parse::<u64>().ok()),
+            ) {
+                replayed.fetch_max(position, Ordering::AcqRel);
+            }
             if started.elapsed() >= timeout {
                 return Ok(false);
             }
@@ -574,6 +704,19 @@ async fn wait_for_replica_replay_lsn(
     })
     .await
     .unwrap_or(Ok(false))
+}
+
+/// A PostgreSQL LSN (`X/Y`, two hex words) as its WAL byte position, the
+/// same number `lsn - '0/0'::pg_lsn` yields on the server. None when the text
+/// is not an LSN, so a malformed fence is never answered from memory.
+fn pg_lsn_position(lsn: &str) -> Option<u64> {
+    let (high, low) = lsn.trim().split_once('/')?;
+    let word = |part: &str| {
+        (!part.is_empty() && part.len() <= 8 && part.bytes().all(|b| b.is_ascii_hexdigit()))
+            .then(|| u64::from_str_radix(part, 16).ok())
+            .flatten()
+    };
+    Some((word(high)? << 32) | word(low)?)
 }
 
 fn escape_prom_label(value: &str) -> String {
@@ -590,6 +733,64 @@ fn unix_now_millis() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lsn_text_becomes_the_server_byte_position() {
+        assert_eq!(pg_lsn_position("0/0"), Some(0));
+        assert_eq!(pg_lsn_position("0/100"), Some(0x100));
+        assert_eq!(
+            pg_lsn_position(" 16/B374D848 "),
+            Some((0x16 << 32) | 0xB374_D848)
+        );
+        assert_eq!(pg_lsn_position("FFFFFFFF/FFFFFFFF"), Some(u64::MAX));
+        for bad in ["", "0", "/1", "1/", "1/2/3", "+1/2", "g/1", "123456789/0"] {
+            assert_eq!(pg_lsn_position(bad), None, "{bad}");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_fence_already_replayed_is_answered_without_a_query() {
+        // The pool points nowhere: any query would fail and fail over.
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(Duration::from_millis(50))
+            .connect_lazy("postgres://udb:udb@127.0.0.1:1/none")
+            .expect("lazy pool");
+        let replica = PgReplicaPool::new("replica-a".to_string(), pool);
+        let manager = PgReplicaManager::new(
+            vec![replica.clone()],
+            PgReplicaStrategy::LeastLag,
+            Duration::from_secs(5),
+            false,
+        );
+        let wait = Duration::from_millis(100);
+        let before = manager
+            .choose_bounded_replica_with_fence_wait(Some("0/200"), Duration::from_secs(5), wait)
+            .await;
+        assert!(matches!(before, BoundedReplicaRead::FailoverToPrimary(_)));
+
+        replica.replayed_position.fetch_max(0x300, Ordering::AcqRel);
+        for fence in ["0/200", "0/300"] {
+            let read = manager
+                .choose_bounded_replica_with_fence_wait(Some(fence), Duration::from_secs(5), wait)
+                .await;
+            assert!(matches!(read, BoundedReplicaRead::Replica(_)), "{fence}");
+        }
+        let ahead = manager
+            .choose_bounded_replica_with_fence_wait(Some("0/301"), Duration::from_secs(5), wait)
+            .await;
+        assert!(matches!(ahead, BoundedReplicaRead::FailoverToPrimary(_)));
+        let malformed = manager
+            .choose_bounded_replica_with_fence_wait(
+                Some("not-an-lsn"),
+                Duration::from_secs(5),
+                wait,
+            )
+            .await;
+        assert!(matches!(
+            malformed,
+            BoundedReplicaRead::FailoverToPrimary(_)
+        ));
+    }
 
     fn replica_live_dsn() -> Option<String> {
         crate::runtime::service::live_tests::support::require_live_dsn_any(&[
@@ -889,7 +1090,9 @@ mod tests {
         assert_ne!(initial_pid, replacement_pid);
         let fence = tokio::spawn({
             let pool = pool.clone();
-            async move { wait_for_replica_replay_lsn(&pool, "0/100", Duration::from_millis(250)).await }
+            async move {
+                wait_for_replica_replay_lsn(&pool, "0/100", Duration::from_millis(250), None).await
+            }
         });
         wait_for_replica_query_lock(&admin, replacement_pid, "pg_last_wal_replay_lsn").await;
         assert!(
@@ -944,7 +1147,7 @@ mod tests {
             "completed probes must retain pool reuse"
         );
         assert!(
-            wait_for_replica_replay_lsn(&pool, "0/100", Duration::from_secs(1))
+            wait_for_replica_replay_lsn(&pool, "0/100", Duration::from_secs(1), None)
                 .await
                 .expect("a fresh LSN fence must clear after lock release")
         );
@@ -1079,6 +1282,58 @@ mod tests {
             false,
         );
         assert!(manager.choose_pool().is_none());
+    }
+
+    /// Default reads go to replicas only when a replica exists, the strategy
+    /// is not `primary_only`, and `UDB_PG_REPLICA_DEFAULT_READS` is not off;
+    /// only then is a caller's own write remembered.
+    #[tokio::test]
+    async fn replica_default_reads_require_a_replica_and_no_opt_out() {
+        use crate::runtime::consistency::OwnWriteFence;
+        let lazy = || {
+            sqlx::postgres::PgPoolOptions::new()
+                .connect_lazy("postgres://udb@127.0.0.1:1/never")
+                .expect("lazy pool")
+        };
+        let key = "tenant\u{1f}project\u{1f}alice\u{1f}";
+
+        let none = PgReplicaManager::empty();
+        assert!(!none.default_read_policy().replica_default);
+        none.record_own_write(key, "0/10");
+        assert_eq!(none.own_write_fence(key), OwnWriteFence::None);
+
+        let on = PgReplicaManager::new(
+            vec![PgReplicaPool::new("replica-1".into(), lazy())],
+            PgReplicaStrategy::RoundRobin,
+            Duration::from_secs(3),
+            false,
+        )
+        .with_default_reads(true, Duration::from_secs(13));
+        let policy = on.default_read_policy();
+        assert!(policy.replica_default);
+        assert_eq!(policy.max_lag_ms, 3_000);
+        assert_eq!(policy.own_write_wait_ms, 250);
+        on.record_own_write(key, "0/10");
+        assert_eq!(on.own_write_fence(key), OwnWriteFence::Lsn("0/10".into()));
+
+        let opted_out = PgReplicaManager::new(
+            vec![PgReplicaPool::new("replica-1".into(), lazy())],
+            PgReplicaStrategy::RoundRobin,
+            Duration::from_secs(3),
+            false,
+        )
+        .with_default_reads(false, Duration::from_secs(13));
+        assert!(!opted_out.default_read_policy().replica_default);
+        opted_out.record_own_write(key, "0/10");
+        assert_eq!(opted_out.own_write_fence(key), OwnWriteFence::None);
+
+        let primary_only = PgReplicaManager::new(
+            vec![PgReplicaPool::new("replica-1".into(), lazy())],
+            PgReplicaStrategy::PrimaryOnly,
+            Duration::from_secs(3),
+            false,
+        );
+        assert!(!primary_only.default_read_policy().replica_default);
     }
 
     #[test]

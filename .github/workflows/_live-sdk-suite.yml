@@ -1083,12 +1083,60 @@ jobs:
           UDB_LIVE_LATENCY_PROFILE: "1"
           UDB_LIVE_LATENCY_REPORT: ${{ github.workspace }}/bench-output/latency-profile.json
           UDB_METRICS_URL: http://127.0.0.1:19092/metrics
+          # Counts the broker's database transactions per page-load call; the
+          # test fails over UDB_LIVE_PAGE_XACT_BUDGET (default 2).
+          UDB_LIVE_DB_DSN: postgres://udb:udb@localhost:5432/udb_ci
         run: |
           set -euo pipefail
           bash bench-output/reset.sh latency-profile 2>&1 | tee bench-output/logs/latency-profile-reset.log
           UDB_BROKER_PID="$(cat /tmp/udb-bench.pid)"
           export UDB_BROKER_PID
           ( cd sdk/go && go test ./udbclient -run '^TestLiveLatencyProfile$' -count=1 -v -timeout 5m ) 2>&1 | tee bench-output/logs/latency-profile.log
+
+      # The same profile with a streaming read replica: reads are served from
+      # the replica by default once one is configured, and the page-load
+      # budgets (p95, database transactions per call) must still hold.
+      - name: Profile warmed RPCs against a streaming read replica
+        if: always() && inputs.candidate-build && steps.reset-script.outcome == 'success'
+        timeout-minutes: 10
+        shell: bash
+        env:
+          UDB_LIVE_LATENCY_PROFILE: "1"
+          UDB_LIVE_LATENCY_REPORT: ${{ github.workspace }}/bench-output/latency-profile-replica.json
+          UDB_METRICS_URL: http://127.0.0.1:19092/metrics
+          UDB_PG_REPLICA_DSN: postgres://udb:udb@127.0.0.1:5433/udb_ci
+          UDB_LIVE_DB_DSN: postgres://udb:udb@localhost:5432/udb_ci,postgres://udb:udb@127.0.0.1:5433/udb_ci
+          PG_SERVICE_ID: ${{ job.services.postgres.id }}
+          PG_REPLICA_IMAGE: ghcr.io/fahara02/udb-ci-postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=udb
+          # Let the replica connect for replication, then clone and follow the primary.
+          docker exec "$PG_SERVICE_ID" sh -c 'echo "host replication all all scram-sha-256" >> "$PGDATA/pg_hba.conf"'
+          psql -h localhost -p 5432 -U udb -d postgres -qAtc "SELECT pg_reload_conf()"
+          docker rm -f udb-bench-replica >/dev/null 2>&1 || true
+          docker run -d --name udb-bench-replica --network host --user postgres -e PGPASSWORD=udb "$PG_REPLICA_IMAGE"             sh -c 'pg_basebackup -h 127.0.0.1 -p 5432 -U udb -D /tmp/replica -R -X stream && chmod 700 /tmp/replica && exec postgres -D /tmp/replica -p 5433 -c hot_standby=on' >/dev/null
+          ready=0
+          for _ in $(seq 1 60); do
+            if [ "$(psql -h 127.0.0.1 -p 5433 -U udb -d postgres -qAtc 'SELECT pg_is_in_recovery()' 2>/dev/null || true)" = "t" ]; then ready=1; break; fi
+            sleep 2
+          done
+          [ "$ready" = 1 ] || { echo "::error::read replica did not start"; docker logs udb-bench-replica | tail -40; exit 1; }
+          bash bench-output/reset.sh latency-profile 2>&1 | tee bench-output/logs/latency-profile-replica-reset.log
+          replica_reads() { psql -h 127.0.0.1 -p 5433 -U udb -d udb_ci -qAtc "SELECT xact_commit FROM pg_stat_database WHERE datname = current_database()"; }
+          before="$(replica_reads)"
+          UDB_BROKER_PID="$(cat /tmp/udb-bench.pid)"
+          export UDB_BROKER_PID
+          ( cd sdk/go && go test ./udbclient -run '^TestLiveLatencyProfile$' -count=1 -v -timeout 6m ) 2>&1 | tee bench-output/logs/latency-profile-replica.log
+          sleep 11
+          after="$(replica_reads)"
+          echo "replica transactions during the profile: $((after - before))"
+          # The profile issues hundreds of reads; a replica that served almost
+          # none means default reads still went to the primary.
+          if [ "$((after - before))" -lt 100 ]; then
+            echo "::error::the read replica served $((after - before)) transactions; default reads did not use it"
+            exit 1
+          fi
 
       # A separate proof broker retains the prepared DB/catalog and exact private
       # runtime environment. Never shorten tokens used by the measured sweeps or
@@ -1165,6 +1213,32 @@ jobs:
           PY
           ( cd sdk/go && go test ./udbclient -run '^TestLiveG1(SessionLifecycle|APIKeyCredentialLifecycle)$' -count=1 -v -timeout 5m ) 2>&1 | tee bench-output/logs/go-g1-session.log
 
+      # A client must recover from a broker restart by itself: the broker is
+      # restarted in place (same database and settings) under a running
+      # session, which must succeed again without being recreated.
+      - name: Prove SDK clients recover from a broker restart
+        if: always() && inputs.candidate-build && steps.reset-script.outcome == 'success'
+        timeout-minutes: 30
+        shell: bash
+        env:
+          UDB_LIVE_BROKER_RESTART_CMD: python ${{ github.workspace }}/scripts/restart_bench_broker.py
+        run: |
+          set -euo pipefail
+          ( cd sdk/go && go test ./udbclient -run '^TestLiveBrokerRestartRecovery$' -count=1 -v -timeout 5m ) 2>&1 | tee bench-output/logs/go-restart-recovery.log
+          grep -q -- '--- PASS: TestLiveBrokerRestartRecovery' bench-output/logs/go-restart-recovery.log || { echo "::error::Go restart recovery did not run or did not pass"; exit 1; }
+          ( cd sdk/typescript && npm run bundle-proto && npx tsc -p tsconfig.test.json && node --test dist-test/live-broker-restart.test.js ) 2>&1 | tee bench-output/logs/typescript-restart-recovery.log
+          grep -Eq '^# pass [1-9]' bench-output/logs/typescript-restart-recovery.log && grep -Eq '^# skipped 0' bench-output/logs/typescript-restart-recovery.log || { echo "::error::TypeScript restart recovery did not run or did not pass"; exit 1; }
+          ( cd sdk/python && python -m pytest -q -rs tests/test_live_broker_restart.py ) 2>&1 | tee bench-output/logs/python-restart-recovery.log
+          grep -Eq '[1-9][0-9]* passed' bench-output/logs/python-restart-recovery.log && ! grep -Eq 'skipped|failed' bench-output/logs/python-restart-recovery.log || { echo "::error::Python restart recovery did not run or did not pass"; exit 1; }
+          ( cd sdk/rust && cargo test --release --test live_broker_restart -- --nocapture ) 2>&1 | tee bench-output/logs/rust-restart-recovery.log
+          grep -Eq 'test result: ok\. [1-9][0-9]* passed; 0 failed; 0 ignored' bench-output/logs/rust-restart-recovery.log || { echo "::error::Rust restart recovery did not run or did not pass"; exit 1; }
+          ( cd sdk/java && mvn -B -ntp -Dtest=LiveBrokerRestartTest -Dsurefire.failIfNoSpecifiedTests=false test ) 2>&1 | tee bench-output/logs/java-restart-recovery.log
+          grep -Eq 'Tests run: [1-9][0-9]*, Failures: 0, Errors: 0, Skipped: 0' bench-output/logs/java-restart-recovery.log || { echo "::error::Java restart recovery did not run or did not pass"; exit 1; }
+          dotnet test sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj -c Release --filter FullyQualifiedName~LiveBrokerRestartTests --logger 'console;verbosity=normal' 2>&1 | tee bench-output/logs/csharp-restart-recovery.log
+          grep -Eq 'Failed: 0, Passed: [1-9][0-9]*, Skipped: 0' bench-output/logs/csharp-restart-recovery.log || { echo "::error::C# restart recovery did not run or did not pass"; exit 1; }
+          ( cd sdk/php && vendor/bin/pest tests/Live/BrokerRestartTest.php ) 2>&1 | tee bench-output/logs/php-restart-recovery.log
+          grep -Eq 'Tests: +[1-9][0-9]* passed' bench-output/logs/php-restart-recovery.log && ! grep -Eqi 'skipped|failed' bench-output/logs/php-restart-recovery.log || { echo "::error::PHP restart recovery did not run or did not pass"; exit 1; }
+
       - name: Fetch previous benchmark history
         if: always()
         shell: bash
@@ -1211,6 +1285,8 @@ jobs:
             bench-output/latency-profile.json
             /tmp/udb-bench.log
             /tmp/udb-g1-session.log
+            /tmp/udb-restart-proof.log
+            bench-output/latency-profile-replica.json
           if-no-files-found: ignore
 
       - name: Fail on benchmark failures

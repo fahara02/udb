@@ -45,7 +45,7 @@ public final class ApiKeyProto {
       "tobuf/timestamp.proto\032%udb/core/apikey/e" +
       "ntity/v1/enums.proto\032\033udb/core/common/v1" +
       "/db.proto\032!udb/core/common/v1/security.p" +
-      "roto\"\335\036\n\006ApiKey\022@\n\006key_id\030\001 \001(\tB)\202\267\030%\n\006k" +
+      "roto\"\254\037\n\006ApiKey\022@\n\006key_id\030\001 \001(\tB)\202\267\030%\n\006k" +
       "ey_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\005keyI" +
       "d\022\204\001\n\nkey_prefix\030\002 \001(\tBe\202\267\030a\n\nkey_prefix" +
       "\022\013VARCHAR(20)\030\001ZAFirst 8 chars of plain " +
@@ -116,41 +116,43 @@ public final class ApiKeyProto {
       "wedResourcesJson\022i\n\rmetadata_json\030\031 \001(\tB" +
       "D\202\267\030@\n\rmetadata_json\022\005JSONB\030\001:\013\'{}\'::jso" +
       "nbZ\027Non-secret key metadatax\001R\014metadataJ" +
-      "son:\306\010\372\266\030\244\007\n\010api_keys\022\tudb_authn\030\004 \001*4Ma" +
+      "son:\225\t\372\266\030\363\007\n\010api_keys\022\tudb_authn\030\004 \001*4Ma" +
       "chine-to-machine API keys for integratio" +
       "n accounts0\0018\001\212\0016\n\017idx_apikey_hash\022\005BTRE" +
-      "E:\022deleted_at IS NULLZ\010key_hash\232\001\021\n\007pg_t" +
-      "rgm\022\006public\252\001R\n\035trg_api_keys_touch_updat" +
-      "ed_at\022\006BEFORE\032\006UPDATE\"\034udb_authn.touch_u" +
-      "pdated_at()*\003ROW\252\001P\n\030trg_apikey_hash_req" +
-      "uired\022\006BEFORE\032\006INSERT\"\037udb_authn.assert_" +
-      "api_key_hash()*\003ROW\302\001\332\001\n\031touch_updated_a" +
-      "t_function\022\010postgres\032\017before_triggers\"\241\001" +
-      "CREATE OR REPLACE FUNCTION udb_authn.tou" +
-      "ch_updated_at()\nRETURNS trigger\nLANGUAGE" +
-      " plpgsql\nAS $$\nBEGIN\n  NEW.updated_at = " +
-      "CURRENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$" +
-      ";\302\001\340\002\n\035apikey_hash_required_function\022\010po" +
-      "stgres\032\017before_triggers\"\243\002CREATE OR REPL" +
-      "ACE FUNCTION udb_authn.assert_api_key_ha" +
-      "sh()\nRETURNS trigger\nLANGUAGE plpgsql\nAS" +
-      " $$\nBEGIN\n  IF NEW.key_hash IS NULL OR l" +
-      "ength(NEW.key_hash) > 128 THEN\n    RAISE" +
-      " EXCEPTION \'api_keys.key_hash must be a " +
-      "keyed digest no longer than 128 characte" +
-      "rs\';\n  END IF;\n  RETURN NEW;\nEND;\n$$;\352\001\007" +
-      "primary\372\001\rapikey:revoke\212\262\031\230\001\n\006tenant\032\tte" +
-      "nant_id*4tenant_id = current_setting(\'ap" +
-      "p.current_tenant_id\')2\013soft_delete:\022apik" +
-      "ey.operational@\373\023H\002R\006tenantZ\010standardr\025t" +
-      "enant.data_residencyB\374\001\n\035com.udb.core.ap" +
-      "ikey.entity.v1B\013ApiKeyProtoP\001ZEgithub.co" +
-      "m/fahara02/udb/sdk/go/gen/udb/core/apike" +
-      "y/entity/v1;entityv1\242\002\004UCAE\252\002\031Udb.Core.A" +
-      "pikey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity" +
-      "\\V1\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity" +
-      "\\V1\352\002\035Udb::Core::Apikey::Entity::V1b\006pro" +
-      "to3"
+      "E:\022deleted_at IS NULLZ\010key_hash\212\001L\n\035idx_" +
+      "api_keys_service_identity\022\005BTREEZ$(metad" +
+      "ata_json->>\'service_identity\')\232\001\021\n\007pg_tr" +
+      "gm\022\006public\252\001R\n\035trg_api_keys_touch_update" +
+      "d_at\022\006BEFORE\032\006UPDATE\"\034udb_authn.touch_up" +
+      "dated_at()*\003ROW\252\001P\n\030trg_apikey_hash_requ" +
+      "ired\022\006BEFORE\032\006INSERT\"\037udb_authn.assert_a" +
+      "pi_key_hash()*\003ROW\302\001\332\001\n\031touch_updated_at" +
+      "_function\022\010postgres\032\017before_triggers\"\241\001C" +
+      "REATE OR REPLACE FUNCTION udb_authn.touc" +
+      "h_updated_at()\nRETURNS trigger\nLANGUAGE " +
+      "plpgsql\nAS $$\nBEGIN\n  NEW.updated_at = C" +
+      "URRENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$;" +
+      "\302\001\340\002\n\035apikey_hash_required_function\022\010pos" +
+      "tgres\032\017before_triggers\"\243\002CREATE OR REPLA" +
+      "CE FUNCTION udb_authn.assert_api_key_has" +
+      "h()\nRETURNS trigger\nLANGUAGE plpgsql\nAS " +
+      "$$\nBEGIN\n  IF NEW.key_hash IS NULL OR le" +
+      "ngth(NEW.key_hash) > 128 THEN\n    RAISE " +
+      "EXCEPTION \'api_keys.key_hash must be a k" +
+      "eyed digest no longer than 128 character" +
+      "s\';\n  END IF;\n  RETURN NEW;\nEND;\n$$;\352\001\007p" +
+      "rimary\372\001\rapikey:revoke\212\262\031\230\001\n\006tenant\032\tten" +
+      "ant_id*4tenant_id = current_setting(\'app" +
+      ".current_tenant_id\')2\013soft_delete:\022apike" +
+      "y.operational@\373\023H\002R\006tenantZ\010standardr\025te" +
+      "nant.data_residencyB\374\001\n\035com.udb.core.api" +
+      "key.entity.v1B\013ApiKeyProtoP\001ZEgithub.com" +
+      "/fahara02/udb/sdk/go/gen/udb/core/apikey" +
+      "/entity/v1;entityv1\242\002\004UCAE\252\002\031Udb.Core.Ap" +
+      "ikey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity\\" +
+      "V1\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\" +
+      "V1\352\002\035Udb::Core::Apikey::Entity::V1b\006prot" +
+      "o3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

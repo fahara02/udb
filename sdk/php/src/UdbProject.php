@@ -15,6 +15,8 @@ use Fahara02\UdbLaravel\Services\StorageService;
 use Fahara02\UdbLaravel\Services\TenantService;
 use Fahara02\UdbLaravel\Services\WebRtcService;
 use Fahara02\UdbLaravel\Support\ScopeJoiner;
+use Fahara02\UdbLaravel\Support\SignInRetry;
+use Fahara02\UdbLaravel\Support\ReconnectBackoff;
 use Fahara02\UdbLaravel\Support\TlsCredentials;
 use Udb\Core\Analytics\Services\V1\AnalyticsServiceClient;
 use Udb\Core\Apikey\Services\V1\ApiKeyServiceClient;
@@ -235,6 +237,11 @@ final class UdbProject
      * {@see setCredentials()} + a tenant/project rebind. Authenticate-bearer
      * always runs (no conditional skip). Returns the `AuthnResponse` (the
      * verified principal).
+     *
+     * A transient failure (broker unreachable or restarting, overloaded, reply
+     * lost) is retried, up to {@see SignInRetry::ATTEMPTS} attempts in all, so a
+     * service that starts while the broker restarts still signs in. A refused
+     * credential is final and thrown at once.
      */
     public function loginAndAdoptTenant(
         string $username,
@@ -242,6 +249,18 @@ final class UdbProject
         string $totpCode = '',
         string $mfaOtpId = '',
         ?UdbMetadata $metadata = null,
+    ): \Udb\Core\Authn\Services\V1\AuthnResponse {
+        return SignInRetry::run(
+            fn () => $this->loginAndAdoptTenantOnce($username, $password, $totpCode, $mfaOtpId, $metadata),
+        );
+    }
+
+    private function loginAndAdoptTenantOnce(
+        string $username,
+        string $password,
+        string $totpCode,
+        string $mfaOtpId,
+        ?UdbMetadata $metadata,
     ): \Udb\Core\Authn\Services\V1\AuthnResponse {
         $login = $this->auth()->login($username, $password, $totpCode, $mfaOtpId, $metadata);
         $token = $login->getAccessToken();
@@ -531,7 +550,7 @@ final class UdbProject
     /** @return array<string,mixed> */
     private function channelOptions(): array
     {
-        return ['credentials' => TlsCredentials::channelCredentials((array) ($this->config['tls'] ?? []))];
+        return ReconnectBackoff::apply(['credentials' => TlsCredentials::channelCredentials((array) ($this->config['tls'] ?? []))]);
     }
 
     /** @return array{endpoint:string, tls?: array{enabled?:bool, root_certs?:?string, target?:?string}, deadline_ms:int} */

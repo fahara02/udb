@@ -405,6 +405,10 @@ type GeneratedClient struct {
 	// Retain only the latest warned version, rather than an unbounded set of
 	// versions seen across reconnects or a rolling broker deployment.
 	serverVersion atomic.Pointer[serverVersionObservation]
+	// bearerRejected is the credential owner's hook for a bearer the broker
+	// refused; reconnectKickedAt rate-limits reconnect kicks. See reconnect.go.
+	bearerRejected    atomic.Pointer[func(string) bool]
+	reconnectKickedAt atomic.Int64
 }
 
 type serverVersionObservation struct {
@@ -840,54 +844,73 @@ func (g *GeneratedClient) DialOptions() []grpc.DialOption {
 			Timeout:             keepaliveTimeout,
 			PermitWithoutStream: true,
 		}),
+		// Reconnect after a broker restart within seconds, not grpc's 120s
+		// backoff ceiling; see reconnect.go.
+		grpc.WithConnectParams(reconnectParams()),
 	}
 }
 
 func (g *GeneratedClient) unaryInterceptor() grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		rc := g.options().Retry
-		readOnly := isReadOnlyUnaryRPC(method)
-		replaySafe := isReplaySafeRPC(method)
-		idemKeyed := hasIdempotencyKey(req)
-		var lastErr error
-		for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
-			if attempt > 0 {
-				proceed, ctxDone := rc.waitBeforeRetry(ctx, attempt-1, lastErr)
-				if ctxDone {
-					return mapError(method, credentialContextError(ctx), nil)
-				}
-				if !proceed {
-					return lastErr
-				}
+		sent, err := g.unaryAttempts(ctx, method, req, reply, cc, invoker, opts...)
+		if g.renewRejectedBearer(method, err, sent) {
+			// The broker refused the owned bearer this call carried (a restarted
+			// broker, a revoked session). The owner renews it on the next resolve;
+			// the broker refuses authentication before any handler runs, so the
+			// call is made exactly once more, with the renewed bearer.
+			_, err = g.unaryAttempts(context.WithValue(ctx, credentialPreparedKey{}, nil), method, req, reply, cc, invoker, opts...)
+		}
+		return err
+	}
+}
+
+// unaryAttempts runs one unary call with the transient-code retry policy. sent
+// is the authorization the last attempt that reached the transport carried.
+func (g *GeneratedClient) unaryAttempts(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) (sent string, _ error) {
+	rc := g.options().Retry
+	readOnly := isReadOnlyUnaryRPC(method)
+	replaySafe := isReplaySafeRPC(method)
+	idemKeyed := hasIdempotencyKey(req)
+	var lastErr error
+	for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
+		if attempt > 0 {
+			proceed, ctxDone := rc.waitBeforeRetry(ctx, attempt-1, lastErr)
+			if ctxDone {
+				return sent, mapError(method, credentialContextError(ctx), nil)
 			}
-			attemptCtx := ctx
-			if attempt > 0 {
-				attemptCtx = context.WithValue(ctx, credentialPreparedKey{}, nil)
-			}
-			callCtx, cancel := g.withDeadline(attemptCtx)
-			callCtx, err := g.prepareCredential(callCtx, method)
-			if err != nil {
-				cancel()
-				return mapError(method, err, nil)
-			}
-			capture, callOpts := captureResponseMetadata(opts)
-			err = invoker(callCtx, method, req, reply, cc, callOpts...)
-			cancel()
-			capture.publish()
-			var versionErr error
-			if err == nil || len(capture.header) > 0 {
-				versionErr = g.checkServerVersion(capture.header)
-			}
-			if err == nil {
-				return versionErr
-			}
-			lastErr = mapError(method, err, capture.trailer)
-			if !rc.retryableForRPC(status.Code(err), readOnly, replaySafe, idemKeyed) {
-				return lastErr
+			if !proceed {
+				return sent, lastErr
 			}
 		}
-		return lastErr
+		attemptCtx := ctx
+		if attempt > 0 {
+			attemptCtx = context.WithValue(ctx, credentialPreparedKey{}, nil)
+		}
+		callCtx, cancel := g.withDeadline(attemptCtx)
+		callCtx, err := g.prepareCredential(callCtx, method)
+		if err != nil {
+			cancel()
+			return sent, mapError(method, err, nil)
+		}
+		sent = sentAuthorization(callCtx)
+		capture, callOpts := captureResponseMetadata(opts)
+		err = invoker(callCtx, method, req, reply, cc, callOpts...)
+		cancel()
+		capture.publish()
+		var versionErr error
+		if err == nil || len(capture.header) > 0 {
+			versionErr = g.checkServerVersion(capture.header)
+		}
+		if err == nil {
+			return sent, versionErr
+		}
+		g.kickReconnect(cc, err)
+		lastErr = mapError(method, err, capture.trailer)
+		if !rc.retryableForRPC(status.Code(err), readOnly, replaySafe, idemKeyed) {
+			return sent, lastErr
+		}
 	}
+	return sent, lastErr
 }
 
 func (g *GeneratedClient) streamInterceptor() grpc.StreamClientInterceptor {
@@ -907,6 +930,7 @@ func (g *GeneratedClient) streamInterceptor() grpc.StreamClientInterceptor {
 		cs, err := streamer(callCtx, desc, cc, method, opts...)
 		if err != nil {
 			cancel()
+			g.kickReconnect(cc, err)
 			return nil, mapError(method, err, nil)
 		}
 		return &cancelOnCloseStream{ClientStream: g.versionStream(cs, cancel), cancel: cancel}, nil

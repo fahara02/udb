@@ -844,9 +844,12 @@ impl DataBrokerRuntime {
                 runtime.encryption = Some(encryption);
             }
             Ok(None) => {}
-            Err(err) => report
-                .warnings
-                .push(format!("field-level encryption disabled: {err}")),
+            Err(err) => {
+                report
+                    .warnings
+                    .push(format!("field-level encryption disabled: {err}"));
+                report.encryption_load_error = Some(err);
+            }
         }
 
         let mut runtime_instances = runtime_backend_instances(&instance_config, &report, &runtime);
@@ -1266,13 +1269,12 @@ impl DataBrokerRuntime {
         } else {
             None
         };
-        let reset_result = conn.reset_context(&context).await;
-        // The guard recycles only after a completed RESET. Cancellation during
-        // set/query/count/reset and every early `?` discard the dirty session.
-        drop(conn);
+        // The RESET runs after the answer: the connection reaches the pool only
+        // after it completes. Cancellation during set/query/count and every
+        // early `?` discard the dirty session.
+        conn.release_in_background(&context);
         let rows = rows_result?;
         let exact_total = total_result.transpose()?;
-        reset_result?;
         let mut record_set = rows_to_record_set(
             rows,
             Some(table),
@@ -1437,10 +1439,8 @@ impl DataBrokerRuntime {
             .map_err(|err| {
                 crate::runtime::executor_utils::sqlx_error_to_status("join_query", &err)
             });
-        let reset_result = conn.reset_context(&context).await;
-        drop(conn);
+        conn.release_in_background(&context);
         let mut rows = rows_result?;
-        reset_result?;
         let limit = usize::try_from(request.limit).unwrap_or_default();
         let has_more = limit > 0 && rows.len() > limit;
         if has_more {
@@ -11502,7 +11502,10 @@ pub(crate) async fn register_postgres(ctx: &mut RegisterCtx<'_>) {
                 .acquire_timeout(acquire_timeout)
                 .idle_timeout(idle_timeout)
                 .max_lifetime(max_lifetime)
-                .test_before_acquire(true)
+                .test_before_acquire(false)
+                .before_acquire(|conn, meta| {
+                    Box::pin(crate::runtime::core::helpers::ping_if_idle(conn, meta))
+                })
                 .connect(&replica_cs)
                 .await
             {
@@ -11532,14 +11535,21 @@ pub(crate) async fn register_postgres(ctx: &mut RegisterCtx<'_>) {
         }
 
         if !replicas.is_empty() {
+            let health_interval =
+                Duration::from_secs(config.pg_replica_health_interval_secs.max(10));
+            // Reads that name no consistency go to a replica by default; a
+            // caller's own write is remembered for the lag bound plus one
+            // health-probe interval (lag is only re-measured once per probe).
             let manager = PgReplicaManager::new(
                 replicas,
                 replica_strategy,
                 replica_max_lag,
                 replica_fail_open,
+            )
+            .with_default_reads(
+                config.pg_replica_default_reads.unwrap_or(true),
+                replica_max_lag + health_interval,
             );
-            let health_interval =
-                Duration::from_secs(config.pg_replica_health_interval_secs.max(10));
             manager.refresh_health_once().await;
             manager.start_health_task(health_interval);
             runtime.pg_replicas = manager;

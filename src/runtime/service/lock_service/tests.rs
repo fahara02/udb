@@ -472,3 +472,64 @@ mod expiry_reaper {
         assert_eq!(lock_status(&pool, &second).await, STATUS_EXPIRED);
     }
 }
+
+/// The advisory-lease table behind every lock acquire/renew is ensured once per
+/// store object, not by DDL on each call.
+mod lease_table_ensure {
+    /// Proof by removal: after the first acquire ensured the table, drop it. If
+    /// acquire still ran `CREATE TABLE IF NOT EXISTS` per call, the next acquire
+    /// would recreate it and succeed; it must fail instead (no DDL ran), and the
+    /// call after that must ensure again and succeed (a failure is retried).
+    #[tokio::test]
+    #[ignore = "requires live Postgres; native CI runs all ignored live proofs"]
+    async fn live_lock_acquire_runs_no_lease_table_ddl_per_call() {
+        use crate::runtime::service::live_tests::support::{
+            live_native_service_db_lock, live_pg_dsn, live_pg_pool, migrate_native_service_db,
+        };
+        use std::time::Duration;
+
+        let _guard = live_native_service_db_lock().lock().await;
+        let pool = live_pg_pool().await;
+        migrate_native_service_db(&pool).await;
+        let mut config = crate::runtime::config::UdbConfig::from_env();
+        config.primary.direct_dsn = live_pg_dsn();
+        let runtime = crate::runtime::DataBrokerRuntime::from_config(config).await;
+        let store = runtime
+            .default_system_stores()
+            .expect("the live runtime registers its default canonical store");
+        let owner = format!("lease-ddl-proof-{}", uuid::Uuid::new_v4());
+        let lease = |n: u8| format!("{owner}-{n}");
+        let ttl = Duration::from_secs(30);
+
+        assert!(
+            runtime
+                .try_acquire_native_lease(&lease(0), &owner, ttl)
+                .await
+                .expect("first acquire ensures the lease table")
+        );
+        sqlx::query(r#"DROP TABLE "udb_system"."udb_advisory_leases""#)
+            .execute(&pool)
+            .await
+            .expect("drop the ensured lease table");
+        let without_ddl = runtime
+            .try_acquire_native_lease(&lease(1), &owner, ttl)
+            .await;
+        let after_retry = runtime
+            .try_acquire_native_lease(&lease(2), &owner, ttl)
+            .await;
+        // Restore the shared table before asserting, whatever happened above.
+        store
+            .ensure_advisory_lease_table()
+            .await
+            .expect("restore the lease table");
+        assert!(
+            without_ddl.is_err(),
+            "an acquire after the first must not re-run the lease-table DDL"
+        );
+        assert!(
+            after_retry.expect("the acquire after a failure ensures the table again"),
+            "the re-ensured acquire holds its lease"
+        );
+        runtime.release_native_lease(&lease(2), &owner).await;
+    }
+}

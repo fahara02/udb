@@ -732,13 +732,31 @@ where
                         tonic::transport::server::TcpConnectInfo,
                     >>()
                     .is_some();
+            let call_started = std::time::Instant::now();
+            let method = req.uri().path().to_string();
             if needs_resolution {
+                let credential = if req.headers().contains_key("x-api-key")
+                    || req.headers().contains_key("x-udb-api-key")
+                {
+                    "api_key"
+                } else if req.headers().contains_key("authorization") {
+                    "bearer"
+                } else {
+                    "client_certificate"
+                };
                 let der = first_peer_cert_der(req.extensions());
                 if let Some(resolved) = resolve_credentials(req.headers(), der).await {
                     req.extensions_mut().insert(resolved);
                 }
+                crate::runtime::metrics::auth_resolve_seconds()
+                    .with_label_values(&[credential])
+                    .observe(call_started.elapsed().as_secs_f64());
             }
-            inner.call(req).await
+            let response = inner.call(req).await;
+            crate::runtime::metrics::rpc_total_seconds()
+                .with_label_values(&[method.as_str()])
+                .observe(call_started.elapsed().as_secs_f64());
+            response
         })
     }
 }

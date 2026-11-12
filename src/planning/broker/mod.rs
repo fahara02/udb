@@ -26,8 +26,12 @@ pub struct RequestContext {
     pub project_id: String,
     /// Read consistency hint from `x-udb-consistency`.
     ///
-    /// Supported values are `strong`, `bounded_staleness`, and `eventual`.
-    /// Empty means the runtime default, currently replica-eligible reads.
+    /// Any `ConsistencyMode` token (`strong`, `read_your_writes`,
+    /// `bounded_staleness`, `replica_bounded`, `eventual`, `projection_ok`,
+    /// `cache_ok`). Empty means the runtime default: replica-bounded within
+    /// `UDB_PG_REPLICA_MAX_LAG_SECS`, fenced on the caller's own last write,
+    /// when a PostgreSQL replica is configured (unless
+    /// `UDB_PG_REPLICA_DEFAULT_READS=false`); otherwise the primary.
     #[serde(default)]
     pub consistency: String,
     /// Optional per-request maximum replica lag from `x-udb-max-replica-lag-ms`.

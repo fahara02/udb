@@ -145,6 +145,14 @@ pub(crate) const DEFAULT_CDC_POLL_INTERVAL_MS: u64 = 250;
 /// Resolved once with the rest of [`CdcConfig`]; never read on an event hot path.
 pub(crate) const DEFAULT_CDC_TOPIC_POLICY_RELOAD_INTERVAL_MS: u64 = 1_000;
 pub(crate) const DEFAULT_CDC_POLL_BATCH: i64 = 200;
+
+/// Parse a positive millisecond interval knob; unset, empty, zero or garbage
+/// keep the default. Shared by the per-stream journal poll cadences.
+pub(crate) fn resolve_poll_interval_ms(raw: Option<&str>, default_ms: u64) -> u64 {
+    raw.and_then(|v| v.trim().parse::<u64>().ok())
+        .filter(|ms| *ms > 0)
+        .unwrap_or(default_ms)
+}
 pub(crate) const DEFAULT_CDC_PRODUCER_LINGER_MS: u64 = 20;
 pub(crate) const DEFAULT_CDC_PRODUCER_BATCH_MESSAGES: u64 = 10_000;
 /// Cooldown for the "failed to publish to kafka" ERROR log. When Kafka is

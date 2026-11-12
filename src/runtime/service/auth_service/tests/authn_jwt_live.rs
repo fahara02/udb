@@ -671,8 +671,10 @@ async fn live_postgres_cached_bearer_verdict_honours_revocation() {
         "a revocation on this node is seen by the next call"
     );
 
-    // 2. Revoked without an event on this node (as another broker node would):
-    // refused once the cache lifetime has passed.
+    // 2. Revoked without an event on this node (as another broker node, or an
+    // operator in SQL, would): the auth-state version moves at commit and is
+    // published to every node, so the change is refused within milliseconds,
+    // with no wait for the cache lifetime.
     let second = login("verdict-remote").await;
     let claims = crate::runtime::security::validate_bearer_token(&security, &second.access_token)
         .expect("decode bearer");
@@ -686,14 +688,82 @@ async fn live_postgres_cached_bearer_verdict_honours_revocation() {
     let jti = claims.jti.clone().expect("session jti");
     let hash = hash_secret(&jti, b"live-auth-test-secret");
     assert!(store.revoke(&hash, now()).await.expect("store revoke"));
-    tokio::time::sleep(std::time::Duration::from_millis(2_300)).await;
+    // The change reaches the in-memory version by notification at commit:
+    // seen within milliseconds, never after the cache lifetime.
+    let changed_at = std::time::Instant::now();
+    while authn
+        .jwt_persisted_state_valid(&claims, now())
+        .await
+        .unwrap()
+    {
+        assert!(
+            changed_at.elapsed() < std::time::Duration::from_millis(500),
+            "a session revoked elsewhere is refused by the next call (within 500 ms, before the cache lifetime)"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(2)).await;
+    }
+    eprintln!("auth change seen after {:?}", changed_at.elapsed());
+
+    // 3. A user suspended straight in SQL: refused by the next call.
+    let third = login("verdict-sql").await;
+    let claims = crate::runtime::security::validate_bearer_token(&security, &third.access_token)
+        .expect("decode bearer");
     assert!(
-        !authn
+        authn
             .jwt_persisted_state_valid(&claims, now())
             .await
-            .unwrap(),
-        "a change made elsewhere is seen within the cache lifetime"
+            .unwrap()
     );
+    let version = || async {
+        sqlx::query_scalar::<_, i64>("SELECT CASE WHEN is_called THEN last_value ELSE 0 END FROM \"udb_authn\".\"udb_auth_state_version\"")
+            .fetch_one(&pool)
+            .await
+            .expect("read auth-state version")
+    };
+    // A last_active_at stamp is not a change of auth state: the version stays.
+    let before_touch = version().await;
+    sqlx::query("UPDATE \"udb_authn\".\"sessions\" SET \"last_active_at\" = now()")
+        .execute(&pool)
+        .await
+        .expect("stamp sessions");
+    assert_eq!(
+        version().await,
+        before_touch,
+        "a session touch must not drop every remembered verdict"
+    );
+    let users = crate::runtime::native_catalog::native_model(
+        "udb.core.authn.entity.v1.User",
+        &["user_id", "status"],
+    );
+    sqlx::query(&format!(
+        "UPDATE {} SET {}='SUSPENDED' WHERE {}=$1::UUID",
+        users.relation,
+        users.q("status"),
+        users.q("user_id")
+    ))
+    .bind(&user.user_id)
+    .execute(&pool)
+    .await
+    .expect("suspend user in SQL");
+    assert!(
+        version().await > before_touch,
+        "a status change moves the version"
+    );
+    // The change reaches the in-memory version by notification at commit:
+    // seen within milliseconds, never after the cache lifetime.
+    let changed_at = std::time::Instant::now();
+    while authn
+        .jwt_persisted_state_valid(&claims, now())
+        .await
+        .unwrap()
+    {
+        assert!(
+            changed_at.elapsed() < std::time::Duration::from_millis(500),
+            "a user suspended in SQL is refused by the next call (within 500 ms, before the cache lifetime)"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(2)).await;
+    }
+    eprintln!("auth change seen after {:?}", changed_at.elapsed());
 
     cleanup_native_auth_db(&pool).await;
 }

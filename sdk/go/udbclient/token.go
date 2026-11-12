@@ -224,6 +224,42 @@ type TokenManager struct {
 	publish       func(context.Context) error
 	needsRecovery bool
 	terminalErr   error
+	// rejected is an access token the broker refused before its local expiry;
+	// a stored token carrying it is renewed as if it were stale (guarded by mu).
+	rejected string
+}
+
+// markRejected records that the broker refused accessToken, so the next
+// Token/RefreshIfNeeded renews it even though it has not expired locally.
+func (m *TokenManager) markRejected(accessToken string) {
+	if accessToken == "" {
+		return
+	}
+	m.mu.Lock()
+	m.rejected = accessToken
+	m.mu.Unlock()
+}
+
+// usable reports whether tok is fresh and not refused by the broker.
+func (m *TokenManager) usable(tok Token, skew time.Duration) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.usableLocked(tok, skew)
+}
+
+func (m *TokenManager) usableLocked(tok Token, skew time.Duration) bool {
+	return tok.Valid(m.now(), skew) && !m.rejectedLocked(tok)
+}
+
+// isRejected reports whether the broker refused tok's access token.
+func (m *TokenManager) isRejected(tok Token) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.rejectedLocked(tok)
+}
+
+func (m *TokenManager) rejectedLocked(tok Token) bool {
+	return m.rejected != "" && tok.AccessToken == m.rejected
 }
 
 // A completed flight retains its own result for every waiter. A later refresh
@@ -330,7 +366,7 @@ func (m *TokenManager) Token(ctx context.Context) (Token, error) {
 	if err != nil {
 		return Token{}, err
 	}
-	if tok.Valid(m.now(), m.RefreshSkew) {
+	if m.usable(tok, m.RefreshSkew) {
 		return tok, nil
 	}
 	if err := m.RefreshIfNeeded(ctx); err != nil {
@@ -360,7 +396,7 @@ func (m *TokenManager) RefreshIfNeeded(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if tok.Valid(m.now(), m.RefreshSkew) {
+	if m.usable(tok, m.RefreshSkew) {
 		return nil
 	}
 
@@ -390,7 +426,7 @@ func (m *TokenManager) RefreshIfNeeded(ctx context.Context) error {
 		m.mu.Unlock()
 		return err
 	}
-	if tok.Valid(m.now(), m.RefreshSkew) {
+	if m.usableLocked(tok, m.RefreshSkew) {
 		m.mu.Unlock()
 		return nil
 	}
@@ -435,7 +471,7 @@ func (m *TokenManager) renew(ctx context.Context, tok Token, needsRecovery bool)
 			if err != nil {
 				return err
 			}
-			if cur.Valid(m.now(), m.RefreshSkew) {
+			if m.usable(cur, m.RefreshSkew) {
 				return nil
 			}
 			tok = cur

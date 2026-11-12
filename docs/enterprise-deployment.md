@@ -32,8 +32,8 @@ the auth/session/encryption/authz/redis subset.
 | `UDB_SESSION_HASH_SECRET` | Keyed secret for sessions (and a fallback for the password/bundle secrets). |
 | `UDB_SESSION_BACKEND=postgres` | Where sessions live: `postgres` (default) or `redis` (needs the `redis` feature and `REDIS_URL`). **Postgres** keeps sessions durable and re-checks a revocation atomically with the validation that races it. **Redis** keeps them in memory: a Redis restart without AOF signs every user out, and validation reads then stamps in two steps. Prefer `postgres`. Validation stamps `last_active_at` at most once per touch interval (60 s, or a tenth of the idle TTL when shorter); every other call reads without a lock. |
 | `UDB_SESSION_TTL_SECONDS=86400` / `UDB_SESSION_IDLE_TTL_SECONDS=3600` | Absolute session lifetime and idle timeout. The idle timeout can fire up to one touch interval early. |
-| `UDB_AUTH_VERDICT_CACHE_MS=2000` | How long a broker remembers that a bearer is still valid (user active, not revoked, session and grant live), so a page's many calls, and a gateway that authenticates every request, do not each pay those round trips. A revocation, logout, status, grant, role, membership, API key or IdP change made on the same broker node takes effect on the next call; one made on another node takes effect within this time. `0` checks live state on every call. |
-| `UDB_ENCRYPTION_KEY` | 32-byte object/native-state encryption key (base64/hex/raw). Required when encryption-at-rest is mandated, else config validation fails. |
+| `UDB_AUTH_VERDICT_CACHE_MS=2000` | How long a broker remembers that a bearer is still valid (user active, not revoked, session and grant live), so a page's many calls, and a gateway that authenticates every request, do not each pay those round trips. Triggers advance one sequence (`udb_authn.udb_auth_state_version`) when that state changes and publish the new value at commit; each node keeps it in memory from a listener, so a revocation, logout, suspension, grant or membership change made on any node, or in SQL, is refused everywhere within milliseconds and a call costs no database round trip. While a node's listener is disconnected its calls read the sequence (one small statement each). `UDB_AUTH_STATE_READ_PER_CALL=true` always reads it, for no delivery window at that price. The broker installs the triggers on first use; a role without DDL rights gets a warning and only this time bound. `0` checks live state on every call. |
+| `UDB_ENCRYPTION_KEY` | 32-byte object/native-state encryption key (base64/hex/raw). Required under `UDB_ENV=production`, any fail-closed posture (`UDB_FAIL_CLOSED` / `UDB_ENTERPRISE_AUDIT`), or `UDB_OBJECT_NATIVE_STATE_ENCRYPTION_REQUIRED=true`: without a key that loads, the broker refuses to start and names this variable (see §2.2). A Vault key source (`UDB_VAULT_ADDR` + `UDB_VAULT_TOKEN`) also satisfies it. |
 | `UDB_AUTH_GRPC_ADDR=0.0.0.0:50061` | Exposes the auth control plane — see §3. Defaults to loopback-only. |
 | `UDB_SERVICE_IDENTITY_REQUIRED=true` | Require a verified service identity (forced on in production). |
 | `REDIS_URL` (or `UDB_REDIS_DSN`) | Redis for the distributed rate limiter / sessions. Without it each broker process enforces the budget on its own, unless `UDB_RATE_LIMIT_FAILURE_MODE=open`. |
@@ -119,7 +119,7 @@ startup listing **every** unmet item together (not one-at-a-time). The checklist
 | Service identity | `UDB_SERVICE_IDENTITY_REQUIRED=true` **OR** the trusted-transport acknowledgment |
 | Authentication | JWT (`UDB_JWT_PUBLIC_KEY` or `UDB_JWT_JWKS_URL`) **or** mTLS |
 | No header scopes | do **not** set `UDB_ALLOW_HEADER_SCOPES` |
-| Durable audit sink | external HTTP/SIEM (`UDB_AUDIT_SINK_URL=…`) **OR** the data-plane Postgres audit sink (`UDB_AUDIT_SINK=postgres` + `UDB_AUDIT_PG_TABLE=<schema.table>`) **OR** the auth-plane durable export (`UDB_AUDIT_EXPORT_POSTGRES=1`) |
+| Durable audit sink | external HTTP/SIEM (`UDB_AUDIT_SINK_URL=…`) **OR** the data-plane Postgres audit sink (`UDB_AUDIT_SINK=postgres` + `UDB_AUDIT_PG_TABLE=<schema.table>`) **OR** the auth-plane durable export (`UDB_AUDIT_EXPORT_POSTGRES=1`). Whichever you pick, a data-plane sink that keeps nothing (`UDB_AUDIT_SINK=stdout`, or the unwired `kafka`) refuses startup: use `postgres` or `file` |
 | PII-safe logging | on by default — only fails if you explicitly set `UDB_PII_SAFE_LOGGING=false` |
 
 **Two escape hatches let a single-node / behind-a-proxy deployment run fail-closed
@@ -169,6 +169,49 @@ automatically.
 > `udb doctor --enterprise` reports this checklist (including which escape hatch, if
 > any, is active) before you pay a slow startup.
 
+### 2.2 Which gates need `UDB_ENV=production` and which apply under fail-closed
+
+`UDB_ENV=production` implies fail-closed, but fail-closed does **not** imply
+production. A staging broker with `UDB_ENV=staging` and `UDB_FAIL_CLOSED=true` gets
+every gate in the first table and **none** of the second. If staging should mirror
+production, set the production-only variables yourself (for example
+`UDB_TLS_REQUIRED=true`, `UDB_MTLS_REQUIRED=true`) and leave the dev switches in
+the second table unset.
+
+**Applies under any fail-closed posture** (`UDB_FAIL_CLOSED`, `UDB_ENTERPRISE_AUDIT`,
+or `UDB_ENV=production`), in any `UDB_ENV`:
+
+| Gate | Effect |
+|---|---|
+| Deny on dependency error | Revocation lookup, signing-key/JWKS store and rate-limit store errors deny instead of allowing. |
+| Hardened startup checklist (§2.1) | Startup aborts unless transport, service identity, authentication, no header scopes, a durable audit sink and PII-safe logging are satisfied. |
+| Encryption-at-rest key | Startup aborts unless an encryption key **loads** (`UDB_ENCRYPTION_KEY`, or a Vault key source). A key that fails to decode or a Vault export that fails is named in the error. Before 0.6.15 a fail-closed broker without `UDB_ENV=production` started keyless and failed at the first secret, native-state or vault write. |
+| TURN secret | TURN credentials are minted only with `UDB_TURN_SECRET`; the built-in dev fallback secret is refused (STUN only). Before 0.6.15 this applied only in production. |
+| Backup tenant scope | With a backup DB configured, startup aborts unless `UDB_BACKUP_TENANT_ID` or `UDB_ALLOW_CROSS_TENANT_BACKUP=true` is set. |
+| Audit table shape | An existing `UDB_AUDIT_PG_TABLE` that lacks the sink's columns aborts startup. |
+| Auth readiness | A `noop://` audit sink fails auth readiness instead of passing as a dev setting. |
+
+**Applies only under `UDB_ENV=production`** (or `prod`):
+
+| Gate | Effect |
+|---|---|
+| TLS and mTLS forced on | `UDB_REQUIRE_SECURE_TRANSPORT`, `UDB_MTLS_REQUIRED` and both internal mTLS flags are forced on, overriding an explicit `false`. |
+| TLS defaults | `UDB_TLS_REQUIRED`, `UDB_PG_TLS_REQUIRED`, `UDB_REDIS_TLS_REQUIRED`, `UDB_KAFKA_TLS_REQUIRED` and `UDB_SERVICE_IDENTITY_REQUIRED` default to `true` (an explicit value still wins). |
+| Encryption required at config load | `UDB_OBJECT_NATIVE_STATE_ENCRYPTION_REQUIRED` is forced on, so config validation fails without a key source. |
+| Default-allow refused | `UDB_ABAC_DEFAULT_ALLOW` aborts startup and fails auth readiness. Under fail-closed alone it is reported, not refused, because CI smoke and staging rely on it. |
+| Private OAuth token URL refused | `UDB_VAULT_OAUTH_ALLOW_PRIVATE_TOKEN_URL` is ignored. |
+
+**Applies under the production posture** (`UDB_ENV=production`, **or** both
+`UDB_TLS_REQUIRED=true` and `UDB_SERVICE_IDENTITY_REQUIRED=true`), not under
+fail-closed alone:
+
+| Gate | Effect |
+|---|---|
+| Raw generic dispatch | Raw dispatch to a mediated backend is refused unless `UDB_DISPATCH_ALLOW_RAW_<BACKEND>` is set. |
+| Dev identity providers | `UDB_SAML_TEST_MODE` and `UDB_OIDC_TEST_MODE` are refused. |
+| OTP dev echo | `UDB_OTP_DEV_ECHO` is refused. |
+| WebAuthn | The relying-party origin must be non-loopback `https://`, and an attestation/resident-key/user-verification policy this build cannot enforce is refused. |
+
 ---
 
 ## 3. The auth control plane is on a separate (loopback-default) listener
@@ -203,6 +246,43 @@ sees *"another UDB instance holds the startup advisory lock"* and crash-loops.
 - Point `UDB_PG_DSN` at the **direct** endpoint.
 - Recover a stranded lock with `udb admin release-lock` — run it **against the
   direct DSN** (the pooler may not see the stranded backend).
+
+### 4.1 Read replicas serve default reads
+
+When you configure at least one Postgres read replica, a read that names no
+consistency mode goes to a replica. Writes always go to the primary. A read
+that asks for `strong` (or `primary_read`) always goes to the primary.
+
+| Env var | Default | What it does |
+| --- | --- | --- |
+| `UDB_PG_REPLICA_DSNS` / `UDB_PG_REPLICA_DSN` | unset | Comma-separated replica DSNs. Unset means every read uses the primary. |
+| `UDB_PG_REPLICA_MAX_LAG_SECS` | 3 (minimum 3) | How far behind a replica can be and still serve a default read. A replica further behind is skipped. If no replica qualifies, the primary serves the read. The read never fails because of lag. |
+| `UDB_PG_REPLICA_HEALTH_INTERVAL_SECS` | 10 (minimum 10) | How often each replica's lag is measured. |
+| `UDB_PG_REPLICA_STRATEGY` | `round_robin` | `least_lag`, `random_healthy`, or `primary_only`. `primary_only` turns replica reads off. |
+| `UDB_PG_REPLICA_DEFAULT_READS` | `true` | Set `false` to keep reads that name no mode on the primary. Replicas then serve only reads that ask for `replica_bounded`, `bounded_staleness`, or `eventual`. |
+
+**Read-after-write.** After a caller writes, the broker remembers the write's
+primary position (`WriteReceipt.source_lsn`). The caller is identified by
+tenant, project, user, and service identity. The broker keeps this position
+for the lag bound plus one health interval (13 s by default). The caller's next
+default read on the same broker waits up to 250 ms for the replica to reach that
+position. If the replica doesn't get there in time, the primary serves the read.
+So the caller never reads data older than its own write. After a `BeginTx`, or
+when a write has no Postgres position, the caller's default reads go to the
+primary for that period.
+
+This memory belongs to one broker process. Suppose a caller writes through
+broker A and then reads through broker B. That read is protected only by the
+lag bound. To get exact read-your-writes across brokers, pass the write receipt
+back as a read fence (`read_fence` / `x-udb-read-fence`). The SDKs already
+provide this. The memory is also cleared when the runtime reloads its
+configuration.
+
+**What `UDB_PG_REPLICA_DEFAULT_READS=false` costs.** Every read that names no
+mode goes to the primary. Your replicas then carry only reads that opt in, and
+read throughput is limited by the primary. Turn the default off only if a
+caller needs to see writes made through *another* broker within the lag bound
+and cannot pass a read fence. Otherwise, mark just those reads `strong`.
 
 ---
 
@@ -247,6 +327,18 @@ native `PERMISSION_DENIED` is a missing token scope, not a missing policy row.
   carries that role's `token_scopes` (inside the role's own tenant and project);
   a role without `token_scopes` adds none. Service-account scopes come from the
   grant, never from roles.
+
+- **Snapshot refresh cost.** Every `UDB_AUTHZ_SNAPSHOT_TTL_SECS` (default 5)
+  the warmer reads one small revision fingerprint from
+  `udb_authz.authz_revisions`. The full policy/role/tuple reload runs only when
+  that revision moved, when a loaded role binding or tuple has reached its
+  expiry, or when the last full reload is older than
+  `UDB_AUTHZ_SNAPSHOT_FULL_RELOAD_SECS` (default 60). Every authz RPC that
+  changes policy, roles, assignments or tuples (and `udb policy apply`) appends a
+  revision, so its effect is still visible on the next tick on every node.
+  Writes that bypass the revision (raw SQL against the `udb_authz` tables, a
+  tenant restore) are picked up within `UDB_AUTHZ_SNAPSHOT_FULL_RELOAD_SECS`.
+  Set it to `0` to reload in full on every tick.
 
 For dev/bootstrap: `UDB_ABAC_DEFAULT_ALLOW=true` (only while `policy_rules` is
 empty). For production: seed real least-privilege `policy_rules` and leave
@@ -347,6 +439,26 @@ set `UDB_CDC_JOURNAL_ONLY=true`. Default is enabled.
 - CDC publish is fully decoupled from the write path: an unreachable broker
   **never** rolls back or fails a data mutation — the outbox row commits with the
   write, and delivery is retried asynchronously by the tailer.
+
+### 9.1 Background polling cadences
+
+These loops run whether or not anything changed. Each idle tick is one small
+indexed read; the heavier work runs only when that read shows a change. The
+defaults favour latency; raise them to cut idle database traffic on a quiet
+fleet.
+
+| Variable | Default | What one idle tick costs |
+|---|---|---|
+| `UDB_CDC_POLL_INTERVAL_MS` | `250` | The CDC outbox tailer: one `outbox_events` page read. |
+| `UDB_CDC_STREAM_JOURNAL_POLL_MS` | `500` | Per open `StreamCdc` subscriber: one primary-key read of the journal head; the journal range read runs only when the head moved past the subscriber's cursor. |
+| `UDB_LIVEQUERY_JOURNAL_POLL_MS` | `500` | Per live-query feed (one per topic, tenant and project, shared by its subscribers): one indexed journal probe. |
+| `UDB_CDC_TOPIC_POLICY_RELOAD_INTERVAL_MS` | `1000` | One read of the (small) topic policy table; the generation bumps only when a row changed. |
+| `UDB_CATALOG_RECONCILE_INTERVAL_MS` | `2000` | Backstop behind the `udb_catalog_reload` notification: one catalog generation read; the full reconcile runs only when it moved. |
+| `UDB_AUTHZ_SNAPSHOT_TTL_SECS` | `5` | One authz revision read; see §5 for when the full reload runs (`UDB_AUTHZ_SNAPSHOT_FULL_RELOAD_SECS`). |
+
+A zero, empty or unparsable value keeps the default. The `LockService` lease
+table is created once per broker process (retried after a failure), not on each
+`AcquireLock`/`RenewLock`.
 
 ## 10. Diagnosing an opaque `INTERNAL` on a write
 

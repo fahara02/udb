@@ -423,16 +423,91 @@ fn audit_relation_schema(relation: &str) -> Option<&str> {
     relation.split_once('.').map(|(schema, _)| schema)
 }
 
+/// How many times self-creating audit DDL is re-run after colliding with a
+/// concurrent session's identical DDL that the advisory lock did not serialize
+/// (a different code path creating the same schema, for one).
+const AUDIT_DDL_COLLISION_ATTEMPTS: u32 = 3;
+
+/// The advisory-lock name that serializes self-creating DDL for one relation.
+/// Pure so the key derivation is pinned by a test.
+fn audit_ddl_lock_name(relation: &str) -> String {
+    format!("udb.audit_ddl:{}", relation.trim().to_ascii_lowercase())
+}
+
+/// Run self-creating `CREATE SCHEMA`/`CREATE TABLE IF NOT EXISTS` statements for an
+/// audit relation so that two sessions doing their FIRST write at the same moment
+/// cannot both try to create it.
+///
+/// Postgres `CREATE ... IF NOT EXISTS` is not race-safe: the loser of two
+/// concurrent creates fails with `duplicate key value violates unique constraint
+/// "pg_type_typname_nsp_index"` (or `pg_namespace_nspname_index` for the schema).
+/// For a lazily-created audit table that loser is a real audit write, so the race
+/// turned into a lost event on the data plane and a REFUSED request on the
+/// cross-tenant read path. The statements now run in one transaction behind a
+/// transaction-scoped advisory lock keyed on the relation, so the second session
+/// waits for the first to commit and then finds the table. A collision that still
+/// gets through (DDL from a path that does not take this lock) is retried: the
+/// statements are idempotent, so the retry converges once the winner commits.
+pub(crate) async fn run_audit_ddl_serialized(
+    pool: &PgPool,
+    relation: &str,
+    statements: &[String],
+) -> Result<(), String> {
+    let mut attempt = 0u32;
+    loop {
+        attempt += 1;
+        match run_audit_ddl_once(pool, relation, statements).await {
+            Err(err)
+                if attempt < AUDIT_DDL_COLLISION_ATTEMPTS
+                    && crate::runtime::system::is_concurrent_ddl_collision(&err) =>
+            {
+                tracing::warn!(
+                    relation,
+                    attempt,
+                    error = %err,
+                    "audit table DDL collided with a concurrent session's identical DDL; retrying"
+                );
+                tokio::time::sleep(std::time::Duration::from_millis(50 * u64::from(attempt))).await;
+            }
+            other => return other,
+        }
+    }
+}
+
+async fn run_audit_ddl_once(
+    pool: &PgPool,
+    relation: &str,
+    statements: &[String],
+) -> Result<(), String> {
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| format!("ensure audit table {relation}: begin failed: {e}"))?;
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+        .bind(audit_ddl_lock_name(relation))
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| format!("ensure audit table {relation}: advisory lock failed: {e}"))?;
+    for statement in statements {
+        sqlx::query(statement)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| format!("ensure audit table {relation} failed: {e}"))?;
+    }
+    tx.commit()
+        .await
+        .map_err(|e| format!("ensure audit table {relation}: commit failed: {e}"))
+}
+
 /// `CREATE SCHEMA`/`CREATE TABLE IF NOT EXISTS` for the durable data-plane audit
 /// table. Idempotent + self-creating (no migration needed), mirroring the
 /// auth-plane `PostgresAuditLogSink::ensure_table`. `relation` is pre-validated by
-/// [`sanitize_audit_relation`], so interpolation is safe.
+/// [`sanitize_audit_relation`], so interpolation is safe. Serialized per relation
+/// by [`run_audit_ddl_serialized`], so concurrent first writes cannot race it.
 async fn ensure_pg_audit_table(pool: &PgPool, relation: &str) -> Result<(), String> {
+    let mut statements = Vec::with_capacity(2);
     if let Some(schema) = audit_relation_schema(relation) {
-        sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {schema}"))
-            .execute(pool)
-            .await
-            .map_err(|e| format!("ensure audit schema failed: {e}"))?;
+        statements.push(format!("CREATE SCHEMA IF NOT EXISTS {schema}"));
     }
     let sql = format!(
         "CREATE TABLE IF NOT EXISTS {relation} ( \
@@ -447,10 +522,8 @@ async fn ensure_pg_audit_table(pool: &PgPool, relation: &str) -> Result<(), Stri
              occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW() \
          )"
     );
-    sqlx::query(&sql)
-        .execute(pool)
-        .await
-        .map_err(|e| format!("ensure audit table failed: {e}"))?;
+    statements.push(sql);
+    run_audit_ddl_serialized(pool, relation, &statements).await?;
     // The CREATE above is a no-op when the relation already exists, whatever
     // shape it has, so it cannot be the whole check.
     verify_pg_audit_columns(pool, relation).await
@@ -627,6 +700,71 @@ pub(crate) async fn ensure_pg_audit_sink_ready(
     .await
 }
 
+/// Whether the configured data-plane audit sink fails to store events durably.
+///
+/// The durable-sink startup check ([`ensure_pg_audit_sink_ready`]) only looked at
+/// a Postgres sink and returned `Ok` for every other kind, and the production gate
+/// accepts the AUTH-plane export or a SIEM URL as "a durable audit sink". So a
+/// broker with `UDB_AUDIT_SINK=stdout` booted clean in a fail-closed posture while
+/// every data-plane mutation's audit went to a stream nothing keeps. `Some` names
+/// the problem and the fix; the caller decides by posture (fatal when hardened,
+/// a loud warning in dev). `None` (no data-plane sink at all) and `file`/`postgres`
+/// are not flagged here: `none` is the documented "data-plane audit off" choice,
+/// and the other two persist.
+pub(crate) fn data_plane_audit_durability_violation(config: &AuditSinkConfig) -> Option<String> {
+    let kind = match config.kind {
+        AuditSinkKind::Stdout => "stdout",
+        AuditSinkKind::Kafka => "kafka",
+        AuditSinkKind::None | AuditSinkKind::File | AuditSinkKind::Postgres => return None,
+    };
+    Some(format!(
+        "the data-plane audit sink UDB_AUDIT_SINK={kind} does not store audit events durably \
+         (stdout is not kept; the kafka transport is not wired and falls back to stdout), so a \
+         production / fail-closed broker refuses to start with it. Set UDB_AUDIT_SINK=postgres \
+         with UDB_AUDIT_PG_TABLE=<schema.table> (or UDB_AUDIT_SINK=file with \
+         UDB_AUDIT_FILE_PATH=<path>). An auth-plane export or UDB_AUDIT_SINK_URL does not \
+         cover data-plane mutations."
+    ))
+}
+
+/// Declared character widths of the bounded text columns of `relation`
+/// (`VARCHAR(n)` / `CHAR(n)`), keyed by column name. Columns without a declared
+/// limit are absent. Empty when the relation does not resolve yet.
+pub(crate) async fn declared_column_widths(
+    pool: &PgPool,
+    relation: &str,
+) -> Result<std::collections::HashMap<String, usize>, String> {
+    let unquote = |s: &str| s.trim().trim_matches('"').to_string();
+    let (schema, table) = match relation.split_once('.') {
+        Some((s, t)) => (Some(unquote(s)), unquote(t)),
+        None => (None, unquote(relation)),
+    };
+    let rows: Vec<(String, i32)> = sqlx::query_as::<_, (String, i32)>(
+        "SELECT column_name::TEXT, character_maximum_length::INT \
+         FROM information_schema.columns \
+         WHERE table_schema = COALESCE($1, current_schema()) AND table_name = $2 \
+           AND character_maximum_length IS NOT NULL",
+    )
+    .bind(schema.as_deref())
+    .bind(table.as_str())
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("audit table width check failed: {e}"))?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(name, width)| usize::try_from(width).ok().map(|w| (name, w)))
+        .collect())
+}
+
+/// `value` cut to at most `width` characters (Postgres `VARCHAR(n)` counts
+/// characters, not bytes), or `None` when it already fits. Never splits a char.
+pub(crate) fn truncate_to_width(value: &str, width: usize) -> Option<String> {
+    if value.chars().count() <= width {
+        return None;
+    }
+    Some(value.chars().take(width).collect())
+}
+
 fn append_line(path: &str, line: &str) -> std::io::Result<()> {
     // A relative/nested sink path (`logs/audit.log`) must not fail every event
     // just because its directory does not exist yet.
@@ -771,6 +909,59 @@ mod tests {
             PG_AUDIT_BOUND_COLUMNS.len(),
             7,
             "the writer binds exactly seven values; update both together"
+        );
+    }
+
+    /// A non-durable data-plane sink is named with its fix; durable kinds and the
+    /// documented "off" choice are not flagged.
+    #[test]
+    fn non_durable_data_plane_sink_is_a_violation_with_the_fix_in_the_message() {
+        let with_kind = |kind| AuditSinkConfig {
+            kind,
+            ..Default::default()
+        };
+        for kind in [AuditSinkKind::Stdout, AuditSinkKind::Kafka] {
+            let message = data_plane_audit_durability_violation(&with_kind(kind.clone()))
+                .unwrap_or_else(|| panic!("{kind:?} must be refused in a hardened posture"));
+            assert!(message.contains("UDB_AUDIT_SINK=postgres"), "{message}");
+            assert!(message.contains("UDB_AUDIT_PG_TABLE"), "{message}");
+        }
+        assert!(
+            data_plane_audit_durability_violation(&with_kind(AuditSinkKind::Stdout))
+                .unwrap()
+                .contains("UDB_AUDIT_SINK=stdout")
+        );
+        for kind in [
+            AuditSinkKind::None,
+            AuditSinkKind::File,
+            AuditSinkKind::Postgres,
+        ] {
+            assert!(
+                data_plane_audit_durability_violation(&with_kind(kind.clone())).is_none(),
+                "{kind:?} is not a durability violation"
+            );
+        }
+    }
+
+    #[test]
+    fn truncate_to_width_counts_characters_and_leaves_fitting_values_alone() {
+        assert_eq!(truncate_to_width("abc", 3), None);
+        assert_eq!(truncate_to_width("", 0), None);
+        assert_eq!(truncate_to_width("abcd", 3).as_deref(), Some("abc"));
+        // Multi-byte: VARCHAR(n) counts characters, and a char is never split.
+        assert_eq!(truncate_to_width("ééé", 3), None);
+        assert_eq!(truncate_to_width("éééé", 2).as_deref(), Some("éé"));
+    }
+
+    #[test]
+    fn audit_ddl_lock_is_keyed_per_relation_case_insensitively() {
+        assert_eq!(
+            audit_ddl_lock_name("udb_system.Auth_Audit_Log"),
+            audit_ddl_lock_name(" udb_system.auth_audit_log ")
+        );
+        assert_ne!(
+            audit_ddl_lock_name("udb_system.auth_audit_log"),
+            audit_ddl_lock_name("udb_system.data_audit_log")
         );
     }
 

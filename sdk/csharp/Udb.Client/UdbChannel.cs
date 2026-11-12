@@ -22,9 +22,21 @@ public static class UdbChannel
     private static readonly TimeSpan KeepAlivePingDelay = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan KeepAlivePingTimeout = TimeSpan.FromSeconds(10);
 
-    /// <summary>Build the default <see cref="GrpcChannelOptions"/> (keepalive only).</summary>
+    // Recovery after a broker restart. The channel's reconnect backoff defaults
+    // to a 120 s ceiling: a channel that failed a few dials while the broker was
+    // down kept failing calls with UNAVAILABLE for up to two minutes after the
+    // broker was back. Capped here, it dials again within seconds.
+    internal static readonly TimeSpan InitialReconnectBackoff = TimeSpan.FromMilliseconds(500);
+    internal static readonly TimeSpan MaxReconnectBackoff = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Build the default <see cref="GrpcChannelOptions"/>: keepalive, and a reconnect
+    /// backoff capped at 5 s so the channel recovers promptly after a broker restart.
+    /// </summary>
     public static GrpcChannelOptions DefaultOptions() => new()
     {
+        InitialReconnectBackoff = InitialReconnectBackoff,
+        MaxReconnectBackoff = MaxReconnectBackoff,
         HttpHandler = new SocketsHttpHandler
         {
             // Keep the warm channel alive so an idle connection does not drop to

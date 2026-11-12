@@ -151,16 +151,19 @@ const PLATFORM_BENCHMARK_RPCS = new Set([
 function requiresPlatformBenchmarkIdentity(serviceName, methodName) {
     return PLATFORM_BENCHMARK_RPCS.has(`${serviceName}/${methodName}`);
 }
-// ExchangeServiceTokenForTenant is refused for a human or API-key caller: only a
-// service account presenting its HOME bearer may exchange it. The membership
-// create/list/revoke rows stay on the bench tenant's ordinary administrator.
+// ExchangeServiceTokenForTenant and ListOwnTenantMemberships are refused for a
+// human or API-key caller: only a service account presenting its HOME bearer may
+// call them. The membership create/list/revoke rows stay on the bench tenant's
+// ordinary administrator.
 const SERVICE_ACCOUNT_BENCHMARK_RPCS = new Set([
     "AuthnService/exchange_service_token_for_tenant",
+    "AuthnService/list_own_tenant_memberships",
 ]);
 function requiresServiceAccountBenchmarkIdentity(serviceName, methodName) {
     return SERVICE_ACCOUNT_BENCHMARK_RPCS.has(`${serviceName}/${methodName}`);
 }
-/** The service account that measures ExchangeServiceTokenForTenant, from the
+/** The service account that measures ExchangeServiceTokenForTenant and
+ *  ListOwnTenantMemberships, from the
  *  prepared fixtures; undefined when the fixture script provided none (an older
  *  broker), in which case the row runs on the ordinary caller and fails honestly.
  *  Read by EXACT key: PerfFixtures.lookup suffix-matches, so
@@ -771,7 +774,7 @@ function fullSurfaceManifestFixtures() {
         rollback_policy_set_id: "rollback-policy-set-1", rollback_target_version_id: "rollback-target-version-1",
         rollback_resource_version: "rollback-resource-version-1",
         update_draft_id: "update-draft-1", release_fencing_token: "1", renew_fencing_token: "1",
-        vault_create_key_name: "transit-create-key", vault_put_secret_path: "secret/put",
+        vault_create_key_name: "transit-create-key", vault_put_secret_path: "secret/put", vault_oauth_secret_path: "secret/oauth",
         webauthn_delete_user_id: "webauthn-delete-user-1", webauthn_delete_credential_id: "webauthn-delete-credential-1",
         webauthn_rename_user_id: "webauthn-rename-user-1", webauthn_rename_credential_id: "webauthn-rename-credential-1",
     })) {
@@ -1801,6 +1804,7 @@ function fullSurfaceManifestFixtures() {
     fixtures.set("vault_db_lease_id", "sdk-vault-db-lease");
     fixtures.set("vault_create_key_name", "sdk-perf-create-key");
     fixtures.set("vault_put_secret_path", "app/put");
+    fixtures.set("vault_oauth_secret_path", "app/oauth");
     const created = manifestJSONBody("VaultService", "create_transit_key", fixtures);
     const decrypt = manifestJSONBody("VaultService", "decrypt", fixtures);
     const deleted = manifestJSONBody("VaultService", "delete_secret", fixtures);
@@ -1961,8 +1965,11 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.throws(() => verifiedNativeFixtureActor(principal, "foreign-tenant", "project-1"), /foreign authenticated tenant/);
     node_assert_1.strict.throws(() => verifiedNativeFixtureActor(principal, "tenant-1", "foreign-project"), /foreign authenticated project/);
 });
-(0, node_test_1.test)("benchmark service-account routing covers only the tenant token exchange", () => {
+(0, node_test_1.test)("benchmark service-account routing covers only the tenant token exchange and own-membership list", () => {
     node_assert_1.strict.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "exchange_service_token_for_tenant"), true);
+    node_assert_1.strict.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "list_own_tenant_memberships"), true);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("AuthnService", "list_own_tenant_memberships"), false);
+    node_assert_1.strict.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "set_service_account_password"), false);
     node_assert_1.strict.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "create_service_account_tenant_membership"), false);
     node_assert_1.strict.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "list_service_account_tenant_memberships"), false);
     node_assert_1.strict.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "revoke_service_account_tenant_membership"), false);
@@ -3048,6 +3055,8 @@ async function seedPerfFixtures(gen, platformGen, data, tenantId, projectId, uui
     // ── VaultService: secret + transit key material for crypto/read rows ──────────
     await tryRun("SeedVaultSecret", async () => {
         await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/path", secret_value: "perf-secret", expected_version: 0, metadata_json: "{}" }, opts);
+        // A token valid for decades, so the measured lease reaches no provider.
+        await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/oauth", secret_value: JSON.stringify({ token_url: "https://oauth.example.com/token", client_id: "perf", access_token: "perf-token", expires_at_unix: 4102444800 }), expected_version: 0, metadata_json: "{}" }, opts);
     });
     await tryRun("SeedVaultDeleteSecret", async () => {
         await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/delete", secret_value: "perf-secret-delete", expected_version: 0, metadata_json: "{}" }, opts);
@@ -5042,6 +5051,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             "admin_revoke_all_tenant_sessions", "emergency_revoke", "change_password",
             "reset_password", "admin_reset_password", "change_user_status", "admin_reset_mfa",
             "revoke_recovery_codes", "revoke_device", "delete_web_authn_credential", "disable_mfa_factor",
+            "set_service_account_password",
         ]);
         const phase1 = [];
         let phase2 = [];
@@ -5105,8 +5115,8 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         // Run it after every disposable-principal teardown, then log in once more
         // before the final self-PurgeTenant.
         phase3.sort((a, b) => Number(a.methodName === "admin_revoke_all_tenant_sessions") - Number(b.methodName === "admin_revoke_all_tenant_sessions"));
-        // ExchangeServiceTokenForTenant only accepts a service account's HOME bearer.
-        // Right before measuring it, log the fixture's service account in (in its home
+        // ExchangeServiceTokenForTenant and ListOwnTenantMemberships only accept a
+        // service account's HOME bearer. Right before measuring each, log the fixture's service account in (in its home
         // tenant), verify the bearer and measure on a client carrying that principal's
         // tenant/project/user/service identity. Without the fixture (or if that login
         // fails) the row runs on the ordinary caller and its refusal is recorded.

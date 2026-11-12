@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.14 | protocol v1.0.0                                          │
+│    crate v0.6.15 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 These pages document UDB, the Universal Data Broker — one typed API in
@@ -26,7 +26,7 @@ its [Quick Start](../README.md#quick-start), then
 [integration.md](integration.md) to connect an application. When you're ready
 for more, jump straight to the guide that matches your task below.
 
-This is the public documentation for UDB 0.6.14. The guides are grouped by what you're doing: understanding the architecture,
+This is the public documentation for UDB 0.6.15. The guides are grouped by what you're doing: understanding the architecture,
 annotating your protos, integrating an app, using the native services, running
 UDB in production, securing it, testing it, and picking an SDK.
 

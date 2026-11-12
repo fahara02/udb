@@ -17,6 +17,8 @@ import com.udb.core.tenant.services.v1.CreateTenantRequest;
 import com.udb.core.tenant.services.v1.CreateTenantResponse;
 import com.udb.core.tenant.services.v1.TenantServiceGrpc;
 import io.grpc.ManagedChannel;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -201,11 +203,64 @@ public final class UdbProject implements AutoCloseable {
             .build());
   }
 
+  /** Sign-in attempts {@link #loginAndAdoptTenant(LoginRequest)} makes before it gives up. */
+  static final int LOGIN_ATTEMPTS = 3;
+
+  private static final long LOGIN_BACKOFF_BASE_MS = 1_000L;
+  private static final long LOGIN_BACKOFF_CAP_MS = 60_000L;
+
   /**
    * Login, ALWAYS authenticate the freshly minted bearer, then adopt the
    * canonical tenant/project from the verified principal across every facade.
+   *
+   * <p>A transient failure (broker unreachable or restarting, overloaded, reply lost) is retried up
+   * to {@link #LOGIN_ATTEMPTS} attempts in all, waiting a jittered, doubling interval between them,
+   * so a service that starts while the broker restarts still signs in. A refused credential is
+   * final and thrown at once.
    */
   public synchronized AuthnResponse loginAndAdoptTenant(LoginRequest request) {
+    StatusRuntimeException last = null;
+    for (int attempt = 0; attempt < LOGIN_ATTEMPTS; attempt++) {
+      if (attempt > 0) {
+        try {
+          Thread.sleep(loginBackoffMillis(attempt));
+        } catch (InterruptedException interrupted) {
+          Thread.currentThread().interrupt();
+          throw last;
+        }
+      }
+      try {
+        return loginAndAdoptOnce(request);
+      } catch (StatusRuntimeException err) {
+        last = err;
+        if (!transientSignInFailure(err.getStatus().getCode())) {
+          throw err;
+        }
+      }
+    }
+    throw last;
+  }
+
+  /** Whether repeating a failed sign-in can help: the broker was unreachable, overloaded, or the reply was lost. */
+  static boolean transientSignInFailure(Status.Code code) {
+    return code == Status.Code.UNAVAILABLE
+        || code == Status.Code.DEADLINE_EXCEEDED
+        || code == Status.Code.RESOURCE_EXHAUSTED
+        || code == Status.Code.ABORTED;
+  }
+
+  /** Wait after the n-th consecutive failure: random in [ceiling/2, ceiling], ceiling = base * 2^(n-1), capped. */
+  static long loginBackoffMillis(int failures) {
+    long ceiling = LOGIN_BACKOFF_BASE_MS;
+    for (int i = 1; i < failures && ceiling < LOGIN_BACKOFF_CAP_MS; i++) {
+      ceiling *= 2;
+    }
+    ceiling = Math.min(ceiling, LOGIN_BACKOFF_CAP_MS);
+    long half = ceiling / 2;
+    return half + java.util.concurrent.ThreadLocalRandom.current().nextLong(ceiling - half + 1);
+  }
+
+  private AuthnResponse loginAndAdoptOnce(LoginRequest request) {
     LoginResponse login = auth.login(request);
     String token = login.getAccessToken().isBlank() ? login.getSessionToken() : login.getAccessToken();
     if (token.isBlank()) {

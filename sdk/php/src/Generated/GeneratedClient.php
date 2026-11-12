@@ -6,6 +6,7 @@ namespace Fahara02\UdbLaravel\Generated;
 
 use Fahara02\UdbLaravel\Exceptions\UdbConfigurationException;
 use Fahara02\UdbLaravel\Exceptions\UdbRpcException;
+use Fahara02\UdbLaravel\Support\ReconnectBackoff;
 use Fahara02\UdbLaravel\Support\TlsCredentials;
 use Fahara02\UdbLaravel\UdbMetadata;
 use Grpc\BaseStub;
@@ -18,7 +19,7 @@ use Grpc\BaseStub;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.6.14
+ *   UDB version ...... 0.6.15
  *   Protocol version . 1.0.0
  *   Services ......... 29
  *   RPCs ............. 426
@@ -12536,7 +12537,8 @@ final class GeneratedClient
         $tls = (array) ($this->config['tls'] ?? []);
         $credentials = TlsCredentials::channelCredentials($tls);
 
-        $options = (array) ($this->config['channel_options'] ?? []);
+        // Reconnect within seconds after a broker restart (see ReconnectBackoff).
+        $options = ReconnectBackoff::apply((array) ($this->config['channel_options'] ?? []));
         $options['credentials'] = $credentials;
 
         $target = $tls['target'] ?? $this->config['endpoint'];

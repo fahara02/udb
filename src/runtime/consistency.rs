@@ -95,6 +95,11 @@ pub enum ConsistencyMode {
     CacheOk,
 }
 
+/// `Strong` is the PARSE default (blank / unknown token). It is not how a read
+/// that names no consistency is served when replicas are configured: the
+/// runtime then applies [`ConsistencyPolicy::with_default_read`] (replica-
+/// bounded, fenced on the caller's own write) — see
+/// `DataBrokerRuntime::read_consistency_policy`.
 impl Default for ConsistencyMode {
     fn default() -> Self {
         Self::Strong
@@ -373,6 +378,46 @@ pub struct ConsistencyPolicy {
     /// `max_replica_lag_ms` carried over from `RequestContext`. Honoured
     /// by `BoundedStaleness` mode.
     pub max_replica_lag_ms: u64,
+    /// True when the caller named no consistency and the runtime applied the
+    /// replica-default read (see [`ConsistencyPolicy::with_default_read`]).
+    /// The mode is then `ReplicaBounded` (or `Strong` for a caller whose own
+    /// write the replicas cannot be proven to hold), the fence — if any — is
+    /// the caller's own last write, and a failover to the primary is a normal
+    /// outcome, not a stale read: the primary holds the freshest data.
+    pub implicit_default: bool,
+}
+
+/// How the runtime serves a read that names no consistency of its own.
+///
+/// Built from the replica configuration: when at least one PostgreSQL read
+/// replica is configured (and `UDB_PG_REPLICA_DEFAULT_READS` is not `false`),
+/// such a read is served replica-bounded within `max_lag_ms`, failing over to
+/// the primary. With no replica, or with the opt-out, `replica_default` is
+/// false and the read stays on the primary exactly as before.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DefaultReadPolicy {
+    /// Serve unspecified-consistency reads replica-bounded.
+    pub replica_default: bool,
+    /// Lag bound (ms) for a default read when the request sets none.
+    pub max_lag_ms: u64,
+    /// How long a default read waits for the chosen replica to replay the
+    /// caller's own last write before it goes to the primary instead.
+    pub own_write_wait_ms: u64,
+}
+
+/// What this broker node remembers about a caller's most recent write, used to
+/// fence that caller's next default read (automatic read-after-write).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OwnWriteFence {
+    /// No recent write by this caller on this node.
+    None,
+    /// The caller wrote recently; a replica must have replayed past this
+    /// primary WAL LSN before it may serve the caller's read.
+    Lsn(String),
+    /// The caller wrote recently but the write position is unknown (no
+    /// receipt, a non-PostgreSQL token, or the remembered entry was evicted):
+    /// the read goes to the primary.
+    Primary,
 }
 
 impl ConsistencyPolicy {
@@ -400,11 +445,78 @@ impl ConsistencyPolicy {
             mode,
             fence: ReadFence::default(),
             max_replica_lag_ms,
+            implicit_default: false,
         }
     }
 
     pub fn with_fence(mut self, fence: ReadFence) -> Self {
         self.fence = fence;
+        self
+    }
+
+    /// True when the request names no consistency of its own: no mode (the
+    /// `consistency` field / `x-udb-consistency` header is blank or
+    /// `UNSPECIFIED`), no primary-read flag, no eventual opt-in and no read
+    /// fence. Only such a request is eligible for the replica default.
+    pub fn request_names_no_consistency(
+        consistency_token: &str,
+        primary_read: bool,
+        eventual_consistency_allowed: bool,
+        read_fence_json: &str,
+    ) -> bool {
+        let token = consistency_token.trim().to_ascii_lowercase();
+        matches!(
+            token.as_str(),
+            "" | "unspecified" | "consistency_mode_unspecified"
+        ) && !primary_read
+            && !eventual_consistency_allowed
+            && read_fence_json.trim().is_empty()
+    }
+
+    /// Apply the runtime's default for a read that named no consistency.
+    ///
+    /// `names_no_consistency` comes from
+    /// [`Self::request_names_no_consistency`]. When it is false, or the
+    /// default is off (`defaults.replica_default == false`: no replica
+    /// configured, or `UDB_PG_REPLICA_DEFAULT_READS=false`), the policy is
+    /// returned unchanged — an explicit `Strong` stays on the primary.
+    ///
+    /// Otherwise the read becomes `ReplicaBounded` within the request's own
+    /// `max_replica_lag_ms` (or `defaults.max_lag_ms` when it set none), and
+    /// the caller's own last write on this node is honoured automatically:
+    /// - [`OwnWriteFence::Lsn`] fences the replica on that primary LSN, waiting
+    ///   at most `defaults.own_write_wait_ms` before the primary serves it;
+    /// - [`OwnWriteFence::Primary`] sends the read to the primary;
+    /// - [`OwnWriteFence::None`] is a plain lag-bounded replica read.
+    pub fn with_default_read(
+        mut self,
+        names_no_consistency: bool,
+        defaults: DefaultReadPolicy,
+        own_write: OwnWriteFence,
+    ) -> Self {
+        if !names_no_consistency || !defaults.replica_default {
+            return self;
+        }
+        self.implicit_default = true;
+        if self.max_replica_lag_ms == 0 {
+            self.max_replica_lag_ms = defaults.max_lag_ms;
+        }
+        match own_write {
+            OwnWriteFence::Primary => {
+                self.mode = ConsistencyMode::Strong;
+            }
+            OwnWriteFence::Lsn(lsn) => {
+                self.mode = ConsistencyMode::ReplicaBounded;
+                self.fence = ReadFence {
+                    min_outbox_lsn: lsn,
+                    projection_task_ids: Vec::new(),
+                    max_wait_ms: defaults.own_write_wait_ms,
+                };
+            }
+            OwnWriteFence::None => {
+                self.mode = ConsistencyMode::ReplicaBounded;
+            }
+        }
         self
     }
 
@@ -520,9 +632,13 @@ pub enum ReadRouting {
     /// Route to a read replica and fence on the backend's REAL replication
     /// position. `min_lsn` is the caller's write position (`None` ⇒
     /// lag-bounded selection only, no LSN wait). `max_staleness_ms` is the
-    /// wait budget; the caller fails over to the primary on timeout.
+    /// replica lag bound; `fence_wait_ms` is how long to wait for the replica
+    /// to replay `min_lsn` (equal to `max_staleness_ms` for every explicit
+    /// mode; the short own-write budget for an implicit default read). The
+    /// caller fails over to the primary on timeout.
     ReplicaBounded {
         max_staleness_ms: u64,
+        fence_wait_ms: u64,
         min_lsn: Option<String>,
     },
     /// Route to any healthy replica with no fence (`Eventual`,
@@ -587,9 +703,18 @@ impl ConsistencyPolicy {
             // RYW: the budget is the fence's own wait window.
             _ => self.fence.max_wait_ms,
         };
+        // An implicit default read waits only the short own-write budget for
+        // its fence (the primary always holds the write); every explicit mode
+        // keeps one budget for both lag selection and the fence wait.
+        let fence_wait_ms = if self.implicit_default && min_lsn.is_some() {
+            self.fence.max_wait_ms
+        } else {
+            max_staleness_ms
+        };
         if supports_bounded_reads(backend_label) {
             ReadRouting::ReplicaBounded {
                 max_staleness_ms,
+                fence_wait_ms,
                 min_lsn,
             }
         } else if refuse_on_wallclock {
@@ -603,6 +728,169 @@ impl ConsistencyPolicy {
             // caller's writes, so route there instead of erroring.
             ReadRouting::Primary
         }
+    }
+}
+
+// ── Automatic read-after-write for default reads ──────────────────────────────
+//
+// A default read (no consistency named) may be served by a replica. So that a
+// caller never reads older data than its own write, each broker node remembers
+// the primary WAL LSN of every caller's most recent write for a short TTL and
+// fences that caller's next default read on it. The map is in-process: a write
+// that landed on ANOTHER broker node is covered only by the replica lag bound,
+// unless the client passes the write receipt back as a read fence (SDK path).
+
+/// Shards of the own-write map; a read locks one shard for one hash lookup.
+const OWN_WRITE_SHARDS: usize = 16;
+/// Entries held per shard before eviction (16 × 4096 = 65 536 callers).
+const OWN_WRITE_SHARD_CAPACITY: usize = 4096;
+
+#[derive(Debug, Clone)]
+struct OwnWriteEntry {
+    /// Primary WAL LSN as text plus its numeric form; `None` = position unknown.
+    lsn: Option<(String, u64)>,
+    expires_at: std::time::Instant,
+}
+
+#[derive(Debug, Default)]
+struct OwnWriteShard {
+    entries: std::collections::HashMap<String, OwnWriteEntry>,
+    /// Set when a still-live entry had to be evicted for capacity: until this
+    /// instant, a caller with no entry in this shard may be one whose fence was
+    /// dropped, so its default read goes to the primary (never a stale replica).
+    evicted_live_until: Option<std::time::Instant>,
+}
+
+/// Bounded, TTL'd per-caller memory of the last write position on this node.
+#[derive(Debug)]
+pub struct OwnWriteFences {
+    shards: Vec<std::sync::Mutex<OwnWriteShard>>,
+    ttl: std::time::Duration,
+}
+
+impl OwnWriteFences {
+    pub fn new(ttl: std::time::Duration) -> Self {
+        Self {
+            shards: (0..OWN_WRITE_SHARDS)
+                .map(|_| std::sync::Mutex::new(OwnWriteShard::default()))
+                .collect(),
+            ttl,
+        }
+    }
+
+    pub fn ttl(&self) -> std::time::Duration {
+        self.ttl
+    }
+
+    /// The caller identity a fence is keyed on: tenant, project, principal and
+    /// service identity. An anonymous caller shares one key per tenant/project,
+    /// which only makes its reads fresher (more fences), never staler.
+    pub fn caller_key(
+        tenant_id: &str,
+        project_id: &str,
+        user_id: &str,
+        service_identity: &str,
+    ) -> String {
+        format!(
+            "{}\u{1f}{}\u{1f}{}\u{1f}{}",
+            tenant_id.trim(),
+            project_id.trim(),
+            user_id.trim(),
+            service_identity.trim()
+        )
+    }
+
+    fn shard(&self, key: &str) -> &std::sync::Mutex<OwnWriteShard> {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        key.hash(&mut hasher);
+        &self.shards[(hasher.finish() as usize) % self.shards.len()]
+    }
+
+    /// Remember a successful write by `key`. `source_lsn` is the write
+    /// receipt's primary position; a blank or non-PostgreSQL token (MySQL GTID,
+    /// SQLite data_version) is remembered as "position unknown", which routes
+    /// the caller's next default read to the primary. A later write never
+    /// lowers the remembered position.
+    pub fn record_at(&self, key: &str, source_lsn: &str, now: std::time::Instant) {
+        let parsed = crate::runtime::consistency_fence::parse_pg_lsn(source_lsn)
+            .map(|value| (source_lsn.trim().to_string(), value));
+        let expires_at = now + self.ttl;
+        let Ok(mut shard) = self.shard(key).lock() else {
+            return;
+        };
+        if let Some(existing) = shard.entries.get_mut(key) {
+            let still_live = existing.expires_at > now;
+            existing.lsn = match (existing.lsn.take(), parsed) {
+                // An unknown position, live, stays unknown: the earlier write
+                // cannot be fenced, so the primary must keep serving.
+                (None, _) if still_live => None,
+                (Some(old), Some(new)) if still_live => {
+                    Some(if new.1 >= old.1 { new } else { old })
+                }
+                (_, new) => new,
+            };
+            existing.expires_at = expires_at;
+            return;
+        }
+        if shard.entries.len() >= OWN_WRITE_SHARD_CAPACITY {
+            shard.entries.retain(|_, entry| entry.expires_at > now);
+        }
+        if shard.entries.len() >= OWN_WRITE_SHARD_CAPACITY {
+            let oldest = shard
+                .entries
+                .iter()
+                .min_by_key(|(_, entry)| entry.expires_at)
+                .map(|(key, entry)| (key.clone(), entry.expires_at));
+            if let Some((oldest_key, oldest_expiry)) = oldest {
+                shard.entries.remove(&oldest_key);
+                shard.evicted_live_until = Some(
+                    shard
+                        .evicted_live_until
+                        .map_or(oldest_expiry, |until| until.max(oldest_expiry)),
+                );
+            }
+        }
+        shard.entries.insert(
+            key.to_string(),
+            OwnWriteEntry {
+                lsn: parsed,
+                expires_at,
+            },
+        );
+    }
+
+    /// The fence a default read by `key` must honour at `now`.
+    pub fn lookup_at(&self, key: &str, now: std::time::Instant) -> OwnWriteFence {
+        let Ok(mut shard) = self.shard(key).lock() else {
+            // A poisoned shard cannot prove the caller has no recent write.
+            return OwnWriteFence::Primary;
+        };
+        if let Some(entry) = shard.entries.get(key) {
+            if entry.expires_at > now {
+                return match &entry.lsn {
+                    Some((text, _)) => OwnWriteFence::Lsn(text.clone()),
+                    None => OwnWriteFence::Primary,
+                };
+            }
+            shard.entries.remove(key);
+        }
+        match shard.evicted_live_until {
+            Some(until) if until > now => OwnWriteFence::Primary,
+            Some(_) => {
+                shard.evicted_live_until = None;
+                OwnWriteFence::None
+            }
+            None => OwnWriteFence::None,
+        }
+    }
+
+    pub fn record(&self, key: &str, source_lsn: &str) {
+        self.record_at(key, source_lsn, std::time::Instant::now());
+    }
+
+    pub fn lookup(&self, key: &str) -> OwnWriteFence {
+        self.lookup_at(key, std::time::Instant::now())
     }
 }
 
@@ -1069,11 +1357,13 @@ mod tests {
                 max_wait_ms: 9_999,
                 ..Default::default()
             },
+            ..Default::default()
         };
         assert_eq!(
             policy.route_read(false, "postgres"),
             ReadRouting::ReplicaBounded {
                 max_staleness_ms: 750,
+                fence_wait_ms: 750,
                 min_lsn: Some("0/1A2B3C".to_string()),
             }
         );
@@ -1084,11 +1374,13 @@ mod tests {
             mode: ConsistencyMode::BoundedStaleness,
             max_replica_lag_ms: 200,
             fence: ReadFence::default(),
+            ..Default::default()
         };
         assert_eq!(
             policy.route_read(false, "mongodb"),
             ReadRouting::ReplicaBounded {
                 max_staleness_ms: 200,
+                fence_wait_ms: 200,
                 // No fence LSN ⇒ lag-bounded selection only.
                 min_lsn: None,
             }
@@ -1103,6 +1395,7 @@ mod tests {
             mode: ConsistencyMode::BoundedStaleness,
             max_replica_lag_ms: 500,
             fence: ReadFence::default(),
+            ..Default::default()
         };
         for backend in ["s3", "azureblob", "gcs", "memcached", "unknown"] {
             match policy.route_read(false, backend) {
@@ -1132,11 +1425,13 @@ mod tests {
                 max_wait_ms: 1_500,
                 ..Default::default()
             },
+            ..Default::default()
         };
         assert_eq!(
             policy.route_read(false, "postgres"),
             ReadRouting::ReplicaBounded {
                 max_staleness_ms: 1_500,
+                fence_wait_ms: 1_500,
                 min_lsn: Some("0/200".to_string()),
             }
         );
@@ -1216,12 +1511,14 @@ mod tests {
                 max_wait_ms: 9_999,
                 ..Default::default()
             },
+            ..Default::default()
         };
         // Real-position backend: replica + LSN fence + lag budget.
         assert_eq!(
             policy.route_read(false, "postgres"),
             ReadRouting::ReplicaBounded {
                 max_staleness_ms: 500,
+                fence_wait_ms: 500,
                 min_lsn: Some("0/1A2B3C".to_string()),
             }
         );
@@ -1229,5 +1526,241 @@ mod tests {
         assert_eq!(policy.route_read(false, "s3"), ReadRouting::Primary);
         // Writes never route to a replica, even under REPLICA_BOUNDED.
         assert_eq!(policy.route_read(true, "postgres"), ReadRouting::Primary);
+    }
+
+    // ── Replica-default reads + automatic read-after-write ────────────────
+
+    const REPLICAS_ON: DefaultReadPolicy = DefaultReadPolicy {
+        replica_default: true,
+        max_lag_ms: 3_000,
+        own_write_wait_ms: 250,
+    };
+
+    /// The policy a read with the given request fields resolves to, exactly as
+    /// the runtime builds it.
+    fn default_read(
+        token: &str,
+        primary_read: bool,
+        eventual: bool,
+        fence_json: &str,
+        max_lag_ms: u64,
+        defaults: DefaultReadPolicy,
+        own_write: OwnWriteFence,
+    ) -> ConsistencyPolicy {
+        ConsistencyPolicy::from_request_context(token, max_lag_ms, primary_read, eventual)
+            .with_default_read(
+                ConsistencyPolicy::request_names_no_consistency(
+                    token,
+                    primary_read,
+                    eventual,
+                    fence_json,
+                ),
+                defaults,
+                own_write,
+            )
+    }
+
+    /// No replica configured (or the opt-out): a read that names no
+    /// consistency stays on the primary, exactly as before.
+    #[test]
+    fn default_read_without_replicas_stays_on_primary() {
+        let policy = default_read(
+            "",
+            false,
+            false,
+            "",
+            0,
+            DefaultReadPolicy::default(),
+            OwnWriteFence::None,
+        );
+        assert_eq!(policy.mode, ConsistencyMode::Strong);
+        assert!(!policy.implicit_default);
+        assert_eq!(policy.route_read(false, "postgres"), ReadRouting::Primary);
+    }
+
+    /// `UDB_PG_REPLICA_DEFAULT_READS=false` with replicas configured: the
+    /// manager reports `replica_default: false`, so the read is primary.
+    #[test]
+    fn default_read_opt_out_restores_primary() {
+        let opted_out = DefaultReadPolicy {
+            replica_default: false,
+            ..REPLICAS_ON
+        };
+        let policy = default_read("", false, false, "", 0, opted_out, OwnWriteFence::None);
+        assert_eq!(policy.route_read(false, "postgres"), ReadRouting::Primary);
+    }
+
+    /// Replicas configured, nothing named: replica-bounded within the
+    /// configured lag, no fence (the caller has no recent write here).
+    #[test]
+    fn default_read_with_replicas_is_replica_bounded() {
+        let policy = default_read("", false, false, "", 0, REPLICAS_ON, OwnWriteFence::None);
+        assert!(policy.implicit_default);
+        assert_eq!(policy.mode, ConsistencyMode::ReplicaBounded);
+        // The proto enum's UNSPECIFIED, spelled out, is the same as unset.
+        let unspecified = default_read(
+            "CONSISTENCY_MODE_UNSPECIFIED",
+            false,
+            false,
+            "",
+            0,
+            REPLICAS_ON,
+            OwnWriteFence::None,
+        );
+        assert!(unspecified.implicit_default);
+        assert_eq!(
+            policy.route_read(false, "postgres"),
+            ReadRouting::ReplicaBounded {
+                max_staleness_ms: 3_000,
+                fence_wait_ms: 3_000,
+                min_lsn: None,
+            }
+        );
+        // The caller's own tighter lag bound wins over the configured one.
+        let tight = default_read("", false, false, "", 400, REPLICAS_ON, OwnWriteFence::None);
+        assert_eq!(
+            tight.route_read(false, "postgres"),
+            ReadRouting::ReplicaBounded {
+                max_staleness_ms: 400,
+                fence_wait_ms: 400,
+                min_lsn: None,
+            }
+        );
+        // A wall-clock backend fails over to the primary, never an error.
+        assert_eq!(policy.route_read(false, "s3"), ReadRouting::Primary);
+        // Writes stay on the primary.
+        assert_eq!(policy.route_read(true, "postgres"), ReadRouting::Primary);
+    }
+
+    /// Anything the caller names keeps its explicit meaning: Strong (by mode
+    /// or primary_read) stays primary, eventual stays unfenced, a client
+    /// fence is not replaced by the default.
+    #[test]
+    fn explicit_consistency_is_never_overridden_by_the_default() {
+        for token in ["strong", "primary", "linearizable"] {
+            let policy = default_read(token, false, false, "", 0, REPLICAS_ON, OwnWriteFence::None);
+            assert!(!policy.implicit_default, "{token}");
+            assert_eq!(policy.route_read(false, "postgres"), ReadRouting::Primary);
+        }
+        let primary_flag = default_read("", true, false, "", 0, REPLICAS_ON, OwnWriteFence::None);
+        assert_eq!(
+            primary_flag.route_read(false, "postgres"),
+            ReadRouting::Primary
+        );
+        let eventual = default_read("", false, true, "", 0, REPLICAS_ON, OwnWriteFence::None);
+        assert_eq!(
+            eventual.route_read(false, "postgres"),
+            ReadRouting::ReplicaUnfenced
+        );
+        let fenced = default_read(
+            "",
+            false,
+            false,
+            r#"{"min_outbox_lsn":"0/10"}"#,
+            0,
+            REPLICAS_ON,
+            OwnWriteFence::Lsn("0/99".into()),
+        );
+        assert!(!fenced.implicit_default);
+        assert!(
+            fenced.fence.is_empty(),
+            "the default never invents a fence for an explicit request"
+        );
+    }
+
+    /// The caller's own recent write fences its next default read: the replica
+    /// must replay past that LSN within the short own-write budget, else the
+    /// primary serves it. An unknown write position goes straight to primary.
+    #[test]
+    fn own_write_fence_is_chosen_for_default_reads() {
+        let policy = default_read(
+            "",
+            false,
+            false,
+            "",
+            0,
+            REPLICAS_ON,
+            OwnWriteFence::Lsn("0/1A2B3C".into()),
+        );
+        assert_eq!(
+            policy.route_read(false, "postgres"),
+            ReadRouting::ReplicaBounded {
+                max_staleness_ms: 3_000,
+                fence_wait_ms: 250,
+                min_lsn: Some("0/1A2B3C".to_string()),
+            }
+        );
+        let unknown = default_read("", false, false, "", 0, REPLICAS_ON, OwnWriteFence::Primary);
+        assert!(unknown.implicit_default);
+        assert_eq!(unknown.route_read(false, "postgres"), ReadRouting::Primary);
+    }
+
+    #[test]
+    fn own_write_map_remembers_highest_lsn_until_ttl() {
+        use std::time::{Duration, Instant};
+        let map = OwnWriteFences::new(Duration::from_secs(10));
+        let now = Instant::now();
+        let alice = OwnWriteFences::caller_key("t1", "p", "alice", "");
+        let bob = OwnWriteFences::caller_key("t1", "p", "bob", "");
+        assert_eq!(map.lookup_at(&alice, now), OwnWriteFence::None);
+
+        map.record_at(&alice, "0/200", now);
+        map.record_at(&alice, "0/100", now); // never lowers the position
+        assert_eq!(
+            map.lookup_at(&alice, now),
+            OwnWriteFence::Lsn("0/200".to_string())
+        );
+        // Another caller is not fenced by Alice's write.
+        assert_eq!(map.lookup_at(&bob, now), OwnWriteFence::None);
+        // Past the TTL the entry is gone.
+        assert_eq!(
+            map.lookup_at(&alice, now + Duration::from_secs(11)),
+            OwnWriteFence::None
+        );
+
+        // A write with no PostgreSQL position routes the next read to primary.
+        map.record_at(&bob, "", now);
+        assert_eq!(map.lookup_at(&bob, now), OwnWriteFence::Primary);
+        map.record_at(&bob, "0/300", now); // still unknown while the first is live
+        assert_eq!(map.lookup_at(&bob, now), OwnWriteFence::Primary);
+        map.record_at(&bob, "mysql-gtid:1-5", now + Duration::from_secs(11));
+        assert_eq!(
+            map.lookup_at(&bob, now + Duration::from_secs(11)),
+            OwnWriteFence::Primary
+        );
+    }
+
+    /// Capacity eviction of a still-live entry must not silently drop a fence:
+    /// callers without an entry in that shard go to the primary until the
+    /// evicted entry would have expired.
+    #[test]
+    fn own_write_map_eviction_fails_safe_to_primary() {
+        use std::time::{Duration, Instant};
+        let map = OwnWriteFences::new(Duration::from_secs(5));
+        let now = Instant::now();
+        let total = OWN_WRITE_SHARDS * OWN_WRITE_SHARD_CAPACITY + OWN_WRITE_SHARDS * 8;
+        for i in 0..total {
+            map.record_at(&format!("caller-{i}"), "0/10", now);
+        }
+        let stored: usize = map
+            .shards
+            .iter()
+            .map(|shard| shard.lock().unwrap().entries.len())
+            .sum();
+        assert!(stored <= OWN_WRITE_SHARDS * OWN_WRITE_SHARD_CAPACITY);
+        // Some caller was evicted; an unknown caller in an overflowed shard is
+        // sent to the primary while the evicted entries could still be live.
+        let evicted = (0..total)
+            .map(|i| format!("caller-{i}"))
+            .find(|key| map.lookup_at(key, now) == OwnWriteFence::Primary);
+        assert!(
+            evicted.is_some(),
+            "an evicted caller must read from the primary"
+        );
+        // After the TTL every shard is clear again.
+        assert_eq!(
+            map.lookup_at("caller-0", now + Duration::from_secs(6)),
+            OwnWriteFence::None
+        );
     }
 }

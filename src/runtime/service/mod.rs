@@ -402,7 +402,21 @@ pub struct DataBrokerService {
 }
 
 pub(crate) const UDB_PROTOCOL_VERSION: &str = "1.0.0";
-const CATALOG_RECONCILE_INTERVAL: Duration = Duration::from_secs(2);
+/// Default backstop cadence of the durable catalog reconcile behind the
+/// `udb_catalog_reload` LISTEN channel. Each tick is one generation read; the
+/// full reconcile runs only when the generation moved.
+const DEFAULT_CATALOG_RECONCILE_INTERVAL_MS: u64 = 2_000;
+
+/// `UDB_CATALOG_RECONCILE_INTERVAL_MS` (default 2000). Read once at the
+/// listener spawn, never per request.
+fn catalog_reconcile_interval() -> Duration {
+    Duration::from_millis(crate::runtime::cdc::resolve_poll_interval_ms(
+        std::env::var("UDB_CATALOG_RECONCILE_INTERVAL_MS")
+            .ok()
+            .as_deref(),
+        DEFAULT_CATALOG_RECONCILE_INTERVAL_MS,
+    ))
+}
 
 /// Whether the privilege-creating dev/bench baseline seed (`EnsureBaseline`) is
 /// enabled. Fail-closed: disabled unless the operator sets `UDB_ENABLE_ADMIN_SEED`.
@@ -1116,11 +1130,15 @@ impl DataBrokerService {
                 }
             }
         }
-        insert_ascii_header(
-            metadata,
-            "x-udb-consistency-mode",
-            consistency.mode.as_str(),
-        );
+        // Report the mode reads are actually served under: a request that
+        // named no consistency is `replica_bounded` when replicas serve
+        // default reads (see `read_consistency_policy`).
+        let served_mode = if self.runtime_snapshot().default_read_applies(context) {
+            crate::runtime::consistency::ConsistencyMode::ReplicaBounded
+        } else {
+            consistency.mode
+        };
+        insert_ascii_header(metadata, "x-udb-consistency-mode", served_mode.as_str());
         insert_ascii_header(
             metadata,
             "x-udb-read-fence-present",
@@ -1183,6 +1201,11 @@ impl DataBrokerService {
                 .current_write_receipt(&active.metadata.checksum)
                 .await
         };
+        // Automatic read-after-write: this caller's next default read on this
+        // node is fenced on the write's primary position (or sent to the
+        // primary when the position is unknown).
+        self.runtime_snapshot()
+            .record_own_write(context, &receipt.source_lsn);
         let receipt_json = serde_json::to_string(&receipt).unwrap_or_default();
         mutation.write_receipt_json = receipt_json.clone();
         mutation.write_receipt = Some(receipt.to_proto());
@@ -2054,6 +2077,11 @@ pub async fn serve(
         &runtime_config,
         addr,
     ));
+    // Encryption-at-rest key gate: when the key is mandatory (fail-closed
+    // posture, UDB_ENV=production, or explicitly required) and none LOADED —
+    // missing, undecodable, or a failed Vault export — refuse to start here,
+    // naming UDB_ENCRYPTION_KEY, instead of failing at the first secret write.
+    crate::runtime::preflight::enforce_encryption_key(&runtime_config, runtime.init_report())?;
     // Size password-KDF admission now so a memory-limited container's warning
     // (naming UDB_PASSWORD_KDF_MAX_CONCURRENCY) is in the boot log.
     crate::runtime::authn::password_cpu::init_admission();
@@ -2577,7 +2605,7 @@ pub async fn serve(
                     }
                     listener
                 };
-                let mut interval = tokio::time::interval(CATALOG_RECONCILE_INTERVAL);
+                let mut interval = tokio::time::interval(catalog_reconcile_interval());
                 interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
                 interval.tick().await;
                 loop {
@@ -2952,7 +2980,10 @@ pub async fn serve(
             interval.tick().await; // consume the immediate first tick (eager warm already ran)
             loop {
                 interval.tick().await;
-                warmer.warm_shared_snapshot().await;
+                // One revision read per tick; the full reload runs only when
+                // the durable authz revision moved (or a grant expired, or the
+                // UDB_AUTHZ_SNAPSHOT_FULL_RELOAD_SECS bound elapsed).
+                warmer.refresh_shared_snapshot().await;
             }
         });
     }
@@ -3099,6 +3130,22 @@ pub async fn serve(
     {
         let audit_runtime = service.runtime.load_full();
         let audit_pool = audit_runtime.pg_pool_clone();
+        // A data-plane sink that keeps nothing (stdout, the unwired kafka
+        // transport) is not a durable audit trail: refuse it when hardened,
+        // say so loudly in dev.
+        if let Some(violation) = crate::runtime::core::audit::data_plane_audit_durability_violation(
+            &audit_runtime.config().audit_sink,
+        ) {
+            if crate::runtime::security::fail_closed_mode() {
+                return Err(std::io::Error::other(format!(
+                    "durable audit startup check failed: {violation}"
+                ))
+                .into());
+            }
+            tracing::warn!(
+                "{violation} (advisory in dev; fatal under UDB_ENV=production / UDB_FAIL_CLOSED)"
+            );
+        }
         match crate::runtime::core::audit::ensure_pg_audit_sink_ready(
             &audit_runtime.config().audit_sink,
             audit_pool.as_ref(),

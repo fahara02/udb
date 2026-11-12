@@ -491,9 +491,17 @@ impl DataBrokerService {
                     &metadata_context,
                     crate::runtime::channels::OperationChannel::Write,
                     "postgres",
-                    runtime.upsert(&manifest, item, item_context),
+                    runtime.upsert(&manifest, item, item_context.clone()),
                 )
                 .await?;
+                // Automatic read-after-write for the caller's next default read.
+                runtime.record_own_write(
+                    &item_context,
+                    val.write_receipt
+                        .as_ref()
+                        .map(|receipt| receipt.source_lsn.as_str())
+                        .unwrap_or_default(),
+                );
                 yield val;
             }
         };
@@ -705,6 +713,15 @@ impl DataBrokerService {
                 // The batch receipt lives in the response body; surface it as the
                 // read-your-writes header too, matching the unary mutation path.
                 let receipt_json = res.write_receipt_json.clone();
+                // Automatic read-after-write: fence this caller's next default
+                // read on the batch's primary position (unknown ⇒ primary).
+                let source_lsn = serde_json::from_str::<crate::runtime::consistency::WriteReceipt>(
+                    &receipt_json,
+                )
+                .map(|receipt| receipt.source_lsn)
+                .unwrap_or_default();
+                self.runtime_snapshot()
+                    .record_own_write(&metadata_context, &source_lsn);
                 let mut response =
                     self.with_catalog_response_headers(Response::new(res), &metadata_context);
                 insert_ascii_header(

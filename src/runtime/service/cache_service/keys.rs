@@ -163,6 +163,18 @@ return {1, after, delta}";
 /// [`INCREMENT_OVER_BUDGET`] (reverted). A missing key reports TTL 0.
 #[cfg_attr(not(feature = "redis"), allow(dead_code))]
 pub(crate) const BUDGETED_INCREMENT_LUA: &str = "\
+local max_bytes = tonumber(ARGV[4]) or 0 \
+local ttl = tonumber(ARGV[3]) or 0 \
+local meta = redis.call('GET', KEYS[3]) \
+if meta then \
+  local ok, m = pcall(cjson.decode, meta) \
+  if ok and type(m) == 'table' then \
+    local declared = tonumber(m['max_bytes']) or 0 \
+    if declared > 0 and declared == math.floor(declared) then max_bytes = declared end \
+    local default_ttl = tonumber(m['default_ttl_seconds']) or 0 \
+    if ttl <= 0 and default_ttl > 0 and default_ttl == math.floor(default_ttl) then ttl = default_ttl end \
+  end \
+end \
 local function remaining() \
   local p = redis.call('PTTL', KEYS[1]) \
   if p > 0 then return math.ceil(p / 1000) end \
@@ -174,32 +186,31 @@ local current = 0 \
 local old_len = 0 \
 if raw then \
   current = tonumber(raw) \
-  if current == nil or current ~= math.floor(current) then return {-1, 0, 0, remaining()} end \
+  if current == nil or current ~= math.floor(current) then return {-1, 0, 0, remaining(), max_bytes} end \
   old_len = string.len(raw) \
 else \
   created = 1 \
 end \
 local cap = tonumber(ARGV[2]) or 0 \
 if cap > 0 and current + tonumber(ARGV[1]) > cap then \
-  return {0, current, 0, remaining()} \
+  return {0, current, 0, remaining(), max_bytes} \
 end \
-if tonumber(ARGV[1]) == 0 then return {1, current, 0, remaining()} end \
+if tonumber(ARGV[1]) == 0 then return {1, current, 0, remaining(), max_bytes} end \
 local after = redis.pcall('INCRBY', KEYS[1], ARGV[1]) \
 if type(after) == 'table' and after.err then \
-  if string.find(after.err, 'overflow') then return {-2, current, 0, remaining()} end \
-  return {-1, 0, 0, remaining()} \
+  if string.find(after.err, 'overflow') then return {-2, current, 0, remaining(), max_bytes} end \
+  return {-1, 0, 0, remaining(), max_bytes} \
 end \
 local len_delta = redis.call('STRLEN', KEYS[1]) - old_len \
 local used = tonumber(redis.call('GET', KEYS[2]) or '0') or 0 \
 if used < 0 then used = 0 end \
-if len_delta > 0 and used + len_delta > tonumber(ARGV[4]) then \
+if len_delta > 0 and used + len_delta > max_bytes then \
   if created == 1 then redis.call('DEL', KEYS[1]) else redis.call('SET', KEYS[1], raw, 'KEEPTTL') end \
-  return {-3, current, 0, remaining()} \
+  return {-3, current, 0, remaining(), max_bytes} \
 end \
-local ttl = tonumber(ARGV[3]) or 0 \
 if created == 1 and ttl > 0 then redis.call('EXPIRE', KEYS[1], ttl) end \
 if len_delta ~= 0 then redis.call('INCRBY', KEYS[2], len_delta) end \
-return {1, after, created, remaining()}";
+return {1, after, created, remaining(), max_bytes}";
 
 /// [`BUDGETED_INCREMENT_LUA`] statuses.
 #[cfg_attr(not(feature = "redis"), allow(dead_code))]

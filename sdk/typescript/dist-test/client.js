@@ -61,7 +61,7 @@ function metadata(meta) {
     headers.set("x-scopes", (meta.scopes ?? []).join(","));
     headers.set("x-service-identity", meta.serviceIdentity ?? "example.service");
     headers.set("x-udb-project-id", meta.projectId ?? "default");
-    headers.set("x-udb-client-catalog-version", meta.clientCatalogVersion ?? exports.UDB_PROTOCOL_VERSION);
+    headers.set("x-udb-client-catalog-version", meta.clientCatalogVersion ?? "");
     if (meta.bearerToken)
         headers.set("authorization", `Bearer ${meta.bearerToken}`);
     if (meta.apiKey)
@@ -71,11 +71,15 @@ function metadata(meta) {
 // Default channel options for the long-lived UDB channel: keepalive keeps an idle
 // HTTP/2 connection warm instead of dropping to IDLE and re-handshaking. Retries
 // are handled by the generated wrapper where proto-derived operation_kind is known.
+// The reconnect backoff is capped at 5 s (grpc-js default: 120 s) so the channel
+// serves again within seconds of a restarted broker coming back.
 exports.UDB_DEFAULT_CHANNEL_OPTIONS = {
     "grpc.keepalive_time_ms": 30_000,
     "grpc.keepalive_timeout_ms": 10_000,
     "grpc.keepalive_permit_without_calls": 1,
     "grpc.http2.max_pings_without_data": 0,
+    "grpc.initial_reconnect_backoff_ms": 500,
+    "grpc.max_reconnect_backoff_ms": 5_000,
 };
 function dataBrokerClient(target, protoRoot = (0, protoRoot_1.defaultProtoRoot)()) {
     const protoPath = path_1.default.join(protoRoot, "udb/services/v1/data_broker.proto");

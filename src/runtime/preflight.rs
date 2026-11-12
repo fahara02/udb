@@ -11,7 +11,9 @@
 //!
 //! The same check set powers `udb doctor --enterprise`. Findings are advisory at
 //! startup (the per-capability guards still enforce when each capability is
-//! actually used) — the value is surfacing the WHOLE list at once.
+//! actually used) — the value is surfacing the WHOLE list at once. One exception
+//! is fatal: [`enforce_encryption_key`] refuses to serve when the encryption key
+//! is mandatory (fail-closed / production / explicitly required) and none loaded.
 
 use std::net::SocketAddr;
 
@@ -97,6 +99,90 @@ fn expected_version_finding(expected: Option<&str>, running: &str) -> Option<Pre
     })
 }
 
+/// The fix every encryption-key message names.
+const ENCRYPTION_KEY_FIX: &str = "set UDB_ENCRYPTION_KEY (32 bytes, base64/hex/raw; `udb env fill` \
+     or `openssl rand -base64 32` generates one), or a Vault key source (UDB_VAULT_ADDR + \
+     UDB_VAULT_TOKEN)";
+
+/// Pure config-level encryption-key finding. A key is mandatory when the
+/// operator requires object/native-state encryption (`UDB_ENV=production` sets
+/// that) OR the broker runs fail-closed (`UDB_FAIL_CLOSED`, `UDB_ENTERPRISE_AUDIT`
+/// or a production posture): there every at-rest secret, native-state and vault
+/// write refuses without a key, so a keyless start would only fail on first use.
+fn encryption_key_finding(
+    required: bool,
+    fail_closed: bool,
+    has_key_source: bool,
+) -> Option<PreflightFinding> {
+    if has_key_source || !(required || fail_closed) {
+        return None;
+    }
+    let why = if required {
+        "object/native-state encryption is required"
+    } else {
+        "the broker runs fail-closed (UDB_FAIL_CLOSED / UDB_ENTERPRISE_AUDIT / production posture)"
+    };
+    Some(PreflightFinding {
+        name: "encryption-key",
+        severity: PreflightSeverity::Fail,
+        detail: format!(
+            "{why} but no encryption key source is configured: secret, native-state and vault \
+             writes would be refused"
+        ),
+        fix: ENCRYPTION_KEY_FIX,
+    })
+}
+
+/// Pure startup decision for the encryption-at-rest key. Enforced only when the
+/// key is mandatory (`required` or `fail_closed`); there a broker with no LOADED
+/// key refuses to start instead of failing at the first secret write. Covers
+/// both "no key configured" and "a key was configured but did not load" (bad
+/// encoding, wrong length, unreachable Vault, empty Vault export).
+pub fn encryption_key_startup_violation(
+    required: bool,
+    fail_closed: bool,
+    key_source_configured: bool,
+    key_loaded: bool,
+    load_error: Option<&str>,
+) -> Option<String> {
+    if key_loaded || !(required || fail_closed) {
+        return None;
+    }
+    let posture = if fail_closed {
+        "the broker runs fail-closed (UDB_FAIL_CLOSED, UDB_ENTERPRISE_AUDIT or UDB_ENV=production)"
+    } else {
+        "object/native-state encryption is required (UDB_OBJECT_NATIVE_STATE_ENCRYPTION_REQUIRED)"
+    };
+    let problem = match (key_source_configured, load_error) {
+        (_, Some(err)) => format!("the configured encryption key did not load: {err}"),
+        (true, None) => "the configured Vault key source returned no keys".to_string(),
+        (false, None) => "no encryption key is configured".to_string(),
+    };
+    Some(format!(
+        "encryption-at-rest key startup gate failed: {posture}, so a key is mandatory, but \
+         {problem}. Fix: {ENCRYPTION_KEY_FIX}."
+    ))
+}
+
+/// Refuse to serve a fail-closed / encryption-required broker that has no
+/// loaded encryption-at-rest key. Called by `serve()` after the runtime is built
+/// (so a key that failed to decode or a Vault export that failed is caught too).
+pub fn enforce_encryption_key(
+    config: &UdbConfig,
+    init: &crate::runtime::core::RuntimeInitReport,
+) -> std::io::Result<()> {
+    match encryption_key_startup_violation(
+        config.encryption.object_native_state_required,
+        crate::runtime::security::fail_closed_mode(),
+        config.encryption.has_key_source(),
+        init.encryption_configured,
+        init.encryption_load_error.as_deref(),
+    ) {
+        Some(violation) => Err(std::io::Error::other(violation)),
+        None => Ok(()),
+    }
+}
+
 /// Evaluate every enterprise prerequisite against the loaded config + env.
 ///
 /// Returns ONLY the unmet/risky findings (empty slice = clean). `public_addr` is
@@ -105,15 +191,14 @@ fn expected_version_finding(expected: Option<&str>, running: &str) -> Option<Pre
 pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFinding> {
     let mut out = Vec::new();
 
-    // (a) Object/native-state encryption key.
-    if config.encryption.object_native_state_required && !config.encryption.has_key_source() {
-        out.push(PreflightFinding {
-            name: "encryption-key",
-            severity: PreflightSeverity::Fail,
-            detail: "object/native-state encryption is required but no key source is configured"
-                .to_string(),
-            fix: "set UDB_ENCRYPTION_KEY (32 bytes; base64/hex/raw) or a Vault key source",
-        });
+    // (a) Encryption-at-rest key: required explicitly, by UDB_ENV=production, or
+    // by any fail-closed posture (every at-rest secret write refuses without it).
+    if let Some(finding) = encryption_key_finding(
+        config.encryption.object_native_state_required,
+        crate::runtime::security::fail_closed_mode(),
+        config.encryption.has_key_source(),
+    ) {
+        out.push(finding);
     }
 
     // (b) Native-password hash secret (admin bootstrap / create_user).
@@ -356,6 +441,70 @@ mod tests {
         let prod =
             authz_default_posture_finding(true, true).expect("prod default-allow is flagged");
         assert_eq!(prod.severity, PreflightSeverity::Fail);
+    }
+
+    #[test]
+    fn encryption_key_finding_fires_under_fail_closed_without_a_key() {
+        // Dev posture, not required: no finding with or without a key.
+        assert!(encryption_key_finding(false, false, false).is_none());
+        assert!(encryption_key_finding(false, false, true).is_none());
+        // Fail-closed (UDB_FAIL_CLOSED in staging) with no key: FAIL, names the var.
+        let finding = encryption_key_finding(false, true, false).expect("fail-closed needs a key");
+        assert_eq!(finding.name, "encryption-key");
+        assert_eq!(finding.severity, PreflightSeverity::Fail);
+        assert!(finding.detail.contains("fail-closed"), "{}", finding.detail);
+        assert!(finding.fix.contains("UDB_ENCRYPTION_KEY"));
+        // Explicitly required (production sets this) with no key: FAIL.
+        let required = encryption_key_finding(true, false, false).expect("required needs a key");
+        assert!(required.detail.contains("required"), "{}", required.detail);
+        // A configured key source satisfies both.
+        assert!(encryption_key_finding(true, true, true).is_none());
+    }
+
+    #[test]
+    fn encryption_key_startup_gate_refuses_fail_closed_without_a_loaded_key() {
+        // Dev posture: never enforced, even when a configured key failed to load.
+        assert!(encryption_key_startup_violation(false, false, false, false, None).is_none());
+        assert!(
+            encryption_key_startup_violation(false, false, true, false, Some("bad key")).is_none()
+        );
+        // A loaded key passes every posture.
+        assert!(encryption_key_startup_violation(true, true, true, true, None).is_none());
+
+        // Fail-closed, nothing configured: names the env var to set.
+        let missing = encryption_key_startup_violation(false, true, false, false, None)
+            .expect("fail-closed without a key must refuse to start");
+        assert!(missing.contains("UDB_ENCRYPTION_KEY"), "{missing}");
+        assert!(missing.contains("UDB_FAIL_CLOSED"), "{missing}");
+        assert!(
+            missing.contains("no encryption key is configured"),
+            "{missing}"
+        );
+
+        // Fail-closed, a key configured but undecodable: the load error is named.
+        let bad = encryption_key_startup_violation(
+            false,
+            true,
+            true,
+            false,
+            Some("UDB_ENCRYPTION_KEY/UDB_ENCRYPTION_KEY_V1 failed to decode: wrong length"),
+        )
+        .expect("fail-closed with an unloadable key must refuse to start");
+        assert!(bad.contains("did not load"), "{bad}");
+        assert!(bad.contains("failed to decode"), "{bad}");
+
+        // Fail-closed, Vault configured but its export held no keys.
+        let empty_vault = encryption_key_startup_violation(false, true, true, false, None)
+            .expect("fail-closed with an empty Vault export must refuse to start");
+        assert!(empty_vault.contains("Vault"), "{empty_vault}");
+
+        // Required without fail-closed (explicit operator flag): enforced too.
+        let required = encryption_key_startup_violation(true, false, false, false, None)
+            .expect("required encryption without a key must refuse to start");
+        assert!(
+            required.contains("UDB_OBJECT_NATIVE_STATE_ENCRYPTION_REQUIRED"),
+            "{required}"
+        );
     }
 
     #[test]

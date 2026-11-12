@@ -51,6 +51,13 @@ message ApiKey {
       where_clause: "deleted_at IS NULL"
       columns: "key_hash"
     }
+    // ListApiKeys finds a service account's keys by this metadata field; the
+    // expression index keeps that lookup off a scan of every key.
+    indexes: {
+      index_name: "idx_api_keys_service_identity"
+      index_type: "BTREE"
+      columns: "(metadata_json->>'service_identity')"
+    }
     extensions: {
       name: "pg_trgm"
       schema: "public"

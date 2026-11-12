@@ -133,8 +133,13 @@ class _ProjectSurface:
         error = self._api_key_last_error
         if error is None or not self._api_key_secret:
             return None
-        # A blip while the bearer is still valid leaves the next call free to renew.
-        if isinstance(error, UdbCredentialBindingError) or self._api_key_expires_at <= time.time():
+        # A blip while the bearer is still valid leaves the next call free to renew;
+        # a bearer the broker refused is not valid whatever its expiry.
+        if (
+            isinstance(error, UdbCredentialBindingError)
+            or getattr(self, "_api_key_rejected", False)
+            or self._api_key_expires_at <= time.time()
+        ):
             return UdbCredentialError(f"udb: credential renewal failed: {error}")
         return None
 

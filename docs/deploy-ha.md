@@ -146,6 +146,14 @@ tenant can hold on a replica, so one noisy tenant cannot starve the others on
 the same replica. `fairness_weight` further weights admission per
 (project, tenant, op).
 
+**Rate limit (opt-in).** A per-(project, tenant, op) token bucket refuses calls
+beyond a rate only when the operator sets one: `UDB_FAIR_TOKENS_PER_SEC` (or
+`UDB_FAIR_<OP>_TOKENS_PER_SEC`) and optionally `UDB_FAIR_BURST` (default twice
+the rate). A read costs 1 token, a write 2, a transaction 6. A refused call gets
+RESOURCE_EXHAUSTED with the exact refill wait in `retry_after_ms`. Unset, no
+tenant is refused for calling often; the semaphores above still bound in-flight
+work.
+
 **Status:** this is a **per-replica** fairness control — each replica enforces
 its own per-tenant in-flight budget independently. It is in the shipped
 admission path. A *cluster-wide* per-tenant budget that coordinates across
@@ -235,6 +243,36 @@ config readers.
 All three replicas MUST point at the **same** control-plane Postgres
 (`udb_system`), the same Kafka cluster, and the same Redis — coordination is
 entirely through these shared durable stores, not replica-to-replica.
+
+**Security posture must match on every replica.** Set the same `UDB_ENV`,
+`UDB_FAIL_CLOSED` and `UDB_ENCRYPTION_KEY` (or Vault key source) everywhere: a
+replica with a different key cannot read what another wrote, and a fail-closed
+replica without a key that loads refuses to start. `UDB_FAIL_CLOSED=true` does
+not turn on the production-only gates (forced TLS/mTLS, the default-allow
+refusal, the dev identity-provider refusals); a staging fleet that runs
+fail-closed without `UDB_ENV=production` gets only the fail-closed set. The full
+split is in [enterprise-deployment.md §2.2](enterprise-deployment.md#22-which-gates-need-udb_envproduction-and-which-apply-under-fail-closed).
+
+### 7.1 Postgres read replicas
+
+When replicas are configured, a read that names no consistency mode goes to a
+replica. It is bounded by the lag limit and falls back to the primary. Writes
+and `strong` reads always go to the primary.
+
+| Env var | Default | Notes |
+| --- | --- | --- |
+| `UDB_PG_REPLICA_DSNS` / `UDB_PG_REPLICA_DSN` | unset | Replica DSNs. Unset means every read uses the primary. |
+| `UDB_PG_REPLICA_MAX_LAG_SECS` | 3 (min 3) | Lag limit for default reads. If no replica is within it, the primary serves the read. The read never fails because of lag. |
+| `UDB_PG_REPLICA_HEALTH_INTERVAL_SECS` | 10 (min 10) | How often replica lag is measured. |
+| `UDB_PG_REPLICA_DEFAULT_READS` | `true` | Set `false` to send reads that name no mode to the primary. **Price:** the primary carries all of that read load, and replicas carry only reads that opt in (`replica_bounded`, `bounded_staleness`, `eventual`). |
+
+Each broker remembers a caller's last write position for the lag limit plus
+one health interval. It fences that caller's next default read on that
+position: it waits up to 250 ms for the replica, then uses the primary. This
+memory is **per broker process**. A write made through another broker in the
+fleet is covered only by the lag limit, unless the client passes the write
+receipt back as a read fence. The SDKs support this. See
+[enterprise-deployment.md §4.1](enterprise-deployment.md#41-read-replicas-serve-default-reads).
 
 ---
 

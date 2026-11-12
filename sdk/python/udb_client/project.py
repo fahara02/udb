@@ -44,6 +44,12 @@ from typing import Any, Callable, Sequence
 import grpc
 
 from ._channel import merge_channel_options, ssl_credentials
+from ._reconnect import (
+    AUTHN_SERVICE_PREFIX,
+    REJECTED_RENEW_INTERVAL_S,
+    OwnedBearerInterceptor,
+    WakeableStop,
+)
 from ._credentials import (
     RenewalFlight,
     UdbCredentialError,
@@ -1450,12 +1456,19 @@ def _make_channel(
     options: Sequence[tuple[str, Any]] | None,
     client_certificate_chain: bytes | None = None,
     client_private_key: bytes | None = None,
+    owner: Any = None,
 ) -> grpc.Channel:
     opts = merge_channel_options(options)
     if tls:
         creds = ssl_credentials(root_certificates, client_private_key, client_certificate_chain)
-        return grpc.secure_channel(target, creds, options=opts)
-    return grpc.insecure_channel(target, options=opts)
+        channel = grpc.secure_channel(target, creds, options=opts)
+    else:
+        channel = grpc.insecure_channel(target, options=opts)
+    if owner is None:
+        return channel
+    # A unary call whose owned bearer the broker refused is renewed and repeated
+    # once; see udb_client._reconnect.
+    return grpc.intercept_channel(channel, OwnedBearerInterceptor(owner))
 
 
 class UdbProject(_ProjectSurface):
@@ -1500,7 +1513,17 @@ class UdbProject(_ProjectSurface):
         self._api_key_failures = 0
         self._api_key_last_error: BaseException | None = None
         self._api_key_lock = threading.Lock()
-        self._api_key_stop = threading.Event()
+        # Wakes the renewal loop early: when the broker refused the bearer, and on close.
+        self._api_key_wake = threading.Event()
+        self._api_key_stop = WakeableStop(self._api_key_wake)
+        # The broker refused the current exchanged bearer before its expiry. Until a
+        # re-exchange succeeds a failed one refuses calls locally, and the renewal
+        # loop retries with backoff instead of one exchange per call.
+        self._api_key_rejected = False
+        # The last bearer renewed because the broker refused it, and when (monotonic).
+        self._reject_lock = threading.Lock()
+        self._last_rejected = ""
+        self._last_rejected_at = 0.0
         self._api_key_thread: threading.Thread | None = None
         self._api_key_principal: Any = None
         self._api_key_pinned: Any = None
@@ -1514,6 +1537,7 @@ class UdbProject(_ProjectSurface):
             client_certificate_chain=config.client_certificate_chain,
             client_private_key=config.client_private_key,
             options=config.channel_options,
+            owner=self,
         )
         # Control plane (auth + native services) channel; reuse the data
         # channel when the targets coincide so we don't double-dial.
@@ -1529,6 +1553,7 @@ class UdbProject(_ProjectSurface):
                 client_certificate_chain=config.client_certificate_chain,
                 client_private_key=config.client_private_key,
                 options=config.channel_options,
+                owner=self,
             )
             self._owns_ctl_channel = True
 
@@ -1549,6 +1574,7 @@ class UdbProject(_ProjectSurface):
                 client_certificate_chain=config.client_certificate_chain,
                 client_private_key=config.client_private_key,
                 options=config.channel_options,
+                owner=self,
             )
             self._owns_webrtc_channel = True
 
@@ -1754,6 +1780,7 @@ class UdbProject(_ProjectSurface):
         self._api_key_issued_at = now
         self._api_key_expires_at = expires_at
         self._api_key_warned = False
+        self._api_key_rejected = False
         self._api_key_principal = principal
         self.config.bearer_token = token
         self.bind_metadata(identity)
@@ -1771,7 +1798,12 @@ class UdbProject(_ProjectSurface):
             if not key:
                 return
             running = self._api_key_flight
-            if running is None and self._api_key_last_error is None and not self._api_key_due(time.time()):
+            if (
+                running is None
+                and self._api_key_last_error is None
+                and not self._api_key_rejected
+                and not self._api_key_due(time.time())
+            ):
                 return
             flight = running or RenewalFlight()
             self._api_key_flight = flight
@@ -1786,7 +1818,7 @@ class UdbProject(_ProjectSurface):
             flight.error = exc
             self._api_key_failures += 1
             self._api_key_last_error = exc
-            if time.time() >= self._api_key_expires_at:
+            if self._api_key_rejected or time.time() >= self._api_key_expires_at:
                 self._drop_expired_api_key_bearer()
         else:
             self._api_key_failures = 0
@@ -1810,15 +1842,57 @@ class UdbProject(_ProjectSurface):
         return f"Bearer {self.config.bearer_token}"
 
     def _drop_expired_api_key_bearer(self) -> None:
-        """Fail closed: remove an expired API-key bearer from every future call."""
+        """Fail closed: remove an expired or refused API-key bearer from every future call."""
         self.config.bearer_token = ""
         self.bind_metadata(replace(self._metadata, bearer_token="", api_key=""))
         if not self._api_key_warned:
             self._api_key_warned = True
             _LOG.warning(
-                "udb: API key re-exchange is failing past bearer expiry; calls fail "
-                "closed until a re-exchange succeeds"
+                "udb: API key re-exchange is failing past bearer expiry or refusal; "
+                "calls fail closed until a re-exchange succeeds"
             )
+
+    # ── a bearer the broker refused ───────────────────────────────────────
+    def _owned_bearer(self) -> str:
+        """The ``Bearer <token>`` this project owns and attaches now; "" when none."""
+        if not self._api_key_secret or not self.config.bearer_token:
+            return ""
+        return f"Bearer {self.config.bearer_token}"
+
+    def _invalidate_bearer(self, sent: str) -> None:
+        """Mark ``sent`` refused, so the next call re-exchanges the key, and wake
+        the renewal loop so a failed re-exchange is retried with backoff."""
+        with self._api_key_lock:
+            if self._owned_bearer() != sent:
+                return
+            self._api_key_rejected = True
+        self._api_key_wake.set()
+
+    def _bearer_rejected(self, method: str, sent: str) -> bool:
+        """The broker answered UNAUTHENTICATED to a call to ``method`` that carried
+        ``sent``. Returns True when ``sent`` is the bearer this project owns and it
+        is now marked for renewal, so the call may be made once more with the
+        renewed bearer. A bearer the project does not own (a configured bearer, an
+        ``as_user`` bearer) is never renewed, AuthnService calls are never repeated,
+        and a bearer renewed moments ago that is refused again is not renewed again.
+        """
+        if not sent or method.startswith(AUTHN_SERVICE_PREFIX):
+            return False
+        if self._api_key_stop.is_set() or not self._owns_credential():
+            return False
+        with self._reject_lock:
+            if sent == self._last_rejected:
+                # Already marked by a concurrent call; its renewal is shared.
+                return True
+            if sent != self._owned_bearer():
+                # Not the owner's bearer, or one an ordinary renewal already replaced.
+                return False
+            now = time.monotonic()
+            if self._last_rejected_at and now - self._last_rejected_at < REJECTED_RENEW_INTERVAL_S:
+                return False
+            self._last_rejected, self._last_rejected_at = sent, now
+        self._invalidate_bearer(sent)
+        return True
 
     def _api_key_skew(self) -> float:
         lifetime = self._api_key_expires_at - self._api_key_issued_at
@@ -1836,6 +1910,9 @@ class UdbProject(_ProjectSurface):
         if exp <= 0:
             return _API_KEY_IDLE_S
         delay = max(exp - self._api_key_skew() - time.time(), _API_KEY_MIN_DELAY_S)
+        if self._api_key_rejected:
+            # A refused bearer is re-exchanged as soon as the backoff allows.
+            delay = _API_KEY_MIN_DELAY_S
         if self._api_key_failures > 0:
             backoff = min(
                 _API_KEY_MIN_DELAY_S * 2 ** (self._api_key_failures - 1),
@@ -1852,7 +1929,11 @@ class UdbProject(_ProjectSurface):
             pass
 
     def _api_key_renewal_loop(self) -> None:
-        while not self._api_key_stop.wait(self._api_key_next_delay()):
+        while True:
+            self._api_key_wake.wait(self._api_key_next_delay())
+            self._api_key_wake.clear()
+            if self._api_key_stop.is_set():
+                return
             if not self._api_key_secret or self._api_key_expires_at <= 0:
                 return
             self._api_key_renewal_tick()

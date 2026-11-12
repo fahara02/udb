@@ -450,6 +450,7 @@ async fn live_evidence_export_writes_the_general_audit_table_only_when_enabled()
         project: DEFAULT_PROJECT_ID.to_string(),
         batch_limit: 500,
         interval: Duration::from_secs(300),
+        settle: Duration::ZERO,
         enabled: false,
     };
 

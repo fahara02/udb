@@ -7,7 +7,74 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.15] - 2026-11-12
+
+### Breaking for callers
+
+- **Automatic usage metering is written in batches, up to 250 ms after the call.** Usage reads
+  (`QueryUsage`, `CheckQuota`) see an admitted call's usage within one flush, not as soon as the
+  call returns. Explicit `MeteringService.RecordUsage` is unchanged and stored before it returns.
+  - detect: a test that reads usage right after a metered call sees the previous total
+  - fix: allow ~0.5 s before reading, or poll until the total moves
+- **The per-tenant call-rate limit is off unless configured.** Every (project, tenant,
+  operation) had a token bucket of 100 calls/s (burst 200) by default; a busy app whose users
+  share one tenant had page loads refused and retried a second later, so unrelated calls
+  finished together at 1–3 s. The bucket now applies only when `UDB_FAIR_TOKENS_PER_SEC` (or
+  `UDB_FAIR_<OP>_TOKENS_PER_SEC`) is set; the per-tenant concurrency limits still apply. A refused
+  call's `retry_after_ms` is now the exact refill time, not rounded up to whole seconds.
+- **Authz decisions are admitted on the read channel.** `CheckAccess`/`Authorize`-style decisions
+  shared the admin channel: 20 concurrent calls broker-wide with no queue, so a burst of
+  gateway checks past 20 was refused at once and retried. They now share the read channel (300
+  concurrent, 250 ms queue); a decision is an in-memory snapshot read.
+  - detect: a deployment that relied on the default 100/s to cap a tenant now admits it
+  - fix: set `UDB_FAIR_TOKENS_PER_SEC` (and `UDB_FAIR_BURST`) to the rate you want enforced
+- **With a read replica configured, reads that name no consistency are served by the replica.**
+  Before, every such read went to the primary unless the caller opted in, so a replica took no
+  load by default. Now a read with no consistency mode goes to a replica within
+  `UDB_PG_REPLICA_MAX_LAG_SECS`, and to the primary when none is within that bound (it never fails
+  because of lag). Read-after-write is automatic for a caller's own writes through the same
+  broker: the next default read waits up to 250 ms for the replica to reach that write, then
+  uses the primary. Explicit `strong` / `primary_read` reads and every write stay on the primary.
+  Without replicas nothing changes. `x-udb-consistency-mode` reports `replica_bounded` for these
+  reads.
+  - detect: `x-udb-consistency-mode: replica_bounded` on a request that set no mode, or
+    `udb_pg_replica_query_total` rising; a read can be up to the lag bound behind another
+    caller's or another broker's write
+  - fix: set `consistency: STRONG` (or `x-udb-consistency: strong`) on reads that must see other
+    callers' latest writes, pass the write receipt as `read_fence` for cross-broker
+    read-your-writes, or set `UDB_PG_REPLICA_DEFAULT_READS=false` to keep them on the primary
+- **A fail-closed broker refuses to start without a working encryption key.** Under
+  `UDB_FAIL_CLOSED`, `UDB_ENTERPRISE_AUDIT` or `UDB_ENV=production`, a broker with no
+  encryption-at-rest key used to start and fail at the first secret, native-state or vault
+  write; a key that did not decode, or a failed Vault export, only logged a warning and ran with
+  encryption off. Fail-closed also refuses the built-in dev TURN secret now.
+  - detect: startup fails with an error naming `UDB_ENCRYPTION_KEY` (or `UDB_TURN_SECRET`)
+  - fix: set `UDB_ENCRYPTION_KEY` (or a Vault key source), and `UDB_TURN_SECRET` where TURN is used
+- **A fail-closed broker refuses a data-plane audit sink that keeps nothing.** `UDB_AUDIT_SINK=stdout`
+  (or the unwired `kafka`, which fell back to stdout) passed the durable-audit startup check.
+  - detect: startup fails naming `UDB_AUDIT_SINK`; dev posture only warns
+  - fix: `UDB_AUDIT_SINK=postgres` with `UDB_AUDIT_PG_TABLE`, or `file` with `UDB_AUDIT_FILE_PATH`
+- **With `UDB_AUDIT_EXPORT_POSTGRES=1`, an auth change that cannot write its audit row is refused.**
+  Auth events written inside a transaction (user creation, status changes, emergency
+  revocation, invitations, tenant auth policy) now write their `auth_audit_log` row in that
+  transaction, so a committed change can no longer be missing from the audit trail.
+  - detect: those mutations fail with INTERNAL; `audit_sink_failures{sink="postgres_audit_log"}` rises
+  - fix: repair or drop a wrong-shaped `udb_system.auth_audit_log`; the sink recreates it
+
 ### Fixed
+
+- **A native-service call no longer waits for its usage row.** Every admitted native call (cache,
+  vault, storage, messaging, WebRTC and the rest) wrote its metering row before running, bounded
+  at 2 s, so a gateway's per-request `CacheService.Increment` paid an extra INSERT on every
+  request and up to 2 s when the pool was busy. Events are now queued and stored in batches (one
+  statement per tenant per 250 ms). Lost events (a full queue or a failed flush) are counted in
+  `udb_metering_events_lost_total` and logged, never silently.
+- **A database query no longer pays a second round trip to ping its connection.** Every pool
+  checkout pinged Postgres first. Only a connection idle for 10 s or more is pinged now; one in
+  steady use is known good.
+- **The cost of authenticating a call is measured.** `udb_grpc_duration_seconds` starts inside the
+  handler, after the caller is authenticated. `udb_auth_resolve_seconds{credential}` now times
+  authentication and `udb_rpc_total_seconds{method}` the whole call, on every listener.
 
 - **A signed-in user's calls no longer queue on their session row.** Every bearer call validated
   its session with an UPDATE that stamped `last_active_at`, so every call was a durable write and
@@ -17,14 +84,80 @@ release line was tagged.
   other call validates with a read that takes no lock. Revocation, expiry, idle time and token
   scope are still checked on every call, and a session revoked while its stamp was being written
   is still refused. The idle timeout can fire up to one interval early.
-- **A bearer's validity is checked once per few seconds, not on every call.** Each bearer call
-  (and a gateway's `Authenticate` for every request it serves) re-read the user row, the token
+- **A bearer's validity costs no database round trip per call.** Each bearer call (and a
+  gateway's `Authenticate` for every request it serves) re-read the user row, the token
   revocation, the session and the refresh family or service grant, several round trips before
-  the call itself ran, so a page paid them many times over. The verdict is now remembered for
-  `UDB_AUTH_VERDICT_CACHE_MS` (default 2000 ms; `0` checks live state on every call). A
-  revocation, logout, status, grant, role, membership, API key or IdP change made on the same
-  broker node takes effect on the next call; one made on another node within that time. Errors
-  are never remembered. Step-up, refresh and membership exchange still check live state.
+  the call itself ran, so a page paid them many times over. The verdict is now remembered, and
+  served only under the auth-state version it was computed under: triggers advance one sequence
+  (`udb_authn.udb_auth_state_version`) when a user's status, a revocation, a session's revocation
+  or scope, a refresh family, a service grant or a tenant membership changes, and publish the new
+  value at commit to a listener on every broker node, which keeps it in memory. A change made on
+  any node, or straight in SQL, is refused everywhere within milliseconds. While a node's
+  listener is disconnected, its calls read the sequence themselves (one small statement), so a
+  lost connection never serves a stale verdict; `UDB_AUTH_STATE_READ_PER_CALL=true` always
+  reads it, for no delivery window at the price of that statement per call. Errors are
+  never remembered; `UDB_AUTH_VERDICT_CACHE_MS` (default 2000 ms) bounds how long a verdict is
+  kept, and `0` checks live state on every call. Where the triggers cannot be installed (a role
+  without DDL rights) a warning says so and that bound is the only one. Step-up, refresh and
+  membership exchange still check live state.
+- **Listing a user's sessions is one statement, and an indexed one.** The page carries its
+  total; the separate `COUNT` runs only for a page past the end. The owner filter compared
+  `user_id::TEXT` with the caller's id, which kept PostgreSQL off the `user_id` index and
+  scanned every session of every tenant on each call; it now compares a UUID parameter (and
+  only when the id is a UUID), so the principal and user indexes serve it.
+- **A read no longer waits for its connection to be cleaned.** A data-plane read installs the
+  caller's tenant context on its connection and RESETs it afterwards; the caller waited for
+  that RESET. It now runs after the answer, on a task that owns the connection, which reaches
+  the pool only once the RESET completes (a failed or cancelled one discards it, as before).
+  One round trip fewer on every Select, join and hybrid text leg.
+- **Reads after a write share one replica check.** For a caller's own recent write, each
+  replica-served read asked the replica whether it had replayed that write. Each replica now
+  remembers the highest position it was seen to have replayed (it only moves forward), so the
+  reads of a page after a save are answered from that instead of one query each.
+- **`CacheService.Increment` is one Redis round trip.** The namespace budget and default TTL
+  were read with a separate `GET` before the increment script; the script now reads them
+  itself, in the same atomic step as the bound and budget checks.
+- **Listing a service account's API keys uses an index.** The lookup by
+  `metadata_json->>'service_identity'` scanned every key; the table declares an expression
+  index for it (`idx_api_keys_service_identity`, created by the next catalog apply).
+- **Idle background loops stop doing database work when nothing changed.** The authz policy
+  snapshot reads one revision fingerprint per tick and reloads in full only when the revision
+  moved, a loaded grant expired, or `UDB_AUTHZ_SNAPSHOT_FULL_RELOAD_SECS` (default 60, `0` =
+  every tick) elapsed; writes that bypass the revision log (raw SQL on `udb_authz.*`, a backup
+  restore) are picked up within that bound instead of 5 s. LockService no longer runs `CREATE
+  SCHEMA`/`CREATE TABLE IF NOT EXISTS` on every AcquireLock/RenewLock; the lease table is
+  ensured once per process and again after a failure. An idle StreamCdc subscriber skips its
+  journal range read when the head has not moved. New interval knobs:
+  `UDB_CDC_STREAM_JOURNAL_POLL_MS` (500), `UDB_LIVEQUERY_JOURNAL_POLL_MS` (500),
+  `UDB_CATALOG_RECONCILE_INTERVAL_MS` (2000).
+- **Emitting an auth event no longer runs an outbox-lag query on every call.** The
+  `udb_auth_outbox_lag_seconds` gauge is refreshed in the background every 10 seconds.
+- **The compliance evidence export no longer skips audit rows committed out of order.** The
+  export window stays below the start of any transaction still open on the database and below a
+  settle lag (`UDB_COMPLIANCE_EVIDENCE_SETTLE_SECS`, default 30 s); a long-open transaction
+  delays it and is logged.
+- **Cross-tenant reads reuse one audit sink per pool** instead of re-running the table DDL on
+  every call. A value longer than its audit column is cut to fit instead of failing the insert
+  and refusing the read; the full value is kept in the record's envelope under `untruncated`.
+- **Concurrent first writes to a self-created audit table no longer collide.** Creation is
+  serialized per table by an advisory lock and retried on a collision.
+- **The benchmark gates a page load.** The candidate latency profile runs 5 rounds of 50
+  parallel calls of one session (Select, Authenticate, CacheService Increment and Get) and fails
+  over a p95 budget (`UDB_LIVE_PAGE_P95_BUDGET_MS`, 250) or over the database transactions per
+  call (`UDB_LIVE_PAGE_XACT_BUDGET`, 2); it runs once on the primary alone and once with a
+  streaming read replica, and fails if the replica served no reads. The CI broker no longer
+  raises the per-tenant rate limit, so the benchmark runs the shipped defaults.
+- **SDK clients recover from a broker restart without being recreated.** After a broker restart
+  a Go gateway kept failing its request-limit check, and Go sign-ins failed, until the process
+  was restarted. Now the channel reconnects within seconds (reconnect backoff capped at 5 s; a
+  failed call triggers an immediate reconnect) instead of after up to 120 s. A bearer the
+  client owns that the broker refuses before its expiry is renewed (refresh, else sign in
+  again; a service account re-exchanges its key) and the call is repeated once; authentication
+  is refused before any handler runs, so no write is applied twice. AuthnService calls and
+  bearers the client does not own are never repeated, and a credential the broker no longer
+  accepts is refused locally while a background refresh backs off, never one sign-in per call.
+  The enterprise connect retries a transient sign-in failure. The candidate benchmark restarts
+  its broker under a live session in each SDK and requires the session to recover.
 - **`UDB_SESSION_BACKEND` is documented** (`postgres` default, or `redis`), with its trade-offs.
 - **Under fail-closed, an unanswered revocation store is an outage, not a revoked token.** When
   Redis or Postgres could not answer the revocation check, the call was refused as a revoked or

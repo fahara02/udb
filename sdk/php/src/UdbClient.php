@@ -6,6 +6,7 @@ namespace Fahara02\UdbLaravel;
 
 use Fahara02\UdbLaravel\Exceptions\UdbConfigurationException;
 use Fahara02\UdbLaravel\Exceptions\UdbRpcException;
+use Fahara02\UdbLaravel\Support\ReconnectBackoff;
 use Fahara02\UdbLaravel\Support\TlsCredentials;
 use Grpc\BaseStub;
 use Grpc\Timeval;
@@ -258,7 +259,8 @@ class UdbClient
         $tls = (array) ($this->config['tls'] ?? []);
         $credentials = TlsCredentials::channelCredentials($tls);
 
-        $options = (array) ($this->config['channel_options'] ?? []);
+        // Reconnect within seconds after a broker restart (see ReconnectBackoff).
+        $options = ReconnectBackoff::apply((array) ($this->config['channel_options'] ?? []));
         $options['credentials'] = $credentials;
 
         $endpoint = (string) $this->config['endpoint'];

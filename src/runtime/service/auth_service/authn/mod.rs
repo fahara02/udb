@@ -331,6 +331,7 @@ fn webauthn_attestation_invalid_field_status(
 mod core;
 // Master-plan 3.4: signing-key source abstraction (env → KeyProvider trait,
 // optional KMS provider). Selected once by `UDB_SIGNING_KEY_PROVIDER`.
+mod auth_state;
 mod key_provider;
 mod lifecycle;
 mod login;
@@ -385,6 +386,9 @@ pub struct AuthnServiceImpl {
     /// recording a real `decision_id` beyond the coarse transport scope gate.
     /// `None` keeps the scope-only defense-in-depth path working (no engine wired).
     authz_snapshot: Option<std::sync::Arc<arc_swap::ArcSwap<crate::runtime::authz::AuthzSnapshot>>>,
+    /// The cluster-wide auth-state version a remembered bearer verdict is
+    /// checked against (installs its triggers on first use).
+    auth_state: Arc<auth_state::AuthStateVersion>,
 }
 
 #[cfg(feature = "webauthn")]
@@ -1882,6 +1886,7 @@ impl AuthnServiceImpl {
             #[cfg(feature = "redis")]
             jti_denylist: None,
             authz_snapshot: None,
+            auth_state: Arc::default(),
         }
     }
 
@@ -1913,6 +1918,7 @@ impl AuthnServiceImpl {
             #[cfg(feature = "redis")]
             jti_denylist: None,
             authz_snapshot: None,
+            auth_state: Arc::default(),
         }
     }
 
@@ -2394,13 +2400,30 @@ impl AuthnServiceImpl {
     ) -> Result<JwtPersistedState, Status> {
         let cache = verdict_cache::shared();
         let key = verdict_cache::key(claims);
-        if let Some(state) = cache.get(&key) {
+        // Read first: a change committed after this read moves the version, so
+        // the verdict stored under the older value is never served again.
+        let version = self.auth_state.current(self.pg_pool.as_ref()).await;
+        if let Some(state) = cache.get(&key, version) {
             return Ok(state);
         }
-        let generation = cache.generation();
-        let state = self.jwt_persisted_state_user(claims, now).await?;
-        cache.put(key, generation, state.clone());
-        Ok(state)
+        // Parallel misses of one key wait for the first computation.
+        let gate = cache.gate(&key);
+        let result = {
+            let _turn = gate.lock().await;
+            match cache.get(&key, version) {
+                Some(state) => Ok(state),
+                None => {
+                    let generation = cache.generation();
+                    let computed = self.jwt_persisted_state_user(claims, now).await;
+                    if let Ok(state) = &computed {
+                        cache.put(key, generation, version, state.clone());
+                    }
+                    computed
+                }
+            }
+        };
+        cache.release(&key, gate);
+        result
     }
 
     /// Read the native user row behind a credential subject, UNCACHED: the

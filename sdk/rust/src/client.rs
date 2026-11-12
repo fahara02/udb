@@ -6,8 +6,9 @@
 //! nothing in the type system would object.
 
 use tonic::transport::{Channel, Endpoint};
-use tonic::{Request, Status};
+use tonic::{Code, Request, Status};
 
+use crate::auth::TokenManager;
 use crate::error::{CallPolicy, UdbError};
 use crate::metadata::Metadata;
 use crate::proto::udb::entity::v1 as entity;
@@ -24,7 +25,14 @@ pub struct UdbClient {
     /// to tighten a deadline or to opt a mutation into retries the CALLER knows
     /// are safe (an idempotency key, say).
     policy: Option<CallPolicy>,
+    /// The owner of the bearer every call carries, when the client was built
+    /// with [`UdbClient::with_token_manager`]. `None` sends `meta`'s bearer.
+    tokens: Option<TokenManager>,
 }
+
+/// Calls whose UNAUTHENTICATED is about the credential in the request, never
+/// the bearer: they are not repeated after a renewal.
+const AUTHN_SERVICE_PREFIX: &str = "/udb.core.authn.services.v1.AuthnService/";
 
 /// Generate an RPC wrapper with identical retry and deadline handling.
 ///
@@ -38,8 +46,9 @@ macro_rules! rpc {
         pub async fn $name(&mut self, req: $req) -> Result<$resp, UdbError> {
             let policy = self.policy.unwrap_or_else(|| CallPolicy::from_contract($path));
             let mut attempt: u32 = 1;
+            let mut renewed = false;
             loop {
-                let mut request = self.request(req.clone())?;
+                let (mut request, sent) = self.prepare(req.clone()).await?;
                 if let Some(deadline) = policy.deadline {
                     request.set_timeout(deadline);
                 }
@@ -47,6 +56,15 @@ macro_rules! rpc {
                     Ok(response) => return Ok(response.into_inner()),
                     Err(status) => {
                         let err = UdbError::from_status(status);
+                        if !renewed && self.renew_refused(&sent, &err, $path).await {
+                            // The broker refused the owned bearer this call
+                            // carried (a restarted broker, a revoked session).
+                            // It refuses authentication before any handler
+                            // runs, so the call is made exactly once more,
+                            // with the renewed bearer.
+                            renewed = true;
+                            continue;
+                        }
                         if policy.should_retry(attempt, &err) {
                             tokio::time::sleep(policy.backoff_for(attempt, &err)).await;
                             attempt += 1;
@@ -83,6 +101,55 @@ impl UdbClient {
             inner: DataBrokerClient::new(channel),
             meta,
             policy: None,
+            tokens: None,
+        }
+    }
+
+    /// A copy of this client whose calls carry the access token `tokens` owns,
+    /// renewed when stale, instead of the metadata's static bearer.
+    ///
+    /// When the broker refuses that token before its local expiry (a restarted
+    /// broker that lost the session, a revoked session), the client marks it,
+    /// renews it (refresh, else sign in again) and repeats the refused call
+    /// exactly once; the broker refuses authentication before any handler runs,
+    /// so a repeat cannot apply a write twice. A token renewed moments ago that
+    /// is refused again fails the call UNAUTHENTICATED. See [`crate::auth`].
+    pub fn with_token_manager(&self, tokens: TokenManager) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            meta: self.meta.clone(),
+            policy: self.policy,
+            tokens: Some(tokens),
+        }
+    }
+
+    /// The request for one attempt, and the access token it carries when the
+    /// client owns its bearer (empty otherwise).
+    async fn prepare<T>(&self, message: T) -> Result<(Request<T>, String), Status> {
+        let Some(tokens) = &self.tokens else {
+            return Ok((self.request(message)?, String::new()));
+        };
+        let bearer = tokens.access_token().await?;
+        let mut request = Request::new(message);
+        self.meta
+            .clone()
+            .with_bearer_token(bearer.clone())
+            .apply(&mut request)?;
+        Ok((request, bearer))
+    }
+
+    /// Whether a failed call should be made once more because the broker
+    /// refused the owned bearer `sent` and the owner has marked it for renewal.
+    async fn renew_refused(&self, sent: &str, err: &UdbError, path: &str) -> bool {
+        match &self.tokens {
+            Some(tokens)
+                if !sent.is_empty()
+                    && err.code() == Code::Unauthenticated
+                    && !path.starts_with(AUTHN_SERVICE_PREFIX) =>
+            {
+                tokens.reject(sent).await
+            }
+            _ => false,
         }
     }
 
@@ -103,22 +170,29 @@ impl UdbClient {
             inner: self.inner.clone(),
             meta: self.meta.clone().with_audit(purpose, correlation_id),
             policy: self.policy,
+            tokens: self.tokens.clone(),
         }
     }
 
     /// Replace the bearer credential, e.g. after a token refresh.
+    ///
+    /// The copy carries exactly this bearer: a [`TokenManager`] attached with
+    /// [`UdbClient::with_token_manager`] is dropped, and a refusal of a bearer
+    /// the client does not own is never renewed or repeated.
     pub fn with_bearer_token(&self, token: impl Into<String>) -> Self {
         Self {
             inner: self.inner.clone(),
             meta: self.meta.clone().with_bearer_token(token),
             policy: self.policy,
+            tokens: None,
         }
     }
 
     /// Wrap a message in a request carrying this connection's metadata.
     ///
     /// Public so callers can reach an RPC this wrapper does not expose yet
-    /// without hand-rolling — and without hand-rolling the headers.
+    /// without hand-rolling — and without hand-rolling the headers. It carries
+    /// the metadata's static bearer, not one a [`TokenManager`] owns.
     pub fn request<T>(&self, message: T) -> Result<Request<T>, Status> {
         let mut req = Request::new(message);
         self.meta.apply(&mut req)?;
@@ -138,8 +212,19 @@ impl UdbClient {
             inner: self.inner.clone(),
             meta: self.meta.clone(),
             policy: Some(policy),
+            tokens: self.tokens.clone(),
         }
     }
+
+    rpc!(
+        /// Broker capabilities: a cheap authenticated read, also a warm-up and
+        /// reachability probe.
+        get_capabilities,
+        get_capabilities,
+        entity::CapabilitiesRequest,
+        entity::CapabilitiesResponse,
+        "/udb.services.v1.DataBroker/GetCapabilities"
+    );
 
     rpc!(
         /// Read. Retry policy comes from the contract, not this wrapper.
@@ -309,6 +394,7 @@ mod tests {
         // conservative default and silently stop retrying that RPC — a change
         // nothing else would catch.
         for path in [
+            "/udb.services.v1.DataBroker/GetCapabilities",
             "/udb.services.v1.DataBroker/Select",
             "/udb.services.v1.DataBroker/Upsert",
             "/udb.services.v1.DataBroker/Update",
@@ -336,6 +422,45 @@ mod tests {
         // And ones it does not.
         assert!(!is_retry_safe("/udb.services.v1.DataBroker/BulkCas"));
         assert!(!is_retry_safe("/udb.services.v1.DataBroker/VectorUpsert"));
+    }
+
+    #[tokio::test]
+    async fn a_static_bearer_drops_the_token_manager() {
+        let channel = Endpoint::from_static("http://127.0.0.1:50061").connect_lazy();
+        let tokens = TokenManager::new(channel, Metadata::new("tenant-1"));
+        let owned = client().with_token_manager(tokens);
+        assert!(owned.tokens.is_some());
+        assert!(owned.with_audit("billing", "corr-7").tokens.is_some());
+        assert!(owned.with_policy(CallPolicy::once()).tokens.is_some());
+        // Negative: a bearer the client does not own is never renewed.
+        assert!(owned.with_bearer_token("caller-owned").tokens.is_none());
+    }
+
+    #[tokio::test]
+    async fn an_unowned_or_authn_refusal_is_never_repeated() {
+        let refused = UdbError::from_status(Status::unauthenticated("invalid credential"));
+        let path = "/udb.services.v1.DataBroker/Select";
+        // No token manager: the bearer is the caller's.
+        assert!(!client().renew_refused("tok", &refused, path).await);
+
+        let channel = Endpoint::from_static("http://127.0.0.1:50061").connect_lazy();
+        let owned = client().with_token_manager(TokenManager::new(channel, Metadata::new("t")));
+        // A call that carried no owned bearer, an AuthnService call, and a
+        // failure other than UNAUTHENTICATED are never repeated.
+        assert!(!owned.renew_refused("", &refused, path).await);
+        assert!(
+            !owned
+                .renew_refused(
+                    "tok",
+                    &refused,
+                    "/udb.core.authn.services.v1.AuthnService/Login"
+                )
+                .await
+        );
+        let denied = UdbError::from_status(Status::permission_denied("no"));
+        assert!(!owned.renew_refused("tok", &denied, path).await);
+        // The manager holds no token, so "tok" is not its bearer either.
+        assert!(!owned.renew_refused("tok", &refused, path).await);
     }
 
     #[tokio::test]

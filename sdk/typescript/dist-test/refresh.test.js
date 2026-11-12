@@ -44,6 +44,7 @@ function bareProject(opts) {
     project.core = opts.core;
     project.webrtcGenerated = opts.webrtcCore ? { core: opts.webrtcCore } : null;
     project.config = { credentials: { apiKey: "key-1" } };
+    project.renewalBackoffMs = 1; // keep the bounded renewal retries fast in tests
     return project;
 }
 (0, node_test_1.test)("refreshIfNeeded coalesces concurrent callers into ONE RefreshToken RPC", async () => {
@@ -393,4 +394,194 @@ const minted = (token, ttlSec) => () => ({
     node_assert_1.strict.ok(project.refreshTimer, "refresher armed after the API-key exchange");
     project.close();
     node_assert_1.strict.equal(project.refreshTimer, null, "timer cancelled on close");
+});
+// ── Session renewal recovery ────────────────────────────────────────────────
+// A renewal that fails is retried (bounded, jittered); a session holding a
+// durable credential re-authenticates with it and never resubmits a refresh
+// token that may have been consumed; a session that cannot renew fails its calls
+// locally with SessionExpiredError; a call past the renewal point awaits the one
+// shared renewal instead of sending a stale or empty bearer.
+/** A data-plane core whose calls go through the project's credential gate and
+ *  record the bearer each call actually carried. */
+function gatedCore(project) {
+    const calls = [];
+    const sent = [];
+    let bearer;
+    const core = {
+        calls,
+        setCredentials(c) {
+            calls.push(c);
+            if ("bearerToken" in c)
+                bearer = c.bearerToken;
+        },
+        async unary() {
+            sent.push(bearer);
+            return { ok: true };
+        },
+        serverStream() {
+            return {};
+        },
+        clientStream() {
+            return {};
+        },
+        bidiStream() {
+            return {};
+        },
+    };
+    project.core = core;
+    project.installCredentialGate(core);
+    return { core, sent };
+}
+const grpcError = (code, message) => Object.assign(new Error(message), { code });
+function expireStored(store) {
+    const now = Date.now();
+    store.current().issuedAt = now - 900_000;
+    store.current().expiresAt = now - 1_000;
+}
+(0, node_test_1.test)("API-key session: a lost exchange reply is retried with the key and the next call succeeds (x3)", async () => {
+    let mintedCount = 0;
+    let loseNextReply = false;
+    const keys = [];
+    const auth = {
+        ...credSpy(),
+        authenticateApiKey: async (key) => {
+            keys.push(key);
+            if (loseNextReply) {
+                loseNextReply = false;
+                throw grpcError(14, "14 UNAVAILABLE: connection reset before the reply");
+            }
+            mintedCount += 1;
+            return minted(`bearer-${mintedCount}`, 900)();
+        },
+        refreshToken: async () => {
+            throw new Error("RefreshToken must not be called for an API-key bearer");
+        },
+    };
+    const { project, store } = apiKeyProject(auth, credSpy());
+    const reported = [];
+    project.config.onRefreshError = (err) => reported.push(err);
+    const { sent } = gatedCore(project);
+    await project.authenticateApiKeyAndAdopt("svc-key");
+    project.closed = false; // opened after adoption so no real refresh timer is armed
+    for (let cycle = 1; cycle <= 3; cycle += 1) {
+        expireStored(store);
+        loseNextReply = true;
+        await project.core.unary("udb.services.v1.DataBroker", "Select", {});
+        node_assert_1.strict.equal(sent.at(-1), `bearer-${cycle + 1}`, `cycle ${cycle}: the call carried the re-exchanged bearer`);
+        node_assert_1.strict.equal(project.poisoned, false);
+        node_assert_1.strict.equal(project.refreshError(), null);
+    }
+    node_assert_1.strict.equal(keys.length, 7, "connect + (lost + retried) exchange per cycle");
+    node_assert_1.strict.ok(keys.every((k) => k === "svc-key"));
+    node_assert_1.strict.equal(reported.length, 0, "a renewal that recovered within its attempts reports nothing");
+});
+(0, node_test_1.test)("password session: a refresh whose reply was lost re-logs in, never resubmitting the token (x3)", async () => {
+    const PRINCIPAL = {
+        principal_id: "p1",
+        subject: "svc",
+        tenant_id: "tenant-uuid",
+        user_id: "u1",
+        scopes: [],
+    };
+    const presented = [];
+    let logins = 0;
+    const auth = {
+        ...credSpy(),
+        // The broker consumes (rotates) the token, but the reply never arrives.
+        refreshToken: async (req) => {
+            presented.push(req.refresh_token);
+            throw grpcError(4, "4 DEADLINE_EXCEEDED: reply lost");
+        },
+        login: async (req) => {
+            node_assert_1.strict.equal(req.username, "svc");
+            node_assert_1.strict.equal(req.password, "pw");
+            logins += 1;
+            return { access_token: `access-${logins}`, refresh_token: `refresh-${logins}`, access_token_expires_in: 900 };
+        },
+        authenticateBearer: async () => ({ principal: PRINCIPAL }),
+    };
+    const store = memoryStore({
+        accessToken: "access-0",
+        refreshToken: "refresh-0",
+        issuedAt: Date.now() - 900_000,
+        expiresAt: Date.now() - 1_000,
+    });
+    const project = bareProject({ store, auth, core: credSpy() });
+    project.sharedMeta = { tenantId: "tenant-uuid" };
+    project.credentialPin = {
+        principalId: "p1",
+        subject: "svc",
+        accountKind: "",
+        tenantId: "tenant-uuid",
+        projectId: "",
+        userId: "u1",
+        serviceIdentity: "",
+        scopes: [],
+    };
+    project.retainLogin({ username: "svc", password: "pw" });
+    const { sent } = gatedCore(project);
+    for (let cycle = 1; cycle <= 3; cycle += 1) {
+        expireStored(store);
+        await project.core.unary("udb.services.v1.DataBroker", "Select", {});
+        node_assert_1.strict.equal(sent.at(-1), `access-${cycle}`, `cycle ${cycle}: the call carried the re-login bearer`);
+    }
+    node_assert_1.strict.deepEqual(presented, ["refresh-0", "refresh-1", "refresh-2"], "each refresh token presented exactly once");
+    node_assert_1.strict.equal(logins, 3);
+    node_assert_1.strict.equal(project.refreshError(), null);
+});
+(0, node_test_1.test)("refresh-only session: a refused refresh token fails calls locally with SessionExpiredError", async () => {
+    const presented = [];
+    const auth = {
+        ...credSpy(),
+        refreshToken: async (req) => {
+            presented.push(req.refresh_token);
+            if (presented.length === 1)
+                throw grpcError(4, "4 DEADLINE_EXCEEDED: reply lost");
+            throw grpcError(16, "16 UNAUTHENTICATED: invalid refresh token");
+        },
+    };
+    const store = memoryStore({
+        accessToken: "token-1",
+        refreshToken: "refresh-1",
+        issuedAt: Date.now() - 900_000,
+        expiresAt: Date.now() - 1_000,
+    });
+    const project = bareProject({ store, auth, core: credSpy() });
+    const reported = [];
+    project.config.onRefreshError = (err) => reported.push(err);
+    const { core, sent } = gatedCore(project);
+    const isExpired = (err) => err instanceof project_1.SessionExpiredError &&
+        err.code === 16 &&
+        /invalid refresh token/.test(err.cause?.message ?? "");
+    await node_assert_1.strict.rejects(core.unary("udb.services.v1.DataBroker", "Select", {}), isExpired);
+    node_assert_1.strict.equal(sent.length, 0, "no call left the client");
+    node_assert_1.strict.equal(reported.length, 1, "onRefreshError fired");
+    node_assert_1.strict.match(reported[0].message, /invalid refresh token/);
+    node_assert_1.strict.equal(core.calls.at(-1)?.bearerToken, undefined, "the dead bearer was dropped");
+    node_assert_1.strict.throws(() => core.serverStream("svc", "Watch", {}), (err) => err instanceof project_1.SessionExpiredError);
+    // Past the backoff the refused token is still never resubmitted.
+    project.renewalRetryAt = 0;
+    await node_assert_1.strict.rejects(core.unary("udb.services.v1.DataBroker", "Select", {}), isExpired);
+    node_assert_1.strict.deepEqual(presented, ["refresh-1", "refresh-1"], "one transient retry, then the refusal is final");
+    node_assert_1.strict.equal(reported.length, 1, "the same failure is reported once");
+    node_assert_1.strict.equal(sent.length, 0);
+});
+(0, node_test_1.test)("concurrent calls at expiry share exactly one renewal", async () => {
+    let exchanges = 0;
+    const auth = {
+        ...credSpy(),
+        authenticateApiKey: async () => {
+            exchanges += 1;
+            await new Promise((r) => setTimeout(r, 10));
+            return minted(`bearer-${exchanges}`, 900)();
+        },
+    };
+    const { project, store } = apiKeyProject(auth, credSpy());
+    const { sent } = gatedCore(project);
+    await project.authenticateApiKeyAndAdopt("svc-key");
+    project.closed = false; // opened after adoption so no real refresh timer is armed
+    expireStored(store);
+    await Promise.all(Array.from({ length: 8 }, () => project.core.unary("udb.services.v1.DataBroker", "Select", {})));
+    node_assert_1.strict.equal(exchanges, 2, "connect + ONE renewal for eight concurrent callers");
+    node_assert_1.strict.deepEqual(sent, Array(8).fill("bearer-2"), "every caller carried the renewed bearer");
 });

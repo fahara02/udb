@@ -210,12 +210,72 @@ public sealed class UdbProject : IAsyncDisposable, IDisposable
     public void SetCredentials(string? bearerToken, string? apiKey = null)
         => _credentials.Set(bearerToken, apiKey ?? _credentials.ApiKey);
 
+    /// <summary>Sign-in attempts <see cref="LoginAndAdoptTenantAsync(AuthnV1.LoginRequest, CancellationToken)"/> makes before it gives up.</summary>
+    internal const int LoginAttempts = 3;
+
+    private static readonly TimeSpan LoginBackoffBase = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan LoginBackoffCap = TimeSpan.FromSeconds(60);
+
     /// <summary>
     /// Login, always authenticate the minted bearer, then adopt the canonical
     /// tenant/project from the verified principal across future calls.
+    /// A transient failure (broker unreachable or restarting, overloaded, reply
+    /// lost) is retried, up to <c>3</c> attempts in all with a jittered, doubling
+    /// wait between them, so a service that starts while the broker restarts
+    /// still signs in. A refused credential is final and thrown at once.
     /// </summary>
     public async Task<AuthnV1.AuthnResponse> LoginAndAdoptTenantAsync(
         AuthnV1.LoginRequest request, CancellationToken ct = default)
+    {
+        Grpc.Core.RpcException? last = null;
+        for (var attempt = 0; attempt < LoginAttempts; attempt++)
+        {
+            if (attempt > 0)
+            {
+                try
+                {
+                    await Task.Delay(LoginBackoff(attempt), ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw last!;
+                }
+            }
+            try
+            {
+                return await LoginAndAdoptOnceAsync(request, ct).ConfigureAwait(false);
+            }
+            catch (Grpc.Core.RpcException err) when (TransientSignInFailure(err.StatusCode) && !ct.IsCancellationRequested)
+            {
+                last = err;
+            }
+        }
+        throw last!;
+    }
+
+    /// <summary>Whether repeating a failed sign-in can help: the broker was unreachable, overloaded, or the reply was lost.</summary>
+    internal static bool TransientSignInFailure(Grpc.Core.StatusCode code) =>
+        code is Grpc.Core.StatusCode.Unavailable or Grpc.Core.StatusCode.DeadlineExceeded
+            or Grpc.Core.StatusCode.ResourceExhausted or Grpc.Core.StatusCode.Aborted;
+
+    /// <summary>Wait after the n-th consecutive failure: random in [ceiling/2, ceiling], ceiling = base * 2^(n-1), capped.</summary>
+    internal static TimeSpan LoginBackoff(int failures)
+    {
+        var ceiling = LoginBackoffBase;
+        for (var i = 1; i < failures && ceiling < LoginBackoffCap; i++)
+        {
+            ceiling *= 2;
+        }
+        if (ceiling > LoginBackoffCap)
+        {
+            ceiling = LoginBackoffCap;
+        }
+        var half = ceiling / 2;
+        return half + TimeSpan.FromTicks(Random.Shared.NextInt64(ceiling.Ticks - half.Ticks + 1));
+    }
+
+    private async Task<AuthnV1.AuthnResponse> LoginAndAdoptOnceAsync(
+        AuthnV1.LoginRequest request, CancellationToken ct)
     {
         var login = await Auth.LoginAsync(request, ct);
         var token = string.IsNullOrWhiteSpace(login.AccessToken) ? login.SessionToken : login.AccessToken;

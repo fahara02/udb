@@ -1281,6 +1281,12 @@ pub struct UdbConfig {
     /// Replica health refresh interval in seconds.
     #[serde(default)]
     pub pg_replica_health_interval_secs: u64,
+    /// Serve reads that name no consistency from a replica (bounded by
+    /// `pg_replica_max_lag_secs`, failing over to the primary, fenced on the
+    /// caller's own last write). `None` = on whenever a replica is configured;
+    /// `UDB_PG_REPLICA_DEFAULT_READS=false` keeps such reads on the primary.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pg_replica_default_reads: Option<bool>,
     /// Materialized view refresh TTL in days. Zero disables scheduled refresh.
     #[serde(default)]
     pub materialized_view_ttl_days: i32,
@@ -1347,6 +1353,7 @@ impl std::fmt::Debug for UdbConfig {
                 "pg_replica_health_interval_secs",
                 &self.pg_replica_health_interval_secs,
             )
+            .field("pg_replica_default_reads", &self.pg_replica_default_reads)
             .field(
                 "materialized_view_ttl_days",
                 &self.materialized_view_ttl_days,
@@ -1690,6 +1697,9 @@ pub fn merge_udb_config(base: UdbConfig, source: UdbConfig) -> UdbConfig {
         } else {
             source.pg_replica_health_interval_secs
         },
+        pg_replica_default_reads: source
+            .pg_replica_default_reads
+            .or(base.pg_replica_default_reads),
         materialized_view_ttl_days: if source.materialized_view_ttl_days == 0 {
             base.materialized_view_ttl_days
         } else {
@@ -1968,6 +1978,9 @@ impl UdbConfig {
         }
         if let Some(v) = env_u32("UDB_PG_REPLICA_HEALTH_INTERVAL_SECS") {
             self.pg_replica_health_interval_secs = v as u64;
+        }
+        if let Some(v) = bool_env("UDB_PG_REPLICA_DEFAULT_READS") {
+            self.pg_replica_default_reads = Some(v);
         }
         if let Some(v) = env_i32("UDB_MATERIALIZED_VIEW_TTL_DAYS") {
             self.materialized_view_ttl_days = v;

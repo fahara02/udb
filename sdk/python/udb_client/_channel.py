@@ -9,6 +9,9 @@ channel behave well:
   (gRPC default ~300s) and pay a fresh TCP+TLS+HTTP/2 handshake on the next RPC.
 * No channel-wide retry policy. Retries are applied by the generated layer only
   when proto-derived operation_kind marks a unary RPC as read-only.
+* A reconnect backoff capped at 5s (gRPC's default grows to 120s), so a channel
+  that failed a few dials while the broker restarted serves again within
+  seconds of the broker coming back, not minutes.
 
 User-supplied ``channel_options`` always win: :func:`merge_channel_options`
 appends them after the defaults so a caller can override any single key.
@@ -22,9 +25,12 @@ from typing import Any, Sequence
 # and allow pings even with no active stream so a fully idle channel stays warm.
 KEEPALIVE_TIME_MS = 30_000
 KEEPALIVE_TIMEOUT_MS = 10_000
+# Reconnect backoff (milliseconds): the first wait after a failed dial, and the cap.
+RECONNECT_INITIAL_BACKOFF_MS = 500
+RECONNECT_MAX_BACKOFF_MS = 5_000
 
 def default_channel_options() -> list[tuple[str, Any]]:
-    """Return UDB's default gRPC channel options (keepalive only).
+    """Return UDB's default gRPC channel options (keepalive and reconnect backoff).
 
     Suitable to pass directly as ``options=`` to ``grpc.insecure_channel`` /
     ``grpc.secure_channel`` (and their ``grpc.aio`` equivalents).
@@ -35,6 +41,8 @@ def default_channel_options() -> list[tuple[str, Any]]:
         ("grpc.keepalive_timeout_ms", KEEPALIVE_TIMEOUT_MS),
         ("grpc.keepalive_permit_without_calls", 1),
         ("grpc.http2.max_pings_without_data", 0),
+        ("grpc.initial_reconnect_backoff_ms", RECONNECT_INITIAL_BACKOFF_MS),
+        ("grpc.max_reconnect_backoff_ms", RECONNECT_MAX_BACKOFF_MS),
     ]
 
 

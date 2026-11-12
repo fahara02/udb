@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -74,6 +75,9 @@ type EnterpriseSession struct {
 	// stopRefresh stops the background bearer refresher; closed once by Close.
 	stopRefresh chan struct{}
 	stopOnce    sync.Once
+	// wakeRefresh makes the background refresher renew now, when the broker
+	// refused the bearer before its expiry (buffered, one pending wake).
+	wakeRefresh chan struct{}
 	// refreshDone observes the owned loop exiting, without altering Close's
 	// existing nonblocking connection teardown or waiting on a caller's store.
 	refreshDone <-chan struct{}
@@ -128,15 +132,17 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 		return nil, err
 	}
 
-	adopted, err := u.LoginAndAdoptTenant(ctx, &authnv1.LoginRequest{
-		Username: cfg.Username,
-		Password: cfg.Password,
-		// UDB-GO-001: transmit the documented pre-login tenant/project selection so
-		// the broker can resolve/verify the intended identity. The post-login source
-		// of truth is unchanged — only the VERIFIED principal (adopted below) is ever
-		// used for tenant/project scope, never these input hints.
-		TenantHint:  cfg.TenantCode,
-		ProjectHint: cfg.ProjectID,
+	adopted, err := loginWithRetry(ctx, renewalBackoffBase, func(ctx context.Context) (*AdoptedLogin, error) {
+		return u.LoginAndAdoptTenant(ctx, &authnv1.LoginRequest{
+			Username: cfg.Username,
+			Password: cfg.Password,
+			// UDB-GO-001: transmit the documented pre-login tenant/project selection so
+			// the broker can resolve/verify the intended identity. The post-login source
+			// of truth is unchanged — only the VERIFIED principal (adopted below) is ever
+			// used for tenant/project scope, never these input hints.
+			TenantHint:  cfg.TenantCode,
+			ProjectHint: cfg.ProjectID,
+		})
 	})
 	if err != nil {
 		_ = u.Close()
@@ -171,6 +177,7 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 		tm:                 NewTokenManager(u.Auth, store),
 		bearer:             "Bearer " + adopted.Token.AccessToken,
 		stopRefresh:        make(chan struct{}),
+		wakeRefresh:        make(chan struct{}, 1),
 	}
 	identity := u.Meta
 	identity.Scopes = append([]string(nil), identity.Scopes...)
@@ -212,12 +219,53 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 		return nil
 	}
 	sess.tm.publish = sess.publishBearer
-	u.credential.provider.Store(&credentialProvider{resolve: sess.currentBearer, refusal: sess.credentialError})
+	u.credential.provider.Store(&credentialProvider{
+		resolve: sess.currentBearer,
+		refusal: sess.credentialError,
+		current: sess.Bearer,
+		invalidate: func(bearer string) {
+			// The broker refused this bearer before its local expiry (a
+			// restarted broker that lost the session, a revoked session): the
+			// next resolve renews it — refresh, else sign in again.
+			// Until it is renewed the session refuses calls locally, and the
+			// background refresher retries with backoff, so a credential the
+			// broker no longer accepts never turns into a sign-in per call.
+			sess.tm.markRejected(strings.TrimPrefix(bearer, "Bearer "))
+			select {
+			case sess.wakeRefresh <- struct{}{}:
+			default:
+			}
+		},
+	})
 	// Refresh the bearer proactively in the background so no data-plane call pays
 	// the RefreshToken round-trip, and so an unrefreshable (revoked/expired) token
 	// fails closed locally. Stopped by Close.
 	sess.startRefreshLoop()
 	return sess, nil
+}
+
+// loginWithRetry makes up to renewalAttempts login attempts, waiting a
+// jittered, doubling interval between them, and repeats only a transient
+// failure (broker unreachable or restarting, overloaded, reply lost) — the same
+// policy as the service-account key exchange. A refused credential is final.
+func loginWithRetry(ctx context.Context, base time.Duration, login func(context.Context) (*AdoptedLogin, error)) (*AdoptedLogin, error) {
+	var lastErr error
+	for attempt := 0; attempt < renewalAttempts; attempt++ {
+		if attempt > 0 {
+			if sleepContext(ctx, jitteredBackoff(attempt, base, renewalBackoffCap)) != nil {
+				return nil, lastErr
+			}
+		}
+		adopted, err := login(ctx)
+		if err == nil {
+			return adopted, nil
+		}
+		lastErr = err
+		if !transientRenewalError(ctx, err) {
+			break
+		}
+	}
+	return nil, lastErr
 }
 
 // DataContext carries verified metadata for DataBroker calls. The owned
@@ -264,6 +312,8 @@ func (s *EnterpriseSession) startRefreshLoop() {
 				timer.Stop()
 				return
 			case <-timer.C:
+			case <-s.wakeRefresh:
+				timer.Stop()
 			}
 			s.backgroundRefresh()
 		}
@@ -291,6 +341,9 @@ func (s *EnterpriseSession) scheduledRefreshWait() time.Duration {
 	tok, err := s.tm.store.Load(context.Background())
 	if err != nil {
 		return bgRefreshRetry
+	}
+	if s.tm.isRejected(tok) {
+		return bgRefreshMin
 	}
 	if tok.ExpiresAt.IsZero() {
 		return bgRefreshIdle
@@ -428,7 +481,7 @@ func (s *EnterpriseSession) recordCredentialError(ctx context.Context, err error
 	s.lastRefreshErr = err
 	tok, loadErr := s.tm.store.Load(ctx)
 	var binding *credentialBindingError
-	s.poisoned = errors.As(err, &binding) || loadErr != nil || !tok.Valid(s.tm.now(), 0)
+	s.poisoned = errors.As(err, &binding) || loadErr != nil || !tok.Valid(s.tm.now(), 0) || s.tm.isRejected(tok)
 }
 
 func (s *EnterpriseSession) credentialError() error {

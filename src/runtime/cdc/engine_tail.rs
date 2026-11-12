@@ -440,6 +440,34 @@ pub(super) struct PollOutcome {
     pub(super) reached: Option<i64>,
 }
 
+/// The poll outcome when the committed head is not past the cursor: exactly
+/// what the `(cursor, head]` range read would produce (no rows, cursor
+/// reached), without issuing it. `None` when there may be rows to read.
+fn idle_poll_outcome(head: i64, cursor_position: i64, limit: usize) -> Option<PollOutcome> {
+    (head <= cursor_position).then(|| PollOutcome {
+        envelopes: Vec::new(),
+        scanned: 0,
+        reached: (0 < limit).then_some(cursor_position),
+    })
+}
+
+/// Default per-stream journal poll cadence (StreamCdc / PublishCDC live tail).
+pub(crate) const DEFAULT_CDC_STREAM_JOURNAL_POLL_MS: u64 = 500;
+/// Env knob for [`stream_journal_poll_interval`].
+const CDC_STREAM_JOURNAL_POLL_ENV: &str = "UDB_CDC_STREAM_JOURNAL_POLL_MS";
+
+/// How often each live CDC stream polls the durable journal as its backstop
+/// (`UDB_CDC_STREAM_JOURNAL_POLL_MS`, default 500 ms). Resolved once per process.
+fn stream_journal_poll_interval() -> std::time::Duration {
+    static MS: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    std::time::Duration::from_millis(*MS.get_or_init(|| {
+        super::resolve_poll_interval_ms(
+            std::env::var(CDC_STREAM_JOURNAL_POLL_ENV).ok().as_deref(),
+            DEFAULT_CDC_STREAM_JOURNAL_POLL_MS,
+        )
+    }))
+}
+
 /// Progress markers after replay: at most one per this interval...
 const PROGRESS_MARKER_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
 /// ...unless the cursor moved at least this many positions since the last one.
@@ -506,6 +534,12 @@ pub(super) async fn cdc_journal_poll(
     let head = super::journal::head(pool, &tail.catalog)
         .await
         .map_err(|err| cdc_stream_journal_unavailable("journal_head", &err))?;
+    // Nothing committed past the cursor: the range read below is bounded by
+    // `(cursor, head]` and would return no rows, so skip it. Same outcome as a
+    // zero-row page; an idle stream costs one primary-key read per tick.
+    if let Some(idle) = idle_poll_outcome(head, *cursor_position, tail.limit) {
+        return Ok(idle);
+    }
     let mut out = Vec::new();
     let mut scanned = 0usize;
     let mut query = sqlx::query(&tail.sql).bind(*cursor_position).bind(head);
@@ -691,6 +725,38 @@ mod tests {
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
     use serde_json::json;
+
+    #[test]
+    fn idle_journal_poll_skips_the_range_read_with_the_same_outcome() {
+        // Head not past the cursor: the (cursor, head] read could return nothing.
+        for (head, cursor) in [(10, 10), (7, 10), (0, 0)] {
+            let idle = idle_poll_outcome(head, cursor, 1_000).expect("idle poll");
+            assert!(idle.envelopes.is_empty());
+            assert_eq!(idle.scanned, 0);
+            assert_eq!(
+                idle.reached,
+                Some(cursor),
+                "cursor never regresses to the head"
+            );
+        }
+        // New rows committed: the range read must run.
+        assert!(idle_poll_outcome(11, 10, 1_000).is_none());
+    }
+
+    #[test]
+    fn stream_journal_poll_interval_env_keeps_a_positive_default() {
+        assert_eq!(super::super::resolve_poll_interval_ms(None, 500), 500);
+        assert_eq!(
+            super::super::resolve_poll_interval_ms(Some(" 100 "), 500),
+            100
+        );
+        assert_eq!(super::super::resolve_poll_interval_ms(Some("0"), 500), 500);
+        assert_eq!(
+            super::super::resolve_poll_interval_ms(Some("fast"), 500),
+            500
+        );
+        assert_eq!(DEFAULT_CDC_STREAM_JOURNAL_POLL_MS, 500);
+    }
 
     fn stream_policy(pattern: &str, tenant: &str, project: &str, enabled: bool) -> TopicPolicy {
         TopicPolicy {
@@ -2080,7 +2146,7 @@ impl CdcEngine {
             // of exactly what reached Kafka — and it backfills anything the bounded
             // broadcast dropped (lag) or never saw (events from another replica).
             const TAIL_BATCH: i64 = 1_000;
-            const TAIL_POLL: std::time::Duration = std::time::Duration::from_millis(500);
+            let tail_poll = stream_journal_poll_interval();
             const DEDUP_WINDOW: usize = 16_384;
             let tail = JournalTail::new(catalog, &topic_pattern, TAIL_BATCH);
             let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -2140,8 +2206,8 @@ impl CdcEngine {
             // recovery indefinitely. Replay just ran, so first poll is one
             // cadence away; missed polls do not accumulate after starvation.
             let mut journal_tick = tokio::time::interval_at(
-                tokio::time::Instant::now() + TAIL_POLL,
-                TAIL_POLL,
+                tokio::time::Instant::now() + tail_poll,
+                tail_poll,
             );
             journal_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {

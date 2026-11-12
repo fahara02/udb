@@ -10,6 +10,7 @@ import * as crypto from "crypto";
 import path from "path";
 
 import { UdbMetadata, metadata, UDB_DEFAULT_CHANNEL_OPTIONS } from "./client";
+import { kickReconnect } from "./generatedClient";
 import type { TlsOptions } from "./generatedClient";
 import { defaultProtoRoot } from "./protoRoot";
 
@@ -226,16 +227,40 @@ export class UdbAuthClient {
    *  session can renew an expiring bearer first (or refuse locally when it cannot).
    *  Unset on a plain client and on the `withoutCredentials` renewal view. */
   private callGate?: () => Promise<void>;
+  /** Told when the broker refused, as UNAUTHENTICATED, the bearer a gated call
+   *  carried; returns true when the owner marked it for renewal, so the call is
+   *  made once more with the renewed bearer. Unset on the renewal view. */
+  private bearerRejected?: (sent: string, err: unknown) => boolean;
   /** Per-call deadline; set on the renewal view so a lost reply cannot hang a renewal. */
   private deadlineMs?: number;
+  /** When each stub's channel was last kicked to reconnect. */
+  private readonly reconnectKickedAt = new Map<unknown, number>();
 
   private async call<T>(client: any, method: string, request: any): Promise<T> {
     // These carry their credential in the request; they establish or renew one.
-    if (this.callGate && !CREDENTIAL_RPCS.has(method)) await this.callGate();
+    const gate = CREDENTIAL_RPCS.has(method) ? undefined : this.callGate;
+    if (gate) await gate();
+    const sent = this.meta.bearerToken ?? "";
+    try {
+      return await this.send<T>(client, method, request);
+    } catch (err) {
+      // The broker refused the owned bearer before any handler ran (a restarted
+      // broker, a revoked session): renew it and make the call exactly once more.
+      // AuthnService calls are never repeated; their refusal is about the
+      // credential in the request.
+      if (!gate || client === this.authn || !sent || !this.bearerRejected?.(sent, err)) throw err;
+      await gate();
+      return this.send<T>(client, method, request);
+    }
+  }
+
+  private send<T>(client: any, method: string, request: any): Promise<T> {
     return new Promise((resolve, reject) => {
       const done = (err: grpc.ServiceError | null, resp: T) => {
-        if (err) reject(err);
-        else resolve(resp);
+        if (err) {
+          kickReconnect(client, err, this.reconnectKickedAt);
+          reject(err);
+        } else resolve(resp);
       };
       if (this.deadlineMs && this.deadlineMs > 0) {
         client[method](request, metadata(this.meta), { deadline: new Date(Date.now() + this.deadlineMs) }, done);
@@ -245,9 +270,11 @@ export class UdbAuthClient {
     });
   }
 
-  /** Install (or clear) the pre-call credential gate. */
-  setCallGate(gate?: () => Promise<void>): void {
+  /** Install (or clear) the pre-call credential gate, and the handler for a
+   *  bearer the broker refused (see `call`). */
+  setCallGate(gate?: () => Promise<void>, bearerRejected?: (sent: string, err: unknown) => boolean): void {
     this.callGate = gate;
+    this.bearerRejected = bearerRejected;
   }
 
   /** A view of this client that sends no bearer or API key header, for the public
@@ -258,6 +285,7 @@ export class UdbAuthClient {
     const view: UdbAuthClient = Object.create(this);
     view.meta = { ...this.meta, bearerToken: undefined, apiKey: undefined };
     view.callGate = undefined;
+    view.bearerRejected = undefined;
     view.deadlineMs = options.deadlineMs ?? this.deadlineMs;
     return view;
   }

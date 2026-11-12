@@ -1151,16 +1151,26 @@ impl DataBrokerRuntime {
         let Some(store) = self.default_system_stores() else {
             return Ok(true);
         };
-        store.ensure_advisory_lease_table().await.map_err(|e| {
-            native_store_internal_status(
-                "native_advisory_lease",
-                format!("native advisory lease table ensure failed: {e}"),
-            )
-        })?;
+        // The lease table DDL runs once per store object, not on every acquire
+        // (it was CREATE SCHEMA + CREATE TABLE IF NOT EXISTS per LockService
+        // call). A failed ensure is not recorded, so the next call retries it.
+        let ensured = advisory_lease_tables_ensured();
+        if !ensured.contains(&store) {
+            store.ensure_advisory_lease_table().await.map_err(|e| {
+                native_store_internal_status(
+                    "native_advisory_lease",
+                    format!("native advisory lease table ensure failed: {e}"),
+                )
+            })?;
+            ensured.insert(&store);
+        }
         store
             .try_acquire_advisory_lease(lease_name, owner_id, ttl)
             .await
             .map_err(|e| {
+                // The table may have been dropped under a running broker:
+                // forget it so the next acquire ensures it again.
+                ensured.forget(&store);
                 native_store_internal_status(
                     "native_advisory_lease",
                     format!("native advisory lease failed: {e}"),
@@ -1372,6 +1382,103 @@ impl DataBrokerRuntime {
         )
         .await?;
         Ok(store.backend())
+    }
+}
+
+/// Store objects whose one-time setup (the advisory-lease table) this process
+/// already ran. Entries are `Weak`: a `Weak` keeps its allocation reserved, so
+/// pointer identity with a listed entry means the very same store object and a
+/// new store can never inherit an old store's "ensured" mark by address reuse.
+struct EnsuredStores<T: ?Sized> {
+    entries: std::sync::Mutex<Vec<std::sync::Weak<T>>>,
+}
+
+impl<T: ?Sized> EnsuredStores<T> {
+    const fn new() -> Self {
+        Self {
+            entries: std::sync::Mutex::new(Vec::new()),
+        }
+    }
+
+    fn same(entry: &std::sync::Weak<T>, store: &std::sync::Arc<T>) -> bool {
+        entry.as_ptr().cast::<()>() == std::sync::Arc::as_ptr(store).cast::<()>()
+    }
+
+    fn contains(&self, store: &std::sync::Arc<T>) -> bool {
+        self.entries
+            .lock()
+            .map(|entries| entries.iter().any(|entry| Self::same(entry, store)))
+            .unwrap_or(false)
+    }
+
+    fn insert(&self, store: &std::sync::Arc<T>) {
+        if let Ok(mut entries) = self.entries.lock() {
+            // Drop entries whose store is gone (their allocation is released
+            // with them), then record this one once.
+            entries.retain(|entry| entry.strong_count() > 0);
+            if !entries.iter().any(|entry| Self::same(entry, store)) {
+                entries.push(std::sync::Arc::downgrade(store));
+            }
+        }
+    }
+
+    fn forget(&self, store: &std::sync::Arc<T>) {
+        if let Ok(mut entries) = self.entries.lock() {
+            entries.retain(|entry| !Self::same(entry, store));
+        }
+    }
+}
+
+fn advisory_lease_tables_ensured()
+-> &'static EnsuredStores<dyn crate::runtime::canonical_store::SystemStores> {
+    static ENSURED: EnsuredStores<dyn crate::runtime::canonical_store::SystemStores> =
+        EnsuredStores::new();
+    &ENSURED
+}
+
+#[cfg(test)]
+mod ensured_stores_tests {
+    use super::EnsuredStores;
+    use std::sync::Arc;
+
+    trait Probe: Send + Sync {}
+    struct Store;
+    impl Probe for Store {}
+
+    #[test]
+    fn a_store_is_ensured_once_and_forgotten_on_failure() {
+        let ensured: EnsuredStores<dyn Probe> = EnsuredStores::new();
+        let first: Arc<dyn Probe> = Arc::new(Store);
+        let second: Arc<dyn Probe> = Arc::new(Store);
+        assert!(!ensured.contains(&first));
+        ensured.insert(&first);
+        ensured.insert(&first);
+        assert!(ensured.contains(&first));
+        assert!(
+            ensured.contains(&Arc::clone(&first)),
+            "clones are the same store"
+        );
+        assert!(
+            !ensured.contains(&second),
+            "another store runs its own setup"
+        );
+        ensured.forget(&first);
+        assert!(
+            !ensured.contains(&first),
+            "a failed acquire re-runs the setup"
+        );
+    }
+
+    #[test]
+    fn a_replacement_store_never_inherits_a_dropped_stores_mark() {
+        let ensured: EnsuredStores<dyn Probe> = EnsuredStores::new();
+        for _ in 0..64 {
+            let store: Arc<dyn Probe> = Arc::new(Store);
+            ensured.insert(&store);
+            drop(store);
+            let replacement: Arc<dyn Probe> = Arc::new(Store);
+            assert!(!ensured.contains(&replacement));
+        }
     }
 }
 

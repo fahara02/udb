@@ -1620,10 +1620,84 @@ impl DataBrokerRuntime {
                 return Err(bounded_read_refused_status(refused));
             }
         }
+        // A read that names no consistency is replica-eligible only while the
+        // replica default is on (`UDB_PG_REPLICA_DEFAULT_READS`), and only when
+        // the caller has no recent write on this node: this selector cannot
+        // wait on a replica LSN, so an own-write fence means the primary.
+        if self.read_names_no_consistency(context)
+            && (!self.pg_replicas.replica_default_reads()
+                || self
+                    .pg_replicas
+                    .own_write_fence(&own_write_caller_key(context))
+                    != crate::runtime::consistency::OwnWriteFence::None)
+        {
+            return self
+                .pg_pool
+                .clone()
+                .ok_or_else(|| postgres_backend_not_configured_status("default_read"));
+        }
         self.pg_replicas
             .choose_pool_with_max_lag(context.replica_lag_override())
             .or_else(|| self.pg_pool.clone())
             .ok_or_else(|| postgres_backend_not_configured_status("replica_or_primary_read"))
+    }
+
+    /// True when `context` names no consistency of its own and is not pinned
+    /// to a named instance — the reads the replica default applies to.
+    fn read_names_no_consistency(&self, context: &RequestContext) -> bool {
+        context.target_instance.trim().is_empty()
+            && crate::runtime::consistency::ConsistencyPolicy::request_names_no_consistency(
+                &context.consistency,
+                context.primary_read,
+                context.eventual_consistency_allowed,
+                &context.read_fence_json,
+            )
+    }
+
+    /// True when a read under `context` is served by the replica default:
+    /// replicas serve default reads and the request names no consistency.
+    pub(crate) fn default_read_applies(&self, context: &RequestContext) -> bool {
+        self.pg_replicas.replica_default_reads() && self.read_names_no_consistency(context)
+    }
+
+    /// The typed read policy for `context`, with the runtime defaults applied:
+    /// a read that names no consistency becomes replica-bounded (within
+    /// `UDB_PG_REPLICA_MAX_LAG_SECS`, failing over to the primary) when at
+    /// least one replica is configured, and is fenced on the caller's own last
+    /// write on this node. Explicit modes are returned exactly as requested.
+    pub(crate) fn read_consistency_policy(
+        &self,
+        context: &RequestContext,
+    ) -> crate::runtime::consistency::ConsistencyPolicy {
+        use crate::runtime::consistency::{ConsistencyPolicy, ReadFence};
+        let mut policy = ConsistencyPolicy::from_request_context(
+            &context.consistency,
+            context.max_replica_lag_ms,
+            context.primary_read,
+            context.eventual_consistency_allowed,
+        );
+        if !context.read_fence_json.trim().is_empty()
+            && let Ok(fence) = serde_json::from_str::<ReadFence>(&context.read_fence_json)
+        {
+            policy = policy.with_fence(fence);
+        }
+        if !self.default_read_applies(context) {
+            return policy;
+        }
+        let defaults = self.pg_replicas.default_read_policy();
+        let own_write = self
+            .pg_replicas
+            .own_write_fence(&own_write_caller_key(context));
+        policy.with_default_read(true, defaults, own_write)
+    }
+
+    /// Remember that the caller in `context` just wrote, at primary position
+    /// `source_lsn` (the write receipt's `source_lsn`; blank when unknown), so
+    /// its next default read on this node never sees older data. A no-op when
+    /// the replica default is off.
+    pub fn record_own_write(&self, context: &RequestContext, source_lsn: &str) {
+        self.pg_replicas
+            .record_own_write(&own_write_caller_key(context), source_lsn);
     }
 
     /// Async, fully-enforced read-pool selector — the budget- and
@@ -1654,7 +1728,7 @@ impl DataBrokerRuntime {
         context: &RequestContext,
         is_write: bool,
     ) -> Result<RoutedReadPool, tonic::Status> {
-        use crate::runtime::consistency::{ConsistencyPolicy, ReadFence, ReadRouting};
+        use crate::runtime::consistency::ReadRouting;
         use crate::runtime::replica::BoundedReplicaRead;
 
         // An explicit primary route is honoured on every consistency level.
@@ -1683,17 +1757,7 @@ impl DataBrokerRuntime {
                 &context.project_id,
             )?;
         }
-        let mut policy = ConsistencyPolicy::from_request_context(
-            &context.consistency,
-            context.max_replica_lag_ms,
-            context.primary_read,
-            context.eventual_consistency_allowed,
-        );
-        if !context.read_fence_json.trim().is_empty()
-            && let Ok(fence) = serde_json::from_str::<ReadFence>(&context.read_fence_json)
-        {
-            policy = policy.with_fence(fence);
-        }
+        let policy = self.read_consistency_policy(context);
 
         match policy.route_read(is_write, backend_label) {
             ReadRouting::RefusedBounded(refused) => Err(bounded_read_refused_status(refused)),
@@ -1718,12 +1782,14 @@ impl DataBrokerRuntime {
             },
             ReadRouting::ReplicaBounded {
                 max_staleness_ms,
+                fence_wait_ms,
                 min_lsn,
             } => {
                 let budget = std::time::Duration::from_millis(max_staleness_ms);
+                let fence_wait = std::time::Duration::from_millis(fence_wait_ms);
                 match self
                     .pg_replicas
-                    .choose_bounded_replica(min_lsn.as_deref(), budget)
+                    .choose_bounded_replica_with_fence_wait(min_lsn.as_deref(), budget, fence_wait)
                     .await
                 {
                     BoundedReplicaRead::Replica(pool) => {
@@ -1735,6 +1801,13 @@ impl DataBrokerRuntime {
                     // Serve from the primary, but ATTACH the carried
                     // `StaleReadWarning` so the failed-over read is never
                     // returned silently.
+                    // A default read (no consistency named) that fails over is
+                    // served fresh by the primary — nothing stale reached the
+                    // caller, so no warning; the failover is counted in
+                    // `udb_pg_replica_fallback_total`.
+                    BoundedReplicaRead::FailoverToPrimary(_) if policy.implicit_default => {
+                        self.routed_primary_pool(context, tenant).await
+                    }
                     BoundedReplicaRead::FailoverToPrimary(warning) => {
                         let mut routed = self.routed_primary_pool(context, tenant).await?;
                         routed.warning = Some(warning);
@@ -2392,6 +2465,16 @@ impl RoutedReadPool {
 fn normalized_project_id(project_id: &str) -> Option<&str> {
     let project_id = project_id.trim();
     (!project_id.is_empty()).then_some(project_id)
+}
+
+/// The caller identity a read-after-write fence is keyed on.
+fn own_write_caller_key(context: &RequestContext) -> String {
+    crate::runtime::consistency::OwnWriteFences::caller_key(
+        &context.tenant_id,
+        &context.project_id,
+        &context.user_id,
+        &context.service_identity,
+    )
 }
 
 pub(crate) fn read_fence_requires_primary(context: &RequestContext) -> bool {

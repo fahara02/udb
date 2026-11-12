@@ -75,13 +75,39 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
  * and pay a fresh TCP+TLS+HTTP/2 handshake on the next RPC. Retries are applied by
  * this wrapper only when the proto-derived operation_kind marks a unary RPC as
  * read-only. Caller-supplied `channelOptions` are spread on top and win.
+ *
+ * The reconnect backoff is capped at 5 s (grpc-js grows it to 120 s by default),
+ * so a channel that failed a few dials while the broker restarted is serving
+ * again within seconds of the broker coming back, not minutes.
  */
 export const DEFAULT_CHANNEL_OPTIONS: grpc.ChannelOptions = {
   "grpc.keepalive_time_ms": 30_000,
   "grpc.keepalive_timeout_ms": 10_000,
   "grpc.keepalive_permit_without_calls": 1,
   "grpc.http2.max_pings_without_data": 0,
+  "grpc.initial_reconnect_backoff_ms": 500,
+  "grpc.max_reconnect_backoff_ms": 5_000,
 };
+
+/** The shortest interval between two reconnect kicks of one channel. */
+export const RECONNECT_KICK_INTERVAL_MS = 1_000;
+
+/** Ask a channel that failed a call with UNAVAILABLE to connect now, at most once
+ *  per {@link RECONNECT_KICK_INTERVAL_MS} per channel (`kickedAt` holds the last
+ *  kick per key), so an outage is not hammered. @grpc/grpc-js has no public way to
+ *  cut a running reconnect backoff short; a channel that went idle is woken, and
+ *  the 5 s backoff cap in {@link DEFAULT_CHANNEL_OPTIONS} bounds the rest. */
+export function kickReconnect(client: any, err: unknown, kickedAt: Map<unknown, number> | undefined, key: unknown = client): void {
+  if (!kickedAt || (err as { code?: unknown } | null)?.code !== grpc.status.UNAVAILABLE) return;
+  const now = Date.now();
+  if (now - (kickedAt.get(key) ?? 0) < RECONNECT_KICK_INTERVAL_MS) return;
+  kickedAt.set(key, now);
+  try {
+    client?.getChannel?.()?.getConnectivityState?.(true);
+  } catch {
+    /* a closed channel has nothing to reconnect */
+  }
+}
 
 export interface TlsOptions {
   /** PEM root CA bundle. Omit for the system trust store. */
@@ -606,6 +632,8 @@ export class UdbCore {
   private readonly creds: grpc.ChannelCredentials;
   private readonly loaded: any;
   private readonly stubs = new Map<string, any>();
+  /** When each service stub's channel was last kicked to reconnect. */
+  private readonly reconnectKickedAt = new Map<unknown, number>();
 
   constructor(opts: UdbClientOptions) {
     this.opts = opts;
@@ -781,6 +809,7 @@ export class UdbCore {
         });
       } catch (e) {
         const err = e as grpc.ServiceError;
+        kickReconnect(stub, err, this.reconnectKickedAt);
         const failure = new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));
         if (retryEnabled && attempt + 1 < this.retry.maxAttempts && this.isRetryable(err, retrySafe)) {
           const wait = this.retryWait(attempt, failure.retryAfterMs, deadlineAt);
@@ -811,6 +840,7 @@ export class UdbCore {
       this.callMeta(call, false),
     ) as grpc.ClientReadableStream<any>;
     stream.on("error", (err: grpc.ServiceError) => {
+      kickReconnect(stub, err, this.reconnectKickedAt);
       (err as any).udb = new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));
     });
     if (call?.signal) call.signal.addEventListener("abort", () => stream.cancel(), { once: true });
@@ -831,7 +861,10 @@ export class UdbCore {
         this.metadataFor(call),
         this.callMeta(call),
         (err: grpc.ServiceError | null, resp: TRes) => {
-          if (err) reject(new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err)));
+          if (err) {
+            kickReconnect(stub, err, this.reconnectKickedAt);
+            reject(new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err)));
+          }
           else resolve(resp);
         },
       ) as grpc.ClientWritableStream<any>;
@@ -852,6 +885,7 @@ export class UdbCore {
       this.callMeta(call, false),
     ) as grpc.ClientDuplexStream<any, any>;
     stream.on("error", (err: grpc.ServiceError) => {
+      kickReconnect(stub, err, this.reconnectKickedAt);
       (err as any).udb = new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));
     });
     if (call?.signal) call.signal.addEventListener("abort", () => stream.cancel(), { once: true });

@@ -550,10 +550,8 @@ impl crate::runtime::DataBrokerRuntime {
                     format!("PostgreSQL full-text query failed: {err}"),
                 )
             });
-        let reset_result = conn.reset_context(context).await;
-        drop(conn);
+        conn.release_in_background(context);
         let rows = rows_result?;
-        reset_result?;
         drop(routed);
         rows.into_iter()
             .map(|row| {

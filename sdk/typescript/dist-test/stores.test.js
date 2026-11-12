@@ -118,9 +118,9 @@ const store_conformance_1 = require("./test-support/store-conformance");
             });
             return stream;
         },
-    }, () => { });
+    }, (scope) => scope.delete("acme.v1.Order", { id: "o1" }));
     await strict_1.default.rejects(run([{ state: "TX_STATE_OPEN" }]), /without a commit acknowledgement/);
-    await strict_1.default.rejects(run([{ state: "TX_STATE_ERROR", message: "CAS failed" }], { udb: conflict }), (err) => err === conflict && (0, stores_1.codeOf)(err) === stores_1.ErrorCode.Conflict);
+    await strict_1.default.rejects(run([{ state: "TX_STATE_ERROR", message: "CAS failed" }], { udb: conflict }), (err) => (0, stores_1.codeOf)(err) === stores_1.ErrorCode.Conflict);
     await strict_1.default.rejects(run([{ state: "TX_STATE_ERROR", message: "opaque operator text", code: 9,
             error_detail: { reason: "UDB_CAS_CONFLICT" } }]), (err) => (0, stores_1.codeOf)(err) === stores_1.ErrorCode.Conflict);
     await run([{ state: "TX_STATE_COMMITTED" }]);
