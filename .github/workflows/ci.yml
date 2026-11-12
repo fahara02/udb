@@ -2365,6 +2365,9 @@ jobs:
         run: |
           set -euo pipefail
           : "${UDB_PG_DSN:?required provisioned PostgreSQL DSN is missing}"
+          # Build first: linking the webauthn test binary can go minutes without
+          # output, which the live-test watchdog would read as a stalled test.
+          cargo test --locked --lib --features webauthn --no-run
           python3 scripts/run-live-tests.py -- cargo test --locked --lib --features webauthn passkeys_live -- --ignored --nocapture --test-threads=1 \
             | tee "$RUNNER_TEMP/passkeys-live-result.log"
           python3 - <<'PY'

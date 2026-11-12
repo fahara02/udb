@@ -1193,13 +1193,11 @@ impl DataBrokerRuntime {
         let routed_warning = routed_pool.warning().cloned();
         let pool = routed_pool.pool();
         let stale_warning = routed_warning.or(fence_warning);
-        // READ fast-path: a read-only SELECT does NOT need a transaction. We
-        // acquire ONE pooled connection, install the RLS context as SESSION
-        // settings (is_local=false) on it, run the SELECT on that SAME
-        // connection, then ALWAYS reset those session GUCs before the
-        // connection returns to the pool — on BOTH the success and error path.
-        // This drops the BEGIN+COMMIT round-trips while keeping RLS isolation
-        // byte-identical (same keys/values as the write path).
+        // READ path: ONE pooled connection, ONE transaction. `install_context`
+        // opens it and installs the RLS context as transaction-local settings
+        // in the same round trip; the SELECT (and COUNT) run in it; its COMMIT
+        // ends the context too, so no pool user can inherit it. Same keys and
+        // values as the write path, so RLS isolation is byte-identical.
         let conn = pool.acquire().await.map_err(|e| {
             setup_data_internal_status(
                 "select_connection_acquire",
@@ -1269,9 +1267,9 @@ impl DataBrokerRuntime {
         } else {
             None
         };
-        // The RESET runs after the answer: the connection reaches the pool only
-        // after it completes. Cancellation during set/query/count and every
-        // early `?` discard the dirty session.
+        // The read's COMMIT runs after the answer: the connection reaches the
+        // pool only after it completes. Cancellation during set/query/count and
+        // every early `?` discard the open transaction.
         conn.release_in_background(&context);
         let rows = rows_result?;
         let exact_total = total_result.transpose()?;
@@ -1419,10 +1417,8 @@ impl DataBrokerRuntime {
             )
             .await?;
         let stale_warning = routed_warning.or(fence_warning);
-        // READ fast-path (see `select`): no transaction. Acquire one pooled
-        // connection, install RLS context as SESSION settings, run the join
-        // SELECT, then ALWAYS reset the session GUCs before the connection
-        // returns to the pool — on success AND error.
+        // READ path (see `select`): one pooled connection, one transaction
+        // carrying the RLS context; its COMMIT ends the context.
         let conn = pool.acquire().await.map_err(|e| {
             setup_data_internal_status(
                 "join_connection_acquire",

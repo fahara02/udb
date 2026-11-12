@@ -113,11 +113,14 @@ release line was tagged.
   `user_id::TEXT` with the caller's id, which kept PostgreSQL off the `user_id` index and
   scanned every session of every tenant on each call; it now compares a UUID parameter (and
   only when the id is a UUID), so the principal and user indexes serve it.
-- **A read no longer waits for its connection to be cleaned.** A data-plane read installs the
-  caller's tenant context on its connection and RESETs it afterwards; the caller waited for
-  that RESET. It now runs after the answer, on a task that owns the connection, which reaches
-  the pool only once the RESET completes (a failed or cancelled one discards it, as before).
-  One round trip fewer on every Select, join and hybrid text leg.
+- **A read is one database transaction, and does not wait for its cleanup.** A data-plane read
+  set the caller's tenant context as session settings, ran its query and RESET the settings:
+  three transactions, and the caller waited for the RESET. It now opens one transaction and
+  installs the context in it as transaction-local settings in the same round trip, runs its
+  query (and count) in it, and COMMITs after the answer, on a task that owns the connection.
+  The connection reaches the pool only once the COMMIT completes (a failed or cancelled read
+  discards it, as before), and the settings end with the transaction. One transaction instead
+  of three, and one round trip fewer, on every Select, join and hybrid text leg.
 - **Reads after a write share one replica check.** For a caller's own recent write, each
   replica-served read asked the replica whether it had replayed that write. Each replica now
   remembers the highest position it was seen to have replayed (it only moves forward), so the

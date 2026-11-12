@@ -1096,19 +1096,12 @@ fn request_local_setting_pairs(context: &RequestContext) -> Vec<(&'static str, S
     settings
 }
 
-/// Apply the request's RLS context GUCs against an arbitrary Postgres executor
-/// (a transaction OR a single pooled connection). `is_local` selects the
-/// `set_config` scope:
-///   * `true`  — transaction-local (`SET LOCAL` semantics), auto-reset on
-///     COMMIT/ROLLBACK. Used by the WRITE path, which already runs in a tx.
-///   * `false` — session-level on the connection, persists until explicitly
-///     reset. Used by the READ path, which acquires ONE connection, applies the
-///     context, runs the SELECT, then ALWAYS resets via
-///     [`reset_request_local_settings_conn`] before returning the connection to
-///     the pool.
-///
-/// Both scopes install IDENTICAL keys/values (see `request_local_setting_pairs`);
-/// only the local-vs-session flag differs, so RLS permits the exact same rows
+/// Apply the request's RLS context GUCs against an arbitrary Postgres executor.
+/// `is_local` selects the `set_config` scope: `true` is transaction-local
+/// (`SET LOCAL` semantics, gone at COMMIT/ROLLBACK), used by the WRITE path,
+/// which already runs in a transaction. The READ path installs the same keys
+/// and values through [`PgRequestConnection::install_context`], which opens the
+/// read's transaction in the same round trip, so RLS permits the exact same rows
 /// either way.
 async fn apply_request_local_settings<'e, E>(
     executor: E,
@@ -1168,10 +1161,15 @@ pub(crate) async fn set_request_local_settings(
     apply_request_local_settings(&mut **tx, context, /* is_local = */ true).await
 }
 
-/// Own a read connection from before installing SESSION context until RESET.
-/// A cancelled future or an early error must discard its dirty session instead
-/// of letting SQLx's asynchronous return-to-pool task recycle request GUCs.
-/// Successful reads keep their connection and its prepared-statement cache.
+/// Own a read connection from the moment its request context is installed until
+/// that context is gone. The read runs in ONE transaction: `install_context`
+/// opens it and installs the context as transaction-local settings in a single
+/// round trip, and its COMMIT (in the background, after the answer) ends both.
+/// Before, the context was a session setting: one transaction to set it, one
+/// for the query and one to RESET it, so every read cost three. A cancelled
+/// future or an early error must discard the open transaction instead of letting
+/// SQLx's asynchronous return-to-pool task recycle it; successful reads keep
+/// their connection and its prepared-statement cache.
 pub(crate) struct PgRequestConnection {
     connection: Option<sqlx::pool::PoolConnection<sqlx::Postgres>>,
     context_is_clear: bool,
@@ -1200,45 +1198,59 @@ impl PgRequestConnection {
         self.pooled_mut().map(|connection| &mut **connection)
     }
 
+    /// Open the read's transaction and install `context` in it, as one
+    /// simple-protocol round trip: `BEGIN; SELECT set_config(k, v, true), …`.
     pub(crate) async fn install_context(
         &mut self,
         context: &RequestContext,
     ) -> Result<(), tonic::Status> {
         self.context_is_clear = false;
-        set_request_local_settings_conn(self.pooled_mut()?, context).await
+        let sql = request_context_transaction_sql(context)?;
+        let executor: &mut sqlx::PgConnection = &mut **self.pooled_mut()?;
+        executor.execute(sql.as_str()).await.map_err(|err| {
+            core_internal_status(
+                "set_request_context",
+                format!("failed to set request database context: {err}"),
+            )
+        })?;
+        Ok(())
     }
 
+    /// End the read's transaction inline; its settings end with it.
     pub(crate) async fn reset_context(
         &mut self,
-        context: &RequestContext,
+        _context: &RequestContext,
     ) -> Result<(), tonic::Status> {
-        reset_request_local_settings_conn(self.pooled_mut()?, context).await?;
+        let executor: &mut sqlx::PgConnection = &mut **self.pooled_mut()?;
+        executor.execute("COMMIT").await.map_err(|err| {
+            core_internal_status(
+                "reset_request_context",
+                format!("failed to end the request transaction: {err}"),
+            )
+        })?;
         self.context_is_clear = true;
         Ok(())
     }
 
-    /// Hand the connection back once the caller has its answer: the RESET runs
+    /// Hand the connection back once the caller has its answer: the COMMIT runs
     /// on a task that owns the connection, so the read does not wait one more
     /// round trip for it. The connection reaches the pool only after a
-    /// completed RESET; a failed or cancelled one discards it (see `Drop`),
-    /// exactly as an inline reset does.
-    pub(crate) fn release_in_background(mut self, context: &RequestContext) {
+    /// completed COMMIT (after a failed statement it ends the transaction as a
+    /// rollback); a failed or cancelled one discards it (see `Drop`), exactly as
+    /// an inline end does.
+    pub(crate) fn release_in_background(mut self, _context: &RequestContext) {
         if self.context_is_clear {
             return;
         }
-        let Some(sql) = reset_request_local_settings_sql(context) else {
-            self.context_is_clear = true;
-            return;
-        };
         let Ok(runtime) = tokio::runtime::Handle::try_current() else {
-            // No runtime to run the RESET on: Drop discards the dirty session.
+            // No runtime to end the transaction on: Drop discards the session.
             return;
         };
         runtime.spawn(async move {
             let mut this = self;
             if let Ok(connection) = this.pooled_mut() {
                 let executor: &mut sqlx::PgConnection = &mut **connection;
-                if executor.execute(sql.as_str()).await.is_ok() {
+                if executor.execute("COMMIT").await.is_ok() {
                     this.context_is_clear = true;
                 }
             }
@@ -1259,74 +1271,48 @@ impl Drop for PgRequestConnection {
     }
 }
 
-/// READ-path entry point: install the request's RLS context as SESSION-level
-/// settings on a single pooled connection (the read path no longer opens a
-/// transaction). Because session GUCs PERSIST on a pooled connection after it
-/// returns to the pool, the caller MUST pair this with
-/// [`reset_request_local_settings_conn`] on the SAME connection on BOTH the
-/// success and error paths before the connection drops — otherwise a later
-/// request reusing that connection could observe a stale (wider) tenant
-/// context. See `select` / `select_join_fusion` in `setup_data.rs`.
-pub(crate) async fn set_request_local_settings_conn(
-    conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>,
-    context: &RequestContext,
-) -> Result<(), tonic::Status> {
-    apply_request_local_settings(&mut **conn, context, /* is_local = */ false).await
-}
-
-/// READ-path teardown: clear EVERY session GUC installed by
-/// [`set_request_local_settings_conn`] so the connection returns to the pool
-/// with NO residual tenant context. This is leak-safety-critical and MUST run
-/// unconditionally (success AND error) before the connection drops.
-///
-/// `RESET <name>` restores each GUC to its server/role default. We reset the
-/// exact same key list that was set (iterating `request_local_setting_pairs`),
-/// so no key set can survive un-reset. Defense in depth: every read/write path
-/// re-applies the full context BEFORE its own query (overwrite-before-use), so
-/// even a hypothetically-missed reset could not WIDEN visibility — but that is
-/// NOT relied upon here; this explicit reset is the primary guard.
-pub(crate) async fn reset_request_local_settings_conn(
-    conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>,
-    context: &RequestContext,
-) -> Result<(), tonic::Status> {
-    let Some(sql) = reset_request_local_settings_sql(context) else {
-        return Ok(());
-    };
-    // IMPORTANT: run the multi-statement RESET string via `Executor::execute`
-    // with a raw `&str` (the SIMPLE query protocol), which DOES support several
-    // `;`-separated statements in one round-trip. The prepared/extended path
-    // (`sqlx::query(...).execute()`) does NOT accept multi-statement strings on
-    // a PoolConnection — see control::lifecycle for the same caveat — so we must
-    // NOT use it here.
-    let executor: &mut sqlx::PgConnection = &mut **conn;
-    executor.execute(sql.as_str()).await.map_err(|err| {
-        core_internal_status(
-            "reset_request_context",
-            format!("failed to reset request database context: {err}"),
-        )
-    })?;
-    Ok(())
-}
-
-/// The one simple-protocol statement string that RESETs every request GUC
-/// `context` installs; None when it installs none.
-fn reset_request_local_settings_sql(context: &RequestContext) -> Option<String> {
+/// The simple-protocol string that opens a read's transaction and installs
+/// `context` in it as transaction-local settings: `BEGIN; SELECT set_config(…,
+/// true), …;`. One round trip; the settings end with the transaction, so no
+/// pool user can inherit them. The simple protocol takes no bind parameters,
+/// so every key and value is an escape-string literal (see
+/// [`pg_escape_string_literal`]); a value Postgres cannot hold is refused.
+fn request_context_transaction_sql(context: &RequestContext) -> Result<String, tonic::Status> {
     let settings = request_local_setting_pairs(context);
-    if settings.is_empty() {
-        return None;
-    }
-    // `RESET app.current_tenant_id;` is the correct inverse of a GUC set via
-    // `set_config(name, value, false)` — it restores the role/server default
-    // (effectively unset for our custom `app.*` namespace). Batch all RESETs
-    // into one statement to keep teardown a single round-trip. Keys are fixed
-    // identifiers from `session_context_pairs` (no user input), so direct
-    // interpolation is injection-safe.
-    let mut sql = String::with_capacity(settings.len() * 32);
-    for (key, _) in &settings {
+    let mut sql = String::with_capacity(16 + settings.len() * 64);
+    sql.push_str("BEGIN");
+    for (i, (key, value)) in settings.iter().enumerate() {
+        let key = pg_escape_string_literal(key)?;
+        let value = pg_escape_string_literal(value)?;
+        sql.push_str(if i == 0 { "; SELECT " } else { ", " });
         use std::fmt::Write as _;
-        let _ = write!(sql, "RESET {key}; ");
+        let _ = write!(sql, "set_config({key}, {value}, true)");
     }
-    Some(sql)
+    Ok(sql)
+}
+
+/// `value` as a Postgres escape-string literal, `E'…'`. It reads the same
+/// whatever `standard_conforming_strings` is: inside `E''` a backslash is
+/// always an escape, so backslashes are doubled, and a quote is doubled. A NUL
+/// cannot be stored in a Postgres text value and is refused.
+fn pg_escape_string_literal(value: &str) -> Result<String, tonic::Status> {
+    if value.contains('\0') {
+        return Err(core_internal_status(
+            "set_request_context",
+            "a request context value contains a NUL character",
+        ));
+    }
+    let mut literal = String::with_capacity(value.len() + 3);
+    literal.push_str("E'");
+    for ch in value.chars() {
+        match ch {
+            '\\' => literal.push_str("\\\\"),
+            '\'' => literal.push_str("''"),
+            _ => literal.push(ch),
+        }
+    }
+    literal.push('\'');
+    Ok(literal)
 }
 
 #[allow(clippy::items_after_test_module)]
@@ -1343,22 +1329,44 @@ mod rls_conn_leak_tests {
         }
     }
 
-    async fn current_tenant_guc(conn: &mut sqlx::pool::PoolConnection<sqlx::Postgres>) -> String {
+    async fn current_tenant_guc(conn: &mut sqlx::PgConnection) -> String {
         let val: Option<String> =
             sqlx::query_scalar("SELECT current_setting('app.current_tenant_id', true)")
-                .fetch_one(&mut **conn)
+                .fetch_one(conn)
                 .await
                 .expect("read app.current_tenant_id");
         val.unwrap_or_default()
     }
 
-    /// B3: the session-GUC RLS read path must NOT leak a tenant's context onto a
-    /// pooled connection. Proves, on a live Postgres connection:
-    ///   1. `set` installs `app.current_tenant_id` (the read path can see its tenant);
-    ///   2. `reset` CLEARS it — so the next pool user inherits no residual tenant
-    ///      (the cross-tenant-leak guard the txn-drop relies on);
-    ///   3. `set(B)` after `set(A)` OVERWRITES — defense-in-depth, since every
-    ///      request re-applies its own context before querying.
+    /// The context string is one simple-protocol round trip, every key and value
+    /// an escape-string literal, so no value can end the literal early.
+    #[test]
+    fn request_context_sql_opens_one_transaction_with_escaped_local_settings() {
+        let mut context = ctx_for("tenant-'A'\\x");
+        context.purpose = "it's; DROP TABLE t; --".to_string();
+        let sql = request_context_transaction_sql(&context).expect("context sql");
+        assert!(sql.starts_with("BEGIN; SELECT set_config("), "{sql}");
+        assert_eq!(
+            sql.matches("set_config(").count(),
+            request_local_setting_pairs(&context).len()
+        );
+        assert!(sql.contains("E'tenant-''A''\\\\x', true)"), "{sql}");
+        assert!(sql.contains("E'it''s; DROP TABLE t; --', true)"), "{sql}");
+        assert!(
+            !sql.contains(", false)"),
+            "every setting is transaction-local: {sql}"
+        );
+        assert_eq!(pg_escape_string_literal("").expect("empty"), "E''");
+        assert!(pg_escape_string_literal("a\0b").is_err());
+    }
+
+    /// B3: the read path must NOT leak a tenant's context onto a pooled
+    /// connection. Proves, on a live Postgres connection:
+    ///   1. `install_context` installs `app.current_tenant_id`, exactly as given
+    ///      (quotes and backslashes included), for the read's statements;
+    ///   2. ending the read's transaction CLEARS it — the next pool user inherits
+    ///      no residual tenant;
+    ///   3. a second read on the same connection sees only its own tenant.
     /// Env-gated on a live PG DSN (the CI live-DB job); a no-op otherwise.
     #[tokio::test]
     async fn rls_session_settings_reset_and_overwrite_no_cross_tenant_leak() {
@@ -1367,44 +1375,47 @@ mod rls_conn_leak_tests {
             return;
         };
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .max_connections(2)
+            .max_connections(1)
             .connect(&dsn)
             .await
             .expect("connect live PG");
-        let mut conn = pool.acquire().await.expect("acquire");
+        let tenant_a = "tenant-'A'\\x";
+        let mut conn = PgRequestConnection::new(pool.acquire().await.expect("acquire"));
 
-        // (1) set(A) is visible on this connection.
-        set_request_local_settings_conn(&mut conn, &ctx_for("tenant-A"))
+        // (1) install(A) is visible to the read, value exact.
+        conn.install_context(&ctx_for(tenant_a))
             .await
-            .expect("set A");
-        assert_eq!(current_tenant_guc(&mut conn).await, "tenant-A");
-
-        // (2) reset CLEARS it — no residual tenant leaks to the next pool user.
-        reset_request_local_settings_conn(&mut conn, &ctx_for("tenant-A"))
-            .await
-            .expect("reset A");
+            .expect("install A");
         assert_eq!(
-            current_tenant_guc(&mut conn).await,
+            current_tenant_guc(conn.connection_mut().expect("conn")).await,
+            tenant_a
+        );
+        // (2) ending the read clears it.
+        conn.reset_context(&ctx_for(tenant_a)).await.expect("end A");
+        assert_eq!(
+            current_tenant_guc(conn.connection_mut().expect("conn")).await,
             "",
-            "reset must clear app.current_tenant_id (cross-tenant leak guard)"
+            "ending the read must clear app.current_tenant_id (cross-tenant leak guard)"
         );
+        drop(conn);
 
-        // (3) set(A) then set(B) without an intervening reset → B overwrites A.
-        set_request_local_settings_conn(&mut conn, &ctx_for("tenant-A"))
-            .await
-            .expect("set A again");
-        set_request_local_settings_conn(&mut conn, &ctx_for("tenant-B"))
-            .await
-            .expect("set B");
+        // (3) the next read on the same (single) pool slot sees only its own tenant.
+        let mut conn = PgRequestConnection::new(pool.acquire().await.expect("reacquire"));
         assert_eq!(
-            current_tenant_guc(&mut conn).await,
-            "tenant-B",
-            "a later set must overwrite the prior tenant (overwrite-before-use)"
+            current_tenant_guc(conn.connection_mut().expect("conn")).await,
+            "",
+            "a pool user must not inherit the previous read's tenant"
         );
-
-        reset_request_local_settings_conn(&mut conn, &ctx_for("tenant-B"))
+        conn.install_context(&ctx_for("tenant-B"))
             .await
-            .expect("reset B");
+            .expect("install B");
+        assert_eq!(
+            current_tenant_guc(conn.connection_mut().expect("conn")).await,
+            "tenant-B"
+        );
+        conn.reset_context(&ctx_for("tenant-B"))
+            .await
+            .expect("end B");
     }
 
     fn cancellation_live_dsn() -> Option<String> {
@@ -1532,7 +1543,7 @@ mod rls_conn_leak_tests {
                 "the request context must be installed before the read"
             );
             conn.release_in_background(&context);
-            // The single slot comes back only after the background RESET: the
+            // The single slot comes back only after the background COMMIT: the
             // next user gets the same physical connection with no request GUC.
             assert_eq!(acquire_clean_connection(&pool, &context).await, initial_pid);
         }
