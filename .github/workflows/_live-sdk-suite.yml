@@ -1123,18 +1123,23 @@ jobs:
           done
           [ "$ready" = 1 ] || { echo "::error::read replica did not start"; docker logs udb-bench-replica | tail -40; exit 1; }
           bash bench-output/reset.sh latency-profile 2>&1 | tee bench-output/logs/latency-profile-replica-reset.log
-          replica_reads() { psql -h 127.0.0.1 -p 5433 -U udb -d udb_ci -qAtc "SELECT xact_commit FROM pg_stat_database WHERE datname = current_database()"; }
-          before="$(replica_reads)"
+          # Reads of the profile's own table on each server (a hot standby keeps
+          # its own scan counters). Health probes and other background queries
+          # never touch this table, so they cannot hide a broken routing.
+          table_reads() { psql -h "$1" -p "$2" -U udb -d udb_ci -qAtc "SELECT COALESCE(SUM(COALESCE(seq_scan, 0) + COALESCE(idx_scan, 0)), 0) FROM pg_stat_user_tables WHERE schemaname = 'udb_sdk_live' AND relname = 'sdk_live_records'"; }
+          replica_before="$(table_reads 127.0.0.1 5433)"
+          primary_before="$(table_reads localhost 5432)"
           UDB_BROKER_PID="$(cat /tmp/udb-bench.pid)"
           export UDB_BROKER_PID
           ( cd sdk/go && go test ./udbclient -run '^TestLiveLatencyProfile$' -count=1 -v -timeout 6m ) 2>&1 | tee bench-output/logs/latency-profile-replica.log
           sleep 11
-          after="$(replica_reads)"
-          echo "replica transactions during the profile: $((after - before))"
-          # The profile issues hundreds of reads; a replica that served almost
-          # none means default reads still went to the primary.
-          if [ "$((after - before))" -lt 100 ]; then
-            echo "::error::the read replica served $((after - before)) transactions; default reads did not use it"
+          replica_served=$(( $(table_reads 127.0.0.1 5433) - replica_before ))
+          primary_served=$(( $(table_reads localhost 5432) - primary_before ))
+          echo "profile table reads during the profile: replica ${replica_served}, primary ${primary_served}"
+          # The profile's reads name no consistency, so the replica must serve
+          # them; the primary sees only the fixture write and its cleanup.
+          if [ "$replica_served" -lt 20 ] || [ "$replica_served" -le "$primary_served" ]; then
+            echo "::error::the read replica served ${replica_served} reads of the profile table and the primary ${primary_served}; default reads did not use the replica"
             exit 1
           fi
 
