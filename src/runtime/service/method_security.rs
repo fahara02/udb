@@ -872,6 +872,61 @@ fn public_bootstrap_retry_after_ms() -> i64 {
     (seconds_until_next_window.max(1) as i64) * 1_000
 }
 
+/// `AuthnService.Authenticate`: the public RPC whose budgets its handler applies.
+pub(crate) const AUTHENTICATE_PATH: &str = "/udb.core.authn.services.v1.AuthnService/Authenticate";
+
+/// Whether `path`'s public bootstrap and abuse budgets are applied by its handler
+/// instead of the gate. `Authenticate` both exchanges a credential for a bearer
+/// (an API key, an external token) and validates a bearer or session id, which is
+/// what a gateway calls for every request it serves. The gate sees only headers,
+/// so it counted every validation against the per-caller bootstrap budget and
+/// held a gateway to that budget (60 calls a minute by default) for all of its
+/// traffic. The handler sees the credential form and counts only the exchanges;
+/// a signed bearer or a 128-bit session id cannot be guessed, so validating one
+/// needs no bootstrap budget.
+fn public_limits_deferred_to_handler(path: &str) -> bool {
+    path == AUTHENTICATE_PATH
+}
+
+/// Apply `path`'s public bootstrap and abuse budgets from inside its handler, for
+/// an RPC whose gate defers them ([`public_limits_deferred_to_handler`]). Same
+/// buckets, limits and refusal as the gate.
+pub(crate) fn enforce_deferred_public_limits(
+    path: &str,
+    metadata: &tonic::metadata::MetadataMap,
+    remote_addr: Option<std::net::SocketAddr>,
+) -> Result<(), Status> {
+    let declared = method_security(path);
+    let headers = metadata.clone().into_headers();
+    let peer = TransportPeer {
+        remote_addr,
+        mtls_client_identity: false,
+    };
+    check_public_bootstrap_rate_limit(
+        path,
+        &headers,
+        &peer,
+        declared.and_then(|s| s.rate_limit_policy_ref.as_deref()),
+    )
+    .and_then(
+        |()| match declared.and_then(|s| s.abuse_policy_ref.as_deref()) {
+            Some(reference) => check_abuse_policy(reference, &headers, &peer),
+            None => Ok(()),
+        },
+    )
+    .map_err(|(status, reason)| {
+        tracing::warn!(
+            target: "udb.audit.authz",
+            method = %path,
+            outcome = "deny",
+            reason,
+            detail = %status.message(),
+            "native method authorization denied"
+        );
+        status
+    })
+}
+
 fn check_public_bootstrap_rate_limit(
     path: &str,
     headers: &http::HeaderMap,
@@ -1529,14 +1584,16 @@ fn enforce(
 
     // Public bootstrap RPCs need no control-plane bearer.
     if matches!(declared, Some(s) if s.mode == AuthMode::Public) {
-        check_public_bootstrap_rate_limit(
-            path,
-            headers,
-            peer,
-            declared.and_then(|s| s.rate_limit_policy_ref.as_deref()),
-        )?;
-        if let Some(reference) = abuse_ref {
-            check_abuse_policy(reference, headers, peer)?;
+        if !public_limits_deferred_to_handler(path) {
+            check_public_bootstrap_rate_limit(
+                path,
+                headers,
+                peer,
+                declared.and_then(|s| s.rate_limit_policy_ref.as_deref()),
+            )?;
+            if let Some(reference) = abuse_ref {
+                check_abuse_policy(reference, headers, peer)?;
+            }
         }
         if let Some(s) = declared {
             if !s.allowed_credential_types.is_empty()
@@ -2429,6 +2486,52 @@ mod tests {
                 .contains(&(CredentialType::ServiceAccount as i32)),
             "StreamResources must preserve service-account credential annotations"
         );
+    }
+
+    /// A gateway validates every request's bearer through Authenticate: the gate
+    /// must not hold those calls to the per-caller bootstrap budget.
+    #[test]
+    fn the_gate_leaves_authenticate_budgets_to_its_handler() {
+        let security = SecurityConfig::current();
+        let headers = http::HeaderMap::new();
+        let peer = peer_from("203.0.113.91");
+        let path = format!("{AUTHN}/Authenticate");
+        assert_eq!(path, AUTHENTICATE_PATH);
+        let declared = method_security(&path).expect("Authenticate security");
+        assert_eq!(declared.mode, AuthMode::Public);
+        let limit = public_bootstrap_rate_limit_for(declared.rate_limit_policy_ref.as_deref());
+        for _ in 0..limit + 5 {
+            enforce(&security, &path, &headers, &peer, None)
+                .expect("the gate defers Authenticate's public budgets");
+        }
+    }
+
+    /// The deferred check spends the same buckets the gate would, and refuses
+    /// past the budget with the same rate-limited status.
+    #[test]
+    fn deferred_public_limits_refuse_past_the_budget() {
+        let metadata = tonic::metadata::MetadataMap::new();
+        let addr: std::net::SocketAddr = "203.0.113.92:50051".parse().expect("test addr");
+        let declared = method_security(AUTHENTICATE_PATH).expect("Authenticate security");
+        let mut limit = public_bootstrap_rate_limit_for(declared.rate_limit_policy_ref.as_deref());
+        if let Some(reference) = declared.abuse_policy_ref.as_deref() {
+            limit = limit.min(abuse_policy_limit(reference));
+        }
+        for _ in 0..limit {
+            enforce_deferred_public_limits(AUTHENTICATE_PATH, &metadata, Some(addr))
+                .expect("within the public budget");
+        }
+        let err = enforce_deferred_public_limits(AUTHENTICATE_PATH, &metadata, Some(addr))
+            .expect_err("past the public budget");
+        assert_eq!(err.code(), tonic::Code::ResourceExhausted);
+        assert_eq!(
+            crate::runtime::error_reasons::reason_of(&err).as_deref(),
+            Some("UDB_RATE_LIMITED")
+        );
+        // Another caller has its own budget.
+        let other: std::net::SocketAddr = "203.0.113.93:50051".parse().expect("test addr");
+        enforce_deferred_public_limits(AUTHENTICATE_PATH, &metadata, Some(other))
+            .expect("another caller is not refused");
     }
 
     #[test]

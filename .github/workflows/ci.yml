@@ -722,6 +722,11 @@ jobs:
       UDB_STARTUP_DRY_RUN: "true"
       UDB_AUDIT_SINK: postgres
       UDB_AUDIT_PG_TABLE: public.udb_audit_log
+      # The smoke broker runs the default posture (TLS + service identity
+      # required), which counts as production: it refuses to start without an
+      # encryption key or with the fallback TURN secret. Test fixtures only.
+      UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
+      UDB_TURN_SECRET: ci-smoke-turn-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

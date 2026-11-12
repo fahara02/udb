@@ -1115,7 +1115,7 @@ jobs:
           docker exec "$PG_SERVICE_ID" sh -c 'echo "host replication all all scram-sha-256" >> "$PGDATA/pg_hba.conf"'
           psql -h localhost -p 5432 -U udb -d postgres -qAtc "SELECT pg_reload_conf()"
           docker rm -f udb-bench-replica >/dev/null 2>&1 || true
-          docker run -d --name udb-bench-replica --network host --user postgres -e PGPASSWORD=udb "$PG_REPLICA_IMAGE"             sh -c 'pg_basebackup -h 127.0.0.1 -p 5432 -U udb -D /tmp/replica -R -X stream && chmod 700 /tmp/replica && exec postgres -D /tmp/replica -p 5433 -c hot_standby=on' >/dev/null
+          docker run -d --name udb-bench-replica --network host --user postgres -e PGPASSWORD=udb "$PG_REPLICA_IMAGE"             sh -c 'pg_basebackup -h 127.0.0.1 -p 5432 -U udb -D /tmp/replica -R -X stream -c fast && chmod 700 /tmp/replica && exec postgres -D /tmp/replica -p 5433 -c hot_standby=on' >/dev/null
           ready=0
           for _ in $(seq 1 60); do
             if [ "$(psql -h 127.0.0.1 -p 5433 -U udb -d postgres -qAtc 'SELECT pg_is_in_recovery()' 2>/dev/null || true)" = "t" ]; then ready=1; break; fi
@@ -1235,7 +1235,8 @@ jobs:
           ( cd sdk/java && mvn -B -ntp -Dtest=LiveBrokerRestartTest -Dsurefire.failIfNoSpecifiedTests=false test ) 2>&1 | tee bench-output/logs/java-restart-recovery.log
           grep -Eq 'Tests run: [1-9][0-9]*, Failures: 0, Errors: 0, Skipped: 0' bench-output/logs/java-restart-recovery.log || { echo "::error::Java restart recovery did not run or did not pass"; exit 1; }
           dotnet test sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj -c Release --filter FullyQualifiedName~LiveBrokerRestartTests --logger 'console;verbosity=normal' 2>&1 | tee bench-output/logs/csharp-restart-recovery.log
-          grep -Eq 'Failed: 0, Passed: [1-9][0-9]*, Skipped: 0' bench-output/logs/csharp-restart-recovery.log || { echo "::error::C# restart recovery did not run or did not pass"; exit 1; }
+          # `verbosity=normal` prints the summary as separate "Passed: N" / "Failed: N" lines.
+          if ! { grep -Eq '^ *Passed: [1-9][0-9]*' bench-output/logs/csharp-restart-recovery.log && grep -Fq 'Test Run Successful.' bench-output/logs/csharp-restart-recovery.log && ! grep -Eq '^ *(Failed|Skipped): [1-9]' bench-output/logs/csharp-restart-recovery.log; }; then echo "::error::C# restart recovery did not run or did not pass"; exit 1; fi
           ( cd sdk/php && vendor/bin/pest tests/Live/BrokerRestartTest.php ) 2>&1 | tee bench-output/logs/php-restart-recovery.log
           if ! { grep -Eq 'Tests: +[1-9][0-9]* passed' bench-output/logs/php-restart-recovery.log && ! grep -Eqi 'skipped|failed' bench-output/logs/php-restart-recovery.log; }; then echo "::error::PHP restart recovery did not run or did not pass"; exit 1; fi
 

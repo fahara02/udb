@@ -96,6 +96,20 @@ fn password_login_user_active_status() -> Status {
     login_policy_status_with_code("password_login", "user_not_active", "user is not active")
 }
 
+/// Whether an `Authenticate` call spends the caller's public bootstrap budget.
+/// Exchanging an API key or an external token for a bearer does, and so does a
+/// call that names no credential at all. Validating a bearer or a session id
+/// does not: neither can be guessed, and it is what a gateway calls for every
+/// request it serves. A call that carries an exchange credential next to a
+/// bearer counts, since the handler serves the exchange first.
+fn authenticate_counts_against_public_budget(req: &authn_pb::AuthnRequest) -> bool {
+    let exchanges = !req.api_key.trim().is_empty()
+        || !req.external_token.trim().is_empty()
+        || !req.external_provider_id.trim().is_empty();
+    let validates = !req.bearer_token.trim().is_empty() || !req.session_id.trim().is_empty();
+    exchanges || !validates
+}
+
 fn password_change_otp_verified_status() -> Status {
     login_policy_status_with_code(
         "change_password",
@@ -173,6 +187,15 @@ impl AuthnServiceImpl {
         &self,
         request: Request<authn_pb::AuthnRequest>,
     ) -> Result<Response<authn_pb::AuthnResponse>, Status> {
+        // The gate defers this RPC's public budgets to here, where the credential
+        // form is known: exchanges count, bearer and session validation does not.
+        if authenticate_counts_against_public_budget(request.get_ref()) {
+            crate::runtime::service::method_security::enforce_deferred_public_limits(
+                crate::runtime::service::method_security::AUTHENTICATE_PATH,
+                request.metadata(),
+                request.remote_addr(),
+            )?;
+        }
         let req = request.into_inner();
         let now = now_unix();
 
@@ -1791,5 +1814,38 @@ mod tests {
             .expect("service login grants resolve");
         assert_eq!(grants.roles, vec!["doctor".to_string()]);
         assert_eq!(grants.scopes, vec!["data:read".to_string()]);
+    }
+
+    #[test]
+    fn only_credential_exchanges_spend_the_public_authenticate_budget() {
+        let req = |f: fn(&mut authn_pb::AuthnRequest)| {
+            let mut req = authn_pb::AuthnRequest::default();
+            f(&mut req);
+            req
+        };
+        // Validation: what a gateway calls for every request.
+        assert!(!authenticate_counts_against_public_budget(&req(|r| {
+            r.bearer_token = "eyJ.a.b".into()
+        })));
+        assert!(!authenticate_counts_against_public_budget(&req(|r| {
+            r.session_id = "sess_x".into()
+        })));
+        // Exchanges mint a bearer: they count, even next to a bearer.
+        assert!(authenticate_counts_against_public_budget(&req(|r| {
+            r.api_key = "udb_k".into()
+        })));
+        assert!(authenticate_counts_against_public_budget(&req(|r| {
+            r.external_provider_id = "google".into();
+            r.external_token = "tok".into();
+        })));
+        assert!(authenticate_counts_against_public_budget(&req(|r| {
+            r.bearer_token = "eyJ.a.b".into();
+            r.api_key = "udb_k".into();
+        })));
+        // No credential at all still counts.
+        assert!(authenticate_counts_against_public_budget(&req(|_| {})));
+        assert!(authenticate_counts_against_public_budget(&req(|r| {
+            r.bearer_token = "   ".into()
+        })));
     }
 }

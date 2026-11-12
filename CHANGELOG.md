@@ -100,6 +100,14 @@ release line was tagged.
   kept, and `0` checks live state on every call. Where the triggers cannot be installed (a role
   without DDL rights) a warning says so and that bound is the only one. Step-up, refresh and
   membership exchange still check live state.
+- **A gateway validating bearers through `Authenticate` is no longer held to 60 calls a minute.**
+  `Authenticate` is public, and its per-caller bootstrap budget (`UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_PER_MINUTE`,
+  default 60, plus its abuse policy) counted every call, including the bearer and session
+  validation a gateway makes for every request it serves, so one gateway got about one
+  validation a second and the rest were `RESOURCE_EXHAUSTED`. The budget now counts only the
+  calls that exchange a credential for a bearer (an API key, an external token) or name no
+  credential; a signed bearer or a session id cannot be guessed, so validating one is not
+  limited per caller.
 - **Listing a user's sessions is one statement, and an indexed one.** The page carries its
   total; the separate `COUNT` runs only for a page past the end. The owner filter compared
   `user_id::TEXT` with the caller's id, which kept PostgreSQL off the `user_id` index and
