@@ -121,6 +121,13 @@ release line was tagged.
   The connection reaches the pool only once the COMMIT completes (a failed or cancelled read
   discards it, as before), and the settings end with the transaction. One transaction instead
   of three, and one round trip fewer, on every Select, join and hybrid text leg.
+- **A caught-up read replica serves default reads while the primary is idle.** Replica lag
+  was the age of the last replayed transaction, which keeps growing whenever the primary
+  commits nothing, so a replica with everything replayed looked seconds behind, fell outside
+  the staleness budget, and default reads went to the primary (about half of them in the
+  benchmark's replica profile). A replica that is streaming and has replayed all the WAL it
+  received now reports no lag; a disconnected or still-replaying one keeps the transaction-age
+  measure, so a stale replica is still refused.
 - **Reads after a write share one replica check.** For a caller's own recent write, each
   replica-served read asked the replica whether it had replayed that write. Each replica now
   remembers the highest position it was seen to have replayed (it only moves forward), so the

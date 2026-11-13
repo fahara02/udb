@@ -603,17 +603,31 @@ impl Drop for ReplicaQueryConnection {
     }
 }
 
+/// A replica's lag in seconds. The age of the last replayed transaction
+/// (`now() - pg_last_xact_replay_timestamp()`) is a replica's lag only while
+/// the primary is writing: when the primary commits nothing, that age keeps
+/// growing on a replica that has replayed everything, which marked a caught-up
+/// replica as lagging and sent every default read to the primary. A replica
+/// that is streaming and has replayed all the WAL it received is not behind,
+/// so its lag is 0; otherwise (disconnected, still replaying, or no access to
+/// the receiver's status) the transaction age stands, as before.
+const REPLICA_LAG_SECONDS_SQL: &str = "SELECT CASE \
+       WHEN pg_last_wal_receive_lsn() IS NOT NULL \
+        AND pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() \
+        AND EXISTS (SELECT 1 FROM pg_stat_wal_receiver WHERE status = 'streaming') \
+       THEN 0 \
+       ELSE COALESCE(EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp())), 0) \
+     END::float8";
+
 async fn probe_replica(replica: PgReplicaPool) {
     let started = Instant::now();
     let budget = replica_probe_budget(&replica.pool);
     // One budget includes waiting for a pool slot AND executing the query.
     let result = tokio::time::timeout(budget, async {
         let mut connection = ReplicaQueryConnection::new(replica.pool.acquire().await?);
-        let result = sqlx::query_as::<_, (Option<f64>,)>(
-            "SELECT COALESCE(EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp())), 0)::float8",
-        )
-        .fetch_one(connection.connection_mut()?)
-        .await;
+        let result = sqlx::query_as::<_, (Option<f64>,)>(REPLICA_LAG_SECONDS_SQL)
+            .fetch_one(connection.connection_mut()?)
+            .await;
         connection.query_completed = true;
         result
     })
