@@ -1,2 +1,2 @@
 # The released UDB Python SDK, same version as the broker image (UDB_VERSION).
-udb-client==0.6.15
+udb-client==0.6.16

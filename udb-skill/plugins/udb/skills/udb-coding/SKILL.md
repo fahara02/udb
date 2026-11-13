@@ -11,7 +11,7 @@ annotated proto contract derives DB schema, per-RPC security enforcement, the
 generated DataBroker/native-service inventory across 18 backends, seven SDKs
 (TS/Python/Go/Java/C#/PHP/Rust), CLI
 and docs. This skill carries the codebase map AND the house
-doctrine for changing it safely. Current code/SDK baseline is **0.6.15** (wire protocol `1.0.0`).
+doctrine for changing it safely. Current code/SDK baseline is **0.6.16** (wire protocol `1.0.0`).
 
 **Full guide (read on demand): [references/udb-coding.md](references/udb-coding.md)** —
 the proto→runtime pipeline, both request lifecycles file-by-file, the CDC/

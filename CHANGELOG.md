@@ -7,6 +7,15 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.16] - 2026-11-13
+
+A patch for 0.6.15's repository fixtures; the broker and SDKs are unchanged apart from the
+version.
+
+### Breaking for callers
+
+- None.
+
 ### Fixed
 
 - **The integration, XA-HA and playground compose files start a 0.6.15 broker.** Their brokers

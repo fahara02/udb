@@ -5,7 +5,7 @@ description = "Standalone Python example for the UDB SDK"
 requires-python = ">=3.10"
 dependencies = [
   "pydantic>=2.7,<3",
-  "udb-client>=0.6.15",
+  "udb-client>=0.6.16",
 ]
 
 [project.optional-dependencies]

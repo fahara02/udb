@@ -109,7 +109,7 @@ The first line of output then reads `connect: localhost:443 ...`.
 # Health through nginx, with the probe the broker image ships:
 docker run --rm --platform linux/amd64 --network udb-docker-nginx_default \
   -v "$PWD/certs/ca.crt:/ca.crt:ro" --entrypoint grpc_health_probe \
-  ghcr.io/fahara02/udb:0.6.15 -addr=nginx:443 -tls -tls-ca-cert=/ca.crt
+  ghcr.io/fahara02/udb:0.6.16 -addr=nginx:443 -tls -tls-ca-cert=/ca.crt
 # status: SERVING
 
 docker compose logs nginx      # one line per call: path, HTTP status, grpc_status, upstream

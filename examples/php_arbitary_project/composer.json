@@ -4,7 +4,7 @@
     "type": "project",
     "license": "MIT",
     "require": {
-        "fahara02/udb-laravel": "^0.6.15"
+        "fahara02/udb-laravel": "^0.6.16"
     },
     "autoload": {
         "psr-4": {

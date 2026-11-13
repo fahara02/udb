@@ -19,7 +19,7 @@ use Grpc\BaseStub;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.6.15
+ *   UDB version ...... 0.6.16
  *   Protocol version . 1.0.0
  *   Services ......... 29
  *   RPCs ............. 426

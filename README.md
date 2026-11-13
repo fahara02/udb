@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.15 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.16 | protocol v1.0.0</sub>
 </p>
 
 <p align="center">
@@ -100,7 +100,7 @@ Per-service RPC counts (native control plane):
 | Contract manifest | 733 messages, 49 table-backed models, 192 event contracts |
 | Backends | 18 backend kinds across SQL, cache, vector, object, document, graph, and column stores |
 | SDKs | Go, Python, TypeScript/Node, Java, C#, PHP/Laravel, Rust |
-| Release | crate/SDK version `0.6.15`, wire protocol `1.0.0` |
+| Release | crate/SDK version `0.6.16`, wire protocol `1.0.0` |
 
 ## Why UDB
 
@@ -387,13 +387,13 @@ read fences, consistency modes) and idempotency `was_duplicate` replay:
 
 | Language | Install |
 |---|---|
-| Go | `go get github.com/fahara02/udb/sdk/go@v0.6.15` |
-| Python | `pip install udb-client==0.6.15` |
-| TypeScript / Node | `npm i @udb_plus/sdk@0.6.15` |
-| PHP / Laravel | `composer require fahara02/udb-laravel:^0.6.15` |
-| C# | `dotnet add package Udb.Client --version 0.6.15` |
+| Go | `go get github.com/fahara02/udb/sdk/go@v0.6.16` |
+| Python | `pip install udb-client==0.6.16` |
+| TypeScript / Node | `npm i @udb_plus/sdk@0.6.16` |
+| PHP / Laravel | `composer require fahara02/udb-laravel:^0.6.16` |
+| C# | `dotnet add package Udb.Client --version 0.6.16` |
 | Rust | `cargo add udb-client@0.6.13` |
-| Java | `io.github.fahara02:udb-java-client` (`0.6.15` target; build from checkout until publishing lands) |
+| Java | `io.github.fahara02:udb-java-client` (`0.6.16` target; build from checkout until publishing lands) |
 
 Start here: [sdk/README.md](sdk/README.md).
 
