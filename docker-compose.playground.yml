@@ -27,6 +27,9 @@ x-common-env: &common-env
   UDB_ABAC_TABLE: "udb_abac_policies"
   UDB_SAGA_RECOVERY_ENABLED: "true"
   UDB_SAGA_RECOVERY_INTERVAL_SECONDS: "30"
+  # Playground only, never real data: the default posture (TLS + service identity required) refuses to start without an at-rest key and a TURN secret.
+  UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
+  UDB_TURN_SECRET: local-dev-turn-secret
 
 services:
 

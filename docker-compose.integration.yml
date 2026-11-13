@@ -10,6 +10,9 @@ x-udb-broker-env: &udb-broker-env
   UDB_AUDIT_PG_TABLE: public.udb_audit_log
   UDB_SESSION_ENABLED: "true"
   UDB_SESSION_HASH_SECRET: local-integration-session-secret
+  # Dev/test fixture only: the default posture (TLS + service identity required) refuses to start without an at-rest key and a TURN secret.
+  UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
+  UDB_TURN_SECRET: local-dev-turn-secret
   RUST_LOG: info
 
 x-udb-broker-depends: &udb-broker-depends

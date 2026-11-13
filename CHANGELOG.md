@@ -7,6 +7,13 @@ release line was tagged.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The integration, XA-HA and playground compose files start a 0.6.15 broker.** Their brokers
+  run the default posture, which since 0.6.15 refuses to start without an at-rest key and a TURN
+  secret; each now sets dev-only `UDB_ENCRYPTION_KEY` and `UDB_TURN_SECRET` values (the
+  `deploy/` stack generates its own with `init.sh`). The v0.6.15 resilience smokes failed on this.
+
 ## [0.6.15] - 2026-11-12
 
 ### Breaking for callers
@@ -44,7 +51,9 @@ release line was tagged.
     callers' latest writes, pass the write receipt as `read_fence` for cross-broker
     read-your-writes, or set `UDB_PG_REPLICA_DEFAULT_READS=false` to keep them on the primary
 - **A fail-closed broker refuses to start without a working encryption key.** Under
-  `UDB_FAIL_CLOSED`, `UDB_ENTERPRISE_AUDIT` or `UDB_ENV=production`, a broker with no
+  `UDB_FAIL_CLOSED`, `UDB_ENTERPRISE_AUDIT` or `UDB_ENV=production` — and under the default
+  posture, which requires TLS and service identity unless `UDB_TLS_REQUIRED=false` and
+  `UDB_SERVICE_IDENTITY_REQUIRED=false` are set, so it counts as production — a broker with no
   encryption-at-rest key used to start and fail at the first secret, native-state or vault
   write; a key that did not decode, or a failed Vault export, only logged a warning and ran with
   encryption off. Fail-closed also refuses the built-in dev TURN secret now.

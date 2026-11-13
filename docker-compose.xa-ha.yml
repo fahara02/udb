@@ -24,6 +24,9 @@ x-udb-xa-ha-env: &udb-xa-ha-env
   UDB_AUDIT_PG_TABLE: public.udb_audit_log
   UDB_SESSION_ENABLED: "true"
   UDB_SESSION_HASH_SECRET: local-integration-session-secret
+  # Dev/test fixture only: the default posture (TLS + service identity required) refuses to start without an at-rest key and a TURN secret.
+  UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
+  UDB_TURN_SECRET: local-dev-turn-secret
   UDB_XA_RECOVERY_INTERVAL_SECS: "2"
   UDB_XA_RECOVERY_MAX_ATTEMPTS: "10"
   UDB_XA_RECOVERY_GRACE_SECS: "0"
