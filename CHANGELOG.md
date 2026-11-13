@@ -99,7 +99,9 @@ release line was tagged.
   never remembered; `UDB_AUTH_VERDICT_CACHE_MS` (default 2000 ms) bounds how long a verdict is
   kept, and `0` checks live state on every call. Where the triggers cannot be installed (a role
   without DDL rights) a warning says so and that bound is the only one. Step-up, refresh and
-  membership exchange still check live state.
+  membership exchange still check live state. The triggers' `SECURITY DEFINER` function
+  (`udb_authn.udb_auth_state_bump`) is not executable by `PUBLIC`, so vault's bounded database
+  credentials, which refuse a database where any such function is, keep issuing.
 - **A gateway validating bearers through `Authenticate` is no longer held to 60 calls a minute.**
   `Authenticate` is public, and its per-caller bootstrap budget (`UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_PER_MINUTE`,
   default 60, plus its abuse policy) counted every call, including the bearer and session

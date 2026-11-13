@@ -749,6 +749,27 @@ async fn live_postgres_cached_bearer_verdict_honours_revocation() {
         version().await > before_touch,
         "a status change moves the version"
     );
+    // The SECURITY DEFINER bump function is not callable by PUBLIC (vault's
+    // bounded database credentials refuse a database where one is): the same
+    // ACL test vault's issuance audit runs.
+    let (installed, public_can_execute): (bool, bool) = sqlx::query_as(
+        "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace \
+                        WHERE p.prosecdef AND n.nspname = 'udb_authn' \
+                          AND p.proname = 'udb_auth_state_bump'), \
+                EXISTS (SELECT 1 FROM pg_proc p \
+         JOIN pg_namespace n ON n.oid = p.pronamespace \
+         CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) acl \
+         WHERE p.prosecdef AND n.nspname = 'udb_authn' AND p.proname = 'udb_auth_state_bump' \
+           AND acl.grantee = 0 AND acl.privilege_type = 'EXECUTE')",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("read the bump function's ACL");
+    assert!(installed, "the auth-state bump function is installed");
+    assert!(
+        !public_can_execute,
+        "PUBLIC must not be able to execute the SECURITY DEFINER auth-state bump"
+    );
     // The change reaches the in-memory version by notification at commit:
     // seen within milliseconds, never after the cache lifetime.
     let changed_at = std::time::Instant::now();

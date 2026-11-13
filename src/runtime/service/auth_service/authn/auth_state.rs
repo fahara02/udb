@@ -240,6 +240,15 @@ async fn install(pool: &PgPool) -> Result<(String, bool), String> {
     .execute(&mut *tx)
     .await
     .map_err(|e| e.to_string())?;
+    // A new function is executable by PUBLIC. A SECURITY DEFINER function any
+    // role can call is a privilege-escalation path (vault refuses to issue
+    // bounded database credentials on such a database), and nothing needs to
+    // call this one directly: a trigger checks EXECUTE when it is created, not
+    // when it fires, so every writer of a watched table still moves the version.
+    sqlx::query(&format!("REVOKE ALL ON FUNCTION {function}() FROM PUBLIC"))
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let mut complete = true;
     for table in &tables {
