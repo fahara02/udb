@@ -405,6 +405,9 @@ func (s *EnterpriseSession) poisonedContext(ctx context.Context) (context.Contex
 // RefreshErr returns the most recent background bearer-refresh error, or nil if
 // the last refresh succeeded. Useful for health checks and logging.
 func (s *EnterpriseSession) RefreshErr() error {
+	if s.exchangedSession() != nil {
+		return s.Udb.CredentialErr()
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.lastRefreshErr
@@ -422,6 +425,11 @@ func (s *EnterpriseSession) Close() error {
 // Bearer is the "Bearer <token>" credential, for callers that build their own
 // metadata.
 func (s *EnterpriseSession) Bearer() string {
+	if exchanged := s.exchangedSession(); exchanged != nil {
+		exchanged.mu.Lock()
+		defer exchanged.mu.Unlock()
+		return exchanged.bearer
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.bearer

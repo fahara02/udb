@@ -15,7 +15,8 @@ use Google\Protobuf\RepeatedField;
 class RevokeServiceAccountTenantMembershipRequest extends \Google\Protobuf\Internal\Message
 {
     /**
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      *
      * Generated from protobuf field <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
      */
@@ -36,7 +37,8 @@ class RevokeServiceAccountTenantMembershipRequest extends \Google\Protobuf\Inter
      *     Optional. Data for populating the Message object.
      *
      *     @type string $target_tenant_id
-     *           Must be the caller's own tenant.
+     *           The caller's own tenant, a direct child of it, or any tenant for a
+     *           platform admin.
      *     @type string $membership_id
      *     @type string $reason
      * }
@@ -47,7 +49,8 @@ class RevokeServiceAccountTenantMembershipRequest extends \Google\Protobuf\Inter
     }
 
     /**
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      *
      * Generated from protobuf field <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
      * @return string
@@ -58,7 +61,8 @@ class RevokeServiceAccountTenantMembershipRequest extends \Google\Protobuf\Inter
     }
 
     /**
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      *
      * Generated from protobuf field <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
      * @param string $var

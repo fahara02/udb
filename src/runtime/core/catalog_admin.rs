@@ -183,6 +183,74 @@ pub(super) fn catalog_request_fingerprint(parts: &[&[u8]]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+/// The request fingerprint an unreviewed `StageCatalog` stores beside its
+/// idempotency key. A replay under the same key must reproduce it exactly, so
+/// every input that makes two stage requests different is covered here.
+pub(super) fn stage_catalog_request_fingerprint(
+    project_id: &str,
+    version: &str,
+    request_sha256: &str,
+    manifest_integrity_sha256: &str,
+    compatibility_level: &str,
+    reason: &str,
+    actor: &str,
+) -> String {
+    catalog_request_fingerprint(&[
+        b"STAGE",
+        project_id.as_bytes(),
+        version.as_bytes(),
+        request_sha256.as_bytes(),
+        manifest_integrity_sha256.as_bytes(),
+        compatibility_level.as_bytes(),
+        reason.as_bytes(),
+        actor.as_bytes(),
+    ])
+}
+
+/// The idempotency key `udb catalog stage` derives when the operator gives
+/// none. It is built from the same full request fingerprint the stage stores,
+/// so an identical retry replays the earlier stage and a request that differs
+/// in any fingerprinted input (manifest bytes, integrity digest, compatibility
+/// level, reason, actor) gets a fresh key instead of an idempotency conflict.
+pub(super) fn cli_stage_idempotency_key(
+    project_id: &str,
+    version: &str,
+    manifest_json: &[u8],
+    compatibility_level: &str,
+    reason: &str,
+    actor: &str,
+) -> Result<String, tonic::Status> {
+    use sha2::{Digest, Sha256};
+
+    let project_id = canonical_catalog_project_id(project_id)?;
+    let version = version.trim();
+    let manifest_value = parse_catalog_manifest_json(manifest_json)?;
+    let manifest: CatalogManifest = serde_json::from_value(manifest_value).map_err(|err| {
+        catalog_admin_invalid_field(
+            "manifest_json",
+            "must decode as a CatalogManifest",
+            format!("manifest_json is not a CatalogManifest: {err}"),
+        )
+    })?;
+    let request_sha256 = format!("{:x}", Sha256::digest(manifest_json));
+    let manifest_integrity_sha256 =
+        catalog_manifest_integrity_sha256("stage_catalog", &project_id, &manifest)?;
+    let compatibility_level = compatibility_level.trim().to_ascii_lowercase();
+    let fingerprint = stage_catalog_request_fingerprint(
+        &project_id,
+        version,
+        &request_sha256,
+        &manifest_integrity_sha256,
+        &compatibility_level,
+        reason,
+        actor,
+    );
+    Ok(format!(
+        "cli-stage:{project_id}:{version}:{}",
+        &fingerprint[..32]
+    ))
+}
+
 pub(super) fn canonical_catalog_project_id(project_id: &str) -> Result<String, tonic::Status> {
     let project_id = project_id.trim();
     if project_id.is_empty() {
@@ -1534,16 +1602,15 @@ impl DataBrokerRuntime {
                 "manifest checksum_sha256 does not match the decoded catalog content",
             ));
         }
-        let ordinary_request_fingerprint = catalog_request_fingerprint(&[
-            b"STAGE",
-            project_id.as_bytes(),
-            version.as_bytes(),
-            checksum.as_bytes(),
-            manifest_integrity_sha256.as_bytes(),
-            compatibility_level.as_bytes(),
-            reason.as_bytes(),
-            actor.as_bytes(),
-        ]);
+        let ordinary_request_fingerprint = stage_catalog_request_fingerprint(
+            &project_id,
+            version,
+            &checksum,
+            &manifest_integrity_sha256,
+            compatibility_level,
+            reason,
+            actor,
+        );
         let request_fingerprint = match review {
             Some((tenant, run)) => catalog_request_fingerprint(&[
                 b"REVIEWED_STAGE_V1",
@@ -1932,13 +1999,35 @@ impl DataBrokerRuntime {
 
     /// `udb catalog stage`: stage `manifest_json` for `project_id` without
     /// activating it. Returns `(catalog_id, version, replayed)`; staging the same
-    /// manifest again replays the earlier stage instead of adding a row.
+    /// request again replays the earlier stage instead of adding a row.
     pub async fn stage_project_catalog(
         &self,
         project_id: &str,
         manifest_json: &[u8],
         reason: &str,
         actor: &str,
+    ) -> Result<(String, String, bool), tonic::Status> {
+        self.stage_project_catalog_with_idempotency_key(
+            project_id,
+            manifest_json,
+            reason,
+            actor,
+            None,
+        )
+        .await
+    }
+
+    /// [`Self::stage_project_catalog`] with an optional operator-chosen
+    /// idempotency key. Without one the key is derived from the full request
+    /// fingerprint (see [`cli_stage_idempotency_key`]), so an identical retry
+    /// replays and a different request is staged rather than refused.
+    pub async fn stage_project_catalog_with_idempotency_key(
+        &self,
+        project_id: &str,
+        manifest_json: &[u8],
+        reason: &str,
+        actor: &str,
+        idempotency_key: Option<&str>,
     ) -> Result<(String, String, bool), tonic::Status> {
         let manifest: crate::CatalogManifest =
             serde_json::from_slice(manifest_json).map_err(|err| {
@@ -1956,7 +2045,18 @@ impl DataBrokerRuntime {
             "v1".to_string()
         };
         let compatibility_level = self.config().service.catalog_compatibility_level.clone();
-        let checksum: String = manifest.checksum_sha256.chars().take(16).collect();
+        let idempotency_key = match idempotency_key.map(str::trim) {
+            Some(key) if !key.is_empty() => key.to_string(),
+            Some(_) => return Err(catalog_idempotency_required_status("stage_catalog")),
+            None => cli_stage_idempotency_key(
+                project_id,
+                &version,
+                manifest_json,
+                &compatibility_level,
+                reason,
+                actor,
+            )?,
+        };
         let staged = self
             .stage_catalog(
                 project_id,
@@ -1965,7 +2065,7 @@ impl DataBrokerRuntime {
                 reason,
                 actor,
                 &compatibility_level,
-                &format!("cli-stage:{project_id}:{version}:{checksum}"),
+                &idempotency_key,
             )
             .await?;
         Ok((
@@ -5597,6 +5697,74 @@ mod migration_approval_tests {
             json.message()
         );
         assert_single_field_violation(&json, "manifest_json", "must be valid JSON");
+    }
+
+    #[test]
+    fn cli_stage_key_follows_the_full_request_fingerprint() {
+        let manifest = CatalogManifest {
+            generator_version: "1.2.3".to_string(),
+            checksum_sha256: "a".repeat(64),
+            ..CatalogManifest::default()
+        };
+        let json = serde_json::to_vec(&manifest).unwrap();
+        let key = |json: &[u8], level: &str, reason: &str, actor: &str| {
+            cli_stage_idempotency_key("proj", "generator-1.2.3", json, level, reason, actor)
+                .expect("key derives")
+        };
+        let base = key(&json, "backward", "udb catalog stage", "udb-cli");
+        assert!(base.starts_with("cli-stage:proj:generator-1.2.3:"));
+        // An identical retry derives the identical key, so it replays.
+        assert_eq!(base, key(&json, "backward", "udb catalog stage", "udb-cli"));
+        // Case and surrounding whitespace in the compatibility level do not
+        // change the stored fingerprint, so they do not change the key either.
+        assert_eq!(
+            base,
+            key(&json, " Backward ", "udb catalog stage", "udb-cli")
+        );
+
+        // The same semantic checksum with different raw bytes (pretty-printed)
+        // is a different stored fingerprint: it must get a different key, not
+        // collide with the first stage and be refused as an idempotency conflict.
+        let pretty = serde_json::to_vec_pretty(&manifest).unwrap();
+        assert_ne!(
+            base,
+            key(&pretty, "backward", "udb catalog stage", "udb-cli")
+        );
+        assert_ne!(base, key(&json, "exact", "udb catalog stage", "udb-cli"));
+        assert_ne!(base, key(&json, "backward", "another reason", "udb-cli"));
+        assert_ne!(
+            base,
+            key(&json, "backward", "udb catalog stage", "someone-else")
+        );
+
+        // The key embeds a prefix of exactly the fingerprint the stage stores.
+        let fingerprint = stage_catalog_request_fingerprint(
+            "proj",
+            "generator-1.2.3",
+            &{
+                use sha2::{Digest, Sha256};
+                format!("{:x}", Sha256::digest(&json))
+            },
+            &catalog_manifest_integrity_sha256("stage_catalog", "proj", &manifest).unwrap(),
+            "backward",
+            "udb catalog stage",
+            "udb-cli",
+        );
+        assert_eq!(
+            base,
+            format!("cli-stage:proj:generator-1.2.3:{}", &fingerprint[..32])
+        );
+
+        let empty_project =
+            cli_stage_idempotency_key(" ", "v1", &json, "backward", "r", "a").unwrap_err();
+        assert_eq!(empty_project.code(), tonic::Code::InvalidArgument);
+        let not_manifest =
+            cli_stage_idempotency_key("proj", "v1", b"[1]", "backward", "r", "a").unwrap_err();
+        assert_single_field_violation(
+            &not_manifest,
+            "manifest_json",
+            "must decode as a CatalogManifest",
+        );
     }
 
     #[test]

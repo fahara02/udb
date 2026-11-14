@@ -3166,10 +3166,12 @@ public final class AuthnServiceGrpc {
      * <pre>
      * ── Cross-tenant service tokens (service-account tenant memberships) ──
      * Approve a service account that lives in another (home) tenant to act in
-     * THIS tenant. Only an admin of the target tenant may call it (the caller's
-     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * the target tenant. The caller must administer the target tenant: an admin
+     * of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+     * admin (a home-tenant admin alone cannot). An approval from the parent
+     * tenant or a platform admin may only name scopes the service account's
+     * ACTIVE home grant holds. The account must be an ACTIVE service account of
+     * home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
      * required and at most one year away. Written with its audit event in one
      * transaction, in both tenants' audit trails.
      * </pre>
@@ -3181,8 +3183,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Page through the memberships approved in the caller's tenant (the
-     * target tenant), newest first.
+     * Page through the memberships approved in the target tenant, newest
+     * first. Same callers as CreateServiceAccountTenantMembership.
      * </pre>
      */
     default void listServiceAccountTenantMemberships(com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest request,
@@ -3192,7 +3194,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Revoke a membership of the caller's tenant. Every token already minted
+     * Revoke a membership of the target tenant (same callers as
+     * CreateServiceAccountTenantMembership). Every token already minted
      * from it stops validating immediately (fail closed, audited in both
      * tenants).
      * </pre>
@@ -4091,10 +4094,12 @@ public final class AuthnServiceGrpc {
      * <pre>
      * ── Cross-tenant service tokens (service-account tenant memberships) ──
      * Approve a service account that lives in another (home) tenant to act in
-     * THIS tenant. Only an admin of the target tenant may call it (the caller's
-     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * the target tenant. The caller must administer the target tenant: an admin
+     * of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+     * admin (a home-tenant admin alone cannot). An approval from the parent
+     * tenant or a platform admin may only name scopes the service account's
+     * ACTIVE home grant holds. The account must be an ACTIVE service account of
+     * home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
      * required and at most one year away. Written with its audit event in one
      * transaction, in both tenants' audit trails.
      * </pre>
@@ -4107,8 +4112,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Page through the memberships approved in the caller's tenant (the
-     * target tenant), newest first.
+     * Page through the memberships approved in the target tenant, newest
+     * first. Same callers as CreateServiceAccountTenantMembership.
      * </pre>
      */
     public void listServiceAccountTenantMemberships(com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest request,
@@ -4119,7 +4124,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Revoke a membership of the caller's tenant. Every token already minted
+     * Revoke a membership of the target tenant (same callers as
+     * CreateServiceAccountTenantMembership). Every token already minted
      * from it stops validating immediately (fail closed, audited in both
      * tenants).
      * </pre>
@@ -4954,10 +4960,12 @@ public final class AuthnServiceGrpc {
      * <pre>
      * ── Cross-tenant service tokens (service-account tenant memberships) ──
      * Approve a service account that lives in another (home) tenant to act in
-     * THIS tenant. Only an admin of the target tenant may call it (the caller's
-     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * the target tenant. The caller must administer the target tenant: an admin
+     * of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+     * admin (a home-tenant admin alone cannot). An approval from the parent
+     * tenant or a platform admin may only name scopes the service account's
+     * ACTIVE home grant holds. The account must be an ACTIVE service account of
+     * home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
      * required and at most one year away. Written with its audit event in one
      * transaction, in both tenants' audit trails.
      * </pre>
@@ -4969,8 +4977,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Page through the memberships approved in the caller's tenant (the
-     * target tenant), newest first.
+     * Page through the memberships approved in the target tenant, newest
+     * first. Same callers as CreateServiceAccountTenantMembership.
      * </pre>
      */
     public com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse listServiceAccountTenantMemberships(com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest request) throws io.grpc.StatusException {
@@ -4980,7 +4988,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Revoke a membership of the caller's tenant. Every token already minted
+     * Revoke a membership of the target tenant (same callers as
+     * CreateServiceAccountTenantMembership). Every token already minted
      * from it stops validating immediately (fail closed, audited in both
      * tenants).
      * </pre>
@@ -5797,10 +5806,12 @@ public final class AuthnServiceGrpc {
      * <pre>
      * ── Cross-tenant service tokens (service-account tenant memberships) ──
      * Approve a service account that lives in another (home) tenant to act in
-     * THIS tenant. Only an admin of the target tenant may call it (the caller's
-     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * the target tenant. The caller must administer the target tenant: an admin
+     * of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+     * admin (a home-tenant admin alone cannot). An approval from the parent
+     * tenant or a platform admin may only name scopes the service account's
+     * ACTIVE home grant holds. The account must be an ACTIVE service account of
+     * home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
      * required and at most one year away. Written with its audit event in one
      * transaction, in both tenants' audit trails.
      * </pre>
@@ -5812,8 +5823,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Page through the memberships approved in the caller's tenant (the
-     * target tenant), newest first.
+     * Page through the memberships approved in the target tenant, newest
+     * first. Same callers as CreateServiceAccountTenantMembership.
      * </pre>
      */
     public com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse listServiceAccountTenantMemberships(com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest request) {
@@ -5823,7 +5834,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Revoke a membership of the caller's tenant. Every token already minted
+     * Revoke a membership of the target tenant (same callers as
+     * CreateServiceAccountTenantMembership). Every token already minted
      * from it stops validating immediately (fail closed, audited in both
      * tenants).
      * </pre>
@@ -6701,10 +6713,12 @@ public final class AuthnServiceGrpc {
      * <pre>
      * ── Cross-tenant service tokens (service-account tenant memberships) ──
      * Approve a service account that lives in another (home) tenant to act in
-     * THIS tenant. Only an admin of the target tenant may call it (the caller's
-     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * the target tenant. The caller must administer the target tenant: an admin
+     * of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+     * admin (a home-tenant admin alone cannot). An approval from the parent
+     * tenant or a platform admin may only name scopes the service account's
+     * ACTIVE home grant holds. The account must be an ACTIVE service account of
+     * home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
      * required and at most one year away. Written with its audit event in one
      * transaction, in both tenants' audit trails.
      * </pre>
@@ -6717,8 +6731,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Page through the memberships approved in the caller's tenant (the
-     * target tenant), newest first.
+     * Page through the memberships approved in the target tenant, newest
+     * first. Same callers as CreateServiceAccountTenantMembership.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse> listServiceAccountTenantMemberships(
@@ -6729,7 +6743,8 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
-     * Revoke a membership of the caller's tenant. Every token already minted
+     * Revoke a membership of the target tenant (same callers as
+     * CreateServiceAccountTenantMembership). Every token already minted
      * from it stops validating immediately (fail closed, audited in both
      * tenants).
      * </pre>

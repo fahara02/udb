@@ -855,6 +855,7 @@ pub(crate) fn column_from_proto(column: &ProtoColumn) -> ManifestColumn {
     if column.is_array && !sql_type.ends_with(']') && !is_scalar_custom {
         sql_type.push_str("[]");
     }
+    let default_value = canonical_column_default(&sql_type, &column.default_value);
     ManifestColumn {
         field_name: column.field_name.clone(),
         column_name: normalize_ident(&column.column_name),
@@ -866,7 +867,7 @@ pub(crate) fn column_from_proto(column: &ProtoColumn) -> ManifestColumn {
         auto_increment: column.auto_increment,
         is_array: column.is_array,
         has_presence: column.has_presence,
-        default_value: column.default_value.trim().to_string(),
+        default_value,
         check_constraint: column.check_constraint.trim().to_string(),
         collation: column.collation.trim().to_string(),
         enum_values: column.enum_values.clone(),

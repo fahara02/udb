@@ -155,6 +155,9 @@ type Udb struct {
 	// connection does not exchange one); see apikey_session.go.
 	apiKey     *apiKeySession
 	credential *credentialOwner
+	// dialConfig is the Config this client was dialed with, credentials
+	// removed; ForTenant dials a member-tenant client from it.
+	dialConfig Config
 	closeOnce  sync.Once
 	closeErr   error
 	// fence is the latest Table write's receipt; see session_fence.go.
@@ -205,6 +208,9 @@ func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
 	}
 
 	u := &Udb{Meta: meta, conns: []*grpc.ClientConn{brokerConn}, brokerConn: brokerConn}
+	u.dialConfig = cfg
+	u.dialConfig.Credentials = Credentials{}
+	u.dialConfig.Scopes = append([]string(nil), cfg.Scopes...)
 
 	// V23-2: expose the SAME generated client whose interceptors were installed on
 	// every dialed connection (gen.DialOptions() above), rebound onto the live

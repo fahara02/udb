@@ -3,7 +3,7 @@ module github.com/fahara02/udb/examples/go_arbitary_project
 go 1.22
 
 require (
-	github.com/fahara02/udb/sdk/go v0.6.16
+	github.com/fahara02/udb/sdk/go v0.6.17
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
 )

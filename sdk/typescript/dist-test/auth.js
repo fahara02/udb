@@ -321,6 +321,12 @@ class UdbAuthClient {
     refreshToken(request) {
         return this.call(this.authn, "RefreshToken", request);
     }
+    /** Exchange this connection's service bearer for a short-lived token in a member
+     *  tenant (`AuthnService.ExchangeServiceTokenForTenant`). `UdbProject.forTenant`
+     *  keeps such a token fresh. */
+    exchangeServiceTokenForTenant(request) {
+        return this.call(this.authn, "ExchangeServiceTokenForTenant", request);
+    }
     /** Better Auth bridge: forward a Better Auth session/JWT (already verified by
      *  the app) to UDB as an external identity. UDB maps the verified claims to a
      *  principal; UDB policy — not Better Auth roles — still decides authorization. */

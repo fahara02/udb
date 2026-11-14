@@ -84,6 +84,9 @@ pub(crate) enum Command {
     CatalogStage {
         project: String,
         dsn: Option<String>,
+        /// `--idempotency-key <key>`: replay/dedupe under this key instead of
+        /// the one derived from the full stage request fingerprint.
+        idempotency_key: Option<String>,
     },
     /// `udb catalog activate --project <id> --catalog-id <id>`.
     CatalogActivate {
@@ -392,8 +395,9 @@ pub(crate) struct SdkSelector {
     /// marshalling file (B3). Defaults to `udbentities`. Only used with
     /// `--project-proto` + Go.
     pub go_package: Option<String>,
-    /// `--entities-only` — write only `udb_entities_gen.go`, not the language's
-    /// templated client tree. Requires `--project-proto` and `--lang go`.
+    /// `--entities-only` — write only the `udb_entities_gen.{go,ts,py}` entity file,
+    /// not the language's templated client tree. Requires `--project-proto` and
+    /// `--lang go`, `ts` or `python`.
     pub entities_only: bool,
 }
 
@@ -559,6 +563,35 @@ pub(crate) enum AuthCommand {
         user_id: String,
         reason: String,
     },
+    /// `udb auth membership create --target-tenant <uuid> | --all-children
+    ///   --user <service account> --home-tenant <uuid> [--project <id>]
+    ///   --scope <s>... --reason <text> [--expires-in-days <n>] [--replace]`:
+    /// approve a service account homed in another tenant to act in the target
+    /// tenant (an admin of the target, of its direct parent, or a platform
+    /// admin). `--all-children` approves it in every direct child tenant of the
+    /// caller's tenant in one pass; `--replace` supersedes a standing approval.
+    MembershipCreate {
+        target_tenant_id: String,
+        all_children: bool,
+        user_id: String,
+        home_tenant_id: String,
+        project_id: String,
+        scopes: Vec<String>,
+        reason: String,
+        expires_in_days: u64,
+        replace: bool,
+    },
+    /// `udb auth membership list --target-tenant <uuid>`.
+    MembershipList {
+        target_tenant_id: String,
+    },
+    /// `udb auth membership revoke --target-tenant <uuid> --membership <id>
+    ///   --reason <text>`.
+    MembershipRevoke {
+        target_tenant_id: String,
+        membership_id: String,
+        reason: String,
+    },
     /// mTLS certificate-binding management through the authenticated native API.
     CertBindingCreate {
         tenant_id: String,
@@ -637,6 +670,18 @@ pub(crate) enum AuthCommand {
         project: String,
     },
     PolicyLint,
+    /// `udb auth login --username <u> --password-file <path> [--tenant <t>]
+    /// [--project <p>] [--out <file>] [--addr <host:port>]`: sign in through
+    /// AuthnService.Login and write the access token to an owner-only file, or
+    /// print it when `--out` is omitted. The password is read from the file only.
+    Login {
+        username: String,
+        password_file: String,
+        tenant: String,
+        project: String,
+        out: String,
+        addr: String,
+    },
 }
 
 /// `udb authz …` governance subcommands. Currently a single verb — policy
@@ -677,7 +722,53 @@ pub(crate) enum AuthzCommand {
         credential: String,
         /// `--role <code>`: name this role (not the subject) in the grant hint.
         role: String,
+        /// `--project <id>` (default `UDB_PROJECT_ID`): the project the
+        /// question is asked in; a project-bound rule never matches without it.
+        project: String,
+        /// `--brief`: only the decision, who was evaluated, the reason and the
+        /// next step.
+        brief: bool,
     },
+    /// `udb authz policy put --tenant <uuid|*> --action <a> --resource <r>
+    ///   [--subject <s>] [--role <code>] [--project <p>] [--purpose <p>]
+    ///   [--effect ALLOW|DENY] [--priority <n>] [--scope <s>]...
+    ///   [--condition k=v]... [--relationship <rel>] [--id <uuid>] [--disabled]`
+    ///
+    /// One data-plane ABAC rule through AuthzService.PutAuthzPolicy. Without
+    /// --id the row id is derived from the rule, so putting the same rule twice
+    /// is a no-op.
+    PolicyPut(AuthzPolicyRule),
+    /// `udb authz policy list --tenant <uuid|*> [--subject <s>] [--object <r>] [--all]`
+    /// (AuthzService.ListPolicyRules; `--all` includes inactive rows).
+    PolicyList {
+        tenant: String,
+        subject: String,
+        object: String,
+        include_inactive: bool,
+    },
+    /// `udb authz policy delete <policy id> [--tenant <uuid>]`
+    /// (AuthzService.DeletePolicyRule, a soft delete).
+    PolicyDelete { id: String, tenant: String },
+}
+
+/// One rule for `udb authz policy put`, in `udb policy apply`'s vocabulary.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct AuthzPolicyRule {
+    pub(crate) id: String,
+    pub(crate) tenant: String,
+    pub(crate) project: String,
+    pub(crate) subject: String,
+    pub(crate) role: String,
+    pub(crate) action: String,
+    pub(crate) resource: String,
+    pub(crate) purpose: String,
+    pub(crate) effect: String,
+    pub(crate) priority: String,
+    pub(crate) relationship: String,
+    pub(crate) required_scopes: Vec<String>,
+    /// Raw `--condition key=value` values, checked when the command runs.
+    pub(crate) conditions: Vec<String>,
+    pub(crate) enabled: bool,
 }
 
 /// `udb self verify [--version X] [--tier full] [--file <path>] [--manifest <path>]`
@@ -705,6 +796,16 @@ pub(crate) enum OpsCommand {
         changed_by: String,
         /// `--allow-policy-removal`: soft-delete active rules the file no longer declares.
         allow_removal: bool,
+        /// `--additive`: only add the declared rules that are missing; never
+        /// remove or change another rule (rules the file omits are kept).
+        additive: bool,
+    },
+    /// `udb policy export --tenant <uuid|*> [--dsn <postgres-dsn>] [-o <file>]`:
+    /// the tenant's live rules as a policy file `udb policy apply` reads.
+    PolicyExport {
+        tenant: String,
+        dsn: String,
+        out: String,
     },
     /// `udb identity diff|apply -f <identities.(yaml|json)> [--tenant <uuid>]
     ///   [--allow-transfer]`
@@ -1006,6 +1107,28 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
             user_id: flag_value("--user").unwrap_or_default(),
             reason: flag_value("--reason").unwrap_or_default(),
         },
+        (Some("membership"), Some("create")) => AuthCommand::MembershipCreate {
+            target_tenant_id: flag_value("--target-tenant").unwrap_or_default(),
+            all_children: has_flag("--all-children"),
+            user_id: flag_value("--user").unwrap_or_default(),
+            home_tenant_id: flag_value("--home-tenant").unwrap_or_default(),
+            project_id: flag_value("--project").unwrap_or_default(),
+            scopes: flag_values("--scope"),
+            reason: flag_value("--reason").unwrap_or_default(),
+            // Unparseable ⇒ 0, which the dispatcher refuses by name.
+            expires_in_days: flag_value("--expires-in-days")
+                .map(|value| value.trim().parse::<u64>().unwrap_or(0))
+                .unwrap_or(365),
+            replace: has_flag("--replace"),
+        },
+        (Some("membership"), Some("list")) => AuthCommand::MembershipList {
+            target_tenant_id: flag_value("--target-tenant").unwrap_or_default(),
+        },
+        (Some("membership"), Some("revoke")) => AuthCommand::MembershipRevoke {
+            target_tenant_id: flag_value("--target-tenant").unwrap_or_default(),
+            membership_id: flag_value("--membership").unwrap_or_default(),
+            reason: flag_value("--reason").unwrap_or_default(),
+        },
         (Some("grant"), Some("rotate-identity")) => AuthCommand::GrantRotateIdentity {
             tenant_id: flag_value("--tenant").unwrap_or_default(),
             user_id: flag_value("--user").unwrap_or_default(),
@@ -1102,6 +1225,14 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
             project: flag_value("--project").unwrap_or_default(),
         },
         (Some("policy"), Some("lint")) => AuthCommand::PolicyLint,
+        (Some("login"), _) => AuthCommand::Login {
+            username: flag_value("--username").unwrap_or_default(),
+            password_file: flag_value("--password-file").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+            out: flag_value("--out").unwrap_or_default(),
+            addr: flag_value("--addr").unwrap_or_default(),
+        },
         _ => return None,
     };
     Some((command, 3))
@@ -1147,7 +1278,53 @@ fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
                 purpose: flag_value("--purpose").unwrap_or_default(),
                 credential: flag_value("--credential").unwrap_or_default(),
                 role: flag_value("--role").unwrap_or_default(),
+                project: flag_value("--project").unwrap_or_default(),
+                brief: has_flag("--brief"),
             }
+        }
+        // `udb authz policy put|list|delete …`: one data-plane rule at a time.
+        Some("policy") => {
+            let all_values = |flag: &str| -> Vec<String> {
+                args.windows(2)
+                    .filter(|w| w[0] == flag)
+                    .map(|w| w[1].clone())
+                    .collect()
+            };
+            let command = match args.get(2).map(String::as_str) {
+                Some("put") => AuthzCommand::PolicyPut(AuthzPolicyRule {
+                    id: flag_value("--id").unwrap_or_default(),
+                    tenant: flag_value("--tenant").unwrap_or_default(),
+                    project: flag_value("--project").unwrap_or_default(),
+                    subject: flag_value("--subject").unwrap_or_default(),
+                    role: flag_value("--role").unwrap_or_default(),
+                    action: flag_value("--action").unwrap_or_default(),
+                    resource: flag_value("--resource").unwrap_or_default(),
+                    purpose: flag_value("--purpose").unwrap_or_default(),
+                    effect: flag_value("--effect").unwrap_or_else(|| "ALLOW".to_string()),
+                    priority: flag_value("--priority").unwrap_or_default(),
+                    relationship: flag_value("--relationship").unwrap_or_default(),
+                    required_scopes: all_values("--scope")
+                        .iter()
+                        .flat_map(|value| split_csv(value))
+                        .collect(),
+                    conditions: all_values("--condition"),
+                    enabled: !has_flag("--disabled"),
+                }),
+                Some("list") => AuthzCommand::PolicyList {
+                    tenant: flag_value("--tenant").unwrap_or_default(),
+                    subject: flag_value("--subject").unwrap_or_default(),
+                    object: flag_value("--object").unwrap_or_default(),
+                    include_inactive: has_flag("--all"),
+                },
+                Some("delete") => AuthzCommand::PolicyDelete {
+                    id: flag_value("--id")
+                        .or_else(|| args.get(3).filter(|arg| !arg.starts_with("--")).cloned())
+                        .unwrap_or_default(),
+                    tenant: flag_value("--tenant").unwrap_or_default(),
+                },
+                _ => return None,
+            };
+            return Some((command, 3));
         }
         _ => return None,
     };
@@ -1217,6 +1394,14 @@ fn parse_ops_subcommand(args: &[String]) -> Option<(OpsCommand, usize)> {
             dsn: flag_value("--dsn").unwrap_or_default(),
             changed_by: flag_value("--by").unwrap_or_default(),
             allow_removal: has_flag("--allow-policy-removal"),
+            additive: has_flag("--additive"),
+        },
+        (Some("policy"), Some("export")) => OpsCommand::PolicyExport {
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            dsn: flag_value("--dsn").unwrap_or_default(),
+            out: flag_value("-o")
+                .or_else(|| flag_value("--out"))
+                .unwrap_or_default(),
         },
         (Some("identity"), Some(verb @ ("diff" | "apply"))) => OpsCommand::Identity {
             apply: verb == "apply",
@@ -1482,6 +1667,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             Command::CatalogStage {
                 project: flag_value("--project").unwrap_or_default(),
                 dsn: flag_value("--dsn"),
+                idempotency_key: flag_value("--idempotency-key"),
             }
         }
         Some("catalog") if matches!(args.get(1).map(String::as_str), Some("activate")) => {

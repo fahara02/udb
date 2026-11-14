@@ -229,6 +229,32 @@ fn reviewed_catalog_cli_refuses_unchecked_receipts_and_ambiguous_arguments() {
 }
 
 #[test]
+fn parse_args_reads_catalog_stage_idempotency_key() {
+    let args = ["catalog", "stage", "--project", "owned"].map(str::to_string);
+    assert!(matches!(
+        parse_args(&args).0,
+        Command::CatalogStage {
+            idempotency_key: None,
+            ..
+        }
+    ));
+    let args = [
+        "catalog",
+        "stage",
+        "--project",
+        "owned",
+        "--idempotency-key",
+        "release-42",
+    ]
+    .map(str::to_string);
+    assert!(matches!(
+        parse_args(&args).0,
+        Command::CatalogStage { project, idempotency_key: Some(key), .. }
+            if project == "owned" && key == "release-42"
+    ));
+}
+
+#[test]
 fn parse_args_reads_every_udb_up_flag() {
     let args: Vec<String> = [
         "up",
@@ -960,6 +986,75 @@ fn parse_args_recognizes_service_account_create_and_activate() {
         command,
         Command::Auth(AuthCommand::ServiceAccountActivate { tenant_id, user_id, reason })
             if tenant_id == "t1" && user_id == "5f0c" && reason == "rollout"
+    ));
+}
+
+/// `udb auth login` takes the password from a file only and every other input
+/// from flags; `--out`, `--tenant`, `--project` and `--addr` are optional.
+#[test]
+fn parse_args_recognizes_auth_login() {
+    let (command, _, _, _) = parse_args(&argv(
+        "auth login --username svc.billing --password-file /run/secrets/pw --tenant acme --project p1 --out /run/udb/token --addr 127.0.0.1:50061",
+    ));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::Login { username, password_file, tenant, project, out, addr })
+            if username == "svc.billing"
+                && password_file == "/run/secrets/pw"
+                && tenant == "acme"
+                && project == "p1"
+                && out == "/run/udb/token"
+                && addr == "127.0.0.1:50061"
+    ));
+
+    let (command, _, _, _) = parse_args(&argv("auth login --username u --password-file pw"));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::Login { username, password_file, tenant, project, out, addr })
+            if username == "u" && password_file == "pw" && tenant.is_empty()
+                && project.is_empty() && out.is_empty() && addr.is_empty()
+    ));
+}
+
+#[test]
+fn parse_args_recognizes_auth_membership_commands() {
+    let (command, _, _, _) = parse_args(&argv(
+        "auth membership create --all-children --user svc-1 --home-tenant home-t --project p1 --scope udb:read --scope community:items:write --reason onboarding --expires-in-days 90 --replace",
+    ));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::MembershipCreate {
+            target_tenant_id, all_children, user_id, home_tenant_id, project_id,
+            scopes, reason, expires_in_days, replace,
+        }) if target_tenant_id.is_empty() && all_children && user_id == "svc-1"
+            && home_tenant_id == "home-t" && project_id == "p1"
+            && scopes == ["udb:read", "community:items:write"]
+            && reason == "onboarding" && expires_in_days == 90 && replace
+    ));
+
+    let (command, _, _, _) = parse_args(&argv(
+        "auth membership create --target-tenant child-t --user svc-1 --home-tenant home-t --scope udb:read --reason r",
+    ));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::MembershipCreate {
+            target_tenant_id, all_children, expires_in_days, replace, ..
+        }) if target_tenant_id == "child-t" && !all_children && expires_in_days == 365 && !replace
+    ));
+
+    let (command, _, _, _) = parse_args(&argv("auth membership list --target-tenant child-t"));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::MembershipList { target_tenant_id }) if target_tenant_id == "child-t"
+    ));
+
+    let (command, _, _, _) = parse_args(&argv(
+        "auth membership revoke --target-tenant child-t --membership m-1 --reason gone",
+    ));
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::MembershipRevoke { target_tenant_id, membership_id, reason })
+            if target_tenant_id == "child-t" && membership_id == "m-1" && reason == "gone"
     ));
 }
 

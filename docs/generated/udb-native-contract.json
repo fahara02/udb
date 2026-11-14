@@ -1,8 +1,8 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "2798ec0ff17bf1153e78ba267af08db172fb5bcb1e6083f32c6c539af44c7eae",
+  "descriptor_sha256": "15435bd8db42e5e4b581ad6b35e657f22a388a7cfa76df27c7d0e990cc4c79a4",
   "contract_version": "8.0.0",
-  "udb_version": "0.6.16",
+  "udb_version": "0.6.17",
   "protocol_version": "1.0.0",
   "service_count": 29,
   "services": [
@@ -12871,7 +12871,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -27074,7 +27075,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -57931,7 +57933,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 7,
+      "field_count": 8,
       "fields": [
         {
           "name": "target_tenant_id",
@@ -58051,6 +58053,25 @@
           "name": "expires_at",
           "number": 7,
           "type": ".google.protobuf.Timestamp",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "replace_active",
+          "number": 8,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,

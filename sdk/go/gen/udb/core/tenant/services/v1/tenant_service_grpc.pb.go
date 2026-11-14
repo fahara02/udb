@@ -53,7 +53,9 @@ type TenantServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	GetTenant(ctx context.Context, in *GetTenantRequest, opts ...grpc.CallOption) (*GetTenantResponse, error)
-	// List tenants
+	// List tenants: the caller's own tenant and its DIRECT child tenants (every
+	// tenant for a platform admin). A service account sees the tenants under
+	// its home tenant, so a platform service can follow the tenants it serves.
 	// UDB contract: /udb.core.tenant.services.v1.TenantService/ListTenants
 	// Listener: control plane.
 	// Scopes: udb:tenant:list-tenants.
@@ -227,7 +229,9 @@ type TenantServiceServer interface {
 	CreateTenant(context.Context, *CreateTenantRequest) (*CreateTenantResponse, error)
 	// Get tenant
 	GetTenant(context.Context, *GetTenantRequest) (*GetTenantResponse, error)
-	// List tenants
+	// List tenants: the caller's own tenant and its DIRECT child tenants (every
+	// tenant for a platform admin). A service account sees the tenants under
+	// its home tenant, so a platform service can follow the tenants it serves.
 	ListTenants(context.Context, *ListTenantsRequest) (*ListTenantsResponse, error)
 	// Update tenant
 	UpdateTenant(context.Context, *UpdateTenantRequest) (*UpdateTenantResponse, error)

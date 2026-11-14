@@ -14,6 +14,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use tonic::Request;
 use tonic::transport::Channel;
+use udb::proto::udb::core::authz::entity::v1 as authz_entity_pb;
 use udb::proto::udb::core::authz::services::v1 as authz_pb;
 use udb::proto::udb::core::authz::services::v1::authz_service_client::AuthzServiceClient;
 
@@ -133,6 +134,8 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
             purpose,
             credential,
             role,
+            project,
+            brief,
         } => {
             if user.trim().is_empty() || object.trim().is_empty() || action.trim().is_empty() {
                 return Err(
@@ -142,6 +145,9 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
                 );
             }
             let tenant = first_non_empty(&tenant, "UDB_TENANT_ID");
+            // A project-bound rule only matches a question asked in its
+            // project; without one the broker evaluates "no project".
+            let project = first_non_empty(&project, "UDB_PROJECT_ID");
             // Credential-type admission is decided before any policy, from the
             // RPC's descriptor; report it offline so a credential-type refusal
             // is never chased as a missing grant.
@@ -154,6 +160,7 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
                 action: action.trim().to_string(),
                 purpose: purpose.trim().to_string(),
                 tenant_id: tenant.clone(),
+                project_id: project.clone(),
                 ..Default::default()
             };
             let mut client = authz_client()
@@ -166,34 +173,391 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
                     explain_offline_error(&format!("authz check failed: {err}"), &credential_rules)
                 })?
                 .into_inner();
-            let decision = response.decision.unwrap_or_default();
-            let next_step = explain_next_step(
-                response.allowed,
-                &credential_rules,
-                ExplainTarget {
-                    user: user.trim(),
-                    role: role.trim(),
-                    tenant: &tenant,
-                    action: action.trim(),
-                    object: object.trim(),
+            Ok(render_check(
+                &response,
+                ExplainView {
+                    target: ExplainTarget {
+                        user: user.trim(),
+                        role: role.trim(),
+                        tenant: &tenant,
+                        action: action.trim(),
+                        object: object.trim(),
+                    },
+                    project: &project,
+                    credential_rules: &credential_rules,
+                    brief,
                 },
-            );
+            ))
+        }
+        AuthzCommand::PolicyPut(mut rule) => {
+            rule.tenant = first_non_empty(&rule.tenant, "UDB_TENANT_ID");
+            let record = policy_record_from_rule(&rule)?;
+            let mut client = authz_client().await?;
+            let response = client
+                .put_authz_policy(with_tenant_metadata(
+                    authz_pb::PutAuthzPolicyRequest {
+                        policy: Some(record.clone()),
+                    },
+                    &record.tenant,
+                ))
+                .await
+                .map_err(|err| format!("policy put failed: {err}"))?
+                .into_inner();
             Ok(serde_json::json!({
-                "allowed": response.allowed,
-                "user": user.trim(),
+                "ok": response.ok,
+                "message": response.message,
+                "policy": policy_record_json(&record),
+            }))
+        }
+        AuthzCommand::PolicyList {
+            tenant,
+            subject,
+            object,
+            include_inactive,
+        } => {
+            let tenant = first_non_empty(&tenant, "UDB_TENANT_ID");
+            if tenant.is_empty() {
+                return Err(
+                    "pass --tenant <tenant uuid> (or '*' for the platform-wide rules)".to_string(),
+                );
+            }
+            let mut client = authz_client().await?;
+            let response = client
+                .list_policy_rules(with_tenant_metadata(
+                    authz_pb::ListPolicyRulesRequest {
+                        domain: tenant.clone(),
+                        subject: subject.trim().to_string(),
+                        object: object.trim().to_string(),
+                        active_only: !include_inactive,
+                        page: None,
+                    },
+                    &tenant,
+                ))
+                .await
+                .map_err(|err| format!("policy list failed: {err}"))?
+                .into_inner();
+            let policies: Vec<serde_json::Value> =
+                response.policies.iter().map(policy_rule_json).collect();
+            Ok(serde_json::json!({
                 "tenant": tenant,
-                "object": object.trim(),
-                "action": action.trim(),
-                "matched_rule": response.matched_rule,
-                "reason": response.reason,
-                "deny_reason": decision.deny_reason,
-                "matched_policy_ids": decision.matched_policy_ids,
-                "required_scopes": decision.required_scopes,
-                "credential_rules": credential_rules,
-                "next_step": next_step,
+                "count": policies.len(),
+                "policies": policies,
+            }))
+        }
+        AuthzCommand::PolicyDelete { id, tenant } => {
+            if id.trim().is_empty() {
+                return Err(
+                    "provide the policy id: udb authz policy delete <policy id>".to_string()
+                );
+            }
+            let tenant = first_non_empty(&tenant, "UDB_TENANT_ID");
+            let mut client = authz_client().await?;
+            let response = client
+                .delete_policy_rule(with_tenant_metadata(
+                    authz_pb::DeletePolicyRuleRequest {
+                        policy_id: id.trim().to_string(),
+                        deleted_by: String::new(),
+                    },
+                    &tenant,
+                ))
+                .await
+                .map_err(|err| format!("policy delete failed: {err}"))?
+                .into_inner();
+            Ok(serde_json::json!({
+                "policy_id": id.trim(),
+                "deleted": response.deleted,
+                "message": if response.deleted {
+                    "the rule is soft-deleted; every broker drops it at its next snapshot reload"
+                } else {
+                    "no active rule with that id in the caller's tenant (already deleted, or another tenant's)"
+                },
             }))
         }
     }
+}
+
+/// How many matched policy ids `udb authz explain` prints before it
+/// summarises the rest: a broad tenant evaluates thousands of candidates.
+const EXPLAIN_POLICY_IDS_SHOWN: usize = 20;
+
+/// The first [`EXPLAIN_POLICY_IDS_SHOWN`] ids, then `… N more`.
+fn capped_policy_ids(ids: &[String]) -> Vec<String> {
+    let mut shown: Vec<String> = ids.iter().take(EXPLAIN_POLICY_IDS_SHOWN).cloned().collect();
+    if ids.len() > EXPLAIN_POLICY_IDS_SHOWN {
+        shown.push(format!("… {} more", ids.len() - EXPLAIN_POLICY_IDS_SHOWN));
+    }
+    shown
+}
+
+/// A non-admin CheckAccess is answered for the CALLER, whatever subject the
+/// request names (only a service account holding
+/// `udb:authz:check-access-for` may ask about a person of its tenant). When the
+/// broker evaluated someone else, the decision says nothing about the subject
+/// that was asked about, so say so instead of presenting it as theirs.
+fn evaluated_other_subject(requested: &str, evaluated: &str) -> Option<String> {
+    let (requested, evaluated) = (requested.trim(), evaluated.trim());
+    if evaluated.is_empty() || evaluated.eq_ignore_ascii_case(requested) {
+        return None;
+    }
+    Some(format!(
+        "the broker evaluated '{evaluated}' (the caller of UDB_AUTH_TOKEN), not '{requested}': a \
+         caller that is not a cross-tenant admin is always answered for itself, so this decision \
+         says nothing about '{requested}'. Run it again with UDB_AUTH_TOKEN set to a platform-admin \
+         token, or to a token of '{requested}' itself"
+    ))
+}
+
+#[derive(Clone, Copy)]
+struct ExplainView<'a> {
+    target: ExplainTarget<'a>,
+    project: &'a str,
+    credential_rules: &'a [udb::runtime::service::RpcAdmission],
+    brief: bool,
+}
+
+/// The `udb authz explain|check` output. Pure, so it is tested on canned
+/// responses.
+fn render_check(
+    response: &authz_pb::CheckAccessResponse,
+    view: ExplainView<'_>,
+) -> serde_json::Value {
+    let decision = response.decision.clone().unwrap_or_default();
+    let other = evaluated_other_subject(view.target.user, &response.evaluated_subject);
+    let next_step = match &other {
+        Some(note) => note.clone(),
+        None => explain_next_step(response.allowed, view.credential_rules, view.target),
+    };
+    let evaluated = if response.evaluated_subject.trim().is_empty() {
+        view.target.user.to_string()
+    } else {
+        response.evaluated_subject.clone()
+    };
+    if view.brief {
+        return serde_json::json!({
+            "allowed": response.allowed,
+            "user": view.target.user,
+            "evaluated_subject": evaluated,
+            "matched_rule": response.matched_rule,
+            "reason": response.reason,
+            "next_step": next_step,
+        });
+    }
+    serde_json::json!({
+        "allowed": response.allowed,
+        "user": view.target.user,
+        "evaluated_subject": evaluated,
+        "tenant": view.target.tenant,
+        "project": view.project,
+        "object": view.target.object,
+        "action": view.target.action,
+        "matched_rule": response.matched_rule,
+        "reason": response.reason,
+        "deny_reason": decision.deny_reason,
+        "matched_policy_count": decision.matched_policy_ids.len(),
+        "matched_policy_ids": capped_policy_ids(&decision.matched_policy_ids),
+        "required_scopes": decision.required_scopes,
+        "credential_rules": view.credential_rules,
+        "next_step": next_step,
+    })
+}
+
+/// Build the PutAuthzPolicy record for `udb authz policy put`. Every value is
+/// checked here and refused when malformed: nothing is guessed or defaulted
+/// into a different rule. Without `--id` the id is derived from the rule, so
+/// putting the same rule twice writes one row.
+fn policy_record_from_rule(rule: &AuthzPolicyRule) -> Result<authz_pb::AuthzPolicyRecord, String> {
+    let tenant = rule.tenant.trim();
+    if tenant.is_empty() {
+        return Err(
+            "pass --tenant <tenant uuid> (or '*' for a rule in every tenant, which needs a \
+             cross-tenant admin token)"
+                .to_string(),
+        );
+    }
+    if rule.action.trim().is_empty() || rule.resource.trim().is_empty() {
+        return Err(
+            "pass --action <RPC name, e.g. Select> and --resource <message type or *>".to_string(),
+        );
+    }
+    let effect = rule.effect.trim().to_ascii_uppercase();
+    if effect != "ALLOW" && effect != "DENY" {
+        return Err(format!(
+            "--effect must be ALLOW or DENY, got '{}'",
+            rule.effect.trim()
+        ));
+    }
+    let priority = if rule.priority.trim().is_empty() {
+        0
+    } else {
+        rule.priority.trim().parse::<i32>().map_err(|_| {
+            format!(
+                "--priority must be an integer, got '{}'",
+                rule.priority.trim()
+            )
+        })?
+    };
+    let mut conditions = std::collections::BTreeMap::new();
+    for raw in &rule.conditions {
+        let Some((key, value)) = raw.split_once('=') else {
+            return Err(format!("--condition must be key=value, got '{raw}'"));
+        };
+        if key.trim().is_empty() {
+            return Err(format!("--condition needs a key, got '{raw}'"));
+        }
+        conditions.insert(key.trim().to_string(), value.trim().to_string());
+    }
+    let mut required_scopes: Vec<String> = rule
+        .required_scopes
+        .iter()
+        .map(|scope| scope.trim().to_string())
+        .filter(|scope| !scope.is_empty())
+        .collect();
+    required_scopes.sort_unstable();
+    required_scopes.dedup();
+    let mut record = authz_pb::AuthzPolicyRecord {
+        id: rule.id.trim().to_string(),
+        priority,
+        enabled: rule.enabled,
+        effect,
+        tenant: tenant.to_string(),
+        project: rule.project.trim().to_string(),
+        subject: rule.subject.trim().to_string(),
+        role: rule.role.trim().to_string(),
+        action: rule.action.trim().to_string(),
+        resource: rule.resource.trim().to_string(),
+        purpose: rule.purpose.trim().to_string(),
+        relationship: rule.relationship.trim().to_string(),
+        conditions: conditions.into_iter().collect(),
+        required_scopes,
+    };
+    if record.id.is_empty() {
+        record.id = derived_policy_id(&record);
+    }
+    Ok(record)
+}
+
+/// A stable UUID for a rule: the same rule always gets the same id.
+pub(super) fn derived_policy_id(record: &authz_pb::AuthzPolicyRecord) -> String {
+    use sha2::{Digest, Sha256};
+    let mut conditions: Vec<String> = record
+        .conditions
+        .iter()
+        .map(|(key, value)| format!("{key}={value}"))
+        .collect();
+    conditions.sort_unstable();
+    let priority = record.priority.to_string();
+    let conditions = conditions.join("&");
+    let scopes = record.required_scopes.join(",");
+    let key = [
+        record.tenant.as_str(),
+        record.project.as_str(),
+        record.subject.as_str(),
+        record.role.as_str(),
+        record.action.as_str(),
+        record.resource.as_str(),
+        record.effect.as_str(),
+        record.purpose.as_str(),
+        record.relationship.as_str(),
+        priority.as_str(),
+        conditions.as_str(),
+        scopes.as_str(),
+    ]
+    .join("|");
+    let digest = Sha256::digest(format!("udb-authz-policy-put|{key}").as_bytes());
+    let mut bytes = [0u8; 16];
+    bytes.copy_from_slice(&digest[..16]);
+    uuid::Uuid::from_bytes(bytes).to_string()
+}
+
+/// A written record in the policy-file vocabulary (`udb policy apply`).
+fn policy_record_json(record: &authz_pb::AuthzPolicyRecord) -> serde_json::Value {
+    let conditions: std::collections::BTreeMap<&String, &String> =
+        record.conditions.iter().collect();
+    serde_json::json!({
+        "id": record.id,
+        "tenant": record.tenant,
+        "project": record.project,
+        "subject": record.subject,
+        "role": record.role,
+        "action": record.action,
+        "resource": record.resource,
+        "effect": record.effect,
+        "purpose": record.purpose,
+        "relationship": record.relationship,
+        "priority": record.priority,
+        "conditions": conditions,
+        "required_scopes": record.required_scopes,
+        "enabled": record.enabled,
+    })
+}
+
+/// A stored `PolicyRule` row in the policy-file vocabulary: the rule metadata
+/// kept in `attributes_json` (role, purpose, scopes, priority, relationship)
+/// is lifted out, the rest are the rule's attribute conditions.
+fn policy_rule_json(rule: &authz_entity_pb::PolicyRule) -> serde_json::Value {
+    let mut attributes: serde_json::Map<String, serde_json::Value> =
+        match serde_json::from_str::<serde_json::Value>(&rule.attributes_json) {
+            Ok(serde_json::Value::Object(map)) => map,
+            _ => serde_json::Map::new(),
+        };
+    let mut take = |key: &str| -> String {
+        match attributes.remove(key) {
+            Some(serde_json::Value::String(value)) => value,
+            Some(serde_json::Value::Null) | None => String::new(),
+            Some(other) => other.to_string(),
+        }
+    };
+    let role = take("role");
+    let purpose = take("purpose");
+    let relationship = take("relationship");
+    let priority = take("priority");
+    let required_scopes: Vec<String> = take("required_scopes")
+        .split([',', ' '])
+        .map(str::trim)
+        .filter(|scope| !scope.is_empty())
+        .map(ToString::to_string)
+        .collect();
+    serde_json::json!({
+        "id": rule.policy_id,
+        "tenant": rule.tenant_id,
+        "project": rule.project_id,
+        "subject": rule.subject,
+        "role": role,
+        "action": rule.action,
+        "resource": rule.object,
+        "effect": if rule.effect == authz_entity_pb::PolicyEffect::Deny as i32 { "DENY" } else { "ALLOW" },
+        "purpose": purpose,
+        "relationship": relationship,
+        // A stored priority that is not a number is shown as stored.
+        "priority": match priority.trim() {
+            "" => serde_json::Value::from(0),
+            raw => raw
+                .parse::<i64>()
+                .map(serde_json::Value::from)
+                .unwrap_or_else(|_| serde_json::Value::String(raw.to_string())),
+        },
+        "conditions": attributes,
+        "required_scopes": required_scopes,
+        "enabled": rule.is_active,
+    })
+}
+
+/// [`with_metadata`], with `x-tenant-id` naming `tenant` when it is a concrete
+/// tenant (the platform domain `*` is not a tenant id and is not sent).
+fn with_tenant_metadata<T>(message: T, tenant: &str) -> Request<T> {
+    let mut request = with_metadata(message);
+    let tenant = tenant.trim();
+    if !tenant.is_empty() && tenant != "*" {
+        match tenant.parse() {
+            Ok(value) => {
+                request.metadata_mut().insert("x-tenant-id", value);
+            }
+            Err(err) => eprintln!(
+                "warning: --tenant is not a valid gRPC metadata value; x-tenant-id not sent: {err}"
+            ),
+        }
+    }
+    request
 }
 
 /// The native RPC(s) the explained resource (or action) names, with their
@@ -232,6 +596,7 @@ fn explain_offline_error(
     }
 }
 
+#[derive(Clone, Copy)]
 struct ExplainTarget<'a> {
     user: &'a str,
     role: &'a str,
@@ -905,5 +1270,287 @@ mod tests {
         assert_eq!(rendered["cases"][1]["label"], "grant");
         assert_eq!(rendered["cases"][1]["draft_allowed"], true);
         assert_eq!(rendered["cases"][2]["draft_deny_reason"], "removed");
+    }
+
+    fn strings(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn explain_parses_project_and_brief() {
+        let args = strings(&[
+            "authz",
+            "explain",
+            "b6e0d1c2-7a3b-4c5d-9e8f-001122334455",
+            "seed-persona",
+            "list:roots",
+            "--tenant",
+            "t-1",
+            "--project",
+            "meddesk",
+            "--purpose",
+            "meddesk.persona",
+            "--brief",
+        ]);
+        match parse_args(&args).0 {
+            Command::Authz(AuthzCommand::Check {
+                user,
+                project,
+                brief,
+                purpose,
+                ..
+            }) => {
+                assert_eq!(user, "b6e0d1c2-7a3b-4c5d-9e8f-001122334455");
+                assert_eq!(project, "meddesk");
+                assert_eq!(purpose, "meddesk.persona");
+                assert!(brief);
+            }
+            _ => panic!("explain parses as Check"),
+        }
+    }
+
+    fn explain_view<'a>(
+        user: &'a str,
+        rules: &'a [udb::runtime::service::RpcAdmission],
+        brief: bool,
+    ) -> ExplainView<'a> {
+        ExplainView {
+            target: ExplainTarget {
+                user,
+                role: "",
+                tenant: "t-1",
+                action: "seed-persona",
+                object: "list:roots",
+            },
+            project: "meddesk",
+            credential_rules: rules,
+            brief,
+        }
+    }
+
+    /// Thousands of evaluated candidates print as the first 20 and a count.
+    #[test]
+    fn explain_caps_matched_policy_ids() {
+        let ids: Vec<String> = (0..2500).map(|i| format!("p-{i}")).collect();
+        let shown = capped_policy_ids(&ids);
+        assert_eq!(shown.len(), EXPLAIN_POLICY_IDS_SHOWN + 1);
+        assert_eq!(shown[0], "p-0");
+        assert_eq!(shown.last().unwrap(), "… 2480 more");
+        assert_eq!(capped_policy_ids(&ids[..3]), ids[..3].to_vec());
+
+        let response = authz_pb::CheckAccessResponse {
+            allowed: false,
+            evaluated_subject: "sa".to_string(),
+            decision: Some(authz_pb::Decision {
+                matched_policy_ids: ids,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let full = render_check(&response, explain_view("sa", &[], false));
+        assert_eq!(full["matched_policy_count"], 2500);
+        assert_eq!(
+            full["matched_policy_ids"].as_array().unwrap().len(),
+            EXPLAIN_POLICY_IDS_SHOWN + 1
+        );
+        assert_eq!(full["project"], "meddesk");
+        let brief = render_check(&response, explain_view("sa", &[], true));
+        let keys: Vec<&String> = brief.as_object().unwrap().keys().collect();
+        assert!(
+            !keys.iter().any(|key| key.as_str() == "matched_policy_ids"),
+            "{keys:?}"
+        );
+        assert!(brief.get("next_step").is_some());
+    }
+
+    /// A non-admin token is answered for its own caller: explain must not
+    /// present that decision as the asked-about subject's.
+    #[test]
+    fn explain_says_when_the_broker_evaluated_the_caller_instead() {
+        let response = authz_pb::CheckAccessResponse {
+            allowed: false,
+            evaluated_subject: "the-admin-human".to_string(),
+            reason: "no allow rule grants action".to_string(),
+            ..Default::default()
+        };
+        let rendered = render_check(&response, explain_view("the-service-account", &[], false));
+        assert_eq!(rendered["evaluated_subject"], "the-admin-human");
+        let step = rendered["next_step"].as_str().unwrap();
+        assert!(
+            step.contains("evaluated 'the-admin-human'")
+                && step.contains("says nothing about 'the-service-account'"),
+            "{step}"
+        );
+        assert!(evaluated_other_subject("SA", "sa").is_none());
+        assert!(evaluated_other_subject("sa", "").is_none());
+    }
+
+    fn put_rule() -> AuthzPolicyRule {
+        AuthzPolicyRule {
+            tenant: "t-1".to_string(),
+            project: "meddesk".to_string(),
+            subject: "b6e0d1c2-7a3b-4c5d-9e8f-001122334455".to_string(),
+            action: "seed-persona".to_string(),
+            resource: "list:roots".to_string(),
+            purpose: "meddesk.persona".to_string(),
+            effect: "allow".to_string(),
+            enabled: true,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn policy_put_builds_a_checked_record_with_a_stable_id() {
+        let record = policy_record_from_rule(&put_rule()).expect("valid rule");
+        assert_eq!(record.effect, "ALLOW");
+        assert_eq!(record.priority, 0);
+        assert!(uuid::Uuid::parse_str(&record.id).is_ok(), "{}", record.id);
+        assert_eq!(
+            policy_record_from_rule(&put_rule()).unwrap().id,
+            record.id,
+            "the same rule gets the same id"
+        );
+        let mut other = put_rule();
+        other.action = "Select".to_string();
+        assert_ne!(policy_record_from_rule(&other).unwrap().id, record.id);
+
+        let mut explicit = put_rule();
+        explicit.id = "c41d9e7a-0000-4000-8000-00000000beef".to_string();
+        explicit.priority = "10".to_string();
+        explicit.conditions = strings(&["department = cardiology"]);
+        explicit.required_scopes = strings(&["b", " a ", "a"]);
+        let record = policy_record_from_rule(&explicit).unwrap();
+        assert_eq!(record.id, "c41d9e7a-0000-4000-8000-00000000beef");
+        assert_eq!(record.priority, 10);
+        assert_eq!(
+            record.conditions.get("department").map(String::as_str),
+            Some("cardiology")
+        );
+        assert_eq!(record.required_scopes, strings(&["a", "b"]));
+
+        let mut wildcard = put_rule();
+        wildcard.tenant = "*".to_string();
+        assert_eq!(policy_record_from_rule(&wildcard).unwrap().tenant, "*");
+
+        for (field, broken) in [
+            (
+                "tenant",
+                AuthzPolicyRule {
+                    tenant: " ".into(),
+                    ..put_rule()
+                },
+            ),
+            (
+                "action",
+                AuthzPolicyRule {
+                    action: String::new(),
+                    ..put_rule()
+                },
+            ),
+            (
+                "effect",
+                AuthzPolicyRule {
+                    effect: "permit".into(),
+                    ..put_rule()
+                },
+            ),
+            (
+                "priority",
+                AuthzPolicyRule {
+                    priority: "high".into(),
+                    ..put_rule()
+                },
+            ),
+            (
+                "condition",
+                AuthzPolicyRule {
+                    conditions: strings(&["no-equals"]),
+                    ..put_rule()
+                },
+            ),
+        ] {
+            assert!(
+                policy_record_from_rule(&broken).is_err(),
+                "a malformed {field} must be refused, not defaulted"
+            );
+        }
+    }
+
+    #[test]
+    fn policy_subcommands_parse() {
+        let args = strings(&[
+            "authz",
+            "policy",
+            "put",
+            "--tenant",
+            "*",
+            "--action",
+            "Select",
+            "--resource",
+            "*",
+            "--role",
+            "auditor",
+            "--scope",
+            "udb:read,udb:audit",
+            "--condition",
+            "a=b",
+            "--condition",
+            "c=d",
+            "--disabled",
+        ]);
+        match parse_args(&args).0 {
+            Command::Authz(AuthzCommand::PolicyPut(rule)) => {
+                assert_eq!(rule.tenant, "*");
+                assert_eq!(rule.role, "auditor");
+                assert_eq!(rule.effect, "ALLOW");
+                assert_eq!(rule.required_scopes, strings(&["udb:read", "udb:audit"]));
+                assert_eq!(rule.conditions, strings(&["a=b", "c=d"]));
+                assert!(!rule.enabled);
+            }
+            _ => panic!("authz policy put"),
+        }
+        match parse_args(&strings(&[
+            "authz", "policy", "list", "--tenant", "t-1", "--all",
+        ]))
+        .0
+        {
+            Command::Authz(AuthzCommand::PolicyList {
+                tenant,
+                include_inactive,
+                ..
+            }) => {
+                assert_eq!(tenant, "t-1");
+                assert!(include_inactive);
+            }
+            _ => panic!("authz policy list"),
+        }
+        match parse_args(&strings(&["authz", "policy", "delete", "p-1"])).0 {
+            Command::Authz(AuthzCommand::PolicyDelete { id, .. }) => assert_eq!(id, "p-1"),
+            _ => panic!("authz policy delete"),
+        }
+    }
+
+    #[test]
+    fn listed_rules_use_the_policy_file_vocabulary() {
+        let rule = authz_entity_pb::PolicyRule {
+            policy_id: "p-1".to_string(),
+            subject: "sa".to_string(),
+            object: "list:roots".to_string(),
+            action: "seed-persona".to_string(),
+            effect: authz_entity_pb::PolicyEffect::Allow as i32,
+            is_active: true,
+            tenant_id: "t-1".to_string(),
+            project_id: "meddesk".to_string(),
+            attributes_json: r#"{"role":"","purpose":"meddesk.persona","required_scopes":"","priority":"5","ward":"3"}"#.to_string(),
+            ..Default::default()
+        };
+        let json = policy_rule_json(&rule);
+        assert_eq!(json["resource"], "list:roots");
+        assert_eq!(json["purpose"], "meddesk.persona");
+        assert_eq!(json["role"], "");
+        assert_eq!(json["priority"], 5);
+        assert_eq!(json["effect"], "ALLOW");
+        assert_eq!(json["required_scopes"], serde_json::json!([]));
+        assert_eq!(json["conditions"], serde_json::json!({"ward": "3"}));
     }
 }

@@ -74,7 +74,18 @@ fn closest_allow_miss(
             missing.insert("purpose".to_string(), policy.purpose.clone());
         }
         if !super::domain_match(&policy.project, &principal.project_id) {
-            misses.push("project".to_string());
+            misses.push(if principal.project_id.trim().is_empty() {
+                format!(
+                    "project (the rule is bound to project '{}', the request named no project)",
+                    policy.project.trim()
+                )
+            } else {
+                format!(
+                    "project (the rule is bound to project '{}', the request is in '{}')",
+                    policy.project.trim(),
+                    principal.project_id
+                )
+            });
             missing.insert("project".to_string(), policy.project.clone());
         }
         let missing_scopes: Vec<&str> = policy
@@ -117,13 +128,23 @@ fn closest_allow_miss(
         if misses.is_empty() {
             continue;
         }
+        // Fewest failed attributes first; among equals the rule that names the
+        // request most specifically. Without the specificity step the seeded
+        // `organization_owner` rule (`*` everywhere, id 00000000-…-0a0002, the
+        // lowest id) won every tie and hid the rule the caller was asking about,
+        // e.g. a subject-bound rule that failed only on its project.
         if best.as_ref().is_none_or(|(current_policy, current, _)| {
-            (misses.len(), std::cmp::Reverse(policy.priority), &policy.id)
-                < (
-                    current.len(),
-                    std::cmp::Reverse(current_policy.priority),
-                    &current_policy.id,
-                )
+            (
+                misses.len(),
+                std::cmp::Reverse(rule_specificity(policy)),
+                std::cmp::Reverse(policy.priority),
+                &policy.id,
+            ) < (
+                current.len(),
+                std::cmp::Reverse(rule_specificity(current_policy)),
+                std::cmp::Reverse(current_policy.priority),
+                &current_policy.id,
+            )
         }) {
             best = Some((policy, misses, missing));
         }
@@ -141,6 +162,25 @@ fn closest_allow_miss(
         );
         (reason, missing)
     })
+}
+
+/// How many selectors a rule names (not empty, not `*`): tenant, project,
+/// subject, role, action, resource and purpose. Ranks equally-close denial
+/// candidates so a rule written for this request outranks a catch-all.
+fn rule_specificity(policy: &AuthzPolicy) -> usize {
+    [
+        policy.tenant.as_str(),
+        policy.project.as_str(),
+        policy.subject.as_str(),
+        policy.role.as_str(),
+        policy.action.as_str(),
+        policy.resource.as_str(),
+        policy.purpose.as_str(),
+    ]
+    .into_iter()
+    .map(str::trim)
+    .filter(|value| !value.is_empty() && *value != "*")
+    .count()
 }
 
 /// The Casbin PERM model. RBAC-with-domains request + policy, a `g` role
@@ -1045,6 +1085,139 @@ mod tests {
                 .allowed,
             "an all-projects allow grants in any project"
         );
+    }
+
+    /// The reported shape: a tenant-domain rule written by PutAuthzPolicy for a
+    /// service account's user id (role "", purpose set, no scopes, bound to a
+    /// project), next to the seeded organization_owner rule. The service
+    /// account acts in that tenant through a membership-exchanged token, so its
+    /// verified tenant is the rule's tenant (its home tenant is elsewhere).
+    #[tokio::test]
+    async fn service_account_tenant_rule_matches_and_its_project_miss_is_diagnosed() {
+        const TENANT: &str = "3f1c7a52-9d0e-4f7b-8c55-1a2b3c4d5e6f";
+        const SA_USER: &str = "b6e0d1c2-7a3b-4c5d-9e8f-001122334455";
+        let snap = AuthzSnapshot {
+            version: "v1".to_string(),
+            policies: vec![
+                system_owner_rule(),
+                AuthzPolicy {
+                    id: "c41d9e7a-0000-4000-8000-00000000beef".to_string(),
+                    effect: Effect::Allow,
+                    tenant: TENANT.to_string(),
+                    project: "meddesk".to_string(),
+                    subject: SA_USER.to_string(),
+                    role: String::new(),
+                    action: "seed-persona".to_string(),
+                    resource: "list:roots".to_string(),
+                    purpose: "meddesk.persona".to_string(),
+                    // `required_scopes: ""` in attributes_json decodes to no scope.
+                    required_scopes: Vec::new(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let attrs = BTreeMap::new();
+        let resource = ResourceRef::message("list:roots");
+        let membership_principal = Principal {
+            principal_id: SA_USER.to_string(),
+            subject: SA_USER.to_string(),
+            user_id: SA_USER.to_string(),
+            service_identity: "meddesk.seeder".to_string(),
+            tenant_id: TENANT.to_string(),
+            project_id: "meddesk".to_string(),
+            scopes: vec!["udb:authz:check-access".to_string()],
+            ..Default::default()
+        };
+        fn seed_persona<'a>(
+            principal: &'a Principal,
+            resource: &'a ResourceRef,
+            attrs: &'a BTreeMap<String, String>,
+        ) -> AuthzQuery<'a> {
+            AuthzQuery {
+                principal,
+                resource,
+                action: "seed-persona",
+                purpose: "meddesk.persona",
+                attributes: attrs,
+            }
+        }
+        let allowed = snap
+            .casbin_authorize(&seed_persona(&membership_principal, &resource, &attrs))
+            .await;
+        assert!(
+            allowed.allowed,
+            "the service account's own tenant rule must match: {}",
+            allowed.deny_reason
+        );
+        assert!(!allowed.via_role, "a subject rule, not a role grant");
+
+        // The same question without a project (what `udb authz explain`
+        // asked before it sent one): the diagnosis must name the service
+        // account's rule and its project, not the catch-all owner rule.
+        let no_project = Principal {
+            project_id: String::new(),
+            ..membership_principal.clone()
+        };
+        let denied = snap
+            .casbin_authorize(&seed_persona(&no_project, &resource, &attrs))
+            .await;
+        assert!(!denied.allowed);
+        assert_eq!(
+            denied.missing.get("candidate_rule").map(String::as_str),
+            Some("c41d9e7a-0000-4000-8000-00000000beef"),
+            "{}",
+            denied.deny_reason
+        );
+        assert_eq!(
+            denied.missing.get("project").map(String::as_str),
+            Some("meddesk")
+        );
+        assert!(
+            denied
+                .deny_reason
+                .contains("bound to project 'meddesk', the request named no project"),
+            "{}",
+            denied.deny_reason
+        );
+
+        // Another caller evaluated in place of the service account (a
+        // non-admin CheckAccess is answered for the caller): the rule fails
+        // only on subject, and it, not the owner rule, is the one named.
+        let other_caller = Principal {
+            principal_id: "a-human".to_string(),
+            subject: "a-human".to_string(),
+            user_id: "a-human".to_string(),
+            service_identity: String::new(),
+            ..membership_principal.clone()
+        };
+        let other = snap
+            .casbin_authorize(&seed_persona(&other_caller, &resource, &attrs))
+            .await;
+        assert!(!other.allowed);
+        assert_eq!(
+            other.missing.get("candidate_rule").map(String::as_str),
+            Some("c41d9e7a-0000-4000-8000-00000000beef")
+        );
+        assert_eq!(
+            other.missing.get("identity").map(String::as_str),
+            Some("subject or role binding")
+        );
+    }
+
+    #[test]
+    fn rule_specificity_ranks_a_named_rule_above_the_catch_all() {
+        assert_eq!(rule_specificity(&system_owner_rule()), 1);
+        let named = AuthzPolicy {
+            tenant: "t".to_string(),
+            project: "p".to_string(),
+            subject: "s".to_string(),
+            action: "a".to_string(),
+            resource: "*".to_string(),
+            purpose: " ".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(rule_specificity(&named), 4);
     }
 
     #[tokio::test]

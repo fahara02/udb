@@ -201,7 +201,7 @@ Each table lists the scope that admits an RPC; `udb:admin` (and, for authn, auth
 | `MigrateLegacyPolicies` | destructive | `udb:authz:admin` | bearer JWT, session | required |
 | `PromoteCanary` | destructive | `udb:authz:admin` | bearer JWT, session | required |
 | `PutAuthzPolicy` | mutation | `udb:authz:put-authz-policy` | bearer JWT, session | required |
-| `PutRelationship` | mutation | `udb:authz:put-relationship` | bearer JWT, session | required |
+| `PutRelationship` | mutation | `udb:authz:put-relationship` | bearer JWT, session, service account | required |
 | `PutRoleBinding` | mutation | `udb:authz:put-role-binding` | bearer JWT, session, service account | required |
 | `RejectPolicyDraft` | mutation | `udb:authz:policy:approve` | bearer JWT, session | required |
 | `RevokeRole` | mutation | `udb:authz:revoke-role` | bearer JWT, session | required |
@@ -423,7 +423,7 @@ Each table lists the scope that admits an RPC; `udb:admin` (and, for authn, auth
 | `CreateTenant` | mutation | `udb:tenant:create-tenant` | bearer JWT, session | required |
 | `GetTenant` | read_only | `udb:tenant:get-tenant` | bearer JWT, session, service account | required |
 | `GetTenantConfig` | read_only | `udb:tenant:get-tenant-config` | bearer JWT, session, service account | required |
-| `ListTenants` | read_only | `udb:tenant:list-tenants` | bearer JWT, session | required |
+| `ListTenants` | read_only | `udb:tenant:list-tenants` | bearer JWT, session, service account | required |
 | `PurgeTenant` | destructive | `udb:tenant:purge-tenant` | bearer JWT, session | required |
 | `UpdateTenant` | mutation | `udb:tenant:update-tenant` | bearer JWT, session | required |
 | `UpdateTenantConfig` | mutation | `udb:tenant:update-tenant-config` | bearer JWT, session | required |

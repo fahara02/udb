@@ -730,7 +730,8 @@ pub fn grant_command_hint(
     format!(
         "To grant it, add `- {}` under `policies:` in the tenant's policies file and run \
          `udb policy apply -f <policies.yaml> --tenant {tenant}` (apply reconciles the whole \
-         file, so keep the existing entries in it)",
+         file, so keep the existing entries in it; with --additive a file holding only this \
+         entry adds it and leaves every other rule in place)",
         grant_policy_entry(grantee, action, resource)
     )
 }

@@ -62,6 +62,7 @@ fn membership_request(
             seconds: expires,
             nanos: 0,
         }),
+        replace_active: false,
     })
 }
 
@@ -528,6 +529,192 @@ async fn live_postgres_service_tenant_token_exchange() {
         !validate(&authn, &second.access_token).await.valid,
         "revoking the home grant kills the exchanged token"
     );
+
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// A parent tenant's admin manages service-account memberships in its DIRECT
+/// child tenants (and so does a platform admin), with the approved scopes held
+/// to the service's ACTIVE home grant; an unrelated tenant's admin, and the
+/// parent's admin for a grandchild, stay refused.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_parent_tenant_admin_approves_child_memberships -- --ignored --nocapture"]
+async fn live_postgres_parent_tenant_admin_approves_child_memberships() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    ensure_outbox_table(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone()).with_event_sink(Arc::new(
+        super::super::events::OutboxAuthEventSink::new(pool.clone(), OUTBOX_RELATION),
+    ));
+    let (account, _grant) = create_service_account_with_grant(
+        &authn,
+        "parent_child_membership",
+        PASSWORD,
+        &["udb:read", "udb:authn:exchange-tenant-token"],
+    )
+    .await;
+    let parent = Uuid::new_v4().to_string();
+    let child = Uuid::new_v4().to_string();
+    let grandchild = Uuid::new_v4().to_string();
+    let unrelated = Uuid::new_v4().to_string();
+    for (tenant, parent_of) in [
+        (&parent, None),
+        (&child, Some(&parent)),
+        (&grandchild, Some(&child)),
+        (&unrelated, None),
+    ] {
+        sqlx::query(
+            "INSERT INTO udb_tenant.tenants (tenant_id, code, name, type, status, parent_tenant_id) \
+             VALUES ($1::UUID, $1, 'membership hierarchy', 'ORGANIZATION', 'ACTIVE', $2::UUID)",
+        )
+        .bind(tenant)
+        .bind(parent_of)
+        .execute(&pool)
+        .await
+        .expect("insert hierarchy tenant");
+    }
+    let admin_of = |tenant: &str, extra: &[&str]| {
+        let mut scopes = vec!["udb:authn:manage-grants", "udb:authn:read-grants"];
+        scopes.extend_from_slice(extra);
+        test_claim_context("tenant-admin", tenant, "", &scopes, &[])
+    };
+    let create = |ctx: VerifiedClaimContext, target: String, scopes: Vec<String>| {
+        let authn = &authn;
+        let user_id = account.user_id.clone();
+        async move {
+            let mut request = membership_request(&target, &user_id);
+            request.get_mut().approved_scopes = scopes;
+            scope_claim_context_for_test(
+                ctx,
+                authn.create_service_account_tenant_membership(request),
+            )
+            .await
+        }
+    };
+    let read = || vec!["udb:read".to_string()];
+
+    // The parent's admin approves the service into its direct child.
+    let approved = create(admin_of(&parent, &[]), child.clone(), read())
+        .await
+        .expect("a parent-tenant admin approves a membership in its child tenant")
+        .into_inner()
+        .membership
+        .expect("membership");
+    assert_eq!(approved.status, "ACTIVE");
+    assert_eq!(approved.target_tenant_id, child);
+    assert_eq!(
+        event_tenants(
+            &pool,
+            super::super::memberships::TOPIC_MEMBERSHIP_CHANGED,
+            &approved.membership_id
+        )
+        .await
+        .len(),
+        2,
+        "the approval is audited in both the child and the home tenant"
+    );
+
+    // ...but never beyond what the service's home grant holds.
+    let inflated = create(
+        admin_of(&parent, &[]),
+        child.clone(),
+        vec!["udb:read".to_string(), "udb:write".to_string()],
+    )
+    .await
+    .expect_err("a parent-tenant approval cannot exceed the home grant");
+    assert_eq!(inflated.code(), tonic::Code::InvalidArgument);
+
+    // The parent's admin lists and revokes in its child too.
+    let listed = scope_claim_context_for_test(
+        admin_of(&parent, &[]),
+        authn.list_service_account_tenant_memberships(Request::new(
+            authn_pb::ListServiceAccountTenantMembershipsRequest {
+                target_tenant_id: child.clone(),
+                ..Default::default()
+            },
+        )),
+    )
+    .await
+    .expect("a parent-tenant admin lists its child's memberships")
+    .into_inner();
+    assert!(
+        listed
+            .memberships
+            .iter()
+            .any(|m| m.membership_id == approved.membership_id)
+    );
+
+    // Only the DIRECT parent: not a grandparent, not an unrelated tenant.
+    for (ctx, target, why) in [
+        (admin_of(&parent, &[]), grandchild.clone(), "a grandparent"),
+        (
+            admin_of(&unrelated, &[]),
+            child.clone(),
+            "an unrelated tenant",
+        ),
+        (
+            admin_of(&child, &[]),
+            parent.clone(),
+            "a child, for its parent",
+        ),
+    ] {
+        let refused = create(ctx, target, read()).await.expect_err(why);
+        assert_eq!(refused.code(), tonic::Code::PermissionDenied, "{why}");
+    }
+
+    // A platform admin approves into any tenant, held to the home grant too.
+    let platform = admin_of(&unrelated, &["udb:platform_admin"]);
+    create(platform.clone(), grandchild.clone(), read())
+        .await
+        .expect("a platform admin approves a membership in any tenant");
+    let platform_inflated = create(platform, grandchild.clone(), vec!["udb:write".to_string()])
+        .await
+        .expect_err("a platform approval cannot exceed the home grant");
+    assert_eq!(platform_inflated.code(), tonic::Code::InvalidArgument);
+
+    // A standing membership is not silently replaced...
+    let standing = create(admin_of(&child, &[]), child.clone(), read())
+        .await
+        .expect_err("a second approval without replace_active is refused");
+    assert_eq!(standing.code(), tonic::Code::FailedPrecondition);
+
+    // ...but replace_active supersedes it in one transaction. The target
+    // tenant's own admin is unchanged: it may approve any non-admin service
+    // scope, as before.
+    let replace = |ctx: VerifiedClaimContext, target: String, scopes: Vec<String>| {
+        let authn = &authn;
+        let user_id = account.user_id.clone();
+        async move {
+            let mut request = membership_request(&target, &user_id);
+            request.get_mut().approved_scopes = scopes;
+            request.get_mut().replace_active = true;
+            scope_claim_context_for_test(
+                ctx,
+                authn.create_service_account_tenant_membership(request),
+            )
+            .await
+        }
+    };
+    let replaced = replace(
+        admin_of(&child, &[]),
+        child.clone(),
+        vec!["udb:read".to_string(), "udb:write".to_string()],
+    )
+    .await
+    .expect("the target tenant's own admin is not held to the home grant")
+    .into_inner()
+    .membership
+    .expect("replacement membership");
+    assert_ne!(replaced.membership_id, approved.membership_id);
+    let previous_status: String = sqlx::query_scalar(
+        "SELECT status FROM udb_authn.service_account_tenant_memberships WHERE membership_id = $1::UUID",
+    )
+    .bind(&approved.membership_id)
+    .fetch_one(&pool)
+    .await
+    .expect("read the replaced membership");
+    assert_eq!(previous_status, "REVOKED", "the replaced membership ends");
 
     cleanup_native_auth_db(&pool).await;
 }

@@ -47,7 +47,9 @@ class TenantServiceClient extends \Grpc\BaseStub {
     }
 
     /**
-     * List tenants
+     * List tenants: the caller's own tenant and its DIRECT child tenants (every
+     * tenant for a platform admin). A service account sees the tenants under
+     * its home tenant, so a platform service can follow the tenants it serves.
      * @param \Udb\Core\Tenant\Services\V1\ListTenantsRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

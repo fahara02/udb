@@ -2969,10 +2969,12 @@ service AuthnService {
 
   // ── Cross-tenant service tokens (service-account tenant memberships) ──
   // Approve a service account that lives in another (home) tenant to act in
-  // THIS tenant. Only an admin of the target tenant may call it (the caller's
-  // tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-  // account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-  // typed grant. Scopes go through the service-scope validator; expires_at is
+  // the target tenant. The caller must administer the target tenant: an admin
+  // of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+  // admin (a home-tenant admin alone cannot). An approval from the parent
+  // tenant or a platform admin may only name scopes the service account's
+  // ACTIVE home grant holds. The account must be an ACTIVE service account of
+  // home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
   // required and at most one year away. Written with its audit event in one
   // transaction, in both tenants' audit trails.
   rpc CreateServiceAccountTenantMembership(CreateServiceAccountTenantMembershipRequest) returns (CreateServiceAccountTenantMembershipResponse) {
@@ -3033,8 +3035,8 @@ service AuthnService {
       body: "*"
     };
   }
-  // Page through the memberships approved in the caller's tenant (the
-  // target tenant), newest first.
+  // Page through the memberships approved in the target tenant, newest
+  // first. Same callers as CreateServiceAccountTenantMembership.
   rpc ListServiceAccountTenantMemberships(ListServiceAccountTenantMembershipsRequest) returns (ListServiceAccountTenantMembershipsResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
@@ -3082,7 +3084,8 @@ service AuthnService {
     };
     option (google.api.http) = {get: "/v1/auth/tenants/{target_tenant_id}/service-account-memberships"};
   }
-  // Revoke a membership of the caller's tenant. Every token already minted
+  // Revoke a membership of the target tenant (same callers as
+  // CreateServiceAccountTenantMembership). Every token already minted
   // from it stops validating immediately (fail closed, audited in both
   // tenants).
   rpc RevokeServiceAccountTenantMembership(RevokeServiceAccountTenantMembershipRequest) returns (RevokeServiceAccountTenantMembershipResponse) {
@@ -4510,7 +4513,8 @@ message CreateServiceAccountTenantMembershipRequest {
     boilerplate_recipe_tags: "authn"
     generate_minimal_example: true
   };
-  // The approving tenant; must be the caller's own tenant. Format: the
+  // The approving tenant: the caller's own tenant, a direct child of it, or
+  // any tenant for a platform admin. Format: the
   // tenant's canonical UUID (not its human code).
   string target_tenant_id = 1;
   // The service account (user id) being approved.
@@ -4527,6 +4531,11 @@ message CreateServiceAccountTenantMembershipRequest {
   string reason = 6;
   // Required; in the future and at most one year away.
   google.protobuf.Timestamp expires_at = 7;
+  // Replace an ACTIVE membership of the same service account, target tenant
+  // and project in the same transaction (its tokens stop validating at once)
+  // instead of refusing the approval. How a scope change reaches a standing
+  // membership.
+  bool replace_active = 8;
 }
 
 message CreateServiceAccountTenantMembershipResponse {
@@ -4555,7 +4564,8 @@ message ListServiceAccountTenantMembershipsRequest {
     boilerplate_recipe_tags: "authn"
     generate_minimal_example: true
   };
-  // Must be the caller's own tenant.
+  // The caller's own tenant, a direct child of it, or any tenant for a
+  // platform admin.
   string target_tenant_id = 1;
   int32 page_size = 2;
   // Opaque continuation token from a previous response.
@@ -4621,7 +4631,8 @@ message RevokeServiceAccountTenantMembershipRequest {
     boilerplate_recipe_tags: "authn"
     generate_minimal_example: true
   };
-  // Must be the caller's own tenant.
+  // The caller's own tenant, a direct child of it, or any tenant for a
+  // platform admin.
   string target_tenant_id = 1;
   string membership_id = 2;
   string reason = 3;

@@ -93,7 +93,12 @@ class _ProjectSurface:
     # ── credential ownership ──────────────────────────────────────────────
     def _owns_credential(self) -> bool:
         """Whether calls resolve their bearer here rather than carry a fixed one."""
-        return bool(self._api_key_secret)
+        return self._exchanges_bearer()
+
+    def _exchanges_bearer(self) -> bool:
+        """Whether this project renews its bearer by exchanging again: an API key,
+        or (``for_tenant``) the home bearer for a member-tenant token."""
+        return bool(self._api_key_secret or getattr(self, "_bearer_exchange", None))
 
     def _own_metadata(self, metadata: Metadata) -> Metadata:
         """``metadata`` in the form this project binds: live while it owns the credential."""
@@ -110,7 +115,7 @@ class _ProjectSurface:
         """A copy of the verified principal the broker returned for the exchanged
         API key; ``None`` when the connection does not exchange one."""
         principal = self._api_key_principal
-        if principal is None or not self._api_key_secret:
+        if principal is None or not self._exchanges_bearer():
             return None  # set_credentials or a password login superseded the key.
         copied = type(principal)()
         copied.CopyFrom(principal)
@@ -120,7 +125,7 @@ class _ProjectSurface:
         """When the current exchanged bearer expires; ``None`` when the connection
         does not exchange an API key or the bearer carries no expiry."""
         expires_at = self._api_key_expires_at
-        if expires_at <= 0 or not self._api_key_secret:
+        if expires_at <= 0 or not self._exchanges_bearer():
             return None
         return datetime.fromtimestamp(expires_at, timezone.utc)
 
@@ -131,7 +136,7 @@ class _ProjectSurface:
                 "udb: credential owner is closed", code=grpc.StatusCode.CANCELLED
             )
         error = self._api_key_last_error
-        if error is None or not self._api_key_secret:
+        if error is None or not self._exchanges_bearer():
             return None
         # A blip while the bearer is still valid leaves the next call free to renew;
         # a bearer the broker refused is not valid whatever its expiry.
@@ -149,7 +154,7 @@ class _ProjectSurface:
             return UdbCredentialError(
                 "udb: credential owner is closed", code=grpc.StatusCode.CANCELLED
             )
-        return self._api_key_last_error if self._api_key_secret else None
+        return self._api_key_last_error if self._exchanges_bearer() else None
 
     def verify(self, expect: Any = None) -> None:
         """Check the connected principal against an :class:`~udb_client.connect_env.Expect`.

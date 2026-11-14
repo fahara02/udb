@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Iterator, Protocol, Sequence, runtime_che
 import grpc
 
 from udb.core.authn.entity.v1 import enums_pb2 as authn_enums
+from udb.core.authn.services.v1 import authn_service_pb2 as authn_service
 from udb.core.authn.services.v1 import authn_service_pb2_grpc
 from udb.core.authn.services.v1 import core_pb2 as authn
 from udb.core.authz.services.v1 import authz_service_pb2_grpc
@@ -269,6 +270,31 @@ class UdbAuthClient:
             refresh_token=refresh_token, session_id=session_id
         )
         return self._call(self.authn.RefreshToken, "RefreshToken", request, metadata)
+
+    def exchange_service_token_for_tenant(
+        self,
+        target_tenant_id: str,
+        target_project_id: str = "",
+        *,
+        requested_scopes: Sequence[str] = (),
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """Exchange this connection's service bearer for a short-lived token in a
+        member tenant (``AuthnService.ExchangeServiceTokenForTenant``).
+
+        The token has no refresh token; :meth:`UdbProject.for_tenant` keeps one fresh.
+        """
+        request = authn_service.ExchangeServiceTokenForTenantRequest(
+            target_tenant_id=target_tenant_id,
+            target_project_id=target_project_id,
+            requested_scopes=list(requested_scopes),
+        )
+        return self._call(
+            self.authn.ExchangeServiceTokenForTenant,
+            "ExchangeServiceTokenForTenant",
+            request,
+            metadata,
+        )
 
     def validate_session(self, token: str, *, metadata: Metadata | None = None) -> "UserSession":
         """Check a user's bearer token, with or without the ``Bearer `` prefix.

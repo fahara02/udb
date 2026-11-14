@@ -253,7 +253,7 @@ class RevokeCertificateBindingResponse(_message.Message):
     def __init__(self, revoked: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class CreateServiceAccountTenantMembershipRequest(_message.Message):
-    __slots__ = ("target_tenant_id", "user_id", "home_tenant_id", "target_project_id", "approved_scopes", "reason", "expires_at")
+    __slots__ = ("target_tenant_id", "user_id", "home_tenant_id", "target_project_id", "approved_scopes", "reason", "expires_at", "replace_active")
     TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     HOME_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
@@ -261,6 +261,7 @@ class CreateServiceAccountTenantMembershipRequest(_message.Message):
     APPROVED_SCOPES_FIELD_NUMBER: _ClassVar[int]
     REASON_FIELD_NUMBER: _ClassVar[int]
     EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    REPLACE_ACTIVE_FIELD_NUMBER: _ClassVar[int]
     target_tenant_id: str
     user_id: str
     home_tenant_id: str
@@ -268,7 +269,8 @@ class CreateServiceAccountTenantMembershipRequest(_message.Message):
     approved_scopes: _containers.RepeatedScalarFieldContainer[str]
     reason: str
     expires_at: _timestamp_pb2.Timestamp
-    def __init__(self, target_tenant_id: _Optional[str] = ..., user_id: _Optional[str] = ..., home_tenant_id: _Optional[str] = ..., target_project_id: _Optional[str] = ..., approved_scopes: _Optional[_Iterable[str]] = ..., reason: _Optional[str] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    replace_active: bool
+    def __init__(self, target_tenant_id: _Optional[str] = ..., user_id: _Optional[str] = ..., home_tenant_id: _Optional[str] = ..., target_project_id: _Optional[str] = ..., approved_scopes: _Optional[_Iterable[str]] = ..., reason: _Optional[str] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., replace_active: bool = ...) -> None: ...
 
 class CreateServiceAccountTenantMembershipResponse(_message.Message):
     __slots__ = ("membership", "message", "error")

@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.6.16",
+    "version": "0.6.17",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -11590,7 +11590,7 @@
     },
     "/v1/auth/tenants/{targetTenantId}/service-account-memberships": {
       "get": {
-        "summary": "Page through the memberships approved in the caller's tenant (the\ntarget tenant), newest first.",
+        "summary": "Page through the memberships approved in the target tenant, newest\nfirst. Same callers as CreateServiceAccountTenantMembership.",
         "operationId": "listServiceAccountTenantMemberships",
         "responses": {
           "200": {
@@ -11706,7 +11706,7 @@
         "parameters": [
           {
             "name": "targetTenantId",
-            "description": "Must be the caller's own tenant.",
+            "description": "The caller's own tenant, a direct child of it, or any tenant for a\nplatform admin.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -11744,7 +11744,7 @@
         "x-udb-operation-kind": "read_only"
       },
       "post": {
-        "summary": "── Cross-tenant service tokens (service-account tenant memberships) ──\nApprove a service account that lives in another (home) tenant to act in\nTHIS tenant. Only an admin of the target tenant may call it (the caller's\ntenant must be target_tenant_id; a home-tenant admin alone cannot). The\naccount must be an ACTIVE service account of home_tenant_id with an ACTIVE\ntyped grant. Scopes go through the service-scope validator; expires_at is\nrequired and at most one year away. Written with its audit event in one\ntransaction, in both tenants' audit trails.",
+        "summary": "── Cross-tenant service tokens (service-account tenant memberships) ──\nApprove a service account that lives in another (home) tenant to act in\nthe target tenant. The caller must administer the target tenant: an admin\nof target_tenant_id itself, of its DIRECT parent tenant, or a platform\nadmin (a home-tenant admin alone cannot). An approval from the parent\ntenant or a platform admin may only name scopes the service account's\nACTIVE home grant holds. The account must be an ACTIVE service account of\nhome_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is\nrequired and at most one year away. Written with its audit event in one\ntransaction, in both tenants' audit trails.",
         "operationId": "createServiceAccountTenantMembership",
         "responses": {
           "200": {
@@ -11860,7 +11860,7 @@
         "parameters": [
           {
             "name": "targetTenantId",
-            "description": "The approving tenant; must be the caller's own tenant. Format: the\ntenant's canonical UUID (not its human code).",
+            "description": "The approving tenant: the caller's own tenant, a direct child of it, or\nany tenant for a platform admin. Format: the\ntenant's canonical UUID (not its human code).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -11894,7 +11894,7 @@
     },
     "/v1/auth/tenants/{targetTenantId}/service-account-memberships/{membershipId}:revoke": {
       "post": {
-        "summary": "Revoke a membership of the caller's tenant. Every token already minted\nfrom it stops validating immediately (fail closed, audited in both\ntenants).",
+        "summary": "Revoke a membership of the target tenant (same callers as\nCreateServiceAccountTenantMembership). Every token already minted\nfrom it stops validating immediately (fail closed, audited in both\ntenants).",
         "operationId": "revokeServiceAccountTenantMembership",
         "responses": {
           "200": {
@@ -12010,7 +12010,7 @@
         "parameters": [
           {
             "name": "targetTenantId",
-            "description": "Must be the caller's own tenant.",
+            "description": "The caller's own tenant, a direct child of it, or any tenant for a\nplatform admin.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -43525,7 +43525,7 @@
     },
     "/v1/tenants": {
       "get": {
-        "summary": "List tenants",
+        "summary": "List tenants: the caller's own tenant and its DIRECT child tenants (every\ntenant for a platform admin). A service account sees the tenants under\nits home tenant, so a platform service can follow the tenants it serves.",
         "operationId": "listTenants",
         "responses": {
           "200": {
@@ -52907,6 +52907,10 @@
           "type": "string",
           "format": "date-time",
           "description": "Required; in the future and at most one year away."
+        },
+        "replaceActive": {
+          "type": "boolean",
+          "description": "Replace an ACTIVE membership of the same service account, target tenant\nand project in the same transaction (its tokens stop validating at once)\ninstead of refusing the approval. How a scope change reaches a standing\nmembership."
         }
       }
     },

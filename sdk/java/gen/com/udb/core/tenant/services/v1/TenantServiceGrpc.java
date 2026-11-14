@@ -345,7 +345,9 @@ public final class TenantServiceGrpc {
 
     /**
      * <pre>
-     * List tenants
+     * List tenants: the caller's own tenant and its DIRECT child tenants (every
+     * tenant for a platform admin). A service account sees the tenants under
+     * its home tenant, so a platform service can follow the tenants it serves.
      * </pre>
      */
     default void listTenants(com.udb.core.tenant.services.v1.ListTenantsRequest request,
@@ -470,7 +472,9 @@ public final class TenantServiceGrpc {
 
     /**
      * <pre>
-     * List tenants
+     * List tenants: the caller's own tenant and its DIRECT child tenants (every
+     * tenant for a platform admin). A service account sees the tenants under
+     * its home tenant, so a platform service can follow the tenants it serves.
      * </pre>
      */
     public void listTenants(com.udb.core.tenant.services.v1.ListTenantsRequest request,
@@ -588,7 +592,9 @@ public final class TenantServiceGrpc {
 
     /**
      * <pre>
-     * List tenants
+     * List tenants: the caller's own tenant and its DIRECT child tenants (every
+     * tenant for a platform admin). A service account sees the tenants under
+     * its home tenant, so a platform service can follow the tenants it serves.
      * </pre>
      */
     public com.udb.core.tenant.services.v1.ListTenantsResponse listTenants(com.udb.core.tenant.services.v1.ListTenantsRequest request) throws io.grpc.StatusException {
@@ -700,7 +706,9 @@ public final class TenantServiceGrpc {
 
     /**
      * <pre>
-     * List tenants
+     * List tenants: the caller's own tenant and its DIRECT child tenants (every
+     * tenant for a platform admin). A service account sees the tenants under
+     * its home tenant, so a platform service can follow the tenants it serves.
      * </pre>
      */
     public com.udb.core.tenant.services.v1.ListTenantsResponse listTenants(com.udb.core.tenant.services.v1.ListTenantsRequest request) {
@@ -814,7 +822,9 @@ public final class TenantServiceGrpc {
 
     /**
      * <pre>
-     * List tenants
+     * List tenants: the caller's own tenant and its DIRECT child tenants (every
+     * tenant for a platform admin). A service account sees the tenants under
+     * its home tenant, so a platform service can follow the tenants it serves.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.core.tenant.services.v1.ListTenantsResponse> listTenants(

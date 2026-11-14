@@ -1,3 +1,3 @@
 # The native-services tour needs only the published UDB Python SDK (it ships the
 # generated udb.* stubs and grpcio).
-udb-client>=0.6.16
+udb-client>=0.6.17

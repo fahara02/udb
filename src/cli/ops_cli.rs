@@ -40,34 +40,45 @@ async fn run_ops_command_async(command: OpsCommand) -> Result<serde_json::Value,
             dsn,
             changed_by,
             allow_removal,
+            additive,
         } => {
             if file.trim().is_empty() {
                 return Err("provide -f <policies.json|yaml>".to_string());
             }
-            let tenant = if tenant.trim().is_empty() {
-                env::var("UDB_TENANT_ID").unwrap_or_default()
-            } else {
-                tenant
-            };
+            if additive && allow_removal {
+                return Err(
+                    "--additive never removes a rule; drop --allow-policy-removal, or drop \
+                     --additive to reconcile the tenant to the whole file"
+                        .to_string(),
+                );
+            }
+            let tenant = policy_target_tenant(tenant);
             let mut declared = load_policy_file(&file)?;
             for overlay in &overlays {
                 declared.extend(load_policy_file(overlay)?);
             }
             let declared = udb::runtime::service::normalize_declared_policies(&tenant, declared)?;
-            let dsn = if dsn.trim().is_empty() {
-                env::var("UDB_PG_DSN")
-                    .or_else(|_| env::var("DATABASE_URL"))
-                    .map_err(|_| {
-                        "set UDB_PG_DSN (or DATABASE_URL), or pass --dsn <postgres-dsn>".to_string()
-                    })?
-            } else {
-                dsn.trim().to_string()
-            };
+            let dsn = policy_dsn(&dsn)?;
             let changed_by = if changed_by.trim().is_empty() {
                 "udb-cli".to_string()
             } else {
                 changed_by.trim().to_string()
             };
+            if additive {
+                let report = udb::runtime::service::reconcile_authz_policies_offline_with(
+                    &dsn,
+                    &tenant,
+                    declared,
+                    udb::runtime::service::PolicyReconcileOptions {
+                        apply,
+                        additive: true,
+                    },
+                    &changed_by,
+                )
+                .await?;
+                return serde_json::to_value(&report)
+                    .map_err(|err| format!("render report failed: {err}"));
+            }
             if apply && !allow_removal {
                 let preview = udb::runtime::service::reconcile_authz_policies_offline(
                     &dsn,
@@ -81,7 +92,8 @@ async fn run_ops_command_async(command: OpsCommand) -> Result<serde_json::Value,
                     return Err(format!(
                         "this would soft-delete {} active rule(s) the file no longer declares, \
                          and nothing was changed. Check that {file} is current; `udb policy diff` \
-                         lists them. To remove them, add --allow-policy-removal",
+                         lists them. To remove them, add --allow-policy-removal; to only add the \
+                         missing rules and keep them, add --additive",
                         preview.removed.len()
                     ));
                 }
@@ -95,6 +107,34 @@ async fn run_ops_command_async(command: OpsCommand) -> Result<serde_json::Value,
             )
             .await?;
             serde_json::to_value(&report).map_err(|err| format!("render report failed: {err}"))
+        }
+        OpsCommand::PolicyExport { tenant, dsn, out } => {
+            let tenant = policy_target_tenant(tenant);
+            if tenant.trim().is_empty() {
+                return Err(
+                    "UDB_POLICY_TENANT_REQUIRED: pass --tenant <canonical tenant UUID> (or '*')"
+                        .to_string(),
+                );
+            }
+            let dsn = policy_dsn(&dsn)?;
+            let policies =
+                udb::runtime::service::export_authz_policies_offline(&dsn, &tenant).await?;
+            let count = policies.len();
+            let document = policy_file_document(tenant.trim(), policies)?;
+            if out.trim().is_empty() {
+                return Ok(document);
+            }
+            write_policy_file(out.trim(), &document)?;
+            Ok(serde_json::json!({
+                "tenant": tenant.trim(),
+                "exported": count,
+                "file": out.trim(),
+                "next": format!(
+                    "`udb policy diff -f {} --tenant {}` shows no change",
+                    out.trim(),
+                    tenant.trim()
+                ),
+            }))
         }
         OpsCommand::Identity {
             apply,
@@ -166,6 +206,52 @@ pub(super) fn load_policy_file(
             })
             .collect(),
     })
+}
+
+/// `--tenant`, else `UDB_TENANT_ID`. `*` names the platform-wide domain.
+fn policy_target_tenant(tenant: String) -> String {
+    if tenant.trim().is_empty() {
+        env::var("UDB_TENANT_ID").unwrap_or_default()
+    } else {
+        tenant
+    }
+}
+
+/// `--dsn`, else `UDB_PG_DSN`, else `DATABASE_URL`.
+fn policy_dsn(dsn: &str) -> Result<String, String> {
+    if dsn.trim().is_empty() {
+        env::var("UDB_PG_DSN")
+            .or_else(|_| env::var("DATABASE_URL"))
+            .map_err(|_| {
+                "set UDB_PG_DSN (or DATABASE_URL), or pass --dsn <postgres-dsn>".to_string()
+            })
+    } else {
+        Ok(dsn.trim().to_string())
+    }
+}
+
+/// The `{tenant, policies}` document [`load_policy_file`] reads.
+fn policy_file_document(
+    tenant: &str,
+    policies: Vec<udb::runtime::authz::AuthzPolicy>,
+) -> Result<serde_json::Value, String> {
+    let policies =
+        serde_json::to_value(policies).map_err(|err| format!("render policies failed: {err}"))?;
+    Ok(serde_json::json!({ "tenant": tenant, "policies": policies }))
+}
+
+/// Write a policy document as YAML (`.yaml`/`.yml`) or JSON (anything else),
+/// the two forms [`load_policy_file`] reads.
+fn write_policy_file(path: &str, document: &serde_json::Value) -> Result<(), String> {
+    let text = if path.ends_with(".yaml") || path.ends_with(".yml") {
+        serde_yaml::to_string(document).map_err(|err| format!("render YAML failed: {err}"))?
+    } else {
+        let mut text = serde_json::to_string_pretty(document)
+            .map_err(|err| format!("render JSON failed: {err}"))?;
+        text.push('\n');
+        text
+    };
+    fs::write(path, text).map_err(|err| format!("write {path} failed: {err}"))
 }
 
 // ── udb data seed ───────────────────────────────────────────────────────────
@@ -1081,5 +1167,84 @@ mod code_scan_tests {
         assert!(super::code_scan_principal(file, "unknown", "", "").is_err());
         assert!(super::code_scan_principal("", "billing", "", "").is_err());
         std::fs::remove_file(path).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod policy_file_tests {
+    use super::*;
+
+    fn exported() -> Vec<udb::runtime::authz::AuthzPolicy> {
+        vec![udb::runtime::authz::AuthzPolicy {
+            id: "c41d9e7a-0000-4000-8000-00000000beef".to_string(),
+            project: "meddesk".to_string(),
+            subject: "b6e0d1c2-7a3b-4c5d-9e8f-001122334455".to_string(),
+            action: "seed-persona".to_string(),
+            resource: "list:roots".to_string(),
+            purpose: "meddesk.persona".to_string(),
+            required_scopes: vec!["udb:read".to_string()],
+            ..Default::default()
+        }]
+    }
+
+    /// `udb policy export` writes the document `udb policy apply` reads: in
+    /// YAML and in JSON, the policies come back with the document's tenant.
+    #[test]
+    fn exported_policy_file_reads_back_through_the_apply_loader() {
+        for extension in ["yaml", "json"] {
+            let path = std::env::temp_dir().join(format!(
+                "udb-policy-export-{}.{extension}",
+                uuid::Uuid::new_v4()
+            ));
+            let file = path.to_str().unwrap().to_string();
+            let document = policy_file_document("t-1", exported()).unwrap();
+            write_policy_file(&file, &document).unwrap();
+            let loaded = load_policy_file(&file).unwrap();
+            std::fs::remove_file(&path).unwrap();
+            let expected: Vec<_> = exported()
+                .into_iter()
+                .map(|mut policy| {
+                    policy.tenant = "t-1".to_string();
+                    policy
+                })
+                .collect();
+            assert_eq!(loaded, expected, "{extension}");
+            assert_eq!(
+                udb::runtime::service::normalize_declared_policies("t-1", loaded)
+                    .unwrap()
+                    .len(),
+                1
+            );
+        }
+    }
+
+    #[test]
+    fn policy_export_and_additive_parse() {
+        let args: Vec<String> = ["policy", "export", "--tenant", "*", "-o", "p.yaml"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        match parse_args(&args).0 {
+            Command::Ops(OpsCommand::PolicyExport { tenant, out, .. }) => {
+                assert_eq!(tenant, udb::runtime::service::PLATFORM_POLICY_DOMAIN);
+                assert_eq!(out, "p.yaml");
+            }
+            _ => panic!("policy export"),
+        }
+        let args: Vec<String> = ["policy", "apply", "-f", "p.yaml", "--additive"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        match parse_args(&args).0 {
+            Command::Ops(OpsCommand::Policy {
+                apply,
+                additive,
+                allow_removal,
+                ..
+            }) => {
+                assert!(apply && additive && !allow_removal);
+            }
+            _ => panic!("policy apply --additive"),
+        }
     }
 }

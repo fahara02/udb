@@ -12,7 +12,8 @@ public interface CreateServiceAccountTenantMembershipRequestOrBuilder extends
 
   /**
    * <pre>
-   * The approving tenant; must be the caller's own tenant. Format: the
+   * The approving tenant: the caller's own tenant, a direct child of it, or
+   * any tenant for a platform admin. Format: the
    * tenant's canonical UUID (not its human code).
    * </pre>
    *
@@ -22,7 +23,8 @@ public interface CreateServiceAccountTenantMembershipRequestOrBuilder extends
   java.lang.String getTargetTenantId();
   /**
    * <pre>
-   * The approving tenant; must be the caller's own tenant. Format: the
+   * The approving tenant: the caller's own tenant, a direct child of it, or
+   * any tenant for a platform admin. Format: the
    * tenant's canonical UUID (not its human code).
    * </pre>
    *
@@ -179,4 +181,17 @@ public interface CreateServiceAccountTenantMembershipRequestOrBuilder extends
    * <code>.google.protobuf.Timestamp expires_at = 7 [json_name = "expiresAt"];</code>
    */
   com.google.protobuf.TimestampOrBuilder getExpiresAtOrBuilder();
+
+  /**
+   * <pre>
+   * Replace an ACTIVE membership of the same service account, target tenant
+   * and project in the same transaction (its tokens stop validating at once)
+   * instead of refusing the approval. How a scope change reaches a standing
+   * membership.
+   * </pre>
+   *
+   * <code>bool replace_active = 8 [json_name = "replaceActive"];</code>
+   * @return The replaceActive.
+   */
+  boolean getReplaceActive();
 }

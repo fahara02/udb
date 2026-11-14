@@ -733,10 +733,12 @@ type AuthnServiceClient interface {
 	RevokeCertificateBinding(ctx context.Context, in *RevokeCertificateBindingRequest, opts ...grpc.CallOption) (*RevokeCertificateBindingResponse, error)
 	// ── Cross-tenant service tokens (service-account tenant memberships) ──
 	// Approve a service account that lives in another (home) tenant to act in
-	// THIS tenant. Only an admin of the target tenant may call it (the caller's
-	// tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-	// account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-	// typed grant. Scopes go through the service-scope validator; expires_at is
+	// the target tenant. The caller must administer the target tenant: an admin
+	// of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+	// admin (a home-tenant admin alone cannot). An approval from the parent
+	// tenant or a platform admin may only name scopes the service account's
+	// ACTIVE home grant holds. The account must be an ACTIVE service account of
+	// home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
 	// required and at most one year away. Written with its audit event in one
 	// transaction, in both tenants' audit trails.
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/CreateServiceAccountTenantMembership
@@ -748,8 +750,8 @@ type AuthnServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	CreateServiceAccountTenantMembership(ctx context.Context, in *CreateServiceAccountTenantMembershipRequest, opts ...grpc.CallOption) (*CreateServiceAccountTenantMembershipResponse, error)
-	// Page through the memberships approved in the caller's tenant (the
-	// target tenant), newest first.
+	// Page through the memberships approved in the target tenant, newest
+	// first. Same callers as CreateServiceAccountTenantMembership.
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships
 	// Listener: control plane.
 	// Scopes: udb:authn:read-grants.
@@ -759,7 +761,8 @@ type AuthnServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	ListServiceAccountTenantMemberships(ctx context.Context, in *ListServiceAccountTenantMembershipsRequest, opts ...grpc.CallOption) (*ListServiceAccountTenantMembershipsResponse, error)
-	// Revoke a membership of the caller's tenant. Every token already minted
+	// Revoke a membership of the target tenant (same callers as
+	// CreateServiceAccountTenantMembership). Every token already minted
 	// from it stops validating immediately (fail closed, audited in both
 	// tenants).
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/RevokeServiceAccountTenantMembership
@@ -1960,17 +1963,20 @@ type AuthnServiceServer interface {
 	RevokeCertificateBinding(context.Context, *RevokeCertificateBindingRequest) (*RevokeCertificateBindingResponse, error)
 	// ── Cross-tenant service tokens (service-account tenant memberships) ──
 	// Approve a service account that lives in another (home) tenant to act in
-	// THIS tenant. Only an admin of the target tenant may call it (the caller's
-	// tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-	// account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-	// typed grant. Scopes go through the service-scope validator; expires_at is
+	// the target tenant. The caller must administer the target tenant: an admin
+	// of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+	// admin (a home-tenant admin alone cannot). An approval from the parent
+	// tenant or a platform admin may only name scopes the service account's
+	// ACTIVE home grant holds. The account must be an ACTIVE service account of
+	// home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
 	// required and at most one year away. Written with its audit event in one
 	// transaction, in both tenants' audit trails.
 	CreateServiceAccountTenantMembership(context.Context, *CreateServiceAccountTenantMembershipRequest) (*CreateServiceAccountTenantMembershipResponse, error)
-	// Page through the memberships approved in the caller's tenant (the
-	// target tenant), newest first.
+	// Page through the memberships approved in the target tenant, newest
+	// first. Same callers as CreateServiceAccountTenantMembership.
 	ListServiceAccountTenantMemberships(context.Context, *ListServiceAccountTenantMembershipsRequest) (*ListServiceAccountTenantMembershipsResponse, error)
-	// Revoke a membership of the caller's tenant. Every token already minted
+	// Revoke a membership of the target tenant (same callers as
+	// CreateServiceAccountTenantMembership). Every token already minted
 	// from it stops validating immediately (fail closed, audited in both
 	// tenants).
 	RevokeServiceAccountTenantMembership(context.Context, *RevokeServiceAccountTenantMembershipRequest) (*RevokeServiceAccountTenantMembershipResponse, error)

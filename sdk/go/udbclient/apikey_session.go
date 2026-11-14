@@ -23,9 +23,16 @@ import (
 // background loop re-exchanges at 4/5 of the bearer's life, retrying on failure
 // until Close.
 
-// apiKeySession is the exchanged-key state a *Udb owns.
+// apiKeySession is the exchanged-bearer state a *Udb owns: a service-account
+// key exchanged for a service bearer, or (ForTenant) the home bearer exchanged
+// for a member-tenant token. Neither kind of bearer has a refresh token, so
+// both are kept fresh by exchanging again.
 type apiKeySession struct {
-	key   string
+	key string
+	// exchange performs one exchange; nil exchanges key with AuthenticateAPIKey.
+	exchange func(ctx context.Context) (exchangedBearer, error)
+	// label names the exchange in errors ("exchange API key" by default).
+	label string
 	retry time.Duration
 	// backoff is the first wait between attempts of one exchange (default 1s);
 	// tests shorten it.
@@ -49,6 +56,13 @@ type apiKeySession struct {
 	stopOnce sync.Once
 }
 
+// exchangedBearer is one exchange's result before it is verified and installed.
+type exchangedBearer struct {
+	accessToken   string
+	expiresAtUnix int64
+	principal     *authnv1.Principal
+}
+
 type apiKeyRenewalFlight struct {
 	done      chan struct{}
 	expiresAt time.Time
@@ -68,7 +82,21 @@ func (u *Udb) startAPIKeyExchange(ctx context.Context, key string, retry time.Du
 	if retry <= 0 {
 		retry = apiKeyRetryDefault
 	}
-	s := &apiKeySession{key: key, retry: retry, stop: make(chan struct{}), wake: make(chan struct{}, 1)}
+	return u.startBearerExchange(ctx, &apiKeySession{key: key, retry: retry})
+}
+
+// startBearerExchange performs s's first exchange, installs its bearer as the
+// connection's credential, and keeps it fresh until Close. A bearer the broker
+// refuses before its expiry is exchanged again; until that succeeds a failed
+// exchange refuses calls locally instead of sending the refused bearer.
+func (u *Udb) startBearerExchange(ctx context.Context, s *apiKeySession) error {
+	if s.retry <= 0 {
+		s.retry = apiKeyRetryDefault
+	}
+	if s.label == "" {
+		s.label = "exchange API key"
+	}
+	s.stop, s.wake = make(chan struct{}), make(chan struct{}, 1)
 	u.apiKey = s
 	exp, err := u.exchangeAPIKey(ctx, s)
 	if err != nil {
@@ -82,7 +110,7 @@ func (u *Udb) startAPIKeyExchange(ctx context.Context, key string, retry time.Du
 			s.mu.Lock()
 			defer s.mu.Unlock()
 			if !time.Now().Before(s.expiresAt) {
-				return "", credentialRefusal(sessionExpired(errors.New("API key bearer is expired")))
+				return "", credentialRefusal(sessionExpired(fmt.Errorf("%s: the bearer is expired", s.label)))
 			}
 			return s.bearer, nil
 		},
@@ -199,20 +227,21 @@ func (u *Udb) performAPIKeyExchange(ctx context.Context, s *apiKeySession) (time
 		ctx, cancel = context.WithTimeout(ctx, apiKeyExchangeLimit)
 		defer cancel()
 	}
-	res, err := u.Auth.AuthenticateAPIKey(u.recoveryContext(ctx, credentialAuthenticate), s.key)
+	exchange := s.exchange
+	if exchange == nil {
+		exchange = func(ctx context.Context) (exchangedBearer, error) { return u.authenticateAPIKey(ctx, s.key) }
+	}
+	res, err := exchange(ctx)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("udb: exchange API key for a service bearer: %w", err)
+		return time.Time{}, err
 	}
-	if res.GetAccessToken() == "" || res.GetExpiresAtUnix() == 0 {
-		return time.Time{}, errors.New("udb: exchange API key: the broker returned no bearer (is the key active and bound to a service account grant?)")
-	}
-	principal := res.GetPrincipal()
+	principal := res.principal
 	if principal == nil {
-		return time.Time{}, errors.New("udb: exchange API key: the broker returned no verified principal")
+		return time.Time{}, fmt.Errorf("udb: %s: the broker returned no verified principal", s.label)
 	}
-	exp := time.Unix(res.GetExpiresAtUnix(), 0)
+	exp := time.Unix(res.expiresAtUnix, 0)
 	if !time.Now().Before(exp) {
-		return time.Time{}, errors.New("udb: exchange API key: returned bearer is expired")
+		return time.Time{}, fmt.Errorf("udb: %s: returned bearer is expired", s.label)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -228,21 +257,34 @@ func (u *Udb) performAPIKeyExchange(ctx context.Context, s *apiKeySession) (time
 		if err := principalCredentialBinding(s.principal).validate(principal); err != nil {
 			return time.Time{}, &credentialBindingError{cause: err}
 		}
-		if err := u.renewPrincipal(principal, res.GetAccessToken(), *s.identity); err != nil {
-			return time.Time{}, &credentialBindingError{cause: fmt.Errorf("udb: exchange API key: %w", err)}
+		if err := u.renewPrincipal(principal, res.accessToken, *s.identity); err != nil {
+			return time.Time{}, &credentialBindingError{cause: fmt.Errorf("udb: %s: %w", s.label, err)}
 		}
 	} else {
-		u.adoptPrincipal(principal, res.GetAccessToken())
+		u.adoptPrincipal(principal, res.accessToken)
 		identity := u.Meta
 		identity.Scopes = append([]string(nil), identity.Scopes...)
 		s.identity = &identity
 	}
 	s.expiresAt = exp
 	s.renewAt = time.Now().Add(apiKeyRefreshWait(time.Until(exp)))
-	s.bearer = "Bearer " + res.GetAccessToken()
+	s.bearer = "Bearer " + res.accessToken
 	s.refreshErr, s.rejected = nil, false
 	s.principal = proto.Clone(principal).(*authnv1.Principal)
 	return exp, nil
+}
+
+// authenticateAPIKey exchanges a service-account key for a service bearer. The
+// key travels only inside the typed request.
+func (u *Udb) authenticateAPIKey(ctx context.Context, key string) (exchangedBearer, error) {
+	res, err := u.Auth.AuthenticateAPIKey(u.recoveryContext(ctx, credentialAuthenticate), key)
+	if err != nil {
+		return exchangedBearer{}, fmt.Errorf("udb: exchange API key for a service bearer: %w", err)
+	}
+	if res.GetAccessToken() == "" || res.GetExpiresAtUnix() == 0 {
+		return exchangedBearer{}, errors.New("udb: exchange API key: the broker returned no bearer (is the key active and bound to a service account grant?)")
+	}
+	return exchangedBearer{accessToken: res.GetAccessToken(), expiresAtUnix: res.GetExpiresAtUnix(), principal: res.GetPrincipal()}, nil
 }
 
 // keepAPIKeyBearer re-exchanges at 4/5 of the bearer's life. A failed exchange

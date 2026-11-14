@@ -1634,10 +1634,12 @@ namespace Udb.Core.Authn.Services.V1 {
       /// <summary>
       /// ── Cross-tenant service tokens (service-account tenant memberships) ──
       /// Approve a service account that lives in another (home) tenant to act in
-      /// THIS tenant. Only an admin of the target tenant may call it (the caller's
-      /// tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-      /// account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-      /// typed grant. Scopes go through the service-scope validator; expires_at is
+      /// the target tenant. The caller must administer the target tenant: an admin
+      /// of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+      /// admin (a home-tenant admin alone cannot). An approval from the parent
+      /// tenant or a platform admin may only name scopes the service account's
+      /// ACTIVE home grant holds. The account must be an ACTIVE service account of
+      /// home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
       /// required and at most one year away. Written with its audit event in one
       /// transaction, in both tenants' audit trails.
       /// </summary>
@@ -1651,8 +1653,8 @@ namespace Udb.Core.Authn.Services.V1 {
       }
 
       /// <summary>
-      /// Page through the memberships approved in the caller's tenant (the
-      /// target tenant), newest first.
+      /// Page through the memberships approved in the target tenant, newest
+      /// first. Same callers as CreateServiceAccountTenantMembership.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
@@ -1664,7 +1666,8 @@ namespace Udb.Core.Authn.Services.V1 {
       }
 
       /// <summary>
-      /// Revoke a membership of the caller's tenant. Every token already minted
+      /// Revoke a membership of the target tenant (same callers as
+      /// CreateServiceAccountTenantMembership). Every token already minted
       /// from it stops validating immediately (fail closed, audited in both
       /// tenants).
       /// </summary>
@@ -4202,10 +4205,12 @@ namespace Udb.Core.Authn.Services.V1 {
       /// <summary>
       /// ── Cross-tenant service tokens (service-account tenant memberships) ──
       /// Approve a service account that lives in another (home) tenant to act in
-      /// THIS tenant. Only an admin of the target tenant may call it (the caller's
-      /// tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-      /// account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-      /// typed grant. Scopes go through the service-scope validator; expires_at is
+      /// the target tenant. The caller must administer the target tenant: an admin
+      /// of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+      /// admin (a home-tenant admin alone cannot). An approval from the parent
+      /// tenant or a platform admin may only name scopes the service account's
+      /// ACTIVE home grant holds. The account must be an ACTIVE service account of
+      /// home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
       /// required and at most one year away. Written with its audit event in one
       /// transaction, in both tenants' audit trails.
       /// </summary>
@@ -4222,10 +4227,12 @@ namespace Udb.Core.Authn.Services.V1 {
       /// <summary>
       /// ── Cross-tenant service tokens (service-account tenant memberships) ──
       /// Approve a service account that lives in another (home) tenant to act in
-      /// THIS tenant. Only an admin of the target tenant may call it (the caller's
-      /// tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-      /// account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-      /// typed grant. Scopes go through the service-scope validator; expires_at is
+      /// the target tenant. The caller must administer the target tenant: an admin
+      /// of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+      /// admin (a home-tenant admin alone cannot). An approval from the parent
+      /// tenant or a platform admin may only name scopes the service account's
+      /// ACTIVE home grant holds. The account must be an ACTIVE service account of
+      /// home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
       /// required and at most one year away. Written with its audit event in one
       /// transaction, in both tenants' audit trails.
       /// </summary>
@@ -4240,10 +4247,12 @@ namespace Udb.Core.Authn.Services.V1 {
       /// <summary>
       /// ── Cross-tenant service tokens (service-account tenant memberships) ──
       /// Approve a service account that lives in another (home) tenant to act in
-      /// THIS tenant. Only an admin of the target tenant may call it (the caller's
-      /// tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-      /// account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-      /// typed grant. Scopes go through the service-scope validator; expires_at is
+      /// the target tenant. The caller must administer the target tenant: an admin
+      /// of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+      /// admin (a home-tenant admin alone cannot). An approval from the parent
+      /// tenant or a platform admin may only name scopes the service account's
+      /// ACTIVE home grant holds. The account must be an ACTIVE service account of
+      /// home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
       /// required and at most one year away. Written with its audit event in one
       /// transaction, in both tenants' audit trails.
       /// </summary>
@@ -4260,10 +4269,12 @@ namespace Udb.Core.Authn.Services.V1 {
       /// <summary>
       /// ── Cross-tenant service tokens (service-account tenant memberships) ──
       /// Approve a service account that lives in another (home) tenant to act in
-      /// THIS tenant. Only an admin of the target tenant may call it (the caller's
-      /// tenant must be target_tenant_id; a home-tenant admin alone cannot). The
-      /// account must be an ACTIVE service account of home_tenant_id with an ACTIVE
-      /// typed grant. Scopes go through the service-scope validator; expires_at is
+      /// the target tenant. The caller must administer the target tenant: an admin
+      /// of target_tenant_id itself, of its DIRECT parent tenant, or a platform
+      /// admin (a home-tenant admin alone cannot). An approval from the parent
+      /// tenant or a platform admin may only name scopes the service account's
+      /// ACTIVE home grant holds. The account must be an ACTIVE service account of
+      /// home_tenant_id with an ACTIVE typed grant. Scopes go through the service-scope validator; expires_at is
       /// required and at most one year away. Written with its audit event in one
       /// transaction, in both tenants' audit trails.
       /// </summary>
@@ -4276,8 +4287,8 @@ namespace Udb.Core.Authn.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_CreateServiceAccountTenantMembership, null, options, request);
       }
       /// <summary>
-      /// Page through the memberships approved in the caller's tenant (the
-      /// target tenant), newest first.
+      /// Page through the memberships approved in the target tenant, newest
+      /// first. Same callers as CreateServiceAccountTenantMembership.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -4290,8 +4301,8 @@ namespace Udb.Core.Authn.Services.V1 {
         return ListServiceAccountTenantMemberships(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Page through the memberships approved in the caller's tenant (the
-      /// target tenant), newest first.
+      /// Page through the memberships approved in the target tenant, newest
+      /// first. Same callers as CreateServiceAccountTenantMembership.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -4302,8 +4313,8 @@ namespace Udb.Core.Authn.Services.V1 {
         return CallInvoker.BlockingUnaryCall(__Method_ListServiceAccountTenantMemberships, null, options, request);
       }
       /// <summary>
-      /// Page through the memberships approved in the caller's tenant (the
-      /// target tenant), newest first.
+      /// Page through the memberships approved in the target tenant, newest
+      /// first. Same callers as CreateServiceAccountTenantMembership.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -4316,8 +4327,8 @@ namespace Udb.Core.Authn.Services.V1 {
         return ListServiceAccountTenantMembershipsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Page through the memberships approved in the caller's tenant (the
-      /// target tenant), newest first.
+      /// Page through the memberships approved in the target tenant, newest
+      /// first. Same callers as CreateServiceAccountTenantMembership.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -4328,7 +4339,8 @@ namespace Udb.Core.Authn.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_ListServiceAccountTenantMemberships, null, options, request);
       }
       /// <summary>
-      /// Revoke a membership of the caller's tenant. Every token already minted
+      /// Revoke a membership of the target tenant (same callers as
+      /// CreateServiceAccountTenantMembership). Every token already minted
       /// from it stops validating immediately (fail closed, audited in both
       /// tenants).
       /// </summary>
@@ -4343,7 +4355,8 @@ namespace Udb.Core.Authn.Services.V1 {
         return RevokeServiceAccountTenantMembership(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Revoke a membership of the caller's tenant. Every token already minted
+      /// Revoke a membership of the target tenant (same callers as
+      /// CreateServiceAccountTenantMembership). Every token already minted
       /// from it stops validating immediately (fail closed, audited in both
       /// tenants).
       /// </summary>
@@ -4356,7 +4369,8 @@ namespace Udb.Core.Authn.Services.V1 {
         return CallInvoker.BlockingUnaryCall(__Method_RevokeServiceAccountTenantMembership, null, options, request);
       }
       /// <summary>
-      /// Revoke a membership of the caller's tenant. Every token already minted
+      /// Revoke a membership of the target tenant (same callers as
+      /// CreateServiceAccountTenantMembership). Every token already minted
       /// from it stops validating immediately (fail closed, audited in both
       /// tenants).
       /// </summary>
@@ -4371,7 +4385,8 @@ namespace Udb.Core.Authn.Services.V1 {
         return RevokeServiceAccountTenantMembershipAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Revoke a membership of the caller's tenant. Every token already minted
+      /// Revoke a membership of the target tenant (same callers as
+      /// CreateServiceAccountTenantMembership). Every token already minted
       /// from it stops validating immediately (fail closed, audited in both
       /// tenants).
       /// </summary>

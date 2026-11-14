@@ -50,7 +50,8 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object targetTenantId_ = "";
   /**
    * <pre>
-   * Must be the caller's own tenant.
+   * The caller's own tenant, a direct child of it, or any tenant for a
+   * platform admin.
    * </pre>
    *
    * <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -71,7 +72,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * Must be the caller's own tenant.
+   * The caller's own tenant, a direct child of it, or any tenant for a
+   * platform admin.
    * </pre>
    *
    * <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -494,7 +496,8 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object targetTenantId_ = "";
     /**
      * <pre>
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      * </pre>
      *
      * <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -514,7 +517,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      * </pre>
      *
      * <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -535,7 +539,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      * </pre>
      *
      * <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -552,7 +557,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      * </pre>
      *
      * <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -566,7 +572,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      * </pre>
      *
      * <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>

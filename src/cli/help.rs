@@ -84,11 +84,13 @@ const COMMANDS: &[CmdHelp] = &[
         name: "catalog stage",
         group: "Core",
         summary: "Stage the catalog built from your protos for a project, without activating it.",
-        usage: "udb catalog stage --project <id> [--dsn <dsn>]",
+        usage: "udb catalog stage --project <id> [--idempotency-key <key>] [--dsn <dsn>]",
         details: "  Adds an entity without rebuilding the broker: build the manifest from the
   protos, stage it, check it, then `udb catalog activate`. Prints the staged
-  catalog id as JSON on stdout. Staging the same manifest again replays the
-  earlier stage instead of adding a row.",
+  catalog id as JSON on stdout. Staging the same request again replays the
+  earlier stage instead of adding a row. Without --idempotency-key the key is
+  derived from the whole request (manifest bytes, compatibility level, reason,
+  actor), so a changed request is staged as new rather than refused.",
     },
     CmdHelp {
         name: "catalog activate",
@@ -404,6 +406,20 @@ const COMMANDS: &[CmdHelp] = &[
   --scope <s>`. `udb identity apply` does all of this from a declaration file.",
     },
     CmdHelp {
+        name: "auth login",
+        group: "Auth & policy",
+        summary: "Sign in through AuthnService.Login and save (or print) the access token.",
+        usage: "udb auth login --username <u> --password-file <path> [--tenant <t>] [--project <p>] [--out <file>] [--addr <host:port>]",
+        details: "\
+  Connects to --addr, else UDB_AUTH_TARGET (or UDB_GRPC_TARGET / UDB_GRPC_ADDR).
+  The password is never a flag: --password-file is one line in a regular file
+  that, on Unix, only its owner can read. With --out the token is written to an
+  owner-only (0600) file, replacing it whole, and a JSON summary without the
+  token is printed; without --out only the token is printed, so
+  `export UDB_AUTH_TOKEN=$(udb auth login ...)` works. An account that requires
+  a second factor is refused.",
+    },
+    CmdHelp {
         name: "auth grant",
         group: "Auth & policy",
         summary: "Manage typed service-account grants through the authenticated native API.",
@@ -423,6 +439,24 @@ const COMMANDS: &[CmdHelp] = &[
   revoke:  --tenant <tenant-id> --user <uuid> [--reason <r>]
   Wildcard/admin/owner scopes are always rejected. Replace and identity rotation
   bump the revision, invalidating dependent keys and bindings until re-issued.",
+    },
+    CmdHelp {
+        name: "auth membership",
+        group: "Auth & policy",
+        summary: "Approve a service account from another tenant to act in a tenant (or every child tenant).",
+        usage: "udb auth membership <create|list|revoke> [flags]",
+        details: "  Needs UDB_AUTH_TARGET (or UDB_GRPC_TARGET) and UDB_AUTH_TOKEN. The caller administers
+  the target tenant: an admin of it, of its DIRECT parent tenant, or a platform admin.
+  Approvals from the parent or a platform admin may only name scopes the service
+  account's ACTIVE home grant holds.
+  create:  (--target-tenant <tenant-id> | --all-children) --user <uuid>
+           --home-tenant <tenant-id> --scope <s> [--scope <s>…] --reason <r>
+           [--project <p>] [--expires-in-days <1-365, default 365>] [--replace]
+           --all-children approves into every direct child of UDB_TENANT_ID in one pass;
+           --replace supersedes a standing approval (how a grant's new scope reaches it).
+  list:    --target-tenant <tenant-id>
+  revoke:  --target-tenant <tenant-id> --membership <id> --reason <r>
+  Tokens a service exchanged under a replaced or revoked membership stop validating.",
     },
     CmdHelp {
         name: "auth cert-binding",
@@ -553,11 +587,25 @@ const COMMANDS: &[CmdHelp] = &[
         name: "policy apply",
         group: "Auth & policy",
         summary: "Reconcile a tenant's policies to a policy file (one transaction).",
-        usage: "udb policy apply -f <policies.yaml|json> --tenant <uuid> [--overlay <file>]… [--dsn <dsn>] [--by <name>] [--allow-policy-removal]",
+        usage: "udb policy apply -f <policies.yaml|json> --tenant <uuid|*> [--overlay <file>]… [--dsn <dsn>] [--by <name>] [--allow-policy-removal | --additive]",
         details: "  Adds the declared rules that are missing, for that tenant only, then appends
   an authz revision so every replica reloads. Applying the same file twice changes
   nothing. Active rules the file no longer declares stop the run with nothing changed;
-  --allow-policy-removal soft-deletes them.",
+  --allow-policy-removal soft-deletes them. --additive only adds: it never removes or
+  changes another rule and lists the rules it kept (a partial file is safe).
+  --tenant '*' reconciles the platform-wide rules (tenant '*', applied in every
+  tenant) from their own file; it needs the database DSN (platform authority).
+  UDB's seeded organization_owner rule is never removed.",
+    },
+    CmdHelp {
+        name: "policy export",
+        group: "Auth & policy",
+        summary: "Write a tenant's live policy rules as a file `udb policy apply` reads.",
+        usage: "udb policy export --tenant <uuid|*> [-o <policies.yaml|json>] [--dsn <dsn>]",
+        details: "  Reads the tenant's active rows in udb_authz.policy_rules (Postgres-direct:
+  UDB_PG_DSN / DATABASE_URL / --dsn) and prints {tenant, policies} as JSON, or
+  writes it to -o (YAML for .yaml/.yml, else JSON). `udb policy diff -f <file>
+  --tenant <uuid>` on the export shows no change.",
     },
     CmdHelp {
         name: "identity diff",
@@ -686,16 +734,25 @@ const COMMANDS: &[CmdHelp] = &[
   events apply exactly as for an application write.",
     },
     CmdHelp {
-        name: "authz check",
+        name: "authz explain",
         group: "Auth & policy",
         summary: "Ask the live policy engine whether a principal may do an action, and why not.",
-        usage: "udb authz explain <subject> <action> <resource> [--credential <SERVICE_ACCOUNT|BEARER_JWT|SESSION|API_KEY|MTLS>] [--role <code>] [--tenant <uuid>] [--purpose <p>]",
+        usage: "udb authz explain <subject> <action> <resource> [--tenant <uuid>] [--project <p>] [--purpose <p>] [--credential <SERVICE_ACCOUNT|BEARER_JWT|SESSION|API_KEY|MTLS>] [--role <code>] [--brief]",
         details: "  Calls AuthzService.CheckAccess against the running broker (UDB_AUTH_TARGET,
   with the bearer in UDB_AUTH_TOKEN) and prints the decision as JSON. A denial
   includes the broker's diagnosis: the closest rule for that action and object
   in the tenant and the attribute it fails on (purpose, project, scopes,
-  subject/role, conditions). `udb authz check --user <id> --action <a> --object <r>`
-  is the same command with flags.
+  subject/role, conditions).
+  --project (default UDB_PROJECT_ID) is the project the question is asked in: a
+  rule bound to a project never matches a question without one.
+  Who is evaluated: a cross-tenant admin token is answered for <subject>; any
+  other token is answered for its own caller (a service account holding
+  udb:authz:check-access-for may ask about a person of its tenant).
+  `evaluated_subject` names who was evaluated, and when it is not <subject>,
+  `next_step` says so instead of suggesting a grant.
+  `matched_policy_ids` lists the first 20 evaluated candidates and `… N more`
+  (`matched_policy_count` has the total); --brief prints only the decision,
+  who was evaluated, the reason and the next step.
   When <resource> names a native RPC (`ConfigService/PutFlag`, a full
   `/pkg.Service/Method` path or `native.rpc:Service/Method`), the output also
   lists its credential-type rule (endpoint_security.allowed_credential_types,
@@ -703,6 +760,50 @@ const COMMANDS: &[CmdHelp] = &[
   is admitted. `next_step` is the one thing to do: the credential rule when it
   refuses the type, else the `udb policy apply` grant (plus the
   `udb auth role bind` step when --role names the role to grant).",
+    },
+    CmdHelp {
+        name: "authz check",
+        group: "Auth & policy",
+        summary: "`udb authz explain` with flags instead of positionals.",
+        usage: "udb authz check --user <id> --action <a> --object <r> [--tenant <uuid>] [--project <p>] [--purpose <p>] [--credential <type>] [--role <code>] [--brief]",
+        details: "  Same command and output as `udb authz explain`; see `udb help authz explain`.",
+    },
+    CmdHelp {
+        name: "authz simulate",
+        group: "Auth & policy",
+        summary: "Show which decisions a candidate policy bundle would change (SimulatePolicy).",
+        usage: "udb authz simulate --bundle <bundle.json> [--draft <id>] [--tenant <uuid>] [--project <p>] [--persist] [--policy-version <id>]",
+        details: "  The bundle holds candidate policies, role_bindings, relationship_tuples and
+  simulation `cases`; the broker evaluates every case against the active
+  snapshot and the candidate and returns the allow/deny diff.",
+    },
+    CmdHelp {
+        name: "authz policy put",
+        group: "Auth & policy",
+        summary: "Write one data-plane ABAC rule through the broker (PutAuthzPolicy).",
+        usage: "udb authz policy put --tenant <uuid|*> --action <a> --resource <r> [--subject <s>] [--role <code>] [--project <p>] [--purpose <p>] [--effect ALLOW|DENY] [--priority <n>] [--scope <s>]… [--condition key=value]… [--relationship <rel>] [--id <uuid>] [--disabled]",
+        details: "  The same rule `udb policy apply` declares, one at a time, through the
+  broker's tenant checks: --tenant '*' (a rule in every tenant) needs a
+  cross-tenant admin token. Without --id the row id is derived from the rule,
+  so putting the same rule twice writes one row. Malformed values (effect,
+  priority, condition) are refused, never defaulted. Needs UDB_AUTH_TOKEN with
+  udb:authz:put-authz-policy; refused in governed mode (use the draft flow).",
+    },
+    CmdHelp {
+        name: "authz policy list",
+        group: "Auth & policy",
+        summary: "List a tenant's data-plane ABAC rules in the policy-file vocabulary.",
+        usage: "udb authz policy list --tenant <uuid|*> [--subject <s>] [--object <r>] [--all]",
+        details: "  ListPolicyRules; --all includes inactive rows. A tenant-bound token only
+  sees its own tenant's rules.",
+    },
+    CmdHelp {
+        name: "authz policy delete",
+        group: "Auth & policy",
+        summary: "Soft-delete one data-plane ABAC rule by id (DeletePolicyRule).",
+        usage: "udb authz policy delete <policy id> [--tenant <uuid>]",
+        details: "  The rule stays in the audit trail (deleted_at, is_active=false); every broker
+  drops it at its next snapshot reload. Refused in governed mode.",
     },
     CmdHelp {
         name: "proto export",
@@ -912,16 +1013,70 @@ fn print_top_level() {
     );
 }
 
+/// What `udb help <topic>` resolves to.
+#[derive(Debug, PartialEq, Eq)]
+enum HelpTopic {
+    One(&'static str),
+    /// A command word with several subcommands (`authz`, `policy`): list them
+    /// rather than pick one, so `udb authz --help` never prints `check` alone.
+    Group(Vec<&'static str>),
+    Unknown,
+}
+
+fn resolve_help_topic(topic: &str) -> HelpTopic {
+    let topic = topic.trim();
+    if let Some(cmd) = COMMANDS.iter().find(|c| c.name == topic) {
+        return HelpTopic::One(cmd.name);
+    }
+    // Longest registered command the topic starts with on a word boundary
+    // ("auth bootstrap user xyz" finds "auth bootstrap user").
+    if let Some(cmd) = COMMANDS
+        .iter()
+        .filter(|c| topic.starts_with(&format!("{} ", c.name)))
+        .max_by_key(|c| c.name.len())
+    {
+        return HelpTopic::One(cmd.name);
+    }
+    let under: Vec<&'static str> = COMMANDS
+        .iter()
+        .filter(|c| c.name.starts_with(&format!("{topic} ")))
+        .map(|c| c.name)
+        .collect();
+    match under.len() {
+        0 => {}
+        1 => return HelpTopic::One(under[0]),
+        _ => return HelpTopic::Group(under),
+    }
+    // A partial word ("authz expl"): the longest name it begins.
+    match COMMANDS
+        .iter()
+        .filter(|c| !topic.is_empty() && c.name.starts_with(topic))
+        .max_by_key(|c| c.name.len())
+    {
+        Some(cmd) => HelpTopic::One(cmd.name),
+        None => HelpTopic::Unknown,
+    }
+}
+
 fn print_command_help(topic: &str) {
     let topic = topic.trim();
-    // Exact match, else longest-prefix match (so "auth bootstrap user xyz" still
-    // finds "auth bootstrap user"), else a near-name suggestion.
-    let found = COMMANDS.iter().find(|c| c.name == topic).or_else(|| {
-        COMMANDS
-            .iter()
-            .filter(|c| topic.starts_with(c.name) || c.name.starts_with(topic))
-            .max_by_key(|c| c.name.len())
-    });
+    let found = match resolve_help_topic(topic) {
+        HelpTopic::One(name) => COMMANDS.iter().find(|c| c.name == name),
+        HelpTopic::Group(names) => {
+            println!("udb {topic} — subcommands:\n");
+            for name in &names {
+                if let Some(cmd) = COMMANDS.iter().find(|c| c.name == *name) {
+                    println!("  {:<24} {}", cmd.name, cmd.summary);
+                }
+            }
+            println!(
+                "\n`udb help <subcommand>` (e.g. `udb help {}`) shows its flags.",
+                names[0]
+            );
+            return;
+        }
+        HelpTopic::Unknown => None,
+    };
     match found {
         Some(cmd) => {
             println!("udb {} — {}\n", cmd.name, cmd.summary);
@@ -953,6 +1108,51 @@ mod tests {
                 cmd.group
             );
         }
+    }
+
+    /// `udb help authz explain` has its own entry, and `udb authz --help` lists
+    /// the authz subcommands instead of printing `check` alone.
+    #[test]
+    fn authz_and_policy_help_resolve_to_their_own_entries() {
+        assert_eq!(
+            resolve_help_topic("authz explain"),
+            HelpTopic::One("authz explain")
+        );
+        assert_eq!(
+            resolve_help_topic("authz explain b6e0 seed-persona list:roots"),
+            HelpTopic::One("authz explain")
+        );
+        assert_eq!(
+            resolve_help_topic("policy export"),
+            HelpTopic::One("policy export")
+        );
+        let HelpTopic::Group(authz) = resolve_help_topic("authz") else {
+            panic!("authz is a group");
+        };
+        for want in [
+            "authz explain",
+            "authz check",
+            "authz simulate",
+            "authz policy put",
+            "authz policy list",
+            "authz policy delete",
+        ] {
+            assert!(authz.contains(&want), "{want} missing from {authz:?}");
+        }
+        assert_eq!(
+            resolve_help_topic("authz policy"),
+            HelpTopic::Group(vec![
+                "authz policy put",
+                "authz policy list",
+                "authz policy delete"
+            ])
+        );
+        assert_eq!(
+            resolve_help_topic("authz expl"),
+            HelpTopic::One("authz explain")
+        );
+        assert_eq!(resolve_help_topic("serve"), HelpTopic::One("serve"));
+        assert_eq!(resolve_help_topic("no-such-command"), HelpTopic::Unknown);
     }
 
     #[test]

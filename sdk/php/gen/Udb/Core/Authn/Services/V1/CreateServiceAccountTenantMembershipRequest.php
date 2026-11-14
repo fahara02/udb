@@ -15,7 +15,8 @@ use Google\Protobuf\RepeatedField;
 class CreateServiceAccountTenantMembershipRequest extends \Google\Protobuf\Internal\Message
 {
     /**
-     * The approving tenant; must be the caller's own tenant. Format: the
+     * The approving tenant: the caller's own tenant, a direct child of it, or
+     * any tenant for a platform admin. Format: the
      * tenant's canonical UUID (not its human code).
      *
      * Generated from protobuf field <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -58,6 +59,15 @@ class CreateServiceAccountTenantMembershipRequest extends \Google\Protobuf\Inter
      * Generated from protobuf field <code>.google.protobuf.Timestamp expires_at = 7 [json_name = "expiresAt"];</code>
      */
     protected $expires_at = null;
+    /**
+     * Replace an ACTIVE membership of the same service account, target tenant
+     * and project in the same transaction (its tokens stop validating at once)
+     * instead of refusing the approval. How a scope change reaches a standing
+     * membership.
+     *
+     * Generated from protobuf field <code>bool replace_active = 8 [json_name = "replaceActive"];</code>
+     */
+    protected $replace_active = false;
 
     /**
      * Constructor.
@@ -66,7 +76,8 @@ class CreateServiceAccountTenantMembershipRequest extends \Google\Protobuf\Inter
      *     Optional. Data for populating the Message object.
      *
      *     @type string $target_tenant_id
-     *           The approving tenant; must be the caller's own tenant. Format: the
+     *           The approving tenant: the caller's own tenant, a direct child of it, or
+     *           any tenant for a platform admin. Format: the
      *           tenant's canonical UUID (not its human code).
      *     @type string $user_id
      *           The service account (user id) being approved.
@@ -82,6 +93,11 @@ class CreateServiceAccountTenantMembershipRequest extends \Google\Protobuf\Inter
      *     @type string $reason
      *     @type \Google\Protobuf\Timestamp $expires_at
      *           Required; in the future and at most one year away.
+     *     @type bool $replace_active
+     *           Replace an ACTIVE membership of the same service account, target tenant
+     *           and project in the same transaction (its tokens stop validating at once)
+     *           instead of refusing the approval. How a scope change reaches a standing
+     *           membership.
      * }
      */
     public function __construct($data = NULL) {
@@ -90,7 +106,8 @@ class CreateServiceAccountTenantMembershipRequest extends \Google\Protobuf\Inter
     }
 
     /**
-     * The approving tenant; must be the caller's own tenant. Format: the
+     * The approving tenant: the caller's own tenant, a direct child of it, or
+     * any tenant for a platform admin. Format: the
      * tenant's canonical UUID (not its human code).
      *
      * Generated from protobuf field <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -102,7 +119,8 @@ class CreateServiceAccountTenantMembershipRequest extends \Google\Protobuf\Inter
     }
 
     /**
-     * The approving tenant; must be the caller's own tenant. Format: the
+     * The approving tenant: the caller's own tenant, a direct child of it, or
+     * any tenant for a platform admin. Format: the
      * tenant's canonical UUID (not its human code).
      *
      * Generated from protobuf field <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -281,6 +299,38 @@ class CreateServiceAccountTenantMembershipRequest extends \Google\Protobuf\Inter
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * Replace an ACTIVE membership of the same service account, target tenant
+     * and project in the same transaction (its tokens stop validating at once)
+     * instead of refusing the approval. How a scope change reaches a standing
+     * membership.
+     *
+     * Generated from protobuf field <code>bool replace_active = 8 [json_name = "replaceActive"];</code>
+     * @return bool
+     */
+    public function getReplaceActive()
+    {
+        return $this->replace_active;
+    }
+
+    /**
+     * Replace an ACTIVE membership of the same service account, target tenant
+     * and project in the same transaction (its tokens stop validating at once)
+     * instead of refusing the approval. How a scope change reaches a standing
+     * membership.
+     *
+     * Generated from protobuf field <code>bool replace_active = 8 [json_name = "replaceActive"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setReplaceActive($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->replace_active = $var;
 
         return $this;
     }

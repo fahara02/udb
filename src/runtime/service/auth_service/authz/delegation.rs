@@ -10,9 +10,12 @@
 //!   the scope is refused;
 //! - the caller carries `udb:authz:check-access-for` LITERALLY — broad admin
 //!   scopes and `udb:*` do not imply it;
-//! - the subject is an ACTIVE `PERSON` in the caller's own claim tenant; a
-//!   missing subject, a subject in another tenant and a non-person all get the
-//!   SAME refusal, so the call cannot probe which ids exist elsewhere;
+//! - the subject acts in the caller's own claim tenant: an ACTIVE `PERSON` of
+//!   that tenant, an ACTIVE service account of that tenant, or an ACTIVE
+//!   service account with a live membership into it (a platform service acting
+//!   in the tenant through an approved membership). A missing subject and a
+//!   subject that does not act in the tenant get the SAME refusal, so the call
+//!   cannot probe which ids exist elsewhere;
 //! - the decision is evaluated in the token's tenant and project only.
 //!
 //! The evaluated principal is built fresh from the subject id: no caller
@@ -139,9 +142,11 @@ pub(super) fn delegated_principal(subject: &str, ctx: &VerifiedClaimContext) -> 
     }
 }
 
-/// Is `subject` an ACTIVE `PERSON` whose tenant is exactly `claim_tenant`?
-/// `Err` is reserved for a store failure (the caller fails closed on it).
-async fn person_is_active_in_tenant(
+/// Does `subject` act in `claim_tenant`: an ACTIVE `PERSON` or service account
+/// of that tenant, or an ACTIVE service account with a live (ACTIVE,
+/// unexpired) membership into it? `Err` is reserved for a store failure (the
+/// caller fails closed on it).
+async fn subject_acts_in_tenant(
     pool: &sqlx::PgPool,
     subject: Uuid,
     claim_tenant: &str,
@@ -156,15 +161,29 @@ async fn person_is_active_in_tenant(
             "deleted_at",
         ],
     );
+    let mm = native_model(
+        crate::runtime::service::auth_service::memberships::MEMBERSHIP_MSG,
+        &["user_id", "target_tenant_id", "status", "expires_at"],
+    );
     let sql = format!(
-        "SELECT 1 FROM {rel} WHERE {uid} = $1 AND {tenant} = $2 \
-           AND {kind} = 'PERSON' AND {status} = 'ACTIVE' AND {deleted} IS NULL",
+        "SELECT 1 FROM {rel} u WHERE u.{uid} = $1 \
+           AND u.{status} = 'ACTIVE' AND u.{deleted} IS NULL \
+           AND ((u.{tenant} = $2 AND u.{kind} IN ('PERSON', 'SERVICE_ACCOUNT')) \
+             OR (u.{kind} = 'SERVICE_ACCOUNT' AND EXISTS ( \
+                   SELECT 1 FROM {mrel} m WHERE m.{muid} = u.{uid} \
+                     AND m.{mtarget} = $2 AND m.{mstatus} = 'ACTIVE' \
+                     AND m.{mexpires} > now())))",
         rel = um.relation,
         uid = um.q("user_id"),
         tenant = um.q("tenant_id"),
         kind = um.q("account_kind"),
         status = um.q("status"),
         deleted = um.q("deleted_at"),
+        mrel = mm.relation,
+        muid = mm.q("user_id"),
+        mtarget = mm.q("target_tenant_id"),
+        mstatus = mm.q("status"),
+        mexpires = mm.q("expires_at"),
     );
     let row = sqlx::query(&sql)
         .bind(subject)
@@ -189,6 +208,8 @@ pub(super) struct TestDelegatedUser {
     pub(super) tenant_id: &'static str,
     pub(super) account_kind: &'static str,
     pub(super) status: &'static str,
+    /// Tenants a service account holds a live membership into.
+    pub(super) member_of: &'static [&'static str],
 }
 
 #[cfg(test)]
@@ -217,9 +238,11 @@ impl AuthzServiceImpl {
         if let Ok(found) = TEST_DELEGATED_USERS.try_with(|users| {
             users.iter().any(|user| {
                 Uuid::parse_str(user.user_id).ok() == Some(subject)
-                    && user.tenant_id == claim_tenant
-                    && user.account_kind == "PERSON"
                     && user.status == "ACTIVE"
+                    && ((user.tenant_id == claim_tenant
+                        && matches!(user.account_kind, "PERSON" | "SERVICE_ACCOUNT"))
+                        || (user.account_kind == "SERVICE_ACCOUNT"
+                            && user.member_of.contains(&claim_tenant)))
             })
         }) {
             return if found {
@@ -235,7 +258,7 @@ impl AuthzServiceImpl {
                 "checking access for another user requires the Postgres-backed user store",
             )
         })?;
-        match person_is_active_in_tenant(pool, subject, claim_tenant).await {
+        match subject_acts_in_tenant(pool, subject, claim_tenant).await {
             Ok(true) => Ok(()),
             Ok(false) => Err(delegated_subject_not_in_tenant_status()),
             // The store refusal keeps its classified status (never a subject
@@ -325,6 +348,8 @@ mod tests {
     const OTHER_TENANT_PATIENT: &str = "5b0c4e3e-0d1a-4f43-9c43-6f7d1d5a0003";
     const SERVICE_USER: &str = "5b0c4e3e-0d1a-4f43-9c43-6f7d1d5a0004";
     const UNKNOWN: &str = "5b0c4e3e-0d1a-4f43-9c43-6f7d1d5a0005";
+    const MEMBER_SERVICE: &str = "5b0c4e3e-0d1a-4f43-9c43-6f7d1d5a0006";
+    const OTHER_TENANT_SERVICE: &str = "5b0c4e3e-0d1a-4f43-9c43-6f7d1d5a0007";
 
     fn directory() -> Vec<TestDelegatedUser> {
         vec![
@@ -333,18 +358,35 @@ mod tests {
                 tenant_id: "tenant-a",
                 account_kind: "PERSON",
                 status: "ACTIVE",
+                member_of: &[],
             },
             TestDelegatedUser {
                 user_id: OTHER_TENANT_PATIENT,
                 tenant_id: "tenant-b",
                 account_kind: "PERSON",
                 status: "ACTIVE",
+                member_of: &[],
             },
             TestDelegatedUser {
                 user_id: SERVICE_USER,
                 tenant_id: "tenant-a",
                 account_kind: "SERVICE_ACCOUNT",
                 status: "ACTIVE",
+                member_of: &[],
+            },
+            TestDelegatedUser {
+                user_id: MEMBER_SERVICE,
+                tenant_id: "platform",
+                account_kind: "SERVICE_ACCOUNT",
+                status: "ACTIVE",
+                member_of: &["tenant-a"],
+            },
+            TestDelegatedUser {
+                user_id: OTHER_TENANT_SERVICE,
+                tenant_id: "tenant-b",
+                account_kind: "SERVICE_ACCOUNT",
+                status: "ACTIVE",
+                member_of: &[],
             },
         ]
     }
@@ -565,10 +607,10 @@ mod tests {
     async fn missing_cross_tenant_and_non_person_subjects_get_one_identical_refusal() {
         let ctx = service_ctx(&["udb:authz:check-access", CHECK_ACCESS_FOR_SCOPE]);
         let mut refusals = Vec::new();
-        for subject in [OTHER_TENANT_PATIENT, UNKNOWN, SERVICE_USER] {
+        for subject in [OTHER_TENANT_PATIENT, UNKNOWN, OTHER_TENANT_SERVICE] {
             let err = check_as(ctx.clone(), subject, "read")
                 .await
-                .expect_err("a subject that is not a person of the caller's tenant is refused");
+                .expect_err("a subject that does not act in the caller's tenant is refused");
             assert_eq!(err.code(), Code::PermissionDenied, "{subject}");
             assert_eq!(policy_decision_id(&err), "delegated_subject_not_in_tenant");
             refusals.push(err.message().to_string());
@@ -578,6 +620,19 @@ mod tests {
             "the refusal must not reveal which case applied: {refusals:?}"
         );
         assert!(!refusals[0].contains(OTHER_TENANT_PATIENT));
+    }
+
+    /// A service account acts in a tenant when it lives there or holds a live
+    /// membership into it: a delegated decision evaluates it like a person.
+    #[tokio::test]
+    async fn service_accounts_acting_in_the_tenant_are_delegated_subjects() {
+        let ctx = service_ctx(&["udb:authz:check-access", CHECK_ACCESS_FOR_SCOPE]);
+        for subject in [SERVICE_USER, MEMBER_SERVICE] {
+            let response = check_as(ctx.clone(), subject, "read")
+                .await
+                .expect("a service account acting in the tenant is a delegated subject");
+            assert_eq!(response.evaluated_subject, subject);
+        }
     }
 
     #[tokio::test]

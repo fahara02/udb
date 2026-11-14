@@ -56,7 +56,8 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object targetTenantId_ = "";
   /**
    * <pre>
-   * The approving tenant; must be the caller's own tenant. Format: the
+   * The approving tenant: the caller's own tenant, a direct child of it, or
+   * any tenant for a platform admin. Format: the
    * tenant's canonical UUID (not its human code).
    * </pre>
    *
@@ -78,7 +79,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * The approving tenant; must be the caller's own tenant. Format: the
+   * The approving tenant: the caller's own tenant, a direct child of it, or
+   * any tenant for a platform admin. Format: the
    * tenant's canonical UUID (not its human code).
    * </pre>
    *
@@ -379,6 +381,24 @@ private static final long serialVersionUID = 0L;
     return expiresAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : expiresAt_;
   }
 
+  public static final int REPLACE_ACTIVE_FIELD_NUMBER = 8;
+  private boolean replaceActive_ = false;
+  /**
+   * <pre>
+   * Replace an ACTIVE membership of the same service account, target tenant
+   * and project in the same transaction (its tokens stop validating at once)
+   * instead of refusing the approval. How a scope change reaches a standing
+   * membership.
+   * </pre>
+   *
+   * <code>bool replace_active = 8 [json_name = "replaceActive"];</code>
+   * @return The replaceActive.
+   */
+  @java.lang.Override
+  public boolean getReplaceActive() {
+    return replaceActive_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -413,6 +433,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(7, getExpiresAt());
+    }
+    if (replaceActive_ != false) {
+      output.writeBool(8, replaceActive_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -450,6 +473,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(7, getExpiresAt());
     }
+    if (replaceActive_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(8, replaceActive_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -482,6 +509,8 @@ private static final long serialVersionUID = 0L;
       if (!getExpiresAt()
           .equals(other.getExpiresAt())) return false;
     }
+    if (getReplaceActive()
+        != other.getReplaceActive()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -511,6 +540,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + EXPIRES_AT_FIELD_NUMBER;
       hash = (53 * hash) + getExpiresAt().hashCode();
     }
+    hash = (37 * hash) + REPLACE_ACTIVE_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getReplaceActive());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -660,6 +692,7 @@ private static final long serialVersionUID = 0L;
         expiresAtBuilder_.dispose();
         expiresAtBuilder_ = null;
       }
+      replaceActive_ = false;
       return this;
     }
 
@@ -719,6 +752,9 @@ private static final long serialVersionUID = 0L;
             : expiresAtBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.replaceActive_ = replaceActive_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -771,6 +807,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasExpiresAt()) {
         mergeExpiresAt(other.getExpiresAt());
+      }
+      if (other.getReplaceActive() != false) {
+        setReplaceActive(other.getReplaceActive());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -836,6 +875,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 58
+            case 64: {
+              replaceActive_ = input.readBool();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 64
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -856,7 +900,8 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object targetTenantId_ = "";
     /**
      * <pre>
-     * The approving tenant; must be the caller's own tenant. Format: the
+     * The approving tenant: the caller's own tenant, a direct child of it, or
+     * any tenant for a platform admin. Format: the
      * tenant's canonical UUID (not its human code).
      * </pre>
      *
@@ -877,7 +922,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * The approving tenant; must be the caller's own tenant. Format: the
+     * The approving tenant: the caller's own tenant, a direct child of it, or
+     * any tenant for a platform admin. Format: the
      * tenant's canonical UUID (not its human code).
      * </pre>
      *
@@ -899,7 +945,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * The approving tenant; must be the caller's own tenant. Format: the
+     * The approving tenant: the caller's own tenant, a direct child of it, or
+     * any tenant for a platform admin. Format: the
      * tenant's canonical UUID (not its human code).
      * </pre>
      *
@@ -917,7 +964,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * The approving tenant; must be the caller's own tenant. Format: the
+     * The approving tenant: the caller's own tenant, a direct child of it, or
+     * any tenant for a platform admin. Format: the
      * tenant's canonical UUID (not its human code).
      * </pre>
      *
@@ -932,7 +980,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * The approving tenant; must be the caller's own tenant. Format: the
+     * The approving tenant: the caller's own tenant, a direct child of it, or
+     * any tenant for a platform admin. Format: the
      * tenant's canonical UUID (not its human code).
      * </pre>
      *
@@ -1619,6 +1668,59 @@ private static final long serialVersionUID = 0L;
         expiresAt_ = null;
       }
       return expiresAtBuilder_;
+    }
+
+    private boolean replaceActive_ ;
+    /**
+     * <pre>
+     * Replace an ACTIVE membership of the same service account, target tenant
+     * and project in the same transaction (its tokens stop validating at once)
+     * instead of refusing the approval. How a scope change reaches a standing
+     * membership.
+     * </pre>
+     *
+     * <code>bool replace_active = 8 [json_name = "replaceActive"];</code>
+     * @return The replaceActive.
+     */
+    @java.lang.Override
+    public boolean getReplaceActive() {
+      return replaceActive_;
+    }
+    /**
+     * <pre>
+     * Replace an ACTIVE membership of the same service account, target tenant
+     * and project in the same transaction (its tokens stop validating at once)
+     * instead of refusing the approval. How a scope change reaches a standing
+     * membership.
+     * </pre>
+     *
+     * <code>bool replace_active = 8 [json_name = "replaceActive"];</code>
+     * @param value The replaceActive to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReplaceActive(boolean value) {
+
+      replaceActive_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Replace an ACTIVE membership of the same service account, target tenant
+     * and project in the same transaction (its tokens stop validating at once)
+     * instead of refusing the approval. How a scope change reaches a standing
+     * membership.
+     * </pre>
+     *
+     * <code>bool replace_active = 8 [json_name = "replaceActive"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReplaceActive() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      replaceActive_ = false;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest)

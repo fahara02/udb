@@ -780,12 +780,19 @@ fn reserved_word_is_expression_syntax(
         None => false,
     };
     match word {
-        "and" | "or" | "not" | "in" | "is" | "isnull" | "notnull" | "like" | "ilike"
-        | "similar" | "overlaps" | "null" | "true" | "false" | "case" | "collate" | "symmetric"
-        | "asymmetric" | "current_catalog" | "current_date" | "current_role" | "current_schema"
-        | "current_time" | "current_timestamp" | "current_user" | "localtime"
-        | "localtimestamp" | "session_user" | "system_user" => true,
-        "when" | "then" | "else" | "end" => has_case,
+        "not" | "null" | "true" | "false" | "case" | "current_catalog" | "current_date"
+        | "current_role" | "current_schema" | "current_time" | "current_timestamp"
+        | "current_user" | "localtime" | "localtimestamp" | "session_user" | "system_user" => true,
+        // Binary and postfix operators need a left operand: `and = 1` or
+        // `is > 0` uses the word as a column.
+        "and" | "or" | "is" | "isnull" | "notnull" | "overlaps" | "collate" => follows_operand,
+        // `x [NOT] IN (...)`, `x [NOT] LIKE 'p'`.
+        "in" => next_is_open_paren && (follows_operand || previous_word == "not"),
+        "like" | "ilike" | "similar" => follows_operand || previous_word == "not",
+        "symmetric" | "asymmetric" => previous_word == "between",
+        "when" | "then" | "else" => has_case,
+        // `END` closes a CASE after its last operand; `CASE WHEN end > 0` is a column.
+        "end" => has_case && follows_operand,
         // `any (...)`, `array[...]`, `cast (...)`, `left (...)`: only as a call.
         "any" | "some" | "all" | "cast" | "left" | "right" | "full" | "inner" | "outer"
         | "cross" | "natural" | "join" | "binary" | "authorization" | "collation"
@@ -2145,6 +2152,11 @@ mod tests {
             "note <> 'select from to where'",
             "note <> 'it''s to'",
             "num_nonnulls(a, b) <= 1",
+            "name NOT LIKE 'x%' AND code NOT IN ('a') AND tag NOT ILIKE 'y'",
+            "x BETWEEN SYMMETRIC 1 AND 5",
+            "a ISNULL OR b NOTNULL",
+            "(a, b) OVERLAPS (c, d)",
+            "CASE WHEN a THEN 'x' ELSE (b) END = 'x'",
         ] {
             assert_eq!(
                 unquoted_reserved_words(expression),
@@ -2168,6 +2180,11 @@ mod tests {
             ("end > start_at", "end"),
             ("all = 1", "all"),
             ("default = 'x'", "default"),
+            ("in > 0", "in"),
+            ("is = 1", "is"),
+            ("a = 1 AND like = 'x'", "like"),
+            ("a = 1 OR and = 2", "and"),
+            ("CASE WHEN end > 0 THEN 1 ELSE 0 END = 1", "end"),
         ] {
             assert_eq!(
                 unquoted_reserved_words(expression),

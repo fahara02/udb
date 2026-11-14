@@ -172,7 +172,9 @@ service TenantService {
     option (google.api.http) = {get: "/v1/tenants/{tenant_id}"};
   }
 
-  // List tenants
+  // List tenants: the caller's own tenant and its DIRECT child tenants (every
+  // tenant for a platform admin). A service account sees the tenants under
+  // its home tenant, so a platform service can follow the tenants it serves.
   rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
@@ -180,6 +182,7 @@ service TenantService {
       scopes: "udb:tenant:list-tenants"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "tenant.ListTenants"
       request_context_required: true
       tenant_required: true

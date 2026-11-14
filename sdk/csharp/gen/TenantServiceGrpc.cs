@@ -177,7 +177,9 @@ namespace Udb.Core.Tenant.Services.V1 {
       }
 
       /// <summary>
-      /// List tenants
+      /// List tenants: the caller's own tenant and its DIRECT child tenants (every
+      /// tenant for a platform admin). A service account sees the tenants under
+      /// its home tenant, so a platform service can follow the tenants it serves.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
@@ -389,7 +391,9 @@ namespace Udb.Core.Tenant.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_GetTenant, null, options, request);
       }
       /// <summary>
-      /// List tenants
+      /// List tenants: the caller's own tenant and its DIRECT child tenants (every
+      /// tenant for a platform admin). A service account sees the tenants under
+      /// its home tenant, so a platform service can follow the tenants it serves.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -402,7 +406,9 @@ namespace Udb.Core.Tenant.Services.V1 {
         return ListTenants(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// List tenants
+      /// List tenants: the caller's own tenant and its DIRECT child tenants (every
+      /// tenant for a platform admin). A service account sees the tenants under
+      /// its home tenant, so a platform service can follow the tenants it serves.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -413,7 +419,9 @@ namespace Udb.Core.Tenant.Services.V1 {
         return CallInvoker.BlockingUnaryCall(__Method_ListTenants, null, options, request);
       }
       /// <summary>
-      /// List tenants
+      /// List tenants: the caller's own tenant and its DIRECT child tenants (every
+      /// tenant for a platform admin). A service account sees the tenants under
+      /// its home tenant, so a platform service can follow the tenants it serves.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -426,7 +434,9 @@ namespace Udb.Core.Tenant.Services.V1 {
         return ListTenantsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// List tenants
+      /// List tenants: the caller's own tenant and its DIRECT child tenants (every
+      /// tenant for a platform admin). A service account sees the tenants under
+      /// its home tenant, so a platform service can follow the tenants it serves.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>

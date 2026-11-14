@@ -35,6 +35,7 @@ sync clients (documented on the class).
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
 import urllib.request
@@ -52,6 +53,7 @@ from ._reconnect import (
 )
 from ._credentials import (
     RenewalFlight,
+    UdbCredentialBindingError,
     UdbCredentialError,
     check_renewed_principal,
     credential_refusal,
@@ -75,6 +77,8 @@ _API_KEY_LIFETIME_FRACTION = 0.8  # ...or at 80% of the lifetime, if earlier
 _API_KEY_MIN_DELAY_S = 1.0  # floor between attempts (never busy-loop)
 _API_KEY_MAX_BACKOFF_S = 60.0  # cap of the exponential failure backoff
 _API_KEY_IDLE_S = 300.0  # cadence when the bearer carries no expiry
+# A canonical tenant id: a lowercase hyphenated UUID.
+_CANONICAL_TENANT_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 # Native control-plane stubs + request messages. Imported defensively so a
 # checkout missing a particular generated service simply omits that sub-client
@@ -1528,6 +1532,11 @@ class UdbProject(_ProjectSurface):
         self._api_key_principal: Any = None
         self._api_key_pinned: Any = None
         self._api_key_flight: RenewalFlight | None = None
+        # ``for_tenant``: one member-tenant token exchange (given the exchange
+        # metadata, returns an AuthnResponse-shaped reply), used in place of the
+        # API-key exchange; ``_exchange_label`` names it in errors.
+        self._bearer_exchange: Callable[[Metadata], Any] | None = None
+        self._exchange_label = "exchange API key"
 
         # Data plane (broker) channel.
         self._data_channel = _make_channel(
@@ -1673,6 +1682,7 @@ class UdbProject(_ProjectSurface):
         dropped so the renewal thread cannot overwrite them.
         """
         self._api_key_secret = ""
+        self._bearer_exchange = None
         self.config.bearer_token = bearer_token
         self.config.api_key = api_key
         self.bind_metadata(
@@ -1741,7 +1751,11 @@ class UdbProject(_ProjectSurface):
         # Authenticate is a public bootstrap RPC: never present a (possibly
         # expired) bearer alongside the key in the body.
         exchange_meta = without_credentials(metadata or self._metadata)
-        authn = self.auth.authenticate_api_key(key, metadata=exchange_meta)
+        exchange = self._bearer_exchange
+        if exchange is not None:
+            authn = exchange(exchange_meta)
+        else:
+            authn = self.auth.authenticate_api_key(key, metadata=exchange_meta)
         token = getattr(authn, "access_token", "")
         if not token:
             # An API key is only ever exchanged for a bearer; there is no raw-key
@@ -1750,6 +1764,8 @@ class UdbProject(_ProjectSurface):
                 self._api_key_secret = ""
                 self._api_key_issued_at = 0.0
                 self._api_key_expires_at = 0.0
+            if exchange is not None:
+                raise UdbConfigurationError(f"udb: {self._exchange_label}: the broker returned no token")
             raise UdbConfigurationError(
                 "the broker returned no access token for the API key; configure a "
                 "JWT signing key on the broker (API keys are exchanged for a bearer, "
@@ -1759,13 +1775,13 @@ class UdbProject(_ProjectSurface):
         now = time.time()
         if expires_at <= 0:
             raise UdbConfigurationError(
-                "udb: exchange API key: the broker returned no bearer expiry "
+                f"udb: {self._exchange_label}: the broker returned no bearer expiry "
                 "(is the key active and bound to a service account grant?)"
             )
         if not authn.HasField("principal"):
-            raise UdbConfigurationError("udb: exchange API key: the broker returned no verified principal")
+            raise UdbConfigurationError(f"udb: {self._exchange_label}: the broker returned no verified principal")
         if now >= expires_at:
-            raise UdbConfigurationError("udb: exchange API key: returned bearer is expired")
+            raise UdbConfigurationError(f"udb: {self._exchange_label}: returned bearer is expired")
         if self._api_key_stop.is_set():
             raise UdbCredentialError("udb: credential owner is closed", code=grpc.StatusCode.CANCELLED)
         principal = authn.principal
@@ -1795,7 +1811,7 @@ class UdbProject(_ProjectSurface):
         """
         with self._api_key_lock:
             key = self._api_key_secret
-            if not key:
+            if not key and self._bearer_exchange is None:
                 return
             running = self._api_key_flight
             if (
@@ -1838,7 +1854,7 @@ class UdbProject(_ProjectSurface):
         except Exception as exc:  # noqa: BLE001 - a failed renewal refuses the call
             raise credential_refusal(exc) from exc
         if self._api_key_expires_at <= time.time():
-            raise UdbCredentialError("udb: credential renewal failed: API key bearer is expired")
+            raise UdbCredentialError(f"udb: credential renewal failed: {self._exchange_label}: the bearer is expired")
         return f"Bearer {self.config.bearer_token}"
 
     def _drop_expired_api_key_bearer(self) -> None:
@@ -1855,7 +1871,7 @@ class UdbProject(_ProjectSurface):
     # ── a bearer the broker refused ───────────────────────────────────────
     def _owned_bearer(self) -> str:
         """The ``Bearer <token>`` this project owns and attaches now; "" when none."""
-        if not self._api_key_secret or not self.config.bearer_token:
+        if not self._exchanges_bearer() or not self.config.bearer_token:
             return ""
         return f"Bearer {self.config.bearer_token}"
 
@@ -1934,7 +1950,7 @@ class UdbProject(_ProjectSurface):
             self._api_key_wake.clear()
             if self._api_key_stop.is_set():
                 return
-            if not self._api_key_secret or self._api_key_expires_at <= 0:
+            if not self._exchanges_bearer() or self._api_key_expires_at <= 0:
                 return
             self._api_key_renewal_tick()
 
@@ -1953,6 +1969,81 @@ class UdbProject(_ProjectSurface):
     def api_key_renewal_error(self) -> BaseException | None:
         """The most recent API-key re-exchange failure, or ``None``."""
         return self._api_key_last_error
+
+    # ── member tenants ────────────────────────────────────────────────────
+    def for_tenant(self, tenant_id: str, project_id: str = "") -> "UdbProject":
+        """A project that acts in the MEMBER tenant ``tenant_id`` (and ``project_id``;
+        empty lets the membership choose) with a token exchanged from this project's
+        bearer through ``AuthnService.ExchangeServiceTokenForTenant``.
+
+        For a service connected to its home tenant that holds an approved membership
+        in another. The exchanged token is short-lived and has no refresh token, so the
+        member project exchanges again at ~80% of its life, and at once when the broker
+        refuses it early; while that re-exchange is failing its calls are refused
+        locally (:class:`UdbCredentialError`) and the renewal thread retries with
+        backoff. A token for any other tenant or project than the one asked for is
+        refused, never adopted. The member project opens its own channels to the same
+        targets; close it before (or with) this project, whose bearer every
+        re-exchange uses. ``tenant_id`` must be the tenant's canonical lowercase UUID.
+        """
+        tenant = (tenant_id or "").strip()
+        project = (project_id or "").strip()
+        if not _CANONICAL_TENANT_UUID.fullmatch(tenant):
+            raise UdbConfigurationError(
+                f"udb: for_tenant: tenant {tenant_id!r} is not a canonical (lowercase hyphenated) UUID"
+            )
+        if self._api_key_stop.is_set():
+            raise UdbCredentialError("udb: credential owner is closed", code=grpc.StatusCode.CANCELLED)
+        # The member identity comes from the exchanged token's verified principal.
+        config = replace(
+            self.config,
+            tenant_id=tenant,
+            project_id=project,
+            user_id="",
+            scopes=(),
+            bearer_token="",
+            api_key="",
+        )
+        member = UdbProject(config)
+        member._exchange_label = f"exchange the service token for tenant {tenant}"
+        member._bearer_exchange = lambda meta: self._exchange_for_tenant(member, tenant, project, meta)
+        flight = member._join_api_key_flight()
+        try:
+            member._exchange_api_key("", None, adopting=True)
+        except BaseException as exc:
+            flight.error = exc
+            member._finish_api_key_flight(flight)
+            member.close()
+            raise
+        member._finish_api_key_flight(flight)
+        member._start_api_key_renewal()
+        return member
+
+    def _exchange_for_tenant(self, member: "UdbProject", tenant: str, project: str, meta: Metadata) -> Any:
+        """One member-tenant token exchange with this (home) project's bearer,
+        verified through ``member``. Returns an ``AuthnResponse``."""
+        label = f"udb: exchange the service token for tenant {tenant}"
+        resp = self.auth.exchange_service_token_for_tenant(tenant, project)
+        if not resp.access_token or not resp.expires_at_unix:
+            raise UdbConfigurationError(
+                f"{label}: the broker returned no token (does the service have an ACTIVE membership in that tenant?)"
+            )
+        if resp.tenant_id != tenant:
+            raise UdbCredentialBindingError(f"{label}: the broker returned a token for tenant {resp.tenant_id!r}")
+        if project and resp.project_id != project:
+            raise UdbCredentialBindingError(
+                f"{label}: the broker returned a token for project {resp.project_id!r}, want {project!r}"
+            )
+        verified = member.auth.authenticate_bearer(resp.access_token, metadata=meta)
+        if verified.HasField("principal") and verified.principal.tenant_id != tenant:
+            raise UdbCredentialBindingError(
+                f"{label}: the token authenticates in tenant {verified.principal.tenant_id!r}"
+            )
+        reply = type(verified)()
+        reply.CopyFrom(verified)
+        reply.access_token = resp.access_token
+        reply.expires_at_unix = resp.expires_at_unix
+        return reply
     def login_and_adopt_tenant(
         self,
         username: str,
@@ -1990,6 +2081,7 @@ class UdbProject(_ProjectSurface):
         adopted = identity_from_principal(self._metadata, principal, token)
         # A password session supersedes any API-key identity: stop renewing it.
         self._api_key_secret = ""
+        self._bearer_exchange = None
         self._api_key_last_error = None
         self.config.bearer_token = token
         self.config.api_key = ""
@@ -2028,6 +2120,7 @@ class UdbProject(_ProjectSurface):
         # Stop the API-key renewal thread and drop the retained key.
         self._api_key_stop.set()
         self._api_key_secret = ""
+        self._bearer_exchange = None
         thread = self._api_key_thread
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=1.0)

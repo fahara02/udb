@@ -355,7 +355,7 @@ async fn verify_membership_account(
     conn: &mut sqlx::PgConnection,
     user: &Uuid,
     home_tenant: &str,
-) -> Result<(), Status> {
+) -> Result<Vec<String>, Status> {
     let um = native_model(
         "udb.core.authn.entity.v1.User",
         &["user_id", "tenant_id", "account_kind", "status"],
@@ -381,10 +381,10 @@ async fn verify_membership_account(
         return Err(account_ineligible_status());
     }
     let grant = get_grant_by_user(&mut *conn, home_tenant, &user.to_string()).await?;
-    if !grant.is_some_and(|grant| grant.status == STATUS_ACTIVE) {
-        return Err(account_ineligible_status());
+    match grant {
+        Some(grant) if grant.status == STATUS_ACTIVE => Ok(grant.scopes),
+        _ => Err(account_ineligible_status()),
     }
-    Ok(())
 }
 
 /// Mark an ACTIVE but lapsed membership for the same (account, tenant,
@@ -569,6 +569,48 @@ async fn list_memberships(
 /// Revoke an ACTIVE membership of `target_tenant`, bumping its revision so
 /// every token pinned to the old revision stops validating. `None` when no
 /// ACTIVE row matched.
+/// End the ACTIVE membership of one (account, target tenant, project), if
+/// any, so a replacement approval can take its place in the same transaction.
+/// Its exchanged tokens stop validating at once (their pinned revision moves).
+async fn retire_active_membership(
+    conn: &mut sqlx::PgConnection,
+    user: &Uuid,
+    target_tenant: &str,
+    target_project: &str,
+    approved_by: &str,
+    reason: &str,
+) -> Result<Option<MembershipRecord>, Status> {
+    let m = native_model(MEMBERSHIP_MSG, &membership_select_columns());
+    let sql = format!(
+        "UPDATE {rel} SET {status} = $4, {revision} = {revision} + 1, \
+            {approved_by} = $5, {reason} = $6, {updated} = now() \
+         WHERE {uid} = $1 AND {target} = $2 AND {project} = $3 AND {status} = $7 \
+         RETURNING {cols}",
+        rel = m.relation,
+        status = m.q("status"),
+        revision = m.q("revision"),
+        approved_by = m.q("approved_by"),
+        reason = m.q("reason"),
+        updated = m.q("updated_at"),
+        uid = m.q("user_id"),
+        target = m.q("target_tenant_id"),
+        project = m.q("target_project_id"),
+        cols = membership_select_clause(),
+    );
+    let row = sqlx::query(&sql)
+        .bind(user)
+        .bind(target_tenant)
+        .bind(target_project)
+        .bind(STATUS_REVOKED)
+        .bind(approved_by)
+        .bind(reason)
+        .bind(STATUS_ACTIVE)
+        .fetch_optional(&mut *conn)
+        .await
+        .map_err(map_err("service tenant membership replace failed"))?;
+    Ok(row.map(|row| membership_row_from(&row)))
+}
+
 async fn revoke_membership(
     conn: &mut sqlx::PgConnection,
     membership_id: &Uuid,
@@ -769,27 +811,168 @@ fn build_exchange_event(
 
 // ── Authorization ────────────────────────────────────────────────────────────
 
-/// The target tenant of a membership RPC, when the caller administers it: the
-/// verified claim tenant must BE the target. A home-tenant administrator, or
-/// any other tenant's, is refused; so is a claim with no tenant. In-process
-/// calls with no claim context (offline CLI, tests) are trusted, as for every
+/// Who administers a membership's target tenant for this call.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MembershipAuthority {
+    /// The caller's verified tenant is the target tenant.
+    TargetTenant,
+    /// The caller administers the target tenant's direct parent tenant.
+    ParentTenant,
+    /// The caller holds cross-tenant platform authority.
+    Platform,
+    /// In-process call with no claim context (offline CLI, tests).
+    InProcess,
+}
+
+impl MembershipAuthority {
+    /// An approval made from outside the target tenant may not give the
+    /// service more than it already holds: its scopes must lie within the
+    /// service account's ACTIVE home grant.
+    fn caps_scopes_to_home_grant(self) -> bool {
+        matches!(self, Self::ParentTenant | Self::Platform)
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::TargetTenant => "target_tenant_admin",
+            Self::ParentTenant => "parent_tenant_admin",
+            Self::Platform => "platform_admin",
+            Self::InProcess => "in_process",
+        }
+    }
+}
+
+/// The claim-only part of the membership authorization: decided from the
+/// verified claim alone, or `Err(claim_tenant)` when only the tenant tree can
+/// tell (the caller may administer the target's parent).
+fn membership_authority_from_claim(target: &str) -> Result<MembershipAuthority, String> {
+    if !crate::runtime::service::method_security::claim_context_present() {
+        return Ok(MembershipAuthority::InProcess);
+    }
+    let ctx = crate::runtime::service::method_security::current_claim_context();
+    if !ctx.authenticated {
+        return Err(String::new());
+    }
+    if ctx.tenant_id.trim() == target {
+        return Ok(MembershipAuthority::TargetTenant);
+    }
+    if ctx.is_cross_tenant_admin() {
+        return Ok(MembershipAuthority::Platform);
+    }
+    Err(ctx.tenant_id.trim().to_string())
+}
+
+/// Whether `child` is a live tenant whose direct parent is `parent`.
+async fn is_direct_child_tenant(pool: &PgPool, child: &str, parent: &str) -> bool {
+    if parent.is_empty() {
+        return false;
+    }
+    let tenants = native_model(
+        "udb.core.tenant.entity.v1.Tenant",
+        &["tenant_id", "parent_tenant_id", "deleted_at"],
+    );
+    let sql = format!(
+        "SELECT EXISTS (SELECT 1 FROM {rel} WHERE {id}::text = $1 \
+           AND {parent}::text = $2 AND {deleted} IS NULL)",
+        rel = tenants.relation,
+        id = tenants.q("tenant_id"),
+        parent = tenants.q("parent_tenant_id"),
+        deleted = tenants.q("deleted_at"),
+    );
+    match sqlx::query_scalar::<_, bool>(&sql)
+        .bind(child)
+        .bind(parent)
+        .fetch_one(pool)
+        .await
+    {
+        Ok(found) => found,
+        Err(err) => {
+            // No tenant tree (an auth-only deployment) or a failed read: the
+            // parent path is not proven, so it is refused.
+            tracing::warn!(
+                target: "udb.audit.authz",
+                error = %err,
+                "service-account membership: tenant hierarchy lookup failed; parent-tenant approval refused"
+            );
+            false
+        }
+    }
+}
+
+/// The target tenant of a membership RPC and who administers it for this
+/// call: an admin of the target tenant itself, of its direct parent tenant,
+/// or a platform admin. Any other tenant's admin (the service's home tenant
+/// included, unless it is the parent) is refused; so is a claim with no
+/// tenant. In-process calls with no claim context are trusted, as for every
 /// grant RPC.
-fn require_target_tenant_admin(raw_target: &str) -> Result<String, Status> {
+async fn require_membership_admin(
+    pool: &PgPool,
+    raw_target: &str,
+) -> Result<(String, MembershipAuthority), Status> {
     let target = validated_target_tenant(raw_target)?;
-    if crate::runtime::service::method_security::claim_context_present() {
-        let ctx = crate::runtime::service::method_security::current_claim_context();
-        if !ctx.authenticated || ctx.tenant_id.trim() != target {
+    let authority = match membership_authority_from_claim(&target) {
+        Ok(authority) => authority,
+        Err(claim_tenant) if is_direct_child_tenant(pool, &target, &claim_tenant).await => {
+            MembershipAuthority::ParentTenant
+        }
+        Err(claim_tenant) => {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
             tracing::warn!(
                 target: "udb.audit.authz",
                 subject = %ctx.subject,
-                claim_tenant = %ctx.tenant_id,
+                claim_tenant = %claim_tenant,
                 target_tenant = %target,
-                "DENY: service-account membership management outside the caller's tenant"
+                "DENY: service-account membership management outside the caller's tenant, its child tenants, or platform authority"
             );
             return Err(target_admin_required_status());
         }
+    };
+    if authority != MembershipAuthority::TargetTenant && authority != MembershipAuthority::InProcess
+    {
+        let ctx = crate::runtime::service::method_security::current_claim_context();
+        tracing::info!(
+            target: "udb.audit.authz",
+            subject = %ctx.subject,
+            claim_tenant = %ctx.tenant_id,
+            target_tenant = %target,
+            authority = authority.as_str(),
+            "ALLOW: service-account membership management from outside the target tenant"
+        );
     }
-    Ok(target)
+    Ok((target, authority))
+}
+
+/// The scopes an exchanged token may carry: those the membership approved
+/// that the service account's CURRENT home grant still holds.
+fn exchangeable_scopes(membership: &[String], grant: &[String]) -> Vec<String> {
+    membership
+        .iter()
+        .filter(|scope| grant.iter().any(|held| held.eq_ignore_ascii_case(scope)))
+        .cloned()
+        .collect()
+}
+
+/// Refuse an approval from outside the target tenant that names a scope the
+/// service account's home grant does not hold.
+fn require_scopes_within_home_grant(approved: &[String], grant: &[String]) -> Result<(), Status> {
+    let outside: Vec<&str> = approved
+        .iter()
+        .filter(|scope| !grant.iter().any(|held| held.eq_ignore_ascii_case(scope)))
+        .map(String::as_str)
+        .collect();
+    if outside.is_empty() {
+        return Ok(());
+    }
+    Err(grants_invalid_fields(
+        format!(
+            "approved_scopes approved from outside the target tenant must be held by the service account's home grant; not held: {}",
+            outside.join(", ")
+        ),
+        [(
+            "approved_scopes",
+            "must be within the service account's ACTIVE home grant scopes",
+        )],
+    ))
 }
 
 // ── AuthnService handler impls (trait wiring lives in authn/mod.rs) ──────────
@@ -800,7 +983,7 @@ pub(crate) async fn create_service_account_tenant_membership(
     request: Request<authn_pb::CreateServiceAccountTenantMembershipRequest>,
 ) -> Result<Response<authn_pb::CreateServiceAccountTenantMembershipResponse>, Status> {
     let req = request.into_inner();
-    let target = require_target_tenant_admin(&req.target_tenant_id)?;
+    let (target, authority) = require_membership_admin(pool, &req.target_tenant_id).await?;
     let user = parse_uuid(&req.user_id, "user_id")?;
     let home = validated_bounded_text(&req.home_tenant_id, "home_tenant_id", 120)?;
     if home.is_empty() {
@@ -823,8 +1006,39 @@ pub(crate) async fn create_service_account_tenant_membership(
     // The approval, its lapsed predecessor's expiry and both tenants' audit
     // events commit in ONE transaction.
     let mut tx = begin_grants_tx(pool, "service_tenant_membership_create_tx").await?;
-    verify_membership_account(&mut *tx, &user, &home).await?;
+    let grant_scopes = verify_membership_account(&mut *tx, &user, &home).await?;
+    if authority.caps_scopes_to_home_grant() {
+        require_scopes_within_home_grant(&scopes, &grant_scopes)?;
+    }
     expire_lapsed_membership(&mut *tx, &user, &target, &target_project).await?;
+    // `replace_active`: the new approval supersedes a standing one in this
+    // transaction (how a scope change reaches an existing membership), audited
+    // as a revocation in both tenants. Without it a standing one is refused.
+    if req.replace_active
+        && let Some(previous) = retire_active_membership(
+            &mut *tx,
+            &user,
+            &target,
+            &target_project,
+            &approved_by,
+            &reason,
+        )
+        .await?
+    {
+        for event_tenant in [&previous.target_tenant_id, &previous.home_tenant_id] {
+            svc.emit_event_in_tx(
+                &mut *tx,
+                build_membership_event(
+                    event_tenant,
+                    &previous,
+                    "revoke",
+                    "service_tenant_membership_replaced",
+                    &approved_by,
+                ),
+            )
+            .await?;
+        }
+    }
     let record = insert_membership(
         &mut *tx,
         &user,
@@ -866,7 +1080,7 @@ pub(crate) async fn list_service_account_tenant_memberships(
     request: Request<authn_pb::ListServiceAccountTenantMembershipsRequest>,
 ) -> Result<Response<authn_pb::ListServiceAccountTenantMembershipsResponse>, Status> {
     let req = request.into_inner();
-    let target = require_target_tenant_admin(&req.target_tenant_id)?;
+    let (target, _authority) = require_membership_admin(pool, &req.target_tenant_id).await?;
     let (limit, offset) = page_window(req.page_size, &req.page_token);
     let records = list_memberships(pool, &target, limit, offset).await?;
     let next_page_token = next_page_token(records.len(), limit, offset);
@@ -886,7 +1100,7 @@ pub(crate) async fn revoke_service_account_tenant_membership(
     request: Request<authn_pb::RevokeServiceAccountTenantMembershipRequest>,
 ) -> Result<Response<authn_pb::RevokeServiceAccountTenantMembershipResponse>, Status> {
     let req = request.into_inner();
-    let target = require_target_tenant_admin(&req.target_tenant_id)?;
+    let (target, _authority) = require_membership_admin(pool, &req.target_tenant_id).await?;
     let membership_id = parse_uuid(&req.membership_id, "membership_id")?;
     let reason = validated_bounded_text(&req.reason, "reason", 1024)?;
     let approved_by = caller_updated_by();
@@ -1052,7 +1266,10 @@ pub(crate) async fn exchange_service_token_for_tenant(
         .await?
         .filter(|membership| membership.is_live(now))
         .ok_or_else(membership_required_status)?;
-    let scopes = validate_service_scopes(&req.requested_scopes, &membership.scopes)?;
+    // The token never carries more than the service still holds at home: a
+    // scope removed from the home grant stops reaching every tenant at once.
+    let allowed = exchangeable_scopes(&membership.scopes, &grant.scopes);
+    let scopes = validate_service_scopes(&req.requested_scopes, &allowed)?;
     if scopes.is_empty() {
         return Err(membership_required_status());
     }
@@ -1281,12 +1498,14 @@ mod tests {
             &["udb:authn:manage-grants"],
             &[],
         );
-        let err = scope_claim_context_for_test(home_admin, async {
-            require_target_tenant_admin(&target)
+        // Another tenant's admin is not decided by the claim: only the tenant
+        // tree can say whether it is the target's parent.
+        let undecided = scope_claim_context_for_test(home_admin, async {
+            membership_authority_from_claim(&target)
         })
         .await
-        .expect_err("a home-tenant admin is not an admin of the target tenant");
-        assert_eq!(err.code(), Code::PermissionDenied);
+        .expect_err("a home-tenant admin is not an admin of the target tenant by claim");
+        assert_eq!(undecided, "home-tenant");
 
         let target_admin = test_claim_context(
             "target-admin",
@@ -1296,11 +1515,59 @@ mod tests {
             &[],
         );
         let resolved = scope_claim_context_for_test(target_admin, async {
-            require_target_tenant_admin(&target)
+            membership_authority_from_claim(&target)
         })
         .await
         .expect("the target tenant's admin manages its memberships");
-        assert_eq!(resolved, target);
+        assert_eq!(resolved, MembershipAuthority::TargetTenant);
+        assert!(!resolved.caps_scopes_to_home_grant());
+
+        let platform_admin = test_claim_context(
+            "platform-admin",
+            "platform-tenant",
+            "",
+            &["udb:authn:manage-grants", "udb:platform_admin"],
+            &[],
+        );
+        let platform = scope_claim_context_for_test(platform_admin, async {
+            membership_authority_from_claim(&target)
+        })
+        .await
+        .expect("a platform admin manages any tenant's memberships");
+        assert_eq!(platform, MembershipAuthority::Platform);
+        assert!(platform.caps_scopes_to_home_grant());
+        assert!(MembershipAuthority::ParentTenant.caps_scopes_to_home_grant());
+    }
+
+    #[test]
+    fn an_exchanged_token_never_outgrows_the_current_home_grant() {
+        let membership = vec!["udb:read".to_string(), "udb:write".to_string()];
+        let grant = vec![
+            "UDB:READ".to_string(),
+            "udb:authn:exchange-tenant-token".to_string(),
+        ];
+        assert_eq!(
+            exchangeable_scopes(&membership, &grant),
+            vec!["udb:read".to_string()],
+            "a scope removed from the home grant is no longer exchangeable"
+        );
+        assert!(exchangeable_scopes(&membership, &[]).is_empty());
+    }
+
+    #[test]
+    fn an_approval_from_outside_the_target_tenant_stays_within_the_home_grant() {
+        let grant = vec!["udb:read".to_string(), "community:items:write".to_string()];
+        require_scopes_within_home_grant(&["udb:read".to_string()], &grant)
+            .expect("a held scope is approvable");
+        require_scopes_within_home_grant(&["UDB:READ".to_string()], &grant)
+            .expect("scope names compare case-insensitively");
+        let err = require_scopes_within_home_grant(
+            &["udb:read".to_string(), "udb:write".to_string()],
+            &grant,
+        )
+        .expect_err("a scope the home grant lacks is refused");
+        assert_eq!(err.code(), Code::InvalidArgument);
+        assert!(err.message().contains("udb:write"), "{}", err.message());
     }
 
     #[tokio::test]

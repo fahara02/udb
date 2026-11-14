@@ -7,6 +7,148 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.17] - 2026-11-14
+
+### Breaking for callers
+
+- **An exchanged member-tenant token never carries more than the service's current home grant.**
+  `ExchangeServiceTokenForTenant` used the membership's approved scopes alone, so a scope later
+  removed from the service account's home grant still reached every tenant it was a member of.
+  The token's scopes are now the membership's approved scopes that the home grant still holds.
+  - detect: an exchange returns fewer scopes, or refuses a requested one with `scope_outside_grant`
+  - fix: keep the scope in the home grant (`udb auth grant replace`), or re-approve the membership
+
+- **`udb authz explain|check` prints at most 20 `matched_policy_ids`.** A broad tenant listed
+  thousands; the list now ends with `… N more` and `matched_policy_count` holds the total.
+  The command also sends `--project` (default `UDB_PROJECT_ID`) as the question's project.
+  - detect: a script that reads every id from `matched_policy_ids`, or counts them
+  - fix: read `matched_policy_count`; query `udb authz policy list` for the full rule set
+- **`udb help auth`, `udb help authz` and `udb help policy` list the subcommands.** A command
+  word with several subcommands used to print the help of the longest one (`udb authz --help`
+  printed `check`).
+  - detect: a script that greps `udb <word> --help` for one subcommand's flags
+  - fix: ask for the subcommand: `udb help authz explain`
+- **`udb catalog stage` derives its idempotency key from the whole stage request.** The key
+  was the project, generator version and semantic checksum, while the stored request
+  fingerprint also covers the manifest bytes, compatibility level, reason and actor, so a
+  re-stage that differed only there was refused ("idempotency_key was already used with a
+  different catalog request"). The derived key now embeds that fingerprint, and
+  `--idempotency-key <key>` sets one explicitly.
+  - detect: a re-run of a stage made by an older `udb` reports `"replayed": false` and a new
+    `catalog_id` instead of replaying the old row
+  - fix: activate the `catalog_id` the command prints, or pass `--idempotency-key` to pin a key
+- **Column type changes are classified on canonical types.** `INT8`, `FLOAT4`, `DECIMAL`,
+  `CHARACTER VARYING`, `BPCHAR` classify like `BIGINT`, `REAL`, `NUMERIC`, `VARCHAR`, `CHAR`.
+  `SMALLINT`/`INTEGER`/`BIGINT` to a `NUMERIC(p,s)` with enough integral digits is now a
+  lossless widening (reviewed transitions take it); with too few digits, and `REAL`/`DOUBLE
+  PRECISION` to a bounded `NUMERIC(p,s)`, it needs review instead of running unattended.
+  `CHAR(n)` to `VARCHAR(m >= n)` runs unattended like `CHAR` to `TEXT`, but both stay
+  data-destructive (the cast strips CHAR padding), so a reviewed transition still refuses them.
+  A change of array rank (`VARCHAR(80)[]` to `TEXT`) is no longer a widening.
+  - detect: a plan that ran a `ChangeColumnType` to a bounded NUMERIC unattended now lists it
+    as `RequiresReview`
+  - fix: approve it with a `using_expression`, or widen the NUMERIC so every value fits
+- **`udb lint` refuses more bare reserved words in a check_constraint.** `in`, `is`, `like`,
+  `ilike`, `similar`, `and`, `or`, `isnull`, `notnull`, `overlaps`, `collate` and `end` were
+  always accepted as syntax; they are now accepted only where they are syntax (after an
+  operand, `NOT IN (`, a CASE's closing `END`), so `in > 0` or `CASE WHEN end > 0` is refused.
+  - detect: `udb lint` / `catalog stage` reports `check_unquoted_reserved_word` for an
+    expression it passed before
+  - fix: quote the column in the check_constraint: `"end" > 0`
+- **Proto source paths are recorded with forward slashes at the parser.** On Windows the
+  schema's `file` (and so the schema checksum, parser diagnostics and the lint `source_file`)
+  held backslash-separated paths; it is now `proto/udb/...` on every platform.
+  - detect: a manifest or schema checksum generated on Windows changes once after upgrading
+  - fix: none needed; stage the regenerated catalog, which now matches one built on Linux
+
+### Added
+
+- **A parent tenant's admin manages service-account memberships in its direct child tenants.**
+  `CreateServiceAccountTenantMembership` (and its List/Revoke) accepted only an admin of the
+  target tenant itself, so every child tenant's own admin had to approve each platform service.
+  An admin of the target's direct parent tenant, or a platform admin, may now approve, list and
+  revoke too; such an approval may only name scopes the service account's ACTIVE home grant
+  holds, and is audited in both tenants. A grandparent or unrelated tenant is still refused.
+- **`replace_active` on `CreateServiceAccountTenantMembership`** supersedes a standing membership
+  in the same transaction (audited as a revocation; its exchanged tokens stop validating) instead
+  of refusing the approval. This is how a scope added to a service's grant reaches an existing
+  membership.
+- **`udb auth membership create|list|revoke`**, with `--all-children` to approve a service into
+  every direct child of the caller's tenant in one pass and `--replace` to supersede standing
+  approvals.
+- **`TenantService.ListTenants` admits a service-account bearer.** It lists the service's home
+  tenant and that tenant's direct children, so a platform service can follow the tenants it serves.
+
+- **A service acts in a member tenant with a self-renewing exchanged token**: Go
+  `(*Udb).ForTenant` / `(*EnterpriseSession).ForTenant`, TypeScript `UdbProject.forTenant`, Python
+  `UdbProject.for_tenant` exchange the home bearer through `ExchangeServiceTokenForTenant`,
+  exchange again at 4/5 of the short-lived token's life and at once when the broker refuses it,
+  and refuse calls locally while that re-exchange fails. A token for another tenant or project
+  than the one asked for is refused.
+- **`udb auth login --username <u> --password-file <path> [--tenant] [--project] [--out <file>]
+  [--addr]`** signs in through AuthnService.Login and writes the access token to an owner-only
+  (0600) file, or prints only the token when `--out` is omitted. The password is read from the
+  file only.
+- **`udb policy apply --additive`** adds the declared rules that are missing and never removes
+  or changes another rule; rules the file omits (and exact duplicates) are reported under
+  `kept` instead of stopping the run. The default apply still refuses removals without
+  `--allow-policy-removal` (the two flags together are refused).
+- **`udb policy diff|apply|export --tenant '*'`** reconciles the platform-wide rules (tenant `*`,
+  applied in every tenant) from their own file. It needs the database DSN, i.e. platform
+  authority; a tenant's file naming tenant `*` is still refused, now with this way to apply it.
+  No reconcile ever removes UDB's seeded `organization_owner` rule.
+- **`udb policy export --tenant <uuid|*> [-o file]`** writes a tenant's live rules as the
+  `{tenant, policies}` file `udb policy apply` reads (YAML for `.yaml`/`.yml`, else JSON);
+  `udb policy diff` on the export shows no change.
+- **`udb authz policy put|list|delete`** writes, lists and soft-deletes one data-plane ABAC rule
+  through the broker (PutAuthzPolicy / ListPolicyRules / DeletePolicyRule) with `--tenant
+  <uuid|*>`. Without `--id` the id is derived from the rule, so a repeated put writes one row;
+  a malformed effect, priority or condition is refused.
+- **`udb authz explain --brief`** prints only the decision, who was evaluated, the reason and
+  the next step; `udb help authz explain` has its own entry.
+
+### Fixed
+
+- **A delegated access check evaluates a service account that acts in the tenant.** With
+  `udb:authz:check-access-for`, a service could only ask about an ACTIVE person of its tenant;
+  a service account (of the tenant, or acting in it through a live membership) got the same
+  refusal as an unknown id, so a rule written for it could never allow a delegated check. Such
+  a service account is now a valid subject; anyone else still gets the one identical refusal.
+- **`udb auth policy put` writes the rule.** It sent no policy id, which `PutAuthzPolicy` requires,
+  so every call was refused; it now sends the same stable id `udb authz policy put` derives.
+
+- **An unchanged CHECK rule no longer reads as changed after a dump and restore.** A reviewed
+  catalog transition compared `pg_get_expr` text, which differs between a fresh parse and a
+  restored rule (`((kind)::text = ANY ((ARRAY['a'::character varying])::text[]))` vs
+  `ARRAY[('a'::character varying)::text]`), so a restored table failed its shape check. Rules
+  are now compared by a canonical key that undoes PostgreSQL's rewriting only: implicit casts,
+  `= ANY (ARRAY[..])` / `<> ALL` vs `IN` / `NOT IN`, one-element `IN`, `BETWEEN`, `~~` vs
+  `LIKE`, quoted negative numbers and added parentheses.
+- **An array column's default `{}` or `ARRAY[]` renders valid DDL.** It was emitted verbatim
+  (`DEFAULT {}` is not SQL; `ARRAY[]` has no element type); it now renders as
+  `'{}'::TEXT[]`, and `'{}'`, `'{}'::text[]`, `{}` and `ARRAY[]` compare as one default, so
+  none of them plans a `SetDefault`.
+- **A Windows source path no longer leaks backslashes into `-- UDB:source_proto=`**, lint
+  findings or parser diagnostics (see the breaking note on source paths).
+
+- **A denial's diagnosis names the rule written for the request, not UDB's owner rule.** When
+  several rules were equally close, the seeded `organization_owner` rule (`*` everywhere, the
+  lowest id) won the tie, so a service account's tenant rule that failed only on its project
+  was reported as "closest rule …0a0002 fails on subject/role". Ties now go to the rule naming
+  the most selectors, and a project miss says which project the rule needs and that the
+  request named none.
+- **`udb authz explain` says when the broker answered for someone else.** A token that is not a
+  cross-tenant admin is evaluated as its own caller whatever subject is asked about; explain
+  now prints `evaluated_subject` and, when it differs, says the decision is not about the
+  subject instead of suggesting a grant. It also sends the project, without which every
+  project-bound rule failed.
+- **A service account can write relationship tuples in its tenant.** `AuthzService.PutRelationship`
+  admitted only BEARER_JWT and SESSION, so a service account acting in a tenant (including
+  through a membership-exchanged `mbx_` token) was refused before any check. It now admits
+  SERVICE_ACCOUNT (and the service API key it is exchanged from); the
+  `udb:authz:put-relationship` scope and the tuple's tenant/project still have to match the
+  token.
+
 ## [0.6.16] - 2026-11-13
 
 A patch for 0.6.15's repository fixtures; the broker and SDKs are unchanged apart from the

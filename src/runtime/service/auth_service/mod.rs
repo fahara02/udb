@@ -41,7 +41,9 @@ pub(crate) mod memberships;
 mod policy_reconcile;
 pub(crate) mod role_bindings;
 pub use policy_reconcile::{
-    PolicyReconcileReport, normalize_declared_policies, reconcile_authz_policies_offline,
+    PLATFORM_POLICY_DOMAIN, PolicyReconcileOptions, PolicyReconcileReport,
+    export_authz_policies_offline, normalize_declared_policies, reconcile_authz_policies_offline,
+    reconcile_authz_policies_offline_with,
 };
 pub(crate) mod readiness;
 // Phase 10: re-export the auth-plane readiness adapter so the parent `service`

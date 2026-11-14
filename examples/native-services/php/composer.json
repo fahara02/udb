@@ -5,7 +5,7 @@
   "require": {
     "php": ">=8.1",
     "ext-grpc": "*",
-    "fahara02/udb-laravel": "^0.6.16"
+    "fahara02/udb-laravel": "^0.6.17"
   },
   "repositories": [
     {

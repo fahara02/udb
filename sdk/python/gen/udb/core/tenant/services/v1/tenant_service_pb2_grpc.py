@@ -74,7 +74,9 @@ class TenantServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def ListTenants(self, request, context):
-        """List tenants
+        """List tenants: the caller's own tenant and its DIRECT child tenants (every
+        tenant for a platform admin). A service account sees the tenants under
+        its home tenant, so a platform service can follow the tenants it serves.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

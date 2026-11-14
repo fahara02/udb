@@ -1402,7 +1402,8 @@ func (x *RevokeCertificateBindingResponse) GetError() *v11.ApiError {
 
 type CreateServiceAccountTenantMembershipRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The approving tenant; must be the caller's own tenant. Format: the
+	// The approving tenant: the caller's own tenant, a direct child of it, or
+	// any tenant for a platform admin. Format: the
 	// tenant's canonical UUID (not its human code).
 	TargetTenantId string `protobuf:"bytes,1,opt,name=target_tenant_id,json=targetTenantId,proto3" json:"target_tenant_id,omitempty"`
 	// The service account (user id) being approved.
@@ -1418,7 +1419,12 @@ type CreateServiceAccountTenantMembershipRequest struct {
 	ApprovedScopes []string `protobuf:"bytes,5,rep,name=approved_scopes,json=approvedScopes,proto3" json:"approved_scopes,omitempty"`
 	Reason         string   `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
 	// Required; in the future and at most one year away.
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	ExpiresAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// Replace an ACTIVE membership of the same service account, target tenant
+	// and project in the same transaction (its tokens stop validating at once)
+	// instead of refusing the approval. How a scope change reaches a standing
+	// membership.
+	ReplaceActive bool `protobuf:"varint,8,opt,name=replace_active,json=replaceActive,proto3" json:"replace_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1502,6 +1508,13 @@ func (x *CreateServiceAccountTenantMembershipRequest) GetExpiresAt() *timestampp
 	return nil
 }
 
+func (x *CreateServiceAccountTenantMembershipRequest) GetReplaceActive() bool {
+	if x != nil {
+		return x.ReplaceActive
+	}
+	return false
+}
+
 type CreateServiceAccountTenantMembershipResponse struct {
 	state      protoimpl.MessageState             `protogen:"open.v1"`
 	Membership *v1.ServiceAccountTenantMembership `protobuf:"bytes,1,opt,name=membership,proto3" json:"membership,omitempty"`
@@ -1565,7 +1578,8 @@ func (x *CreateServiceAccountTenantMembershipResponse) GetError() *v11.ApiError 
 
 type ListServiceAccountTenantMembershipsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Must be the caller's own tenant.
+	// The caller's own tenant, a direct child of it, or any tenant for a
+	// platform admin.
 	TargetTenantId string `protobuf:"bytes,1,opt,name=target_tenant_id,json=targetTenantId,proto3" json:"target_tenant_id,omitempty"`
 	PageSize       int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// Opaque continuation token from a previous response.
@@ -1804,7 +1818,8 @@ func (x *ListOwnTenantMembershipsResponse) GetNextPageToken() string {
 
 type RevokeServiceAccountTenantMembershipRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Must be the caller's own tenant.
+	// The caller's own tenant, a direct child of it, or any tenant for a
+	// platform admin.
 	TargetTenantId string `protobuf:"bytes,1,opt,name=target_tenant_id,json=targetTenantId,proto3" json:"target_tenant_id,omitempty"`
 	MembershipId   string `protobuf:"bytes,2,opt,name=membership_id,json=membershipId,proto3" json:"membership_id,omitempty"`
 	Reason         string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
@@ -2200,7 +2215,7 @@ const file_udb_core_authn_services_v1_authn_service_proto_rawDesc = "" +
 	" RevokeCertificateBindingResponse\x12\x18\n" +
 	"\arevoked\x18\x01 \x01(\bR\arevoked\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xdc\x02\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x83\x03\n" +
 	"+CreateServiceAccountTenantMembershipRequest\x12(\n" +
 	"\x10target_tenant_id\x18\x01 \x01(\tR\x0etargetTenantId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12$\n" +
@@ -2209,7 +2224,8 @@ const file_udb_core_authn_services_v1_authn_service_proto_rawDesc = "" +
 	"\x0fapproved_scopes\x18\x05 \x03(\tR\x0eapprovedScopes\x12\x16\n" +
 	"\x06reason\x18\x06 \x01(\tR\x06reason\x129\n" +
 	"\n" +
-	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf4\x01\n" +
+	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12%\n" +
+	"\x0ereplace_active\x18\b \x01(\bR\rreplaceActive:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf4\x01\n" +
 	",CreateServiceAccountTenantMembershipResponse\x12X\n" +
 	"\n" +
 	"membership\x18\x01 \x01(\v28.udb.core.authn.entity.v1.ServiceAccountTenantMembershipR\n" +

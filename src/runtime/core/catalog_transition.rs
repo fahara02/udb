@@ -292,7 +292,9 @@ fn allowed_changes(
                     },
                 ) + if change.kind == ChangeKind::ChangeColumnType {
                     "; only a lossless widening with no using_expression can use it (VARCHAR(n) \
-                     to a longer VARCHAR or TEXT, INTEGER to BIGINT)"
+                     to a longer VARCHAR or TEXT, SMALLINT to INTEGER to BIGINT, REAL to DOUBLE \
+                     PRECISION, NUMERIC(p,s) to a NUMERIC with no fewer integral or fractional \
+                     digits)"
                 } else {
                     ""
                 },
@@ -1547,15 +1549,20 @@ impl DataBrokerRuntime {
             .map_err(|err| {
                 catalog_admin_internal_status("reviewed_check_shape", err.to_string())
             })?;
-            let mut expected_checks: Vec<&str> = checks
+            // The live rule may have been restored from a dump, which re-parses
+            // PostgreSQL's own rendering and can render the same rule differently
+            // from a fresh parse of the declared one. Both sides are compared by
+            // their canonical key, which absorbs PostgreSQL's rewriting only.
+            let canonical = crate::generation::manifest::canonical_check_expression;
+            let mut expected_checks: Vec<String> = checks
                 .iter()
                 .filter(|row| row.0 == temp_oid)
-                .map(|row| row.1.as_str())
+                .map(|row| canonical(&row.1))
                 .collect();
-            let mut live_checks: Vec<&str> = checks
+            let mut live_checks: Vec<String> = checks
                 .iter()
                 .filter(|row| row.0 == live_oid && row.2)
-                .map(|row| row.1.as_str())
+                .map(|row| canonical(&row.1))
                 .collect();
             // A rule counts once: a table built with an inline CHECK holds it under two
             // names until a migration replaces it.
@@ -2645,7 +2652,17 @@ mod refusal_message_tests {
         for (from, to) in [
             ("VARCHAR(80)", "VARCHAR(400)"),
             ("VARCHAR(80)", "TEXT"),
+            ("VARCHAR", "TEXT"),
+            ("CHARACTER VARYING(80)", "VARCHAR"),
+            ("SMALLINT", "INTEGER"),
             ("INTEGER", "BIGINT"),
+            ("INT2", "INT8"),
+            ("REAL", "DOUBLE PRECISION"),
+            ("FLOAT4", "FLOAT8"),
+            ("NUMERIC(10,2)", "NUMERIC(12,2)"),
+            ("DECIMAL(10,2)", "NUMERIC(12,2)"),
+            ("INTEGER", "NUMERIC(10)"),
+            ("VARCHAR(80)[]", "TEXT[]"),
         ] {
             assert_eq!(reviewed_refusal(from, to), None, "{from} -> {to}");
         }
@@ -2653,6 +2670,14 @@ mod refusal_message_tests {
             ("VARCHAR(400)", "VARCHAR(80)"),
             ("TEXT", "VARCHAR(80)"),
             ("BIGINT", "INTEGER"),
+            ("INTEGER", "SMALLINT"),
+            ("DOUBLE PRECISION", "REAL"),
+            ("NUMERIC(12,2)", "NUMERIC(10,2)"),
+            ("NUMERIC(10,2)", "NUMERIC(10,4)"),
+            ("INTEGER", "NUMERIC(5)"),
+            // CHAR padding is stripped by the cast: rows survive, values change.
+            ("CHAR(4)", "VARCHAR(10)"),
+            ("CHAR(4)", "TEXT"),
         ] {
             let message = reviewed_refusal(from, to).expect("a narrowing is refused");
             assert!(message.contains("data-destructive"), "{message}");

@@ -179,7 +179,7 @@ public final class Launcher {
       // `--version` output is a single short line; it fits the pipe buffer, so
       // reading after exit cannot deadlock.
       String out = new String(p.getInputStream().readAllBytes()).trim();
-      // `udb --version` prints e.g. "udb 0.6.16"; accept any line containing the tag.
+      // `udb --version` prints e.g. "udb 0.6.17"; accept any line containing the tag.
       return out.contains(UDB_VERSION);
     } catch (IOException | InterruptedException e) {
       if (e instanceof InterruptedException) {

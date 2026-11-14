@@ -26,7 +26,7 @@ var File_udb_core_authz_services_v1_authz_service_proto protoreflect.FileDescrip
 
 const file_udb_core_authz_services_v1_authz_service_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/authz/services/v1/authz_service.proto\x12\x1audb.core.authz.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a%udb/core/authz/services/v1/core.proto\x1a+udb/core/authz/services/v1/governance.proto\x1a!udb/core/common/v1/security.proto2ԡ\x01\n" +
+	".udb/core/authz/services/v1/authz_service.proto\x12\x1audb.core.authz.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a%udb/core/authz/services/v1/core.proto\x1a+udb/core/authz/services/v1/governance.proto\x1a!udb/core/common/v1/security.proto2ա\x01\n" +
 	"\fAuthzService\x12\xb9\x04\n" +
 	"\tAuthorize\x12(.udb.core.authz.services.v1.AuthzRequest\x1a).udb.core.authz.services.v1.AuthzResponse\"\xd6\x03\xca\xf3\x182\b\x02\x1a\x13udb:authz:authorize \x01J\x03\x01\x02\x04j\x0fauthz.Authorize\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18.\b\x01\x12\tauthorize\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01Z\tauthorize\xe2\xf3\x18\xab\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"&udb.native.authz.authorize.boilerplate*\tauthorize2\tudb_authz:\x05authzJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18K\n" +
@@ -111,8 +111,8 @@ const file_udb_core_authz_services_v1_authz_service_proto_rawDesc = "" +
 	"\x0ePutRoleBinding\x121.udb.core.authz.services.v1.PutRoleBindingRequest\x1a0.udb.core.authz.services.v1.AuthMutationResponse\"\x85\x04\xca\xf3\x18>\b\x02\x1a\x1audb:authz:put-role-binding \x01J\x03\x01\x02\x04j\x14authz.PutRoleBinding\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18:\b\x01\x12\x10put_role_binding\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01Z\x0eputRoleBinding\xe2\xf3\x18\xb9\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"-udb.native.authz.put_role_binding.boilerplate*\x10put_role_binding2\tudb_authz:\x05authzJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
 	"\x14authz.PutRoleBinding\x12\fauthz.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
-	"\x05authz\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1c:\x01*\x1a\x17/v1/authz/role-bindings\x12\x81\x05\n" +
-	"\x0fPutRelationship\x122.udb.core.authz.services.v1.PutRelationshipRequest\x1a0.udb.core.authz.services.v1.AuthMutationResponse\"\x87\x04\xca\xf3\x18>\b\x02\x1a\x1audb:authz:put-relationship \x01J\x02\x01\x02j\x15authz.PutRelationship\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18;\b\x01\x12\x10put_relationship\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01Z\x0fputRelationship\xe2\xf3\x18\xb9\x01\n" +
+	"\x05authz\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1c:\x01*\x1a\x17/v1/authz/role-bindings\x12\x82\x05\n" +
+	"\x0fPutRelationship\x122.udb.core.authz.services.v1.PutRelationshipRequest\x1a0.udb.core.authz.services.v1.AuthMutationResponse\"\x88\x04\xca\xf3\x18?\b\x02\x1a\x1audb:authz:put-relationship \x01J\x03\x01\x02\x04j\x15authz.PutRelationship\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18;\b\x01\x12\x10put_relationship\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01Z\x0fputRelationship\xe2\xf3\x18\xb9\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"-udb.native.authz.put_relationship.boilerplate*\x10put_relationship2\tudb_authz:\x05authzJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18Q\n" +
 	"\x15authz.PutRelationship\x12\fauthz.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
 	"\x05authz\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1c:\x01*\x1a\x17/v1/authz/relationships\x12\xf7\x04\n" +

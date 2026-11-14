@@ -664,10 +664,61 @@ pub fn migrate_manifest_to_current(manifest: &mut CatalogManifest) -> ManifestMi
 // Phase I: manifest.rs split into helper modules.
 mod build;
 pub(crate) use build::*;
+mod check_expression;
+pub use check_expression::canonical_check_expression;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An array default renders as valid DDL however it was written, and every
+    /// spelling of one array literal compares equal.
+    #[test]
+    fn array_defaults_render_typed_and_compare_stably() {
+        for (sql_type, written, rendered) in [
+            ("TEXT[]", "{}", "'{}'::TEXT[]"),
+            ("TEXT[]", " ARRAY[] ", "'{}'::TEXT[]"),
+            ("TEXT[]", "array [ ]", "'{}'::TEXT[]"),
+            ("TEXT[]", "ARRAY[]::text[]", "'{}'::TEXT[]"),
+            ("TEXT[]", "{a,b}", "'{a,b}'::TEXT[]"),
+            ("TEXT[]", "{it's}", "'{it''s}'::TEXT[]"),
+            ("INTEGER[]", "{}", "'{}'::INTEGER[]"),
+            // Already valid: kept exactly as written.
+            ("TEXT[]", "'{}'", "'{}'"),
+            ("TEXT[]", "'{}'::text[]", "'{}'::text[]"),
+            ("TEXT[]", "ARRAY['a']", "ARRAY['a']"),
+            ("TEXT[]", "NULL", "NULL"),
+            // Not an array column: never rewritten.
+            ("TEXT", "{}", "{}"),
+            ("JSONB", "'{}'", "'{}'"),
+        ] {
+            assert_eq!(
+                canonical_column_default(sql_type, written),
+                rendered,
+                "{sql_type} default {written}"
+            );
+        }
+
+        let key = |written: &str| column_default_key("TEXT[]", written);
+        for spelling in [
+            "{}",
+            "'{}'",
+            "'{}'::text[]",
+            "'{}'::TEXT[]",
+            "ARRAY[]",
+            " '{}' ",
+        ] {
+            assert_eq!(key(spelling), key("'{}'::text[]"), "{spelling}");
+        }
+        assert_ne!(key("'{}'"), key("'{a}'"));
+        assert_ne!(key("'{}'"), key(""));
+        assert_ne!(key("'{a}'"), key("'{A}'"));
+        // A scalar column compares as written.
+        assert_ne!(
+            column_default_key("TEXT", "'{}'"),
+            column_default_key("TEXT", "'{}'::text")
+        );
+    }
 
     fn base_table() -> ManifestTable {
         ManifestTable {
@@ -1269,6 +1320,84 @@ pub(crate) fn normalize_expression(value: &str) -> String {
         }
     }
     out
+}
+
+/// Whether `sql_type` is a PostgreSQL array type (`TEXT[]`, `int4[][]`, `text ARRAY`).
+pub(crate) fn is_array_sql_type(sql_type: &str) -> bool {
+    let sql_type = sql_type.trim_end();
+    sql_type.ends_with(']') || sql_type.to_ascii_uppercase().ends_with(" ARRAY")
+}
+
+/// The brace content of an array default written as an array literal in any of
+/// the ways an author or `pg_get_expr` spells it: bare `{a,b}`, an empty
+/// `ARRAY[]`, or the string literal `'{a,b}'` with or without a `::type` cast.
+/// `None` for anything else (a non-empty `ARRAY[...]`, NULL, a function call).
+fn array_default_literal(default_value: &str) -> Option<String> {
+    let value = default_value.trim();
+    if value.starts_with('{') && value.ends_with('}') {
+        return Some(value.to_string());
+    }
+    let compact = value
+        .chars()
+        .filter(|ch| !ch.is_whitespace())
+        .collect::<String>()
+        .to_ascii_lowercase();
+    if compact == "array[]" || (compact.starts_with("array[]::") && !compact.contains('(')) {
+        return Some("{}".to_string());
+    }
+    let rest = value.strip_prefix('\'')?;
+    let mut content = String::new();
+    let mut chars = rest.char_indices().peekable();
+    while let Some((at, ch)) = chars.next() {
+        if ch != '\'' {
+            content.push(ch);
+            continue;
+        }
+        if chars.peek().is_some_and(|(_, next)| *next == '\'') {
+            content.push('\'');
+            chars.next();
+            continue;
+        }
+        let tail = rest[at + 1..].trim_start();
+        let is_literal = tail.is_empty() || tail.starts_with("::");
+        let content = content.trim();
+        return (is_literal && content.starts_with('{') && content.ends_with('}'))
+            .then(|| content.to_string());
+    }
+    None
+}
+
+/// The default as the manifest stores it and the DDL renders it. For an array
+/// column, a bare `{...}` (not SQL) or an empty `ARRAY[]` (whose element type
+/// PostgreSQL cannot determine) becomes the typed literal `'{...}'::<sql_type>`,
+/// which is valid DDL and is what `pg_get_expr` renders back. Every other
+/// default is kept as written.
+pub(crate) fn canonical_column_default(sql_type: &str, default_value: &str) -> String {
+    let value = default_value.trim();
+    if !is_array_sql_type(sql_type) {
+        return value.to_string();
+    }
+    let unquoted_braces = value.starts_with('{');
+    let empty_array_constructor = value.to_ascii_lowercase().starts_with("array");
+    match array_default_literal(value) {
+        Some(literal) if unquoted_braces || empty_array_constructor => {
+            format!("'{}'::{}", literal.replace('\'', "''"), sql_type.trim())
+        }
+        _ => value.to_string(),
+    }
+}
+
+/// The comparison key of a column default: two defaults with the same key are
+/// the same default. For an array column every spelling of one array literal
+/// (`{}`, `'{}'`, `'{}'::text[]`, `ARRAY[]`) has one key, so an unchanged
+/// default never reads as changed. Any other default compares as written.
+pub(crate) fn column_default_key(sql_type: &str, default_value: &str) -> String {
+    if is_array_sql_type(sql_type)
+        && let Some(literal) = array_default_literal(default_value)
+    {
+        return format!("array:{literal}");
+    }
+    default_value.trim().to_string()
 }
 
 fn normalize_backend(value: &str) -> String {

@@ -1216,6 +1216,14 @@ const RETAINED_API_KEYS = new WeakMap<object, string>();
  *  password never appears in `util.inspect`/JSON dumps of it. */
 const RETAINED_LOGINS = new WeakMap<object, Record<string, string>>();
 
+/** The member-tenant token exchange of a `forTenant` client, keyed by project: one
+ *  call returns an Authenticate-shaped reply (`access_token`, `expires_at_unix`,
+ *  verified `principal`). The exchanged token has no refresh token; this renews it. */
+const RETAINED_EXCHANGES = new WeakMap<object, () => Promise<any>>();
+
+/** A canonical tenant id: a lowercase hyphenated UUID. */
+const CANONICAL_TENANT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 /** A renewal that verified as a different principal or scope set. Renewing again cannot
  *  fix it, so the session fails closed until a new explicit login. */
 export class CredentialBindingError extends Error {
@@ -1847,12 +1855,41 @@ export class UdbProject {
   private async exchangeApiKey(apiKey: string): Promise<{ verified: any; token: StoredToken | null }> {
     // The key travels in the request; an expired bearer must not ride along.
     const verified: any = await this.renewalAuth().authenticateApiKey(apiKey);
-    // Checked before anything is adopted, so a refused renewal changes no identity.
+    return this.adoptExchangedBearer(
+      verified,
+      "exchange API key",
+      "udb: the broker returned no access token for the API key; configure a JWT signing key on the broker (API keys are exchanged for a bearer, never sent raw)",
+      () => RETAINED_API_KEYS.set(this, apiKey),
+    );
+  }
+
+  /** One member-tenant token exchange of a `forTenant` client (see `forTenant`). */
+  private async exchangeTenantToken(): Promise<{ verified: any; token: StoredToken | null }> {
+    const exchange = RETAINED_EXCHANGES.get(this);
+    if (!exchange) throw new Error("udb: this client has no tenant token exchange");
+    const verified: any = await exchange();
+    return this.adoptExchangedBearer(
+      verified,
+      "exchange the service token for tenant",
+      "udb: the broker returned no member-tenant token",
+      () => undefined,
+    );
+  }
+
+  /** Check, adopt, persist and install a bearer obtained by an exchange (an API key,
+   *  or a member-tenant token). The principal is checked against the pin before
+   *  anything is adopted, so a refused renewal changes no identity. */
+  private async adoptExchangedBearer(
+    verified: any,
+    label: string,
+    noTokenMessage: string,
+    retain: () => void,
+  ): Promise<{ verified: any; token: StoredToken | null }> {
     if (this.credentialPin) this.checkRenewal(verified?.principal);
     else if (verified?.access_token && !verified?.principal) {
-      throw new Error("udb: exchange API key: the broker returned no verified principal");
+      throw new Error(`udb: ${label}: the broker returned no verified principal`);
     }
-    RETAINED_API_KEYS.set(this, apiKey);
+    retain();
     const token: string = verified?.access_token ?? "";
     const principal = verified?.principal ?? {};
     const tenantId: string = principal?.tenant_id ?? "";
@@ -1869,9 +1906,7 @@ export class UdbProject {
       // bearer; it is never sent as a raw header, so there is nothing to fall back to.
       await this.tokenStore.clear();
       this.clearBearerCredentials();
-      throw new Error(
-        "udb: the broker returned no access token for the API key; configure a JWT signing key on the broker (API keys are exchanged for a bearer, never sent raw)",
-      );
+      throw new Error(noTokenMessage);
     }
     const now = Date.now();
     const expiresAtUnix = Number(verified?.expires_at_unix ?? 0);
@@ -2006,7 +2041,8 @@ export class UdbProject {
   private async renewOnce(current: StoredToken): Promise<StoredToken | null> {
     const login = RETAINED_LOGINS.get(this);
     const apiKey = RETAINED_API_KEYS.get(this);
-    const durable = Boolean(login || apiKey);
+    const exchange = RETAINED_EXCHANGES.get(this);
+    const durable = Boolean(login || apiKey || exchange);
     const hasRefresh = Boolean(current.refreshToken || current.sessionId);
     if (!durable && this.refreshRejected) throw this.refreshRejected;
     let refreshFailure: unknown = null;
@@ -2029,7 +2065,11 @@ export class UdbProject {
     }
     if (!durable) return current; // Nothing can renew this token; callers see it expire.
     try {
-      const fresh = apiKey ? (await this.exchangeApiKey(apiKey)).token : await this.reloginVerified(login!);
+      const fresh = apiKey
+        ? (await this.exchangeApiKey(apiKey)).token
+        : exchange
+          ? (await this.exchangeTenantToken()).token
+          : await this.reloginVerified(login!);
       this.credentialNeedsLogin = false;
       return fresh;
     } catch (err) {
@@ -2175,7 +2215,7 @@ export class UdbProject {
     // A local refusal never reached the broker.
     if (err instanceof SessionExpiredError) return false;
     if (this.closed || this.credentialTerminal) return false;
-    if (!RETAINED_LOGINS.has(this) && !RETAINED_API_KEYS.has(this)) return false;
+    if (!RETAINED_LOGINS.has(this) && !RETAINED_API_KEYS.has(this) && !RETAINED_EXCHANGES.has(this)) return false;
     // Already marked by a concurrent call; its renewal is shared.
     if (sent === this.lastRejected) return true;
     // Not the owner's bearer, or one an ordinary refresh already replaced.
@@ -2219,6 +2259,73 @@ export class UdbProject {
         return original(...args);
       };
     }
+  }
+
+  /**
+   * A client that acts in the MEMBER tenant `tenantId` (and `projectId`; empty lets
+   * the membership choose) with a token exchanged from this client's bearer through
+   * `AuthnService.ExchangeServiceTokenForTenant`, for a service connected to its
+   * home tenant that holds an approved membership in another. The exchanged token
+   * is short-lived and has no refresh token, so the member client exchanges again
+   * before it expires, and at once when the broker refuses it early; while that
+   * re-exchange is failing its calls are refused locally (`SessionExpiredError`)
+   * and the background refresher retries with backoff. A token for any other
+   * tenant or project than the one asked for is refused, never adopted. The member
+   * client opens its own channels to the same targets; close it before (or with)
+   * this client, whose bearer every re-exchange uses. `tenantId` must be the
+   * tenant's canonical lowercase UUID.
+   */
+  async forTenant(tenantId: string, projectId = ""): Promise<UdbProject> {
+    const tenant = (tenantId ?? "").trim();
+    const project = (projectId ?? "").trim();
+    if (!CANONICAL_TENANT_UUID.test(tenant)) {
+      throw new Error(`udb: forTenant: tenant "${tenantId}" is not a canonical (lowercase hyphenated) UUID`);
+    }
+    if (this.closed) throw new Error("udb: forTenant: this client is closed");
+    // The member identity comes from the exchanged token's verified principal.
+    const {
+      credentials: _credentials,
+      tokenStore: _tokenStore,
+      userId: _userId,
+      serviceIdentity: _serviceIdentity,
+      scopes: _scopes,
+      ...shared
+    } = this.config;
+    const member = new UdbProject({ ...shared, tenantId: tenant, projectId: project || undefined });
+    const label = `udb: exchange the service token for tenant ${tenant}`;
+    RETAINED_EXCHANGES.set(member, async () => {
+      const resp: any = await this.auth.exchangeServiceTokenForTenant({
+        target_tenant_id: tenant,
+        target_project_id: project,
+        requested_scopes: [],
+      });
+      if (!resp?.access_token || !Number(resp?.expires_at_unix ?? 0)) {
+        throw new Error(`${label}: the broker returned no token (does the service have an ACTIVE membership in that tenant?)`);
+      }
+      if ((resp.tenant_id ?? "") !== tenant) {
+        throw new CredentialBindingError(`${label}: the broker returned a token for tenant "${resp.tenant_id ?? ""}"`);
+      }
+      if (project && (resp.project_id ?? "") !== project) {
+        throw new CredentialBindingError(
+          `${label}: the broker returned a token for project "${resp.project_id ?? ""}", want "${project}"`,
+        );
+      }
+      const verified: any = await member.renewalAuth().authenticateBearer(resp.access_token);
+      const principal = verified?.principal;
+      if (principal && (principal.tenant_id ?? "") !== tenant) {
+        throw new CredentialBindingError(`${label}: the token authenticates in tenant "${principal.tenant_id ?? ""}"`);
+      }
+      return { access_token: resp.access_token, expires_at_unix: resp.expires_at_unix, principal };
+    });
+    try {
+      await member.exchangeTenantToken();
+      member.tenantState.adopt(member.sharedMeta.tenantId);
+    } catch (err) {
+      member.close();
+      throw err;
+    }
+    member.startBackgroundRefresh();
+    return member;
   }
 
   /** Keep the username/password a session connected with, for re-login. */
@@ -2409,6 +2516,7 @@ export class UdbProject {
   async logout(): Promise<void> {
     await this.tokenStore.clear();
     RETAINED_API_KEYS.delete(this);
+    RETAINED_EXCHANGES.delete(this);
     this.verifiedPrincipal = null;
     this.exchangedBearerExpiresAt = 0;
     this.forgetCredentialPin();
@@ -2426,6 +2534,7 @@ export class UdbProject {
     }
     RETAINED_API_KEYS.delete(this);
     RETAINED_LOGINS.delete(this);
+    RETAINED_EXCHANGES.delete(this);
     this.healthClient?.close();
     this.healthClient = null;
     this.generated.close();

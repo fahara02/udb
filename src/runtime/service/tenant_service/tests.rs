@@ -805,3 +805,37 @@ mod durable_gate {
         register_tenant_status_store(None);
     }
 }
+
+/// A platform service account follows the tenants it serves: ListTenants
+/// admits a SERVICE_ACCOUNT bearer, which the handler scopes to its home
+/// tenant and that tenant's direct children like any non-admin caller.
+#[test]
+fn list_tenants_admits_a_service_account_bearer() {
+    use crate::proto::udb::core::common::v1::CredentialType;
+    let security = crate::runtime::service::method_security::method_security(
+        "/udb.core.tenant.services.v1.TenantService/ListTenants",
+    )
+    .expect("ListTenants endpoint security");
+    for credential in [
+        CredentialType::BearerJwt,
+        CredentialType::Session,
+        CredentialType::ServiceAccount,
+    ] {
+        assert!(
+            security
+                .allowed_credential_types
+                .contains(&(credential as i32)),
+            "{credential:?} must be admitted"
+        );
+    }
+    let service = crate::runtime::service::method_security::test_claim_context(
+        "svc-platform",
+        "platform-tenant",
+        "",
+        &["udb:tenant:list-tenants"],
+        &[],
+    );
+    let scope = super::store::list_tenants_scope(true, &service)
+        .expect("a tenant-bound service account lists its subtree");
+    assert_eq!(scope.subtree_of.as_deref(), Some("platform-tenant"));
+}

@@ -12,7 +12,8 @@ public interface ListServiceAccountTenantMembershipsRequestOrBuilder extends
 
   /**
    * <pre>
-   * Must be the caller's own tenant.
+   * The caller's own tenant, a direct child of it, or any tenant for a
+   * platform admin.
    * </pre>
    *
    * <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
@@ -21,7 +22,8 @@ public interface ListServiceAccountTenantMembershipsRequestOrBuilder extends
   java.lang.String getTargetTenantId();
   /**
    * <pre>
-   * Must be the caller's own tenant.
+   * The caller's own tenant, a direct child of it, or any tenant for a
+   * platform admin.
    * </pre>
    *
    * <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>

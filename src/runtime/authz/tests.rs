@@ -626,6 +626,10 @@ async fn default_deny_names_the_tuple_and_ends_with_the_grant_command() {
         "{message}"
     );
     assert!(message.contains("keep the existing entries"), "{message}");
+    assert!(
+        message.contains("with --additive a file holding only this entry adds it"),
+        "{message}"
+    );
     assert_eq!(denied.matched_policy_ids.len(), 40, "audit keeps the count");
 
     // No role: the grant names the caller's identity instead.

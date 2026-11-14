@@ -1146,7 +1146,11 @@ pub fn run() {
             );
             process::exit(exit_code);
         }
-        Command::CatalogStage { project, dsn } => {
+        Command::CatalogStage {
+            project,
+            dsn,
+            idempotency_key,
+        } => {
             if project.trim().is_empty() {
                 eprintln!("catalog stage: --project <id> is required");
                 process::exit(2);
@@ -1160,11 +1164,12 @@ pub fn run() {
                 dsn.as_deref(),
                 |rt| async move {
                     match rt
-                        .stage_project_catalog(
+                        .stage_project_catalog_with_idempotency_key(
                             &project,
                             &manifest_json,
                             "udb catalog stage",
                             "udb-cli",
+                            idempotency_key.as_deref(),
                         )
                         .await
                     {

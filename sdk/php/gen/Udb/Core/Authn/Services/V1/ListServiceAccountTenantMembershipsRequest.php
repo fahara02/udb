@@ -15,7 +15,8 @@ use Google\Protobuf\RepeatedField;
 class ListServiceAccountTenantMembershipsRequest extends \Google\Protobuf\Internal\Message
 {
     /**
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      *
      * Generated from protobuf field <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
      */
@@ -38,7 +39,8 @@ class ListServiceAccountTenantMembershipsRequest extends \Google\Protobuf\Intern
      *     Optional. Data for populating the Message object.
      *
      *     @type string $target_tenant_id
-     *           Must be the caller's own tenant.
+     *           The caller's own tenant, a direct child of it, or any tenant for a
+     *           platform admin.
      *     @type int $page_size
      *     @type string $page_token
      *           Opaque continuation token from a previous response.
@@ -50,7 +52,8 @@ class ListServiceAccountTenantMembershipsRequest extends \Google\Protobuf\Intern
     }
 
     /**
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      *
      * Generated from protobuf field <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
      * @return string
@@ -61,7 +64,8 @@ class ListServiceAccountTenantMembershipsRequest extends \Google\Protobuf\Intern
     }
 
     /**
-     * Must be the caller's own tenant.
+     * The caller's own tenant, a direct child of it, or any tenant for a
+     * platform admin.
      *
      * Generated from protobuf field <code>string target_tenant_id = 1 [json_name = "targetTenantId"];</code>
      * @param string $var

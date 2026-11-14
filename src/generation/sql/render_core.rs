@@ -367,7 +367,10 @@ pub(crate) fn render_delta_operation(
                     qi(&op.schema),
                     qi(&op.table),
                     qi(&column.column_name),
-                    column.default_value
+                    crate::generation::manifest::canonical_column_default(
+                        &column.sql_type,
+                        &column.default_value
+                    )
                 )
             })
             .unwrap_or_else(|| missing_column_note(op)),
@@ -380,7 +383,11 @@ pub(crate) fn render_delta_operation(
         ChangeKind::SetNotNull => table
             .and_then(|table| find_column(table, &op.column))
             .map(|column| {
-                let backfill = first_non_empty(&column.backfill_sql, &column.default_value, "");
+                let default_value = crate::generation::manifest::canonical_column_default(
+                    &column.sql_type,
+                    &column.default_value,
+                );
+                let backfill = first_non_empty(&column.backfill_sql, &default_value, "");
                 let prefix = if backfill.is_empty() {
                     String::new()
                 } else {
@@ -665,7 +672,13 @@ pub(crate) fn render_column(column: &ManifestColumn) -> String {
         ));
     } else {
         if !column.default_value.trim().is_empty() {
-            parts.push(format!("DEFAULT {}", column.default_value));
+            parts.push(format!(
+                "DEFAULT {}",
+                crate::generation::manifest::canonical_column_default(
+                    &column.sql_type,
+                    &column.default_value
+                )
+            ));
         }
         if column.not_null {
             parts.push("NOT NULL".to_string());

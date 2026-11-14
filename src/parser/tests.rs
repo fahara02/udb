@@ -660,3 +660,26 @@ message Invoice {
     assert!(!column("note").security.is_pii, "the enum's zero value");
     assert!(!column("own").security.is_pii);
 }
+
+/// A Windows path (`proto\acme\...`) is recorded with forward slashes at the
+/// parser, so every artifact built from the schema (manifest `source_file`, the
+/// `-- UDB:source_proto=` header, diagnostics, the schema checksum) is the same
+/// on every platform.
+#[test]
+fn parsed_source_paths_use_forward_slashes() {
+    let source = br#"package myapp.v1;
+message Invoice {
+  option (myapp.v1.table) = { table_name: "invoices" schema_name: "billing" is_table: true };
+  string email = 1;
+}
+"#;
+    let windows_path = "proto\\myapp\\billing\\v1\\invoice.proto";
+    let report = super::parse_proto_source(source, windows_path, &ParserConfig::default())
+        .expect("parse test source");
+    assert!(!report.schemas.is_empty());
+    for schema in &report.schemas {
+        assert_eq!(schema.file, "proto/myapp/billing/v1/invoice.proto");
+    }
+    let ast = super::parse_ast_source(source, windows_path).expect("parse test ast");
+    assert_eq!(ast.file, "proto/myapp/billing/v1/invoice.proto");
+}

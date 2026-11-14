@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::generation::manifest::{
     CatalogManifest, ManifestCheck, ManifestColumn, ManifestExtension, ManifestForeignKey,
     ManifestIndex, ManifestMaterializedView, ManifestPolicy, ManifestSqlArtifact, ManifestTable,
-    ManifestTrigger, check_key, fk_key, index_key,
+    ManifestTrigger, check_key, column_default_key, fk_key, index_key,
 };
 use crate::generation::sql::validate_enum_value;
 
@@ -896,7 +896,8 @@ fn diff_columns(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOp
             let previous = old_columns[&new_col.previous_column_name];
             if previous.sql_type != new_col.sql_type
                 || previous.not_null != new_col.not_null
-                || previous.default_value != new_col.default_value
+                || column_default_key(&previous.sql_type, &previous.default_value)
+                    != column_default_key(&new_col.sql_type, &new_col.default_value)
             {
                 ops.push(manual_change(
                     new,
@@ -1069,7 +1070,9 @@ fn diff_column(
             "collation changes rewrite comparison semantics and require explicit review",
         ));
     }
-    if old.default_value != new.default_value {
+    if column_default_key(&old.sql_type, &old.default_value)
+        != column_default_key(&new.sql_type, &new.default_value)
+    {
         let kind = if new.default_value.trim().is_empty() {
             ChangeKind::DropDefault
         } else {
@@ -1354,8 +1357,12 @@ fn parse_sql_type(value: &str) -> Option<ParsedSqlType> {
         "CHARACTER VARYING" | "VARCHAR" => "VARCHAR",
         "DECIMAL" | "NUMERIC" => "NUMERIC",
         "TEXT" => "TEXT",
-        // Nothing else has a widening below, and CHAR must not: casting it strips
-        // the padding, so its values change.
+        // CHAR is parsed so its reviewed widenings can be recognised, but it never
+        // has a LOSSLESS widening: casting it to VARCHAR or TEXT strips the
+        // trailing padding, so its values change.
+        "CHAR" | "CHARACTER" | "BPCHAR" => "CHAR",
+        "JSON" => "JSON",
+        "JSONB" => "JSONB",
         _ => return None,
     }
     .to_string();
@@ -1388,7 +1395,14 @@ pub fn is_lossless_widening(old: &str, new: &str) -> bool {
             ([from], [to]) => to > from,
             _ => false,
         },
-        ("SMALLINT" | "INTEGER" | "BIGINT", "NUMERIC") => new.modifiers.is_empty(),
+        // Exact integers fit any NUMERIC with at least as many integral digits.
+        (from @ ("SMALLINT" | "INTEGER" | "BIGINT"), "NUMERIC") => match new.modifiers.as_slice() {
+            [] => true,
+            [precision, rest @ ..] => {
+                let scale = rest.first().copied().unwrap_or(0);
+                precision.checked_sub(scale) >= integer_decimal_digits(from)
+            }
+        },
         ("NUMERIC", "NUMERIC") => match (old.modifiers.as_slice(), new.modifiers.as_slice()) {
             (_, []) => true,
             ([], _) => false,
@@ -1405,30 +1419,61 @@ pub fn is_lossless_widening(old: &str, new: &str) -> bool {
     }
 }
 
-fn is_widening_sql_type(old: &str, new: &str) -> bool {
-    matches!(
-        (
-            normalize_type_token(old).as_str(),
-            normalize_type_token(new).as_str()
-        ),
-        ("INTEGER", "BIGINT")
-            | ("INTEGER", "NUMERIC")
-            | ("BIGINT", "NUMERIC")
-            | ("REAL", "DOUBLE PRECISION")
-            | ("REAL", "NUMERIC")
-            | ("DOUBLE PRECISION", "NUMERIC")
-            | ("VARCHAR", "TEXT")
-            | ("CHAR", "TEXT")
-            | ("JSON", "JSONB")
-    )
+/// Both types parsed to their canonical names, when both are known and have the
+/// same array rank. Spellings (`INT8`, `CHARACTER VARYING`, `FLOAT4`, `DECIMAL`)
+/// classify exactly like their canonical names.
+fn comparable_sql_types(old: &str, new: &str) -> Option<(ParsedSqlType, ParsedSqlType)> {
+    let (old, new) = (parse_sql_type(old)?, parse_sql_type(new)?);
+    (old.array_rank == new.array_rank).then_some((old, new))
 }
 
+/// The decimal digits an integer type can hold, so a NUMERIC target with fewer
+/// integral digits is a narrowing rather than a widening.
+fn integer_decimal_digits(base: &str) -> Option<u32> {
+    match base {
+        "SMALLINT" => Some(5),
+        "INTEGER" => Some(10),
+        "BIGINT" => Some(19),
+        _ => None,
+    }
+}
+
+/// Whether `new` can hold every value of `old`, so the change may run unattended
+/// (`SafeAuto`). Broader than [`is_lossless_widening`]: it also takes casts that
+/// keep every row but may alter a value's representation (REAL to NUMERIC
+/// rounds the binary float, JSON to JSONB re-renders the document, CHAR to
+/// VARCHAR/TEXT strips trailing padding). Those stay data-destructive, so a
+/// reviewed catalog transition still refuses them.
+fn is_widening_sql_type(old: &str, new: &str) -> bool {
+    if is_lossless_widening(old, new) {
+        return true;
+    }
+    let Some((old, new)) = comparable_sql_types(old, new) else {
+        return false;
+    };
+    match (old.base.as_str(), new.base.as_str()) {
+        ("REAL" | "DOUBLE PRECISION", "NUMERIC") => new.modifiers.is_empty(),
+        ("CHAR", "TEXT") => true,
+        // CHAR without a length is CHAR(1).
+        ("CHAR", "VARCHAR") => match (old.modifiers.as_slice(), new.modifiers.as_slice()) {
+            (_, []) => true,
+            ([], [to]) => *to >= 1,
+            ([from], [to]) => to >= from,
+            _ => false,
+        },
+        ("JSON", "JSONB") => true,
+        _ => false,
+    }
+}
+
+/// Whether `new` provably cannot hold some value of `old`: such a change is
+/// `Blocked` until a `using_expression` and an explicit review take it.
 fn is_narrowing_sql_type(old: &str, new: &str) -> bool {
+    let Some((old, new)) = comparable_sql_types(old, new) else {
+        return false;
+    };
     matches!(
-        (
-            normalize_type_token(old).as_str(),
-            normalize_type_token(new).as_str()
-        ),
+        (old.base.as_str(), new.base.as_str()),
         ("BIGINT", "INTEGER")
             | ("NUMERIC", "BIGINT")
             | ("NUMERIC", "INTEGER")
@@ -1437,17 +1482,6 @@ fn is_narrowing_sql_type(old: &str, new: &str) -> bool {
             | ("TEXT", "CHAR")
             | ("JSONB", "JSON")
     )
-}
-
-fn normalize_type_token(value: &str) -> String {
-    value
-        .trim()
-        .to_ascii_uppercase()
-        .split('(')
-        .next()
-        .unwrap_or_default()
-        .trim()
-        .to_string()
 }
 
 fn diff_enum_values(
@@ -3578,6 +3612,112 @@ mod tests {
                 "{old_type} -> {new_type} must stay destructive"
             );
         }
+    }
+
+    /// Every widening runs unattended (`SafeAuto`) under any spelling of the two
+    /// types; only the lossless ones are non-destructive. Every narrowing or
+    /// unrelated change needs review (or is blocked) and is never `SafeAuto`.
+    #[test]
+    fn type_change_safety_is_table_driven_over_canonical_types() {
+        // (old, new, data_destructive)
+        for (old_type, new_type, destructive) in [
+            ("VARCHAR(10)", "VARCHAR(11)", false),
+            ("VARCHAR(10)", "TEXT", false),
+            ("CHARACTER VARYING(10)", "text", false),
+            ("SMALLINT", "INTEGER", false),
+            ("INT2", "INT8", false),
+            ("INTEGER", "BIGINT", false),
+            ("FLOAT4", "FLOAT8", false),
+            ("REAL", "DOUBLE PRECISION", false),
+            ("NUMERIC(10,2)", "NUMERIC(14,2)", false),
+            ("DECIMAL(10,2)", "NUMERIC(14,2)", false),
+            ("INTEGER", "NUMERIC(10)", false),
+            ("SMALLINT", "NUMERIC(7,2)", false),
+            ("INT4", "NUMERIC", false),
+            // Kept rows, but the cast changes the value's representation.
+            ("CHAR(4)", "TEXT", true),
+            ("CHAR(4)", "VARCHAR(4)", true),
+            ("CHARACTER(4)", "VARCHAR(10)", true),
+            ("CHAR", "VARCHAR", true),
+            ("BPCHAR(4)", "CHARACTER VARYING", true),
+            ("REAL", "NUMERIC", true),
+            ("JSON", "JSONB", true),
+        ] {
+            let change = type_change(old_type, new_type, "");
+            assert_eq!(
+                change.safety,
+                ChangeSafety::SafeAuto,
+                "{old_type} -> {new_type} is a widening"
+            );
+            assert_eq!(
+                change.data_destructive, destructive,
+                "{old_type} -> {new_type} destructiveness"
+            );
+        }
+        for (old_type, new_type) in [
+            ("VARCHAR(11)", "VARCHAR(10)"),
+            ("TEXT", "VARCHAR(10)"),
+            ("CHAR(10)", "VARCHAR(4)"),
+            ("INT8", "INT4"),
+            ("INTEGER", "SMALLINT"),
+            ("FLOAT8", "FLOAT4"),
+            ("NUMERIC(14,2)", "NUMERIC(10,2)"),
+            ("NUMERIC(10,2)", "NUMERIC(10,4)"),
+            ("INTEGER", "NUMERIC(3)"),
+            ("BIGINT", "NUMERIC(12)"),
+            ("REAL", "NUMERIC(6,2)"),
+            ("VARCHAR(80)[]", "TEXT"),
+            ("TEXT", "UUID"),
+        ] {
+            let change = type_change(old_type, new_type, "");
+            assert_ne!(
+                change.safety,
+                ChangeSafety::SafeAuto,
+                "{old_type} -> {new_type} is not a widening"
+            );
+            assert!(change.data_destructive, "{old_type} -> {new_type}");
+        }
+        // Aliased spellings of a known narrowing are blocked like the canonical one.
+        for (old_type, new_type) in [("INT8", "INT4"), ("FLOAT8", "FLOAT4"), ("TEXT", "BPCHAR")] {
+            assert_eq!(
+                type_change(old_type, new_type, "").safety,
+                ChangeSafety::Blocked,
+                "{old_type} -> {new_type}"
+            );
+        }
+    }
+
+    /// One array default spelled two ways is not a default change; a different
+    /// array is. The rendered DDL of a bare or empty-constructor default is valid.
+    #[test]
+    fn array_default_spellings_compare_stably_and_render_typed() {
+        let default_ops = |old_default: &str, new_default: &str| {
+            let mut old_column = column("tags", "TEXT[]");
+            old_column.default_value = old_default.to_string();
+            let mut new_column = column("tags", "TEXT[]");
+            new_column.default_value = new_default.to_string();
+            let old_manifest = manifest(table(vec![old_column]), "old", "old-table");
+            let new_manifest = manifest(table(vec![new_column]), "new", "new-table");
+            diff_manifests(Some(&old_manifest), &new_manifest)
+                .into_iter()
+                .filter(|change| {
+                    matches!(
+                        change.kind,
+                        ChangeKind::SetDefault | ChangeKind::DropDefault
+                    )
+                })
+                .count()
+        };
+        assert_eq!(default_ops("'{}'", "'{}'::text[]"), 0);
+        assert_eq!(default_ops("{}", "'{}'::TEXT[]"), 0);
+        assert_eq!(default_ops("ARRAY[]", "'{}'"), 0);
+        assert_eq!(default_ops("'{}'", "'{a}'"), 1);
+        assert_eq!(default_ops("'{}'", ""), 1);
+
+        let mut tags = column("tags", "TEXT[]");
+        tags.default_value = "{}".to_string();
+        let rendered = crate::generation::sql::render_column(&tags);
+        assert!(rendered.contains("DEFAULT '{}'::TEXT[]"), "{rendered}");
     }
 
     /// A USING expression can rewrite values, whatever the two types are.

@@ -97,7 +97,9 @@ pub use auth_service::{
     cli_api_key_revoke, migrate_service_account_grants, served_bootstrap_admin,
 };
 pub use auth_service::{
-    PolicyReconcileReport, normalize_declared_policies, reconcile_authz_policies_offline,
+    PLATFORM_POLICY_DOMAIN, PolicyReconcileOptions, PolicyReconcileReport,
+    export_authz_policies_offline, normalize_declared_policies, reconcile_authz_policies_offline,
+    reconcile_authz_policies_offline_with,
 };
 /// Validate declarative CLI scopes through the same canonical service-account
 /// validator used by serving create/replace/key attenuation. This preflight does

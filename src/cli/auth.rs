@@ -6,6 +6,7 @@
 
 use super::*;
 use serde_json::json;
+use std::path::{Path, PathBuf};
 use tonic::Request;
 use tonic::transport::Channel;
 use udb::proto::udb::core::apikey::entity::v1 as apikey_entity_pb;
@@ -18,6 +19,8 @@ use udb::proto::udb::core::authz::entity::v1 as authz_entity_pb;
 use udb::proto::udb::core::authz::services::v1 as authz_pb;
 use udb::proto::udb::core::authz::services::v1::authz_service_client::AuthzServiceClient;
 use udb::proto::udb::core::common::v1 as common_pb;
+use udb::proto::udb::core::tenant::services::v1 as tenant_pb;
+use udb::proto::udb::core::tenant::services::v1::tenant_service_client::TenantServiceClient;
 
 const SECRET_PREFIX_REVEAL_LEN: usize = 6;
 
@@ -76,6 +79,40 @@ pub(crate) fn run_auth_command(command: AuthCommand) -> i32 {
             return 1;
         }
     };
+    if let AuthCommand::Login {
+        username,
+        password_file,
+        tenant,
+        project,
+        out,
+        addr,
+    } = command
+    {
+        let login = LoginArgs {
+            username,
+            password_file,
+            tenant,
+            project,
+            out,
+            addr,
+        };
+        return match runtime.block_on(run_login(&login)) {
+            // Without --out the token alone goes to stdout, so
+            // `UDB_AUTH_TOKEN=$(udb auth login …)` works.
+            Ok(LoginOutcome::Printed(token)) => {
+                println!("{token}");
+                0
+            }
+            Ok(LoginOutcome::Written(summary)) => {
+                output_json(&summary, "auth login result");
+                0
+            }
+            Err(err) => {
+                eprintln!("auth login: {err}");
+                1
+            }
+        };
+    }
     match runtime.block_on(run_auth_command_async(command)) {
         Ok(value) => {
             output_json(&value, "auth command result");
@@ -413,6 +450,131 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 ))
                 .await
                 .map_err(|error| format!("grant revoke failed: {error}"))?
+                .into_inner();
+            Ok(json!({ "revoked": response.revoked, "message": response.message }))
+        }
+        AuthCommand::MembershipCreate {
+            target_tenant_id,
+            all_children,
+            user_id,
+            home_tenant_id,
+            project_id,
+            scopes,
+            reason,
+            expires_in_days,
+            replace,
+        } => {
+            require("user", &user_id)?;
+            require("home-tenant", &home_tenant_id)?;
+            require("reason", &reason)?;
+            if scopes.is_empty() {
+                return Err("--scope is required (repeat for multiple scopes)".to_string());
+            }
+            if !(1..=365).contains(&expires_in_days) {
+                return Err("--expires-in-days must be between 1 and 365".to_string());
+            }
+            let targets = membership_targets(&target_tenant_id, all_children).await?;
+            let expires_at = membership_expiry(expires_in_days)?;
+            let mut client = authn_client().await?;
+            let mut approved = Vec::new();
+            let mut failed = Vec::new();
+            for target in targets {
+                let request = authn_pb::CreateServiceAccountTenantMembershipRequest {
+                    target_tenant_id: target.clone(),
+                    user_id: user_id.clone(),
+                    home_tenant_id: home_tenant_id.clone(),
+                    target_project_id: project_id.clone(),
+                    approved_scopes: scopes.clone(),
+                    reason: reason.clone(),
+                    expires_at: Some(expires_at),
+                    replace_active: replace,
+                };
+                match client
+                    .create_service_account_tenant_membership(with_metadata(request))
+                    .await
+                {
+                    Ok(response) => approved.push(json!({
+                        "target_tenant_id": target,
+                        "membership_id": response
+                            .into_inner()
+                            .membership
+                            .map(|membership| membership.membership_id)
+                            .unwrap_or_default(),
+                    })),
+                    Err(error) => failed.push(json!({
+                        "target_tenant_id": target,
+                        "error": error.message(),
+                    })),
+                }
+            }
+            let summary = json!({ "approved": approved, "failed": failed });
+            if failed.is_empty() {
+                Ok(summary)
+            } else {
+                Err(format!(
+                    "membership create failed for {} of {} tenant(s): {summary}",
+                    failed.len(),
+                    failed.len() + approved.len()
+                ))
+            }
+        }
+        AuthCommand::MembershipList { target_tenant_id } => {
+            require("target-tenant", &target_tenant_id)?;
+            let mut client = authn_client().await?;
+            let mut memberships = Vec::new();
+            let mut page_token = String::new();
+            loop {
+                let response = client
+                    .list_service_account_tenant_memberships(with_metadata(
+                        authn_pb::ListServiceAccountTenantMembershipsRequest {
+                            target_tenant_id: target_tenant_id.clone(),
+                            page_size: 200,
+                            page_token: page_token.clone(),
+                        },
+                    ))
+                    .await
+                    .map_err(|error| format!("membership list failed: {error}"))?
+                    .into_inner();
+                memberships.extend(response.memberships.into_iter().map(|membership| {
+                    json!({
+                        "membership_id": membership.membership_id,
+                        "user_id": membership.user_id,
+                        "home_tenant_id": membership.home_tenant_id,
+                        "target_tenant_id": membership.target_tenant_id,
+                        "target_project_id": membership.target_project_id,
+                        "approved_scopes": serde_json::from_str::<serde_json::Value>(
+                            &membership.approved_scopes_json,
+                        )
+                        .unwrap_or(serde_json::Value::Null),
+                        "status": membership.status,
+                    })
+                }));
+                if response.next_page_token.is_empty() {
+                    break;
+                }
+                page_token = response.next_page_token;
+            }
+            Ok(json!({ "memberships": memberships }))
+        }
+        AuthCommand::MembershipRevoke {
+            target_tenant_id,
+            membership_id,
+            reason,
+        } => {
+            require("target-tenant", &target_tenant_id)?;
+            require("membership", &membership_id)?;
+            require("reason", &reason)?;
+            let mut client = authn_client().await?;
+            let response = client
+                .revoke_service_account_tenant_membership(with_metadata(
+                    authn_pb::RevokeServiceAccountTenantMembershipRequest {
+                        target_tenant_id,
+                        membership_id,
+                        reason,
+                    },
+                ))
+                .await
+                .map_err(|error| format!("membership revoke failed: {error}"))?
                 .into_inner();
             Ok(json!({ "revoked": response.revoked, "message": response.message }))
         }
@@ -862,20 +1024,24 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
         } => {
             require("action", &action)?;
             require("resource", &resource)?;
+            // PutAuthzPolicy requires an id: derive the same stable id
+            // `udb authz policy put` does, so re-running one rule writes one row.
+            let mut policy = authz_pb::AuthzPolicyRecord {
+                subject,
+                role,
+                action,
+                resource,
+                effect: effect.to_ascii_uppercase(),
+                tenant,
+                project,
+                enabled: true,
+                ..Default::default()
+            };
+            policy.id = super::authz_cli::derived_policy_id(&policy);
             let mut client = authz_client().await?;
             let response = client
                 .put_authz_policy(with_metadata(authz_pb::PutAuthzPolicyRequest {
-                    policy: Some(authz_pb::AuthzPolicyRecord {
-                        subject,
-                        role,
-                        action,
-                        resource,
-                        effect: effect.to_ascii_uppercase(),
-                        tenant,
-                        project,
-                        enabled: true,
-                        ..Default::default()
-                    }),
+                    policy: Some(policy),
                 }))
                 .await
                 .map_err(|err| format!("policy put failed: {err}"))?
@@ -884,6 +1050,9 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 "ok": response.ok,
                 "message": response.message,
             }))
+        }
+        AuthCommand::Login { .. } => {
+            Err("auth login is handled before the JSON command dispatcher".to_string())
         }
         AuthCommand::PolicyLint => {
             let mut client = authz_client().await?;
@@ -900,10 +1069,242 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
     }
 }
 
+/// `udb auth login` inputs. The password is never an argument: it is read from
+/// `password_file` and lives only in the request.
+pub(crate) struct LoginArgs {
+    pub(crate) username: String,
+    pub(crate) password_file: String,
+    pub(crate) tenant: String,
+    pub(crate) project: String,
+    pub(crate) out: String,
+    pub(crate) addr: String,
+}
+
+pub(crate) enum LoginOutcome {
+    /// No `--out`: the access token, for stdout.
+    Printed(String),
+    /// `--out`: where the token was written, without the token.
+    Written(serde_json::Value),
+}
+
+/// Longest password file `udb auth login` reads.
+const LOGIN_PASSWORD_FILE_LIMIT: u64 = 4096;
+
+/// Sign in through AuthnService.Login. No bearer from the environment rides along:
+/// Login carries its credential in the request.
+async fn run_login(args: &LoginArgs) -> Result<LoginOutcome, String> {
+    require("username", &args.username)?;
+    require("password-file", &args.password_file)?;
+    let password = read_login_password(Path::new(args.password_file.trim()))?;
+    let target = if args.addr.trim().is_empty() {
+        auth_target()
+    } else {
+        let addr = client_target_addr(&args.addr);
+        if addr.starts_with("http://") || addr.starts_with("https://") {
+            addr
+        } else {
+            format!("http://{addr}")
+        }
+    };
+    let mut client = AuthnServiceClient::connect(target.clone())
+        .await
+        .map_err(|err| format!("failed to connect to authn service at {target}: {err}"))?;
+    let tenant = args.tenant.trim();
+    let mut request = Request::new(authn_pb::LoginRequest {
+        username: args.username.trim().to_string(),
+        password,
+        tenant_hint: tenant.to_string(),
+        project_hint: args.project.trim().to_string(),
+        device_name: "udb-cli".to_string(),
+        ..Default::default()
+    });
+    super::authz_cli::attach_correlation_id(&mut request);
+    if !tenant.is_empty() {
+        let value = tenant
+            .parse()
+            .map_err(|_| "--tenant is not a valid gRPC metadata value".to_string())?;
+        request.metadata_mut().insert("x-tenant-id", value);
+    }
+    let response = client
+        .login(request)
+        .await
+        .map_err(|status| format!("login refused: {} ({:?})", status.message(), status.code()))?
+        .into_inner();
+    if response.access_token.is_empty() {
+        return Err(if response.mfa_required {
+            "the account requires a second factor; `udb auth login` does not complete MFA"
+                .to_string()
+        } else {
+            "the broker returned no access token".to_string()
+        });
+    }
+    if args.out.trim().is_empty() {
+        return Ok(LoginOutcome::Printed(response.access_token));
+    }
+    let out = Path::new(args.out.trim());
+    write_owner_only(out, response.access_token.as_bytes())?;
+    Ok(LoginOutcome::Written(json!({
+        "written": out.to_string_lossy(),
+        "user_id": response.user_id,
+        "expires_in_seconds": response.access_token_expires_in,
+    })))
+}
+
+/// Read the password: one non-empty line from a regular file (not a symlink) of
+/// bounded size, which on Unix only its owner can read. Errors never include the
+/// file's contents.
+fn read_login_password(path: &Path) -> Result<String, String> {
+    let meta = std::fs::symlink_metadata(path)
+        .map_err(|_| format!("--password-file {} is unavailable", path.display()))?;
+    if !meta.file_type().is_file() {
+        return Err(
+            "--password-file must be a regular file, not a symlink or directory".to_string(),
+        );
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if meta.permissions().mode() & 0o077 != 0 {
+            return Err(format!(
+                "--password-file {} is readable by others; chmod 600 it",
+                path.display()
+            ));
+        }
+    }
+    if meta.len() > LOGIN_PASSWORD_FILE_LIMIT {
+        return Err("--password-file is larger than a password".to_string());
+    }
+    let raw = std::fs::read_to_string(path)
+        .map_err(|_| "--password-file could not be read as UTF-8 text".to_string())?;
+    let password = raw.trim_end_matches(['\r', '\n']);
+    if password.is_empty() || password.chars().any(char::is_control) {
+        return Err("--password-file must contain the password on one non-empty line".to_string());
+    }
+    Ok(password.to_string())
+}
+
+/// Write `bytes` to `path` readable only by its owner (0600 on Unix). The file is
+/// written beside `path` and renamed over it, so a reader never sees a partial
+/// token and an existing token file is replaced whole.
+fn write_owner_only(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write as _;
+    let parent = match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent.to_path_buf(),
+        _ => PathBuf::from("."),
+    };
+    let name = path
+        .file_name()
+        .ok_or_else(|| "--out must name a file".to_string())?;
+    let mut tmp_name = std::ffi::OsString::from(".");
+    tmp_name.push(name);
+    tmp_name.push(format!(".{}.tmp", uuid::Uuid::new_v4()));
+    let tmp = parent.join(tmp_name);
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let result = (|| {
+        let mut file = options
+            .open(&tmp)
+            .map_err(|err| format!("cannot create {}: {err}", tmp.display()))?;
+        file.write_all(bytes)
+            .and_then(|()| file.sync_all())
+            .map_err(|err| format!("cannot write {}: {err}", tmp.display()))?;
+        drop(file);
+        std::fs::rename(&tmp, path).map_err(|err| format!("cannot write {}: {err}", path.display()))
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    result
+}
+
 async fn authn_client() -> Result<AuthnServiceClient<Channel>, String> {
     AuthnServiceClient::connect(auth_target())
         .await
         .map_err(|err| format!("failed to connect to authn service: {err}"))
+}
+
+async fn tenant_client() -> Result<TenantServiceClient<Channel>, String> {
+    TenantServiceClient::connect(auth_target())
+        .await
+        .map_err(|err| format!("failed to connect to tenant service: {err}"))
+}
+
+/// The tenants a `membership create` approves into: the one named by
+/// `--target-tenant`, or with `--all-children` every DIRECT child of the
+/// caller's tenant (`UDB_TENANT_ID`, the tenant the operator token is for).
+async fn membership_targets(target: &str, all_children: bool) -> Result<Vec<String>, String> {
+    match (target.trim(), all_children) {
+        ("", false) => Err("--target-tenant or --all-children is required".to_string()),
+        (_, true) if !target.trim().is_empty() => {
+            Err("--target-tenant and --all-children are exclusive".to_string())
+        }
+        (target, false) => Ok(vec![target.to_string()]),
+        (_, true) => {
+            let parent = env::var("UDB_TENANT_ID").unwrap_or_default();
+            let parent = parent.trim();
+            if parent.is_empty() {
+                return Err(
+                    "--all-children needs UDB_TENANT_ID: the tenant whose direct children                      are approved (the operator token's tenant)"
+                        .to_string(),
+                );
+            }
+            let mut client = tenant_client().await?;
+            let mut children = Vec::new();
+            let mut page_token = String::new();
+            loop {
+                let response = client
+                    .list_tenants(with_metadata(tenant_pb::ListTenantsRequest {
+                        page_size: 200,
+                        page_token: page_token.clone(),
+                        ..Default::default()
+                    }))
+                    .await
+                    .map_err(|error| format!("listing child tenants failed: {error}"))?
+                    .into_inner();
+                children.extend(direct_children(&response.tenants, parent));
+                if response.next_page_token.is_empty() {
+                    break;
+                }
+                page_token = response.next_page_token;
+            }
+            if children.is_empty() {
+                return Err(format!(
+                    "tenant {parent} has no child tenants to approve into"
+                ));
+            }
+            Ok(children)
+        }
+    }
+}
+
+/// The ids of `tenants` whose direct parent is `parent`.
+fn direct_children(
+    tenants: &[udb::proto::udb::core::tenant::entity::v1::Tenant],
+    parent: &str,
+) -> Vec<String> {
+    tenants
+        .iter()
+        .filter(|tenant| tenant.parent_tenant_id.trim().eq_ignore_ascii_case(parent))
+        .filter(|tenant| !tenant.tenant_id.trim().eq_ignore_ascii_case(parent))
+        .map(|tenant| tenant.tenant_id.trim().to_string())
+        .collect()
+}
+
+/// `expires_at` for a membership `days` from now.
+fn membership_expiry(days: u64) -> Result<prost_types::Timestamp, String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|err| format!("system clock before the epoch: {err}"))?
+        .as_secs();
+    Ok(prost_types::Timestamp {
+        seconds: i64::try_from(now + days * 86_400).unwrap_or(i64::MAX),
+        nanos: 0,
+    })
 }
 
 async fn authz_client() -> Result<AuthzServiceClient<Channel>, String> {
@@ -1060,5 +1461,143 @@ fn client_target_addr(addr: &str) -> String {
         format!("{DEFAULT_GRPC_TARGET_HOST}:{port}")
     } else {
         addr.to_string()
+    }
+}
+
+#[cfg(test)]
+mod login_tests {
+    use super::*;
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "udb-auth-login-{}-{}",
+            std::process::id(),
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&dir).expect("scratch dir");
+        dir.join(name)
+    }
+
+    #[cfg(unix)]
+    fn set_mode(path: &Path, mode: u32) {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)).expect("chmod");
+    }
+
+    #[test]
+    fn token_file_is_owner_only_and_replaced_whole() {
+        let out = scratch("token");
+        write_owner_only(&out, b"first-token").expect("first write");
+        write_owner_only(&out, b"second").expect("replace");
+        assert_eq!(std::fs::read(&out).expect("read"), b"second");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&out).expect("meta").permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600, "token file mode {mode:o}");
+        }
+        let leftovers: Vec<_> = std::fs::read_dir(out.parent().unwrap())
+            .expect("dir")
+            .flatten()
+            .filter(|entry| entry.file_name() != "token")
+            .collect();
+        assert!(leftovers.is_empty(), "temporary files left behind");
+        let _ = std::fs::remove_dir_all(out.parent().unwrap());
+    }
+
+    #[test]
+    fn password_file_yields_one_line_and_never_echoes_it() {
+        let file = scratch("password");
+        std::fs::write(&file, "s3cret-Pass\n").expect("write");
+        #[cfg(unix)]
+        set_mode(&file, 0o600);
+        assert_eq!(read_login_password(&file).expect("read"), "s3cret-Pass");
+
+        for bad in ["", "\n", "two\nlines\n"] {
+            std::fs::write(&file, bad).expect("write");
+            let err = read_login_password(&file).unwrap_err();
+            assert!(err.contains("one non-empty line"), "{err}");
+            assert!(!err.contains("two"), "the error echoed the file: {err}");
+        }
+        let missing = read_login_password(&file.with_file_name("absent")).unwrap_err();
+        assert!(missing.contains("unavailable"), "{missing}");
+        let _ = std::fs::remove_dir_all(file.parent().unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn password_file_readable_by_others_is_refused() {
+        let file = scratch("password");
+        std::fs::write(&file, "s3cret-Pass").expect("write");
+        set_mode(&file, 0o644);
+        let err = read_login_password(&file).unwrap_err();
+        assert!(err.contains("chmod 600"), "{err}");
+        assert!(
+            !err.contains("s3cret"),
+            "the error echoed the password: {err}"
+        );
+        let _ = std::fs::remove_dir_all(file.parent().unwrap());
+    }
+
+    #[test]
+    fn login_requires_username_and_password_file_before_any_connection() {
+        let args = LoginArgs {
+            username: String::new(),
+            password_file: "pw".into(),
+            tenant: String::new(),
+            project: String::new(),
+            out: String::new(),
+            addr: "127.0.0.1:1".into(),
+        };
+        let runtime = tokio::runtime::Runtime::new().expect("runtime");
+        let err = runtime.block_on(run_login(&args)).err().expect("refused");
+        assert_eq!(err, "--username is required");
+        let args = LoginArgs {
+            username: "svc".into(),
+            password_file: String::new(),
+            ..args
+        };
+        let err = runtime.block_on(run_login(&args)).err().expect("refused");
+        assert_eq!(err, "--password-file is required");
+    }
+}
+
+#[cfg(test)]
+mod membership_cli_tests {
+    use super::*;
+    use udb::proto::udb::core::tenant::entity::v1::Tenant;
+
+    fn tenant(id: &str, parent: &str) -> Tenant {
+        Tenant {
+            tenant_id: id.to_string(),
+            parent_tenant_id: parent.to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn all_children_means_direct_children_of_the_callers_tenant() {
+        let listed = vec![
+            tenant("platform", ""),
+            tenant("doctor-a", "platform"),
+            tenant("doctor-b", "PLATFORM"),
+            tenant("clinic-of-a", "doctor-a"),
+        ];
+        assert_eq!(
+            direct_children(&listed, "platform"),
+            vec!["doctor-a".to_string(), "doctor-b".to_string()],
+            "the caller's own row and grandchildren are not approved into"
+        );
+        assert!(direct_children(&listed, "nobody").is_empty());
+    }
+
+    #[test]
+    fn a_membership_expiry_is_days_from_now() {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_secs() as i64;
+        let expiry = membership_expiry(30).expect("expiry");
+        assert!((expiry.seconds - now - 30 * 86_400).abs() <= 2);
     }
 }

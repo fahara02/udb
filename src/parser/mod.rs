@@ -93,7 +93,7 @@ pub fn parse_proto_source(
     name: impl Into<String>,
     config: &ParserConfig,
 ) -> Result<ParseReport, ParseError> {
-    let file = name.into();
+    let file = paths::portable_source_path(&name.into());
     let tokens = Lexer::new(source, file.clone())
         .tokenize()
         .map_err(ParseError::Lex)?;
@@ -109,7 +109,7 @@ pub fn parse_file_report(
         path: file_path.to_path_buf(),
         source,
     })?;
-    let file = file_path.to_string_lossy().to_string();
+    let file = paths::portable_source_path(&file_path.to_string_lossy());
     let tokens = Lexer::new(&source, file.clone())
         .tokenize()
         .map_err(ParseError::Lex)?;
@@ -122,15 +122,14 @@ pub fn parse_ast_file(file_path: impl AsRef<Path>) -> Result<ProtoFileAst, Parse
         path: file_path.to_path_buf(),
         source,
     })?;
-    let file = file_path.to_string_lossy().to_string();
-    parse_ast_source(&source, file)
+    parse_ast_source(&source, file_path.to_string_lossy())
 }
 
 pub fn parse_ast_source(
     source: &[u8],
     file: impl Into<String>,
 ) -> Result<ProtoFileAst, ParseError> {
-    let file = file.into();
+    let file = paths::portable_source_path(&file.into());
     let tokens = Lexer::new(source, file.clone())
         .tokenize()
         .map_err(ParseError::Lex)?;

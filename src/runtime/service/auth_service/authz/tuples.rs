@@ -498,4 +498,34 @@ mod tests {
             ],
         );
     }
+
+    /// A service account acting in a tenant (its own grant, or a
+    /// membership-exchanged `mbx_` token) writes relationship tuples like a
+    /// person may; the RPC's scope is still required. The raw service API key
+    /// is the same workload principal and is admitted with it.
+    #[test]
+    fn put_relationship_admits_service_accounts_and_still_requires_its_scope() {
+        let admissions = crate::runtime::service::describe_rpc_admission(
+            "AuthzService/PutRelationship",
+            "SERVICE_ACCOUNT",
+        );
+        assert_eq!(admissions.len(), 1, "{admissions:?}");
+        let admission = &admissions[0];
+        assert_eq!(admission.credential_admitted, Some(true), "{admission:?}");
+        for kind in ["BEARER_JWT", "SESSION", "SERVICE_ACCOUNT"] {
+            assert!(
+                admission.allowed_credential_types.contains(&kind),
+                "{kind} must stay admitted: {admission:?}"
+            );
+        }
+        assert_eq!(
+            admission.scopes,
+            vec!["udb:authz:put-relationship".to_string()]
+        );
+        let api_key = crate::runtime::service::describe_rpc_admission(
+            "AuthzService/PutRelationship",
+            "API_KEY",
+        );
+        assert_eq!(api_key[0].credential_admitted, Some(true));
+    }
 }
