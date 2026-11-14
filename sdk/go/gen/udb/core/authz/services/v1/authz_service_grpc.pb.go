@@ -244,7 +244,7 @@ type AuthzServiceClient interface {
 	// UDB contract: /udb.core.authz.services.v1.AuthzService/PutRelationship
 	// Listener: control plane.
 	// Scopes: udb:authz:put-relationship.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: mutation.
 	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
 	// Idempotency fields: no declared method replay contract.

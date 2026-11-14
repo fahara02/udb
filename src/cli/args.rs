@@ -1492,6 +1492,15 @@ pub(crate) fn split_csv(value: &str) -> Vec<String> {
 /// Flags that consume the following argv token as their value. The positional
 /// collector and `collect_positional_services` use this to skip flag values.
 const VALUE_FLAGS: &[&str] = &[
+    "--addr",
+    "--expires-in-days",
+    "--home-tenant",
+    "--id",
+    "--membership",
+    "--priority",
+    "--relationship",
+    "--target-tenant",
+    "-o",
     "--prior",
     "--catalog-id",
     "--emit-approval-plan",
@@ -2320,6 +2329,11 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                         | "--decode"
                         | "--embedded"
                         | "--platform-admin"
+                        | "--additive"
+                        | "--all-children"
+                        | "--brief"
+                        | "--disabled"
+                        | "--replace"
                 )
             {
                 None

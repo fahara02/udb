@@ -59,7 +59,7 @@ type TenantServiceClient interface {
 	// UDB contract: /udb.core.tenant.services.v1.TenantService/ListTenants
 	// Listener: control plane.
 	// Scopes: udb:tenant:list-tenants.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: read_only.
 	// Idempotency: read-only unary calls may retry transient failures.
 	// Idempotency fields: no declared method replay contract.
