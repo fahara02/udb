@@ -109,6 +109,13 @@ release line was tagged.
 
 ### Fixed
 
+- **`udb dev --embedded` starts on Ubuntu 26.04.** The embedded PostgreSQL 16.4.0 build links
+  `libxml2.so.2`, which Ubuntu 26.04 no longer ships, so `initdb` could not start; the default
+  is now 16.4.3, the same PostgreSQL 16.4 rebuilt (same data format; it downloads once). That
+  build carries its own time-zone files, some as tar hard links, which UDB's archive reader
+  silently skipped, so a connection could not set `TimeZone=UTC`. Hard links are now written as
+  copies of the earlier entry they name, confined to the install directory like every entry.
+
 - **A delegated access check evaluates a service account that acts in the tenant.** With
   `udb:authz:check-access-for`, a service could only ask about an ACTIVE person of its tenant;
   a service account (of the tenant, or acting in it through a live membership) got the same

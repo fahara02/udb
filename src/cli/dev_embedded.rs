@@ -159,8 +159,11 @@ fn dev_environment(dsn: &str, secret: &str) -> std::collections::BTreeMap<String
     values
 }
 
-/// PostgreSQL release used when `--pg-version` is not given.
-const DEFAULT_PG_VERSION: &str = "16.4.0";
+/// PostgreSQL release used when `--pg-version` is not given. 16.4.3 is
+/// PostgreSQL 16.4 rebuilt by the binaries project: the 16.4.0 build links
+/// `libxml2.so.2`, which Ubuntu 26.04 no longer ships (libxml2 2.14 changed its
+/// soname), so its initdb could not start there. Same server, same data format.
+const DEFAULT_PG_VERSION: &str = "16.4.3";
 /// Where the theseus-rs PostgreSQL builds are published (per-target tar.gz +
 /// .sha256). `UDB_POSTGRES_BINARIES_URL` points at a mirror.
 const DEFAULT_PG_BINARIES_URL: &str =
@@ -289,7 +292,8 @@ fn exe(name: &str) -> String {
 
 /// Read one tar archive (already gunzipped) into `dest`. Handles ustar names
 /// with prefixes, GNU long names (`L`) and pax `path` records; regular files,
-/// directories and (on Unix) symlinks. Paths that escape `dest` are refused.
+/// hard links (written as a copy of the earlier entry they name), directories
+/// and (on Unix) symlinks. Paths that escape `dest` are refused.
 pub(crate) fn untar(mut reader: impl Read, dest: &Path) -> Result<usize, String> {
     let mut header = [0u8; 512];
     let mut long_name: Option<String> = None;
@@ -413,6 +417,47 @@ pub(crate) fn untar(mut reader: impl Read, dest: &Path) -> Result<usize, String>
                     std::os::unix::fs::symlink(&link, &target)
                         .map_err(|err| format!("symlink {name}: {err}"))?;
                 }
+            }
+            b'1' => {
+                // A hard link names an EARLIER entry of the same archive (for
+                // example PostgreSQL's `share/timezone/UTC` -> `UCT`). Skipping
+                // it left the file missing; it is written as a copy of that
+                // entry, which must be a regular file already extracted inside
+                // `dest`, reached without passing through a symlink.
+                let link = field(157..257);
+                let source_relative = Path::new(&link);
+                if link.is_empty()
+                    || source_relative.is_absolute()
+                    || source_relative.components().any(|part| {
+                        !matches!(
+                            part,
+                            std::path::Component::Normal(_) | std::path::Component::CurDir
+                        )
+                    })
+                {
+                    return Err(format!("tar hard link escapes the destination: {name}"));
+                }
+                let source = dest.join(source_relative);
+                let mut ancestor = source.as_path();
+                while ancestor != dest {
+                    if fs::symlink_metadata(ancestor).is_ok_and(|m| m.file_type().is_symlink()) {
+                        return Err(format!("tar hard link traverses a symlink: {name}"));
+                    }
+                    ancestor = ancestor
+                        .parent()
+                        .ok_or_else(|| format!("invalid tar hard link: {name}"))?;
+                }
+                if !fs::symlink_metadata(&source).is_ok_and(|m| m.file_type().is_file()) {
+                    return Err(format!(
+                        "tar hard link names an entry that is not an earlier file: {name} -> {link}"
+                    ));
+                }
+                if let Some(parent) = target.parent() {
+                    fs::create_dir_all(parent).map_err(|err| format!("mkdir: {err}"))?;
+                }
+                let _ = fs::remove_file(&target);
+                fs::copy(&source, &target).map_err(|err| format!("link {name}: {err}"))?;
+                files += 1;
             }
             b'0' | 0 | b'7' => {
                 if let Some(parent) = target.parent() {
@@ -2465,6 +2510,55 @@ CertUtil: -hashfile command completed successfully.
                 .unwrap_err()
                 .contains("truncated tar header")
         );
+    }
+
+    fn hard_link(name: &str, link: &str) -> [u8; 512] {
+        let mut h = header(name, 0, b'1');
+        h[157..157 + link.len()].copy_from_slice(link.as_bytes());
+        h
+    }
+
+    /// PostgreSQL archives carry `share/timezone/UTC` as a hard link to `UCT`;
+    /// dropping it left the server unable to load the UTC zone.
+    #[test]
+    fn untar_writes_hard_links_as_copies_of_the_earlier_entry() {
+        let mut archive = Vec::new();
+        archive.extend_from_slice(&header("pg/share/timezone/UCT", 4, b'0'));
+        let mut body = b"TZif".to_vec();
+        body.resize(512, 0);
+        archive.extend_from_slice(&body);
+        archive.extend_from_slice(&hard_link("pg/share/timezone/UTC", "pg/share/timezone/UCT"));
+        archive.extend_from_slice(&hard_link(
+            "pg/share/timezone/Etc/UTC",
+            "pg/share/timezone/UCT",
+        ));
+        archive.extend_from_slice(&[0u8; 1024]);
+        let dir = std::env::temp_dir().join(format!("udb-untar-{}", uuid::Uuid::new_v4()));
+        assert_eq!(untar(archive.as_slice(), &dir).unwrap(), 3);
+        for zone in ["UCT", "UTC", "Etc/UTC"] {
+            assert_eq!(
+                std::fs::read(dir.join("pg/share/timezone").join(zone)).unwrap(),
+                b"TZif",
+                "{zone}"
+            );
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn untar_refuses_hard_links_outside_or_ahead_of_the_archive() {
+        for (link, why) in [
+            ("../outside", "escapes the destination"),
+            ("/etc/passwd", "escapes the destination"),
+            ("pg/not-yet-extracted", "not an earlier file"),
+        ] {
+            let mut archive = hard_link("pg/evil", link).to_vec();
+            archive.extend_from_slice(&[0u8; 1024]);
+            let dir = std::env::temp_dir().join(format!("udb-untar-{}", uuid::Uuid::new_v4()));
+            let err = untar(archive.as_slice(), &dir).unwrap_err();
+            assert!(err.contains(why), "{link}: {err}");
+            let _ = std::fs::remove_dir_all(&dir);
+        }
     }
 
     #[cfg(unix)]
