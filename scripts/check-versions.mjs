@@ -15,6 +15,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // `--set <x.y.z>` is the one way to change the release version: it writes every
@@ -534,6 +535,37 @@ if (!FIX) {
       note: "missing or empty section for " + version,
     });
     console.error("CHANGELOG.md: missing or empty section for " + version);
+  }
+}
+
+// The skill wrappers (openai/, ollama/, plugin references) are generated from
+// udb-skill/shared/*.md, which carries the release version. A version change
+// is not done until they are regenerated: --set/--fix regenerates them, the
+// check fails while any is stale, so a bump can never ship half-propagated.
+const PYTHON = process.platform === "win32" ? "python" : "python3";
+for (const script of ["sync_skills.py", "sync_udb_coding.py", "sync_references.py"]) {
+  const rel = "udb-skill/" + script;
+  if (!fileExists(rel)) continue;
+  const args = FIX ? [rel] : [rel, "--check"];
+  const run = spawnSync(PYTHON, args, { cwd: ROOT, encoding: "utf8" });
+  if (run.error || run.status !== 0) {
+    const detail = (run.error ? String(run.error) : (run.stdout || "") + (run.stderr || "")).trim();
+    failures.push({ file: rel, note: FIX ? "regeneration failed" : "derived skill files out of sync" });
+    console.error(`${rel}: ${FIX ? "regeneration failed" : "out of sync"}\n${detail}`);
+    if (FIX) process.exitCode = 1;
+  } else if (FIX) {
+    console.log(`${rel}: regenerated`);
+  }
+}
+
+if (FIX) {
+  // Every file a bump touched must be committed, including tracked files that
+  // sit inside mostly-untracked build folders (sdk/typescript/dist-test).
+  const changed = spawnSync("git", ["diff", "--name-only"], { cwd: ROOT, encoding: "utf8" });
+  if (changed.status === 0 && changed.stdout.trim()) {
+    const files = changed.stdout.trim().split("\n");
+    console.log(`\nTracked files changed (${files.length}); commit ALL of them:`);
+    for (const f of files) console.log("  " + f);
   }
 }
 
