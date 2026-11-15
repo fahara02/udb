@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.19 | protocol v1.0.0                                          │
+│    crate v0.6.20 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -515,7 +515,8 @@ flag. A flag wins over the environment and `.env`.
 | Setting | `udb serve` flag | Default | Meaning |
 | --- | --- | --- | --- |
 | `UDB_CLEANUP_ENABLED` | `--cleanup-enabled` | `true` | `false` stops the worker. `udb cleanup run` still works. |
-| `UDB_CLEANUP_RETENTION` | `--cleanup-retention` | the three log tables above = `declared` | Comma-separated `table=value`, merged over the defaults entry by entry: `access_decision_audits=90d,usage_events=keep`. A table is named by its table name or `schema.table`. A value is a duration (`d` or `h`, at least `1d`), `declared` or `keep`. `access_decision_audits:deny=value` keeps denied decisions longer than allows (`=keep` keeps them for good); a class is never kept shorter than its table. An unknown table or a bad value is logged as an error and nothing is pruned until it is fixed; partitions are still created. |
+| `UDB_CLEANUP_RETENTION` | `--cleanup-retention` | the three log tables above = `declared` | Comma-separated `table=value`, merged over the defaults entry by entry: `access_decision_audits=90d,usage_events=keep`. A table is named by its table name or `schema.table`. A value is a duration (`d` or `h`, at least `1d`), `declared` or `keep`. `access_decision_audits:deny=value` keeps denied decisions longer than allows (`=keep` keeps them for good); a class is never kept shorter than its table. A bad entry is logged on every pass and pauses removal for the table it names (an unknown table pauses nothing); the table never falls back to the default retention. Partitions are still created. |
+| `UDB_CLEANUP_MAX_SIZE` | `--cleanup-max-size` | `1GB` | Cap on the estimated size of the log tables above (`500MB`, `10GB`, `off`). Over it, each pass deletes their oldest rows, each table in proportion to its size, down to 90% of the cap, even rows inside retention. Never deleted for the cap: rows of the last hour, denied decisions while `access_decision_audits:deny` keeps them, and `auth_audit_log` rows the evidence export has not exported; when those alone exceed the cap the pass logs it. A table set to `keep` is outside the cap. `usage_events` is inside it: a project that bills from it raises the cap or sets `usage_events=keep`. |
 | `UDB_CLEANUP_INTERVAL` | `--cleanup-interval` | `10m` | How often a pass runs (`30s`, `10m`, `1h`). |
 | `UDB_CLEANUP_BATCH` | `--cleanup-batch` | `5000` | Rows one scheduled delete removes from an unpartitioned table; at most 20 deletes per table per pass. `udb cleanup run` is not capped. |
 | `UDB_CLEANUP_RECLAIM` | `--cleanup-reclaim` | `vacuum` | After rows were deleted from a table: `vacuum` runs `VACUUM (ANALYZE)` (the space is reused at once, nothing is locked); `full` runs `VACUUM FULL` (the space goes back to the operating system, the table is locked while it runs); `off` leaves it to autovacuum. |
@@ -543,6 +544,11 @@ Each pass:
    (`UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED`), `auth_audit_log` rows it has not
    exported yet are kept, so the exported hash chain stays complete.
 3. **Reclaims space** as `UDB_CLEANUP_RECLAIM` says.
+4. **Keeps the log tables under `UDB_CLEANUP_MAX_SIZE`** (default 1 GB). The
+   size is estimated from a sample of each table (stored row size, TOAST
+   included). Deleted rows make room for new ones, so the tables stop
+   growing at the cap; a database that is already larger shrinks on disk only
+   after `udb cleanup run --reclaim full`.
 
 Run a pass by hand:
 
@@ -694,7 +700,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.6.19"
+python scripts/bench_snapshot.py --label "release-0.6.20"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

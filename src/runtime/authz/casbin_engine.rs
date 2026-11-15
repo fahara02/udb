@@ -333,6 +333,19 @@ pub(crate) async fn validate_casbin_model() -> Result<(), String> {
         .map_err(|err| format!("invalid UDB authz Casbin model: {err}"))
 }
 
+/// How many candidate policies belong to the caller's tenant (or to every
+/// tenant): the count the audit keeps. Other tenants' candidates never decide
+/// a request here and are not counted.
+fn tenant_candidates(applicable: &[&AuthzPolicy], req: &AuthzQuery<'_>) -> usize {
+    applicable
+        .iter()
+        .filter(|policy| {
+            let domain = slot_ref(&policy.tenant);
+            domain == "*" || domain.is_empty() || domain == slot_ref(&req.principal.tenant_id)
+        })
+        .count()
+}
+
 impl AuthzSnapshot {
     /// Authorize `req` through a real Casbin enforcer built from this snapshot.
     /// This is the production decision path for the native `AuthzService`.
@@ -446,6 +459,7 @@ impl AuthzSnapshot {
             .filter(|p| p.effect == Effect::Deny && self.policy_matches(p, &roles, req))
             .collect();
         if let Some(policy) = deny_matches.first() {
+            let evaluated_policies = tenant_candidates(&applicable, req);
             return Decision {
                 decision_id,
                 allowed: false,
@@ -456,6 +470,7 @@ impl AuthzSnapshot {
                     ("effect".to_string(), "deny".to_string()),
                 ]),
                 matched_policy_ids: deny_matches.iter().map(|p| p.id.clone()).collect(),
+                evaluated_policies,
                 required_scopes: policy.required_scopes.clone(),
                 policy_version: self.version.clone(),
                 relationship_version: self.relationship_version.clone(),
@@ -581,17 +596,19 @@ impl AuthzSnapshot {
         // applicable Allow whose full selector set matches the request. Both
         // required_scopes and the ROLE_POLICY audit classification derive from
         // it (not an arbitrary `applicable.first()`).
-        let granting: Option<&AuthzPolicy> = if allowed {
+        let grantors: Vec<&AuthzPolicy> = if allowed {
             let mut grantors: Vec<&AuthzPolicy> = applicable
                 .iter()
                 .copied()
                 .filter(|p| p.effect == Effect::Allow && self.policy_matches(p, roles, req))
                 .collect();
             grantors.sort_by_key(|p| std::cmp::Reverse(p.priority));
-            grantors.first().copied()
+            grantors
         } else {
-            None
+            Vec::new()
         };
+        let granting: Option<&AuthzPolicy> = grantors.first().copied();
+        let evaluated_policies = tenant_candidates(applicable, req);
 
         let closest = if allowed {
             None
@@ -627,7 +644,7 @@ impl AuthzSnapshot {
                 // `matched_policy_ids` for audit.
                 {
                     let target = selectors.join("|");
-                    let base = if applicable.is_empty() {
+                    let base = if evaluated_policies == 0 {
                         format!(
                             "denied by Casbin PERM model: no policy allows action '{action}' on '{target}' \
                              for this caller in tenant '{tenant}'. A rule matches only when its action is \
@@ -664,8 +681,11 @@ impl AuthzSnapshot {
                 }
             },
             missing,
-            // Candidate policy set Casbin evaluated (post ABAC pre-filter).
-            matched_policy_ids: applicable.iter().map(|p| p.id.clone()).collect(),
+            // The policies that matched, granting first. The candidates Casbin
+            // evaluated are only counted: listing them made every audit row
+            // as large as the policy set and named other tenants' rules.
+            matched_policy_ids: grantors.iter().map(|p| p.id.clone()).collect(),
+            evaluated_policies,
             required_scopes: granting
                 .map(|p| p.required_scopes.clone())
                 .unwrap_or_default(),
@@ -1622,9 +1642,87 @@ m = (p.dom == "*" || r.dom == p.dom)
                 !decision.allowed,
                 "an empty default candidate set must deny even when the request has an empty identity"
             );
-            assert_eq!(decision.matched_policy_ids, vec!["nonmatching-allow"]);
+            assert!(
+                decision.matched_policy_ids.is_empty(),
+                "a candidate that did not match is never listed"
+            );
+            let own_tenant = usize::from(tenant == "tenant-a");
+            assert_eq!(
+                decision.evaluated_policies, own_tenant,
+                "another tenant's candidate is not counted"
+            );
             assert!(decision.audit_required);
         }
+    }
+
+    /// Two tenants with the same rule set: a decision in one lists only the
+    /// granting rule of that tenant, counts only that tenant's candidates, and
+    /// its size does not grow with the other tenant's rules.
+    #[tokio::test]
+    async fn a_decision_lists_its_granting_rule_and_never_another_tenants_rules() {
+        let rules = |tenant: &str| -> Vec<AuthzPolicy> {
+            (0..50)
+                .map(|index| AuthzPolicy {
+                    id: format!("{tenant}-route-{index}"),
+                    tenant: tenant.to_string(),
+                    role: "doctor".to_string(),
+                    action: "call".to_string(),
+                    resource: format!("route:{index}"),
+                    priority: if index == 7 { 5 } else { 0 },
+                    ..Default::default()
+                })
+                .collect()
+        };
+        let mut policies = rules("tenant-a");
+        policies.extend(rules("tenant-b"));
+        policies.push(AuthzPolicy {
+            id: "tenant-a-route-any".to_string(),
+            tenant: "tenant-a".to_string(),
+            role: "doctor".to_string(),
+            action: "call".to_string(),
+            resource: "*".to_string(),
+            ..Default::default()
+        });
+        let snap = AuthzSnapshot {
+            policies,
+            ..Default::default()
+        };
+        let principal = Principal {
+            subject: "dr-a".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            roles: vec!["doctor".to_string()],
+            ..Default::default()
+        };
+        let attrs = BTreeMap::new();
+        let route = ResourceRef::message("route:7");
+        let allow = snap
+            .casbin_authorize_with_model(CASBIN_MODEL, &query(&principal, &route, "call", &attrs))
+            .await;
+        assert!(allow.allowed, "{}", allow.deny_reason);
+        assert_eq!(
+            allow.matched_policy_ids,
+            vec!["tenant-a-route-7", "tenant-a-route-any"],
+            "the granting rule (highest priority) first, then the other matching rule"
+        );
+        assert!(
+            allow
+                .matched_policy_ids
+                .iter()
+                .all(|id| id.starts_with("tenant-a-")),
+            "no other tenant's rule id"
+        );
+        assert!(allow.evaluated_policies <= 51);
+
+        let elsewhere = Principal {
+            tenant_id: "tenant-c".to_string(),
+            ..principal.clone()
+        };
+        let denied = snap
+            .casbin_authorize_with_model(CASBIN_MODEL, &query(&elsewhere, &route, "call", &attrs))
+            .await;
+        assert!(!denied.allowed, "another tenant's rules never decide");
+        assert!(denied.matched_policy_ids.is_empty());
+        assert_eq!(denied.evaluated_policies, 0);
     }
 
     #[tokio::test]
@@ -1688,8 +1786,10 @@ m = (p.dom == "*" || r.dom == p.dom)
         assert!(allow.via_role);
         assert_eq!(
             allow.matched_policy_ids,
-            vec!["scoped-allow", "other-object"]
+            vec!["scoped-allow"],
+            "only the policy that matched, never the other candidates"
         );
+        assert_eq!(allow.evaluated_policies, 2);
         snap.policies.push(AuthzPolicy {
             id: "explicit-deny".to_string(),
             effect: Effect::Deny,

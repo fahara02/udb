@@ -1641,24 +1641,34 @@ impl AuthzServiceImpl {
         let scopes = decision.required_scopes.join(",");
         let mut decision_input = serde_json::from_str(&ctx.decision_input)
             .unwrap_or_else(|_| serde_json::Value::String(ctx.decision_input.clone()));
+        let mut add_input = |key: &str, value: serde_json::Value| {
+            if decision_input
+                .as_str()
+                .is_some_and(|input| input.trim().is_empty())
+            {
+                decision_input = serde_json::json!({});
+            } else if !decision_input.is_object() {
+                decision_input = serde_json::json!({ "input": decision_input.take() });
+            }
+            if let Some(input) = decision_input.as_object_mut() {
+                input.insert(key.to_string(), value);
+            }
+        };
         if let Some(suppressed) = delegation
             .map(|delegation| delegation.suppressed_identical_allows)
             .filter(|suppressed| *suppressed > 0)
         {
-            match decision_input.as_object_mut() {
-                Some(input) => {
-                    input.insert(
-                        "suppressed_identical_allows".to_string(),
-                        serde_json::Value::from(suppressed),
-                    );
-                }
-                None => {
-                    decision_input = serde_json::json!({
-                        "input": decision_input,
-                        "suppressed_identical_allows": suppressed,
-                    });
-                }
-            }
+            add_input(
+                "suppressed_identical_allows",
+                serde_json::Value::from(suppressed),
+            );
+        }
+        // The candidates the engine evaluated are kept as a count only.
+        if decision.evaluated_policies > 0 {
+            add_input(
+                "evaluated_policies",
+                serde_json::Value::from(decision.evaluated_policies),
+            );
         }
         let mut record = LogicalRecord::new();
         record.insert(

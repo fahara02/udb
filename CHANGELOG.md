@@ -7,6 +7,40 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.20] - 2026-11-16
+
+### Breaking for callers
+
+- **`matched_policy_ids` lists only the policies that matched.** `CheckAccess`,
+  `BatchCheckPermissions`, `ExplainPolicy`, the decision audit, the CDC journal and
+  `auth_audit_log` listed every candidate policy the engine evaluated, from every tenant.
+  That made each audited decision as large as the whole policy set (about 180 KB a row with
+  4,500 rules) and named other tenants' rules to the caller. Now the list holds the granting
+  allow first, then the other allows that matched, or the matching explicit denies, all in
+  the caller's tenant. A default deny lists none. The number of candidates evaluated in the
+  caller's tenant is kept in the audit's `decision_input` as `evaluated_policies`.
+  `matched_rule` is the granting rule; before, it was the first candidate, which could be a
+  rule that did not grant.
+  - detect: code: reads `matched_policy_ids` to see every candidate rule, or its length as a
+    count of evaluated policies
+  - fix: read `decision_input.evaluated_policies` for the count; use `ExplainPolicy` and the
+    policy list for the candidates
+- **UDB's own log tables are capped at 1 GB by default.** `UDB_CLEANUP_MAX_SIZE` (default
+  `1GB`) caps the estimated size of the decision audit, `auth_audit_log` and `usage_events`.
+  Over it, the oldest rows go first, even inside retention. Rows of the last hour, kept denies
+  and not yet exported evidence are never deleted for the cap.
+  - detect: sql: `SELECT min(occurred_at) FROM udb_metering.usage_events` is newer than the
+    retention you set, on a busy broker
+  - fix: raise `UDB_CLEANUP_MAX_SIZE`, set it to `off`, or set the table to `keep`
+
+### Fixed
+
+- **A bad `UDB_CLEANUP_RETENTION` entry no longer stops all pruning.** It pauses removal for the
+  table it names (an unknown table pauses nothing), is logged on every pass and shown by
+  `udb cleanup show`. The table does not fall back to its default retention.
+- **Another tenant's rules never appear in a decision.** They never decided one (the matcher
+  and the explicit-deny check both require the caller's tenant), but they were listed.
+
 ## [0.6.19] - 2026-11-16
 
 ### Breaking for callers

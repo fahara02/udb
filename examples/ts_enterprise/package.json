@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@udb_plus/sdk": "^0.6.19"
+    "@udb_plus/sdk": "^0.6.20"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

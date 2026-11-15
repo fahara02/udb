@@ -25,8 +25,10 @@
 //! `36h`), `declared` or `keep` (every row is kept). Any other time-partitioned
 //! UDB table keeps every row unless it is listed. A table can be named by its
 //! table name or as `schema.table`; the shortest retention accepted is one day.
-//! An unknown table or a malformed value stops every retention pass with an
-//! error naming it (partition upkeep continues).
+//! A malformed entry pauses removal for the table it names (partition upkeep
+//! continues there; an entry naming no known table pauses nothing); every
+//! pass logs the error until it is fixed. It never falls back to the default
+//! retention: a typo in a long retention must not delete what it meant to keep.
 //!
 //! - A partitioned table drops whole partitions whose upper bound is older than
 //!   the retention (disk is given back at once). Only partitions UDB created
@@ -55,6 +57,15 @@
 //! reclaim once, for a maintenance window. Dropped partitions free their space
 //! immediately.
 //!
+//! **Size cap.** `UDB_CLEANUP_MAX_SIZE` (default `1GB`, `off` turns it off)
+//! caps the estimated size of the log tables that have a retention. While
+//! they are over it, each pass deletes their oldest rows, in proportion to
+//! each table's size, even rows still inside retention, down to 90% of the
+//! cap. Rows written in the last hour, rows the evidence export has not
+//! exported and rows of a table's kept class (denied decisions) are never
+//! deleted for the cap; when they alone exceed it, the pass says so. A table
+//! set to `keep` is outside the cap. The CDC journal has its own retention.
+//!
 //! `UDB_CLEANUP_INTERVAL` sets how often a pass runs (default `10m`)
 //! and `UDB_CLEANUP_BATCH` how many rows one delete removes (default
 //! 5000, at most 20 deletes per table per pass). Each setting is also a
@@ -79,6 +90,56 @@ pub const CLEANUP_BATCH_ENV: &str = "UDB_CLEANUP_BATCH";
 pub const CLEANUP_ENABLED_ENV: &str = "UDB_CLEANUP_ENABLED";
 /// What happens to the space deleted rows leave (`off`, `vacuum`, `full`).
 pub const CLEANUP_RECLAIM_ENV: &str = "UDB_CLEANUP_RECLAIM";
+/// Cap on the estimated size of UDB's own log tables (`1GB`, `500MB`, `off`).
+pub const CLEANUP_MAX_SIZE_ENV: &str = "UDB_CLEANUP_MAX_SIZE";
+/// The default size cap: 1 GiB.
+pub const DEFAULT_MAX_SIZE: u64 = 1 << 30;
+/// Rows newer than this are never deleted for the size cap.
+const SIZE_CAP_FLOOR: Duration = Duration::from_secs(3600);
+/// Rows one table's size estimate samples.
+const SIZE_SAMPLE_ROWS: f64 = 20_000.0;
+
+/// `1GB`, `500MB`, `2G`, `1048576` (bytes) → a cap; `off`/`0` → none.
+pub fn parse_size(raw: &str) -> Result<Option<u64>, String> {
+    let value = raw.trim().to_ascii_lowercase().replace(' ', "");
+    if matches!(value.as_str(), "off" | "none" | "0" | "false") {
+        return Ok(None);
+    }
+    let split = value
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(value.len());
+    let (number, unit) = value.split_at(split);
+    let number: u64 = number
+        .parse()
+        .map_err(|_| format!("{CLEANUP_MAX_SIZE_ENV}: `{raw}` is not a size like 1GB or 500MB"))?;
+    let scale: u64 = match unit {
+        "" | "b" => 1,
+        "k" | "kb" | "kib" => 1 << 10,
+        "m" | "mb" | "mib" => 1 << 20,
+        "g" | "gb" | "gib" => 1 << 30,
+        "t" | "tb" | "tib" => 1 << 40,
+        _ => {
+            return Err(format!(
+                "{CLEANUP_MAX_SIZE_ENV}: `{raw}`: unit `{unit}` is not KB, MB, GB or TB"
+            ));
+        }
+    };
+    number
+        .checked_mul(scale)
+        .filter(|bytes| *bytes > 0)
+        .map(Some)
+        .ok_or_else(|| format!("{CLEANUP_MAX_SIZE_ENV}: `{raw}` is too large"))
+}
+
+fn describe_size(bytes: u64) -> String {
+    if bytes.is_multiple_of(1 << 30) {
+        format!("{}GB", bytes >> 30)
+    } else if bytes.is_multiple_of(1 << 20) {
+        format!("{}MB", bytes >> 20)
+    } else {
+        format!("{bytes}B")
+    }
+}
 
 /// How the space of deleted rows is handled after a pass.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -115,16 +176,18 @@ impl Reclaim {
 
 /// Every cleanup setting, resolved ONCE (at worker spawn, or by the CLI) from
 /// the environment, which `.env` and the `udb serve` setting flags feed. A
-/// malformed retention list or reclaim mode is kept as its error: the pass
-/// still keeps partitions ahead, removes nothing, and reports it.
+/// malformed retention entry pauses removal for its table; a malformed reclaim
+/// mode or size cap is kept as its error. The pass reports every one.
 #[derive(Debug, Clone)]
 pub struct CleanupSettings {
     pub enabled: bool,
     pub interval: Duration,
     pub batch: i64,
     pub reclaim: Result<Reclaim, String>,
+    /// The size cap in bytes (`None` = off).
+    pub max_size: Result<Option<u64>, String>,
     pub(crate) targets: Vec<Target>,
-    pub(crate) retention: Result<RetentionConfig, String>,
+    pub(crate) retention: RetentionConfig,
 }
 
 impl CleanupSettings {
@@ -141,6 +204,27 @@ impl CleanupSettings {
             read(CLEANUP_RETENTION_ENV).as_deref(),
             evidence_export,
         )
+        .with_max_size(read(CLEANUP_MAX_SIZE_ENV).as_deref())
+    }
+
+    /// Set the size cap from its raw value (`None` = unset → 1GB).
+    pub(crate) fn with_max_size(mut self, raw: Option<&str>) -> Self {
+        self.max_size = raw.map_or(Ok(Some(DEFAULT_MAX_SIZE)), parse_size);
+        self
+    }
+
+    /// The size cap as `udb cleanup show` prints it.
+    pub fn describe_max_size(&self) -> String {
+        match &self.max_size {
+            Ok(Some(bytes)) => describe_size(*bytes),
+            Ok(None) => "off".to_string(),
+            Err(why) => why.clone(),
+        }
+    }
+
+    /// Every malformed retention entry, as the pass reports it.
+    pub fn retention_errors(&self) -> &[String] {
+        &self.retention.errors
     }
 
     /// Build the settings from raw values (`None` = unset → the default).
@@ -153,15 +237,14 @@ impl CleanupSettings {
         evidence_export: bool,
     ) -> Self {
         let targets = targets(evidence_export);
-        let retention =
-            parse_retention(DEFAULT_CLEANUP_RETENTION, &targets).and_then(|mut config| {
-                if let Some(raw) = retention {
-                    config
-                        .retention
-                        .extend(parse_retention(raw, &targets)?.retention);
-                }
-                Ok(config)
-            });
+        let mut config = parse_retention_entries(DEFAULT_CLEANUP_RETENTION, &targets);
+        if let Some(raw) = retention {
+            let set = parse_retention_entries(raw, &targets);
+            config.retention.extend(set.retention);
+            config.paused.extend(set.paused);
+            config.errors.extend(set.errors);
+        }
+        let retention = config;
         Self {
             enabled: !matches!(
                 enabled.map(|v| v.trim().to_ascii_lowercase()).as_deref(),
@@ -175,15 +258,17 @@ impl CleanupSettings {
                 .filter(|batch| *batch > 0)
                 .unwrap_or(DEFAULT_ROW_BATCH),
             reclaim: reclaim.map_or(Ok(Reclaim::Vacuum), Reclaim::parse),
+            max_size: Ok(Some(DEFAULT_MAX_SIZE)),
             targets,
             retention,
         }
     }
 
     /// One entry per table, for `udb cleanup show` and the startup log: the
-    /// retention in force (`keep`, days or hours) and the declared one.
+    /// retention in force (`keep`, days or hours) and the declared one. A
+    /// table a malformed entry paused says so.
     pub fn describe(&self) -> Result<Vec<serde_json::Value>, String> {
-        let config = self.retention.clone()?;
+        let config = &self.retention;
         Ok(self
             .targets
             .iter()
@@ -203,6 +288,9 @@ impl CleanupSettings {
                     "retention": shown(retention.rows),
                     "declared": target.declared.map(describe_duration),
                 });
+                if let Some(why) = config.paused.get(&target.qualified()) {
+                    entry["paused"] = serde_json::Value::String(why.clone());
+                }
                 if let Some(class) = &target.kept_class {
                     entry["kept_class"] = serde_json::json!({
                         "name": class.name,
@@ -360,6 +448,10 @@ impl Target {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct RetentionConfig {
     pub retention: BTreeMap<String, Option<Duration>>,
+    /// Tables a malformed entry names → the error: nothing is removed there.
+    pub paused: BTreeMap<String, String>,
+    /// Every malformed entry.
+    pub errors: Vec<String>,
 }
 
 impl RetentionConfig {
@@ -596,6 +688,37 @@ pub(crate) fn parse_retention(raw: &str, targets: &[Target]) -> Result<Retention
     Ok(config)
 }
 
+/// Parse a retention list entry by entry: a malformed entry pauses the table
+/// it names (if any) and is kept as an error; the others apply.
+pub(crate) fn parse_retention_entries(raw: &str, targets: &[Target]) -> RetentionConfig {
+    let mut config = RetentionConfig::default();
+    for entry in raw.split(',').map(str::trim).filter(|e| !e.is_empty()) {
+        match parse_retention(entry, targets) {
+            Ok(parsed) => config.retention.extend(parsed.retention),
+            Err(why) => {
+                let name = entry
+                    .split('=')
+                    .next()
+                    .unwrap_or_default()
+                    .split(':')
+                    .next()
+                    .unwrap_or_default()
+                    .trim()
+                    .to_ascii_lowercase();
+                let named: Vec<&Target> = targets
+                    .iter()
+                    .filter(|target| target.qualified() == name || target.table == name)
+                    .collect();
+                if let [target] = named.as_slice() {
+                    config.paused.insert(target.qualified(), why.clone());
+                }
+                config.errors.push(why);
+            }
+        }
+    }
+    config
+}
+
 /// `90d`, `36h`, `keep` (or `0`) → retention; below one day is refused.
 /// (`declared` is resolved by the caller.)
 fn parse_retention_value(value: &str) -> Result<Option<Duration>, String> {
@@ -681,14 +804,14 @@ pub async fn run_cleanup_with(
 ) -> Result<i64, String> {
     let config = &settings.retention;
     let mut changed = 0i64;
-    let mut failures = Vec::new();
+    let mut failures = config.errors.clone();
     for target in &settings.targets {
         let Ok(pool) = runtime.native_store_pool_for_service(&target.service, true, "") else {
             continue;
         };
-        let retention = match &config {
-            Ok(config) => Ok(config.retention_of(target)),
-            Err(why) => Err(why.clone()),
+        let retention = match config.paused.get(&target.qualified()) {
+            Some(why) => Err(why.clone()),
+            None => Ok(config.retention_of(target)),
         };
         let partitioned = matches!(target.kind, TargetKind::Partitioned { .. });
         let mode = PassMode {
@@ -735,8 +858,13 @@ pub async fn run_cleanup_with(
             failures.push(format!("{journal}: {why}"));
         }
     }
-    if let Err(why) = config {
-        failures.insert(0, why.clone());
+    match &settings.max_size {
+        Ok(Some(max)) => match enforce_size_cap(runtime, settings, *max, reclaim).await {
+            Ok(deleted) => changed += deleted,
+            Err(why) => failures.push(why),
+        },
+        Ok(None) => {}
+        Err(why) => failures.push(why.clone()),
     }
     if failures.is_empty() {
         Ok(changed)
@@ -1176,6 +1304,262 @@ async fn partitions_with_expired_rows(
         .into_iter()
         .map(|(schema, table)| format!("{}.{}", qi(&schema), qi(&table)))
         .collect())
+}
+
+/// One table's size estimate: rows sampled per leaf partition, each with its
+/// age and its stored size (TOAST included, as stored, compressed).
+struct SizeSample {
+    /// Estimated bytes of the table's rows.
+    bytes: f64,
+    /// `(epoch seconds of the row's time column, bytes it stands for)`.
+    rows: Vec<(f64, f64)>,
+}
+
+/// Estimate the size of `target`'s rows from a sample of each leaf partition.
+/// Leaves are read directly (the parent's tenant policy would hide other
+/// tenants' rows), inside the platform-admin escape for unpartitioned logs.
+async fn sample_size(pool: &PgPool, target: &Target, column: &str) -> Result<SizeSample, String> {
+    let leaves: Vec<(String, String, f32)> = sqlx::query_as(
+        "SELECT n.nspname::text, c.relname::text, c.reltuples \
+         FROM pg_partition_tree($1::regclass) t \
+         JOIN pg_class c ON c.oid = t.relid \
+         JOIN pg_namespace n ON n.oid = c.relnamespace \
+         WHERE t.isleaf",
+    )
+    .bind(target.relation())
+    .fetch_all(pool)
+    .await
+    .map_err(|err| format!("list partitions: {err}"))?;
+    let mut sample = SizeSample {
+        bytes: 0.0,
+        rows: Vec::new(),
+    };
+    for (schema, table, reltuples) in leaves {
+        let leaf = format!("{}.{}", qi(&schema), qi(&table));
+        let mut estimated = f64::from(reltuples);
+        if estimated < 0.0 {
+            // Never analyzed: count it once.
+            sqlx::Executor::execute(pool, sqlx::raw_sql(&format!("ANALYZE {leaf}")))
+                .await
+                .map_err(|err| format!("analyze {leaf}: {err}"))?;
+            estimated = sqlx::query_scalar::<_, f32>(
+                "SELECT reltuples FROM pg_class WHERE oid = $1::regclass",
+            )
+            .bind(&leaf)
+            .fetch_one(pool)
+            .await
+            .map(f64::from)
+            .map_err(|err| format!("count {leaf}: {err}"))?;
+        }
+        if estimated <= 0.0 {
+            continue;
+        }
+        let size_expr: Option<String> = sqlx::query_scalar(
+            "SELECT string_agg(format('COALESCE(pg_column_size(%I), 0)', attname), ' + ' ORDER BY attnum) \
+             FROM pg_attribute WHERE attrelid = $1::regclass AND attnum > 0 AND NOT attisdropped",
+        )
+        .bind(&leaf)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| format!("read the columns of {leaf}: {err}"))?;
+        let Some(size_expr) = size_expr else { continue };
+        let percent = (SIZE_SAMPLE_ROWS / estimated * 100.0).clamp(0.01, 100.0);
+        let sql = format!(
+            "SELECT EXTRACT(EPOCH FROM {column})::float8, (24 + {size_expr})::float8 \
+             FROM {leaf} TABLESAMPLE SYSTEM ({percent}) LIMIT {limit}",
+            column = qi(column),
+            limit = (SIZE_SAMPLE_ROWS as i64) * 2,
+        );
+        let mut tx = admin_tx(pool).await?;
+        let mut rows: Vec<(f64, f64)> = sqlx::query_as(&sql)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|err| format!("sample {leaf}: {err}"))?;
+        if rows.is_empty() {
+            // A sample of a few pages can miss every row: read the start.
+            let sql = format!(
+                "SELECT EXTRACT(EPOCH FROM {column})::float8, (24 + {size_expr})::float8 \
+                 FROM {leaf} LIMIT {limit}",
+                column = qi(column),
+                limit = SIZE_SAMPLE_ROWS as i64,
+            );
+            rows = sqlx::query_as(&sql)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|err| format!("sample {leaf}: {err}"))?;
+        }
+        tx.commit().await.map_err(|err| err.to_string())?;
+        if rows.is_empty() {
+            continue;
+        }
+        let per_row = estimated / rows.len() as f64;
+        for (at, bytes) in rows {
+            sample.bytes += bytes * per_row;
+            sample.rows.push((at, bytes * per_row));
+        }
+    }
+    Ok(sample)
+}
+
+/// The age of the oldest rows to keep so that `remove` bytes of the sample go:
+/// walk the rows oldest first until that many bytes are behind.
+fn cap_cutoff_age(sample: &SizeSample, remove: f64, now: f64) -> Option<Duration> {
+    let mut rows = sample.rows.clone();
+    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut removed = 0.0;
+    for (at, bytes) in rows {
+        removed += bytes;
+        if removed >= remove {
+            // Deletion is `older than now - age`: one second past this row
+            // takes the row itself too.
+            let age = (now - at - 1.0).max(0.0);
+            return Some(Duration::from_secs(age as u64));
+        }
+    }
+    Some(Duration::ZERO)
+}
+
+/// Keep the estimated size of the log tables that have a retention under
+/// `max`: when over it, delete each table's oldest rows, in proportion to its
+/// size, down to 90% of `max`. Returns the rows deleted.
+async fn enforce_size_cap(
+    runtime: &crate::runtime::DataBrokerRuntime,
+    settings: &CleanupSettings,
+    max: u64,
+    reclaim: Reclaim,
+) -> Result<i64, String> {
+    let config = &settings.retention;
+    let mut tables = Vec::new();
+    let mut failures = Vec::new();
+    for target in &settings.targets {
+        if config.paused.contains_key(&target.qualified()) {
+            continue;
+        }
+        let retention = config.retention_of(target);
+        let Some(rows) = retention.rows else {
+            // `keep` (or a table outside the retention list) is outside the cap.
+            continue;
+        };
+        let Ok(pool) = runtime.native_store_pool_for_service(&target.service, true, "") else {
+            continue;
+        };
+        let exists: bool = match sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+            .bind(target.relation())
+            .fetch_one(&pool)
+            .await
+        {
+            Ok(exists) => exists,
+            Err(err) => {
+                failures.push(format!("{}: {err}", target.qualified()));
+                continue;
+            }
+        };
+        if !exists {
+            continue;
+        }
+        let (column, evidence_state_key) = match &target.kind {
+            TargetKind::Partitioned { column, .. } => (column.clone(), None),
+            TargetKind::Rows {
+                column,
+                evidence_state_key,
+            } => (column.clone(), evidence_state_key.clone()),
+        };
+        match sample_size(&pool, target, &column).await {
+            Ok(sample) => tables.push((
+                target,
+                pool,
+                column,
+                evidence_state_key,
+                retention,
+                rows,
+                sample,
+            )),
+            Err(why) => failures.push(format!("{}: size estimate: {why}", target.qualified())),
+        }
+    }
+    let total: f64 = tables.iter().map(|table| table.6.bytes).sum();
+    let mut deleted = 0i64;
+    if total > max as f64 {
+        let keep = (max as f64 * 0.9) / total;
+        tracing::warn!(
+            estimated_bytes = total as u64,
+            max_bytes = max,
+            "UDB's log tables are over {CLEANUP_MAX_SIZE_ENV}; deleting their oldest rows"
+        );
+        for (target, pool, column, evidence_state_key, retention, rows, sample) in &tables {
+            let now: f64 = sqlx::query_scalar("SELECT EXTRACT(EPOCH FROM now())::float8")
+                .fetch_one(pool)
+                .await
+                .map_err(|err| err.to_string())?;
+            let Some(age) = cap_cutoff_age(sample, sample.bytes * (1.0 - keep), now) else {
+                continue;
+            };
+            let age = age.max(SIZE_CAP_FLOOR);
+            if age >= *rows {
+                continue;
+            }
+            let expiry = Expiry {
+                column,
+                rows: age,
+                kept: target
+                    .kept_class
+                    .as_ref()
+                    .map(|class| (class, retention.kept)),
+                evidence_state_key: evidence_state_key.as_deref(),
+            };
+            let removed = match &target.kind {
+                TargetKind::Partitioned { .. } => {
+                    let mut removed = 0i64;
+                    for child in partitions_with_expired_rows(pool, target, age).await? {
+                        removed += sweep_expired_rows(pool, &child, &expiry).await?;
+                    }
+                    removed
+                }
+                TargetKind::Rows { .. } => {
+                    if evidence_state_key.is_some() {
+                        let ready: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+                            .bind(EVIDENCE_STATE)
+                            .fetch_one(pool)
+                            .await
+                            .map_err(|err| err.to_string())?;
+                        if !ready {
+                            continue;
+                        }
+                    }
+                    sweep_expired_rows(pool, &target.relation(), &expiry).await?
+                }
+            };
+            if removed > 0 {
+                tracing::warn!(
+                    table = %target.qualified(),
+                    deleted = removed,
+                    kept_secs = age.as_secs(),
+                    "deleted the oldest rows to stay under {CLEANUP_MAX_SIZE_ENV}"
+                );
+                deleted += removed;
+                let vacuum = match reclaim {
+                    Reclaim::Off => None,
+                    Reclaim::Vacuum => Some("VACUUM (ANALYZE)"),
+                    Reclaim::Full => Some("VACUUM (FULL, ANALYZE)"),
+                };
+                if let Some(vacuum) = vacuum
+                    && let Err(why) = reclaim_space(pool, &target.relation(), vacuum).await
+                {
+                    failures.push(format!("{}: {why}", target.qualified()));
+                }
+            } else if age == SIZE_CAP_FLOOR {
+                tracing::warn!(
+                    table = %target.qualified(),
+                    "over {CLEANUP_MAX_SIZE_ENV}, but only rows of the last hour, kept-class rows or rows not yet exported are left"
+                );
+            }
+        }
+    }
+    if failures.is_empty() {
+        Ok(deleted)
+    } else {
+        Err(format!("size cap: {}", failures.join("; ")))
+    }
 }
 
 fn split_relation(relation: &str) -> Option<(String, String)> {
@@ -1662,7 +2046,79 @@ mod tests {
         assert_eq!(bad.interval, DEFAULT_INTERVAL);
         assert_eq!(bad.batch, DEFAULT_ROW_BATCH);
         assert!(bad.reclaim.is_err());
-        assert!(bad.describe().is_err());
+        // An entry naming no known table pauses nothing; the error stays.
+        assert_eq!(bad.retention_errors().len(), 1);
+        assert!(bad.retention.paused.is_empty());
+        assert!(bad.describe().is_ok());
+    }
+
+    #[test]
+    fn a_bad_entry_pauses_only_the_table_it_names() {
+        let settings = CleanupSettings::from_values(
+            None,
+            None,
+            None,
+            None,
+            Some("access_decision_audits=12h,usage_events=90d,access_decision_audits:deny=9x"),
+            false,
+        );
+        assert_eq!(settings.retention_errors().len(), 2);
+        assert!(
+            settings
+                .retention
+                .paused
+                .contains_key("udb_authz.access_decision_audits"),
+            "a malformed entry never falls back to the default retention"
+        );
+        let shown = settings.describe().unwrap();
+        let find = |name: &str| {
+            shown
+                .iter()
+                .find(|t| t["table"].as_str().unwrap().ends_with(name))
+                .unwrap()
+                .clone()
+        };
+        assert!(find("access_decision_audits")["paused"].is_string());
+        assert_eq!(find("usage_events")["retention"], "90d");
+        assert!(find("usage_events").get("paused").is_none());
+        assert_eq!(find("auth_audit_log")["retention"], "30d");
+    }
+
+    #[test]
+    fn the_size_cap_parses_and_defaults_to_one_gigabyte() {
+        assert_eq!(parse_size("1GB"), Ok(Some(1 << 30)));
+        assert_eq!(parse_size(" 500 mb "), Ok(Some(500 << 20)));
+        assert_eq!(parse_size("2g"), Ok(Some(2 << 30)));
+        assert_eq!(parse_size("1048576"), Ok(Some(1 << 20)));
+        assert_eq!(parse_size("off"), Ok(None));
+        assert_eq!(parse_size("0"), Ok(None));
+        assert!(parse_size("lots").unwrap_err().contains("1GB"));
+        assert!(parse_size("3PB").unwrap_err().contains("unit"));
+        let settings = CleanupSettings::from_values(None, None, None, None, None, false);
+        assert_eq!(settings.max_size, Ok(Some(DEFAULT_MAX_SIZE)));
+        assert_eq!(settings.describe_max_size(), "1GB");
+        let off = settings.clone().with_max_size(Some("off"));
+        assert_eq!(off.describe_max_size(), "off");
+        let set = settings.with_max_size(Some("250MB"));
+        assert_eq!(set.describe_max_size(), "250MB");
+    }
+
+    #[test]
+    fn the_size_cap_cuts_the_oldest_bytes_first() {
+        let sample = SizeSample {
+            bytes: 100.0,
+            rows: vec![(1_000.0, 40.0), (900.0, 30.0), (950.0, 30.0)],
+        };
+        // Remove 50 bytes: the rows at 900 (30) and 950 (30) go, 1000 stays.
+        assert_eq!(
+            cap_cutoff_age(&sample, 50.0, 1_100.0),
+            Some(Duration::from_secs(149))
+        );
+        // Remove 10 bytes: the oldest row goes.
+        assert_eq!(
+            cap_cutoff_age(&sample, 10.0, 1_100.0),
+            Some(Duration::from_secs(199))
+        );
     }
 
     #[test]

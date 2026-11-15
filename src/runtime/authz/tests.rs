@@ -630,7 +630,11 @@ async fn default_deny_names_the_tuple_and_ends_with_the_grant_command() {
         message.contains("with --additive a file holding only this entry adds it"),
         "{message}"
     );
-    assert_eq!(denied.matched_policy_ids.len(), 40, "audit keeps the count");
+    assert!(
+        denied.matched_policy_ids.is_empty(),
+        "a default deny matched no policy"
+    );
+    assert_eq!(denied.evaluated_policies, 40, "audit keeps the count");
 
     // No role: the grant names the caller's identity instead.
     let bare = principal("svc:lessons", "acme", &[], &[]);

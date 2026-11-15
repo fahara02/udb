@@ -64,6 +64,7 @@ const COMMANDS: &[CmdHelp] = &[
     --cleanup-reclaim <off|vacuum|full>    UDB_CLEANUP_RECLAIM
     --cleanup-interval <dur>      UDB_CLEANUP_INTERVAL
     --cleanup-batch <rows>        UDB_CLEANUP_BATCH
+    --cleanup-max-size <size|off> UDB_CLEANUP_MAX_SIZE (default 1GB)
     --delegated-allow-audit-window <dur>   UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW
     --delegated-allow-audit-max-tracked <n> UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_MAX_TRACKED
     --cdc-journal-retention <dur>          UDB_CDC_JOURNAL_RETENTION

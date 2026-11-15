@@ -500,8 +500,8 @@ pub struct RelationshipTuple {
 }
 
 /// `deny_reason` prefix of a decision denied by an EXPLICIT matched Deny
-/// policy. `matched_policy_ids` cannot tell the two apart: a default-deny also
-/// lists every candidate policy it evaluated.
+/// policy, as opposed to a default-deny (no policy matched, so
+/// `matched_policy_ids` is empty) or an engine error.
 pub const EXPLICIT_DENY_REASON_PREFIX: &str = "denied by policy ";
 
 /// `deny_reason` prefix of a decision the engine could not evaluate.
@@ -518,7 +518,15 @@ pub struct Decision {
     /// Safe denial diagnostics: closest caller-tenant rule and failed
     /// attributes. Empty on allow; never contains another tenant's rule.
     pub missing: BTreeMap<String, String>,
+    /// The policies that matched the request, all in the caller's tenant: the
+    /// granting Allow first (then the other matching Allows, by priority), or
+    /// the matching explicit Deny(s). Empty on a default-deny. Never lists a
+    /// candidate that did not match, so its size does not grow with the
+    /// policy set and no other tenant's rule id appears.
     pub matched_policy_ids: Vec<String>,
+    /// How many of the caller tenant's policies were evaluated (a count for
+    /// the audit, never their ids).
+    pub evaluated_policies: usize,
     pub required_scopes: Vec<String>,
     pub policy_version: String,
     pub relationship_version: String,

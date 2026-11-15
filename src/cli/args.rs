@@ -1513,6 +1513,7 @@ pub(crate) const VALUE_FLAGS: &[&str] = &[
     "--reclaim",
     "--cleanup-interval",
     "--cleanup-batch",
+    "--cleanup-max-size",
     "--delegated-allow-audit-window",
     "--delegated-allow-audit-max-tracked",
     "--cdc-journal-retention",
@@ -2430,6 +2431,7 @@ pub const SETTING_FLAGS: &[(&str, &str)] = &[
     ("--cleanup-retention", "UDB_CLEANUP_RETENTION"),
     ("--cleanup-interval", "UDB_CLEANUP_INTERVAL"),
     ("--cleanup-batch", "UDB_CLEANUP_BATCH"),
+    ("--cleanup-max-size", "UDB_CLEANUP_MAX_SIZE"),
     (
         "--delegated-allow-audit-window",
         "UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW",

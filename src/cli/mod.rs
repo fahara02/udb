@@ -374,6 +374,8 @@ fn run_cleanup_command(command: args::CleanupCommand) -> i32 {
                 cleanup.interval.as_secs()
             ),
             "UDB_CLEANUP_BATCH": cleanup.batch,
+            "UDB_CLEANUP_MAX_SIZE": cleanup.describe_max_size(),
+            "retention_errors": cleanup.retention_errors(),
             "UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW": format!(
                 "{}s",
                 udb::runtime::service::delegated_allow_audit_window().as_secs()
