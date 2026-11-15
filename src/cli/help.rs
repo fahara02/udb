@@ -81,9 +81,13 @@ const COMMANDS: &[CmdHelp] = &[
         cleanup setting. Takes the same setting flags as `udb serve`.
   run   runs one pass against the database (`--dsn` or UDB_PG_DSN): creates the
         time partitions ahead of writes, drops partitions past retention,
-        deletes expired log rows, then reclaims their space. `--reclaim full`
-        runs VACUUM FULL on every log table (gives disk back to the OS; locks
-        each table while it runs, so use a maintenance window).
+        deletes every expired log row (the whole backlog, also inside the
+        partitions that are kept), then reclaims their space. `--reclaim
+        vacuum` vacuums every log table and the CDC journal; `--reclaim full`
+        runs VACUUM FULL on them (gives disk back to the OS; locks each table
+        while it runs, so use a maintenance window).
+        Denied decisions can be kept longer than allows:
+        UDB_CLEANUP_RETENTION=access_decision_audits=7d,access_decision_audits:deny=90d
   The broker runs the same pass every UDB_CLEANUP_INTERVAL (default 10m) unless
   UDB_CLEANUP_ENABLED=false. Every setting is an environment variable, a `.env`
   entry or a `udb serve` flag (`udb help serve`).

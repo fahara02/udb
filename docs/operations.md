@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.18 | protocol v1.0.0                                          │
+│    crate v0.6.19 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -500,7 +500,7 @@ it; it is on by default.
 
 | Table | What writes a row | Default retention |
 | --- | --- | --- |
-| `udb_authz.access_decision_audits` (monthly partitions) | every deny; a delegated allow (a service checking access for a user) once per window for the same decision | `declared`: 30 days (monthly partitions: a month is dropped once its last day is 30 days old) |
+| `udb_authz.access_decision_audits` (monthly partitions) | every deny; a delegated allow (a service checking access for a user) once per window for the same decision | `declared`: 30 days, for allows and denies (`access_decision_audits:deny` can keep denies longer) |
 | `udb_system.auth_audit_log` | every auth event, when `UDB_AUDIT_EXPORT_POSTGRES=1` | `declared`: same as the decision audit |
 | `udb_metering.usage_events` | every native-service call | `declared`: 400 days |
 | other time-partitioned UDB tables (sessions, notification log, ...) | | kept; listed tables only |
@@ -515,9 +515,9 @@ flag. A flag wins over the environment and `.env`.
 | Setting | `udb serve` flag | Default | Meaning |
 | --- | --- | --- | --- |
 | `UDB_CLEANUP_ENABLED` | `--cleanup-enabled` | `true` | `false` stops the worker. `udb cleanup run` still works. |
-| `UDB_CLEANUP_RETENTION` | `--cleanup-retention` | the three log tables above = `declared` | Comma-separated `table=value`, merged over the defaults entry by entry: `access_decision_audits=90d,usage_events=keep`. A table is named by its table name or `schema.table`. A value is a duration (`d` or `h`, at least `1d`), `declared` or `keep`. An unknown table or a bad value is logged as an error and nothing is pruned until it is fixed; partitions are still created. |
+| `UDB_CLEANUP_RETENTION` | `--cleanup-retention` | the three log tables above = `declared` | Comma-separated `table=value`, merged over the defaults entry by entry: `access_decision_audits=90d,usage_events=keep`. A table is named by its table name or `schema.table`. A value is a duration (`d` or `h`, at least `1d`), `declared` or `keep`. `access_decision_audits:deny=value` keeps denied decisions longer than allows (`=keep` keeps them for good); a class is never kept shorter than its table. An unknown table or a bad value is logged as an error and nothing is pruned until it is fixed; partitions are still created. |
 | `UDB_CLEANUP_INTERVAL` | `--cleanup-interval` | `10m` | How often a pass runs (`30s`, `10m`, `1h`). |
-| `UDB_CLEANUP_BATCH` | `--cleanup-batch` | `5000` | Rows one delete removes; at most 20 deletes per table per pass. |
+| `UDB_CLEANUP_BATCH` | `--cleanup-batch` | `5000` | Rows one scheduled delete removes from an unpartitioned table; at most 20 deletes per table per pass. `udb cleanup run` is not capped. |
 | `UDB_CLEANUP_RECLAIM` | `--cleanup-reclaim` | `vacuum` | After rows were deleted from a table: `vacuum` runs `VACUUM (ANALYZE)` (the space is reused at once, nothing is locked); `full` runs `VACUUM FULL` (the space goes back to the operating system, the table is locked while it runs); `off` leaves it to autovacuum. |
 | `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW` | `--delegated-allow-audit-window` | `1h` | Identical delegated allows inside this window are audited once. The next written row carries the count of the others as `suppressed_identical_allows` in `decision_input`. `0` audits every allow. Denies are always audited. |
 | `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_MAX_TRACKED` | `--delegated-allow-audit-max-tracked` | `100000` | Distinct decisions one broker tracks for the window. When full, allows are written (never dropped). |
@@ -534,7 +534,11 @@ Each pass:
    whole range is older than the retention, which frees its disk space at once.
    Only partitions UDB created (`<table>_p_<period>`) are dropped, never a
    default or hand-made one; with pg_partman the retention is written to
-   `partman.part_config` instead. `auth_audit_log` and `usage_events` delete
+   `partman.part_config` instead. A partition is dropped once its
+   longest-kept rows are past retention (denies, when they are kept longer).
+   Rows past retention inside the partitions that stay (the current month,
+   for one) are deleted too: once a day, in one pass over each partition, 32
+   MiB of the table per statement. `auth_audit_log` and `usage_events` delete
    old rows in batches. When the compliance evidence export is on
    (`UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED`), `auth_audit_log` rows it has not
    exported yet are kept, so the exported hash chain stays complete.
@@ -544,14 +548,19 @@ Run a pass by hand:
 
 ```sh
 udb cleanup show                      # what is in force
-udb cleanup run                       # one pass now (UDB_PG_DSN or --dsn)
-udb cleanup run --reclaim full        # also VACUUM FULL every log table: maintenance window
+udb cleanup run                       # one pass now that takes the whole backlog (UDB_PG_DSN or --dsn)
+udb cleanup run --reclaim vacuum      # also VACUUM every log table and the CDC journal (no lock)
+udb cleanup run --reclaim full        # also VACUUM FULL them: maintenance window
 ```
 
-The first pass after an upgrade can delete a large backlog. `udb cleanup run
---reclaim full` afterwards gives that disk back; `pg_repack` does the same
-without locking, if it is installed. The CDC journal is not covered by
-`--reclaim`; run `VACUUM FULL` or `pg_repack` on it yourself if needed.
+`udb cleanup run` is safe next to running brokers: it deletes in short
+transactions and sweeps the tables in page ranges, so a large backlog is read
+once. Deleting rows frees space for new rows but does not shrink the files;
+`udb cleanup run --reclaim full` gives the disk back to the operating system,
+including the space the CDC journal sweep freed. It locks each table while it
+rewrites it, so run it in a quiet window; `pg_repack`, if installed, does the
+same without the lock. `VACUUM FULL` needs free disk about the size of the
+rows that are kept in the table it rewrites.
 
 ### Consumer start and progress markers
 
@@ -685,7 +694,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.6.18"
+python scripts/bench_snapshot.py --label "release-0.6.19"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

@@ -32,6 +32,14 @@
 //!   the retention (disk is given back at once). Only partitions UDB created
 //!   (`<table>_p_<period>`) are dropped, never a default or hand-made partition.
 //!   With pg_partman, the retention is written to `partman.part_config` instead.
+//!   Rows past retention inside the partitions that are kept (the current
+//!   month, a hand-made partition) are swept out once a day, one pass over each
+//!   partition in page ranges.
+//! - A table can keep one class of rows longer: `access_decision_audits:deny=90d`
+//!   keeps denied decisions 90 days while allows follow
+//!   `access_decision_audits`; `:deny=keep` keeps them for good. A class is
+//!   never kept shorter than its table, and a partition is dropped only once
+//!   its longest-kept rows expired.
 //! - `udb_system.auth_audit_log` and `udb_metering.usage_events` delete rows
 //!   older than the retention in bounded batches. When the compliance evidence
 //!   export is on, `auth_audit_log` rows not yet exported are kept, so the
@@ -50,8 +58,9 @@
 //! `UDB_CLEANUP_INTERVAL` sets how often a pass runs (default `10m`)
 //! and `UDB_CLEANUP_BATCH` how many rows one delete removes (default
 //! 5000, at most 20 deletes per table per pass). Each setting is also a
-//! `udb serve` flag; `udb retention show` prints what is in force and
-//! `udb retention run` runs one pass now.
+//! `udb serve` flag; `udb cleanup show` prints what is in force and
+//! `udb cleanup run` runs one pass now that takes the whole backlog
+//! (`--reclaim [full]` also reclaims every log table and the CDC journal).
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -179,18 +188,28 @@ impl CleanupSettings {
             .targets
             .iter()
             .map(|target| {
-                serde_json::json!({
+                let shown = |retention: Option<Duration>| {
+                    retention
+                        .map(describe_duration)
+                        .unwrap_or_else(|| "keep".to_string())
+                };
+                let retention = config.retention_of(target);
+                let mut entry = serde_json::json!({
                     "table": target.qualified(),
                     "kind": match target.kind {
                         TargetKind::Partitioned { .. } => "partitioned",
                         TargetKind::Rows { .. } => "rows",
                     },
-                    "retention": config
-                        .retention_for(target)
-                        .map(describe_duration)
-                        .unwrap_or_else(|| "keep".to_string()),
+                    "retention": shown(retention.rows),
                     "declared": target.declared.map(describe_duration),
-                })
+                });
+                if let Some(class) = &target.kept_class {
+                    entry["kept_class"] = serde_json::json!({
+                        "name": class.name,
+                        "retention": shown(retention.kept),
+                    });
+                }
+                entry
             })
             .collect())
     }
@@ -212,16 +231,23 @@ fn parse_interval(raw: &str) -> Option<Duration> {
 }
 /// The retention in force when nothing is configured: UDB's own logs follow
 /// their declared retention.
-pub const DEFAULT_CLEANUP_RETENTION: &str =
-    "access_decision_audits=declared,auth_audit_log=declared,usage_events=declared";
+pub const DEFAULT_CLEANUP_RETENTION: &str = "access_decision_audits=declared,\
+     access_decision_audits:deny=declared,auth_audit_log=declared,usage_events=declared";
 const DEFAULT_INTERVAL: Duration = Duration::from_secs(600);
 const MIN_RETENTION: Duration = Duration::from_secs(24 * 3600);
 const DEFAULT_PREMAKE: i32 = 4;
 const DEFAULT_ROW_BATCH: i64 = 5_000;
 const MAX_BATCHES_PER_PASS: usize = 20;
+/// Heap pages one sweep statement covers (32 MiB at the default block size).
+const SWEEP_PAGES: i64 = 4_096;
+/// How often the scheduled pass sweeps rows out of the partitions it keeps.
+/// Retention is set in days, so once a day is enough; `udb cleanup run`
+/// always sweeps.
+const PARTITION_SWEEP_EVERY: Duration = Duration::from_secs(24 * 3600);
 const DECISION_AUDIT_MESSAGE: &str = "udb.core.authz.entity.v1.AccessDecisionAudit";
 const USAGE_EVENT_MESSAGE: &str = "udb.core.metering.entity.v1.UsageEvent";
 
+#[cfg(test)]
 const AUTH_AUDIT_LOG: &str = "udb_system.auth_audit_log";
 const EVIDENCE_STATE: &str = "udb_system.evidence_export_state";
 const CDC_JOURNAL_TABLE: &str = "udb_cdc_event_journal";
@@ -232,6 +258,8 @@ pub(crate) enum TargetKind {
     /// Range-partitioned by time: partitions are kept ahead and expired ones
     /// dropped.
     Partitioned {
+        /// The partition key column.
+        column: String,
         /// `date_trunc` unit (`month`, `day`, ...).
         unit: String,
         /// PostgreSQL interval of one partition (`1 month`).
@@ -258,6 +286,63 @@ pub(crate) struct Target {
     pub kind: TargetKind,
     /// The proto-declared retention (`retention_days`), if any.
     pub declared: Option<Duration>,
+    /// Rows kept at least as long as the table and longer when configured.
+    pub kept_class: Option<KeptClass>,
+}
+
+/// A class of rows a table keeps longer than the rest, named in the retention
+/// list after a colon: `access_decision_audits:deny=90d` keeps denied
+/// decisions 90 days while allows follow `access_decision_audits`. A class is
+/// never kept shorter than its table.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct KeptClass {
+    pub name: String,
+    /// SQL condition true for the class's rows (never NULL).
+    pub predicate: String,
+}
+
+/// The retention of one table: `rows` for its rows, `kept` for its kept class
+/// (equal to `rows` when the table has none). `None` keeps the rows.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct Retention {
+    pub rows: Option<Duration>,
+    pub kept: Option<Duration>,
+}
+
+impl Retention {
+    #[cfg(test)]
+    fn uniform(retention: Duration) -> Self {
+        Self {
+            rows: Some(retention),
+            kept: Some(retention),
+        }
+    }
+}
+
+/// What one pass did to one table.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct Outcome {
+    pub created: i64,
+    pub dropped: i64,
+    pub deleted: i64,
+}
+
+impl Outcome {
+    fn total(self) -> i64 {
+        self.created + self.dropped + self.deleted
+    }
+}
+
+/// How hard one pass works on one table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PassMode {
+    /// Rows one batched delete removes.
+    pub batch: i64,
+    /// `udb cleanup run`: no per-pass cap, the whole backlog goes, and an
+    /// unpartitioned table is swept page range by page range.
+    pub drain: bool,
+    /// Sweep expired rows out of the partitions that are kept.
+    pub sweep_partitions: bool,
 }
 
 impl Target {
@@ -281,6 +366,27 @@ impl RetentionConfig {
     pub(crate) fn retention_for(&self, target: &Target) -> Option<Duration> {
         self.retention.get(&target.qualified()).copied().flatten()
     }
+
+    /// The table's retention plus its kept class's, never shorter than the
+    /// table's. An unset class follows the table.
+    pub(crate) fn retention_of(&self, target: &Target) -> Retention {
+        let rows = self.retention_for(target);
+        let kept = match &target.kept_class {
+            None => rows,
+            Some(class) => match self.retention.get(&class_key(target, class)) {
+                None => rows,
+                Some(class_retention) => match (rows, *class_retention) {
+                    (Some(rows), Some(class_retention)) => Some(rows.max(class_retention)),
+                    _ => None,
+                },
+            },
+        };
+        Retention { rows, kept }
+    }
+}
+
+fn class_key(target: &Target, class: &KeptClass) -> String {
+    format!("{}:{}", target.qualified(), class.name)
 }
 
 fn declared_days(days: i32) -> Option<Duration> {
@@ -297,7 +403,7 @@ fn manifest_table(message_type: &str) -> Option<&'static ManifestTable> {
 
 fn describe_duration(duration: Duration) -> String {
     let secs = duration.as_secs();
-    if secs % 86_400 == 0 {
+    if secs.is_multiple_of(86_400) {
         format!("{}d", secs / 86_400)
     } else {
         format!("{}h", secs / 3_600)
@@ -313,6 +419,20 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
         .iter()
         .filter_map(partitioned_target)
         .collect();
+    // Denied decisions are the security record: they can be kept longer than
+    // the routine allows (`access_decision_audits:deny=...`).
+    if let Some(audit) = manifest_table(DECISION_AUDIT_MESSAGE)
+        && let Some(target) = targets
+            .iter_mut()
+            .find(|target| target.schema == audit.schema && target.table == audit.table)
+    {
+        let model =
+            crate::runtime::native_catalog::native_model(DECISION_AUDIT_MESSAGE, &["effect"]);
+        target.kept_class = Some(KeptClass {
+            name: "deny".to_string(),
+            predicate: format!("{} IS DISTINCT FROM 'ALLOW'", qi(model.column("effect"))),
+        });
+    }
     // The auth audit log has no proto: it is kept as long as the decision audit.
     let audit_declared = manifest_table(DECISION_AUDIT_MESSAGE)
         .and_then(|table| declared_days(table.retention_days));
@@ -321,6 +441,7 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
         table: "auth_audit_log".to_string(),
         service: "compliance".to_string(),
         declared: audit_declared,
+        kept_class: None,
         kind: TargetKind::Rows {
             column: "occurred_at".to_string(),
             evidence_state_key: evidence_export
@@ -335,6 +456,7 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
             service: "metering".to_string(),
             declared: manifest_table(USAGE_EVENT_MESSAGE)
                 .and_then(|table| declared_days(table.retention_days)),
+            kept_class: None,
             kind: TargetKind::Rows {
                 column: usage.column("occurred_at").to_string(),
                 evidence_state_key: None,
@@ -383,7 +505,9 @@ fn partitioned_target(table: &ManifestTable) -> Option<Target> {
         table: table.table.clone(),
         service,
         declared: declared_days(table.retention_days),
+        kept_class: None,
         kind: TargetKind::Partitioned {
+            column: table.partition_column.trim().to_string(),
             unit: unit.to_string(),
             interval: format!("1 {unit}"),
             suffix_format: suffix_format.to_string(),
@@ -406,6 +530,10 @@ pub(crate) fn parse_retention(raw: &str, targets: &[Target]) -> Result<Retention
             ));
         };
         let name = name.trim().to_ascii_lowercase();
+        let (name, class) = match name.split_once(':') {
+            Some((table, class)) => (table.trim().to_string(), Some(class.trim().to_string())),
+            None => (name, None),
+        };
         if name.ends_with(CDC_JOURNAL_TABLE) {
             return Err(format!(
                 "{CLEANUP_RETENTION_ENV}: the CDC journal has its own sweep; set UDB_CDC_JOURNAL_RETENTION"
@@ -444,7 +572,26 @@ pub(crate) fn parse_retention(raw: &str, targets: &[Target]) -> Result<Retention
             parse_retention_value(value.trim())
                 .map_err(|why| format!("{CLEANUP_RETENTION_ENV}: `{entry}`: {why}"))?
         };
-        config.retention.insert(target.qualified(), retention);
+        let key = match class {
+            None => target.qualified(),
+            Some(class) => match &target.kept_class {
+                Some(kept) if kept.name == class => class_key(target, kept),
+                Some(kept) => {
+                    return Err(format!(
+                        "{CLEANUP_RETENTION_ENV}: `{entry}`: {} keeps only the row class `{}`",
+                        target.qualified(),
+                        kept.name
+                    ));
+                }
+                None => {
+                    return Err(format!(
+                        "{CLEANUP_RETENTION_ENV}: `{entry}`: {} has no row class to keep longer",
+                        target.qualified()
+                    ));
+                }
+            },
+        };
+        config.retention.insert(key, retention);
     }
     Ok(config)
 }
@@ -476,9 +623,9 @@ fn parse_retention_value(value: &str) -> Result<Option<Duration>, String> {
     Ok(Some(retention))
 }
 
-/// One pass over every target whose store this broker can reach, with the
-/// configured reclaim. Returns the partitions created and dropped plus the
-/// rows deleted.
+/// One scheduled pass over every target whose store this broker can reach,
+/// with the configured reclaim. Returns the partitions created and dropped
+/// plus the rows deleted.
 pub async fn run_cleanup_once(
     runtime: &crate::runtime::DataBrokerRuntime,
     settings: &CleanupSettings,
@@ -489,18 +636,47 @@ pub async fn run_cleanup_once(
         settings,
         reclaim.clone().unwrap_or(Reclaim::Off),
         false,
+        false,
     )
     .await
     .and_then(|changed| reclaim.map(|_| changed))
 }
 
-/// One pass with an explicit reclaim mode. `reclaim_all` (`udb cleanup run
-/// --reclaim full`) fully vacuums every log table, deleted rows or not; the
-/// scheduled pass only reclaims tables it deleted rows from.
+/// Per table, when the scheduled pass last swept rows out of kept partitions.
+fn last_partition_sweep()
+-> &'static std::sync::Mutex<std::collections::HashMap<String, std::time::Instant>> {
+    static LAST: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<String, std::time::Instant>>,
+    > = std::sync::OnceLock::new();
+    LAST.get_or_init(Default::default)
+}
+
+/// Whether the scheduled pass sweeps this table's kept partitions now (at most
+/// once per [`PARTITION_SWEEP_EVERY`]).
+fn partition_sweep_due(target: &Target) -> bool {
+    let mut last = last_partition_sweep()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let now = std::time::Instant::now();
+    match last.get(&target.qualified()) {
+        Some(at) if now.duration_since(*at) < PARTITION_SWEEP_EVERY => false,
+        _ => {
+            last.insert(target.qualified(), now);
+            true
+        }
+    }
+}
+
+/// One pass with an explicit reclaim mode. `drain` (`udb cleanup run`) takes
+/// the whole backlog: no per-pass cap, kept partitions are always swept.
+/// `reclaim_all` (`udb cleanup run --reclaim`) reclaims every log table plus
+/// the CDC journal, deleted rows or not; otherwise only tables that lost rows
+/// are reclaimed.
 pub async fn run_cleanup_with(
     runtime: &crate::runtime::DataBrokerRuntime,
     settings: &CleanupSettings,
     reclaim: Reclaim,
+    drain: bool,
     reclaim_all: bool,
 ) -> Result<i64, String> {
     let config = &settings.retention;
@@ -511,28 +687,52 @@ pub async fn run_cleanup_with(
             continue;
         };
         let retention = match &config {
-            Ok(config) => Ok(config.retention_for(target)),
+            Ok(config) => Ok(config.retention_of(target)),
             Err(why) => Err(why.clone()),
         };
-        match maintain_target(&pool, target, retention, settings.batch).await {
-            Ok(count) => {
-                changed += count;
-                // Only row-deleted tables carry free space: a dropped
-                // partition already gave its space back.
-                let row_table = matches!(target.kind, TargetKind::Rows { .. });
+        let partitioned = matches!(target.kind, TargetKind::Partitioned { .. });
+        let mode = PassMode {
+            batch: settings.batch,
+            drain,
+            sweep_partitions: partitioned && (drain || partition_sweep_due(target)),
+        };
+        match maintain_target(&pool, target, retention, mode).await {
+            Ok(outcome) => {
+                changed += outcome.total();
+                // A dropped partition already gave its space back; deleted
+                // rows leave free space in the table file.
                 let vacuum = match reclaim {
                     Reclaim::Off => None,
-                    Reclaim::Vacuum => (row_table && count > 0).then_some("VACUUM (ANALYZE)"),
-                    Reclaim::Full => (row_table && (count > 0 || reclaim_all))
-                        .then_some("VACUUM (FULL, ANALYZE)"),
+                    Reclaim::Vacuum => {
+                        (outcome.deleted > 0 || reclaim_all).then_some("VACUUM (ANALYZE)")
+                    }
+                    Reclaim::Full => {
+                        (outcome.deleted > 0 || reclaim_all).then_some("VACUUM (FULL, ANALYZE)")
+                    }
                 };
                 if let Some(vacuum) = vacuum
-                    && let Err(why) = reclaim_space(&pool, target, vacuum).await
+                    && let Err(why) = reclaim_space(&pool, &target.relation(), vacuum).await
                 {
                     failures.push(format!("{}: {why}", target.qualified()));
                 }
             }
             Err(why) => failures.push(format!("{}: {why}", target.qualified())),
+        }
+    }
+    // The CDC journal prunes itself (UDB_CDC_JOURNAL_RETENTION); an explicit
+    // reclaim gives the space its sweep freed back as well.
+    if reclaim_all
+        && reclaim != Reclaim::Off
+        && let Some(pool) = runtime.pg_pool_clone()
+    {
+        let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+        let vacuum = if reclaim == Reclaim::Full {
+            "VACUUM (FULL, ANALYZE)"
+        } else {
+            "VACUUM (ANALYZE)"
+        };
+        if let Err(why) = reclaim_space(&pool, &journal, vacuum).await {
+            failures.push(format!("{journal}: {why}"));
         }
     }
     if let Err(why) = config {
@@ -548,22 +748,23 @@ pub async fn run_cleanup_with(
     }
 }
 
-/// Run `vacuum` on a table that exists. VACUUM cannot run in a transaction, so
-/// it goes over the simple query protocol.
-async fn reclaim_space(pool: &PgPool, target: &Target, vacuum: &str) -> Result<(), String> {
+/// Run `vacuum` on a relation that exists. VACUUM cannot run in a
+/// transaction, so it goes over the simple query protocol. On a partitioned
+/// table it covers every partition.
+async fn reclaim_space(pool: &PgPool, relation: &str, vacuum: &str) -> Result<(), String> {
     let exists: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
-        .bind(target.relation())
+        .bind(relation)
         .fetch_one(pool)
         .await
         .map_err(|err| format!("look up the table: {err}"))?;
     if !exists {
         return Ok(());
     }
-    let sql = format!("{vacuum} {}", target.relation());
+    let sql = format!("{vacuum} {relation}");
     sqlx::Executor::execute(pool, sqlx::raw_sql(&sql))
         .await
         .map(|_| {
-            tracing::info!(table = %target.qualified(), statement = vacuum, "cleanup reclaimed space");
+            tracing::info!(table = %relation, statement = vacuum, "cleanup reclaimed space");
         })
         .map_err(|err| format!("{vacuum}: {err}"))
 }
@@ -573,20 +774,21 @@ async fn reclaim_space(pool: &PgPool, target: &Target, vacuum: &str) -> Result<(
 pub(crate) async fn maintain_target(
     pool: &PgPool,
     target: &Target,
-    retention: Result<Option<Duration>, String>,
-    batch: i64,
-) -> Result<i64, String> {
+    retention: Result<Retention, String>,
+    mode: PassMode,
+) -> Result<Outcome, String> {
     let exists: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
         .bind(target.relation())
         .fetch_one(pool)
         .await
         .map_err(|err| format!("look up the table: {err}"))?;
     if !exists {
-        return Ok(0);
+        return Ok(Outcome::default());
     }
-    let retention = retention.ok().flatten();
+    let retention = retention.unwrap_or_default();
     match &target.kind {
         TargetKind::Partitioned {
+            column,
             unit,
             interval,
             suffix_format,
@@ -600,40 +802,66 @@ pub(crate) async fn maintain_target(
             .await
             .map_err(|err| format!("read the partitioning: {err}"))?;
             if !partitioned {
-                return Ok(0);
+                return Ok(Outcome::default());
             }
+            let mut outcome = Outcome::default();
             if partman_manages(pool, target).await? {
-                if let Some(retention) = retention {
-                    set_partman_retention(pool, target, retention).await?;
+                // pg_partman drops whole partitions; rows past retention in
+                // the partitions it keeps are still swept below.
+                if let Some(kept) = retention.kept {
+                    set_partman_retention(pool, target, kept).await?;
                 }
-                return Ok(0);
+            } else {
+                outcome.created =
+                    create_partitions_ahead(pool, target, unit, interval, suffix_format, *premake)
+                        .await?;
+                // A partition goes whole once even its longest-kept rows expired.
+                if let Some(kept) = retention.kept {
+                    outcome.dropped = drop_expired_partitions(pool, target, kept).await?;
+                }
             }
-            let created =
-                create_partitions_ahead(pool, target, unit, interval, suffix_format, *premake)
-                    .await?;
-            let dropped = match retention {
-                Some(retention) => drop_expired_partitions(pool, target, retention).await?,
-                None => 0,
-            };
-            Ok(created + dropped)
+            if mode.sweep_partitions
+                && let Some(rows) = retention.rows
+            {
+                let expiry = Expiry {
+                    column,
+                    rows,
+                    kept: target
+                        .kept_class
+                        .as_ref()
+                        .map(|class| (class, retention.kept)),
+                    evidence_state_key: None,
+                };
+                for child in partitions_with_expired_rows(pool, target, rows).await? {
+                    outcome.deleted += sweep_expired_rows(pool, &child, &expiry).await?;
+                }
+                if outcome.deleted > 0 {
+                    tracing::info!(table = %target.qualified(), deleted = outcome.deleted, retention_secs = rows.as_secs(), "deleted rows past retention from kept partitions");
+                }
+            }
+            Ok(outcome)
         }
         TargetKind::Rows {
             column,
             evidence_state_key,
-        } => match retention {
-            Some(retention) => {
-                delete_expired_rows(
-                    pool,
-                    target,
-                    column,
-                    evidence_state_key.as_deref(),
-                    retention,
-                    batch,
-                )
-                .await
-            }
-            None => Ok(0),
-        },
+        } => {
+            let Some(rows) = retention.rows else {
+                return Ok(Outcome::default());
+            };
+            let expiry = Expiry {
+                column,
+                rows,
+                kept: target
+                    .kept_class
+                    .as_ref()
+                    .map(|class| (class, retention.kept)),
+                evidence_state_key: evidence_state_key.as_deref(),
+            };
+            Ok(Outcome {
+                deleted: delete_expired_rows(pool, target, &expiry, mode).await?,
+                ..Outcome::default()
+            })
+        }
     }
 }
 
@@ -776,73 +1004,178 @@ async fn drop_expired_partitions(
     Ok(dropped)
 }
 
-/// Delete rows older than the retention in bounded batches, each its own
-/// transaction with the platform-admin escape (the tables FORCE row-level
-/// security and retention is cross-tenant system work). With an evidence
-/// export, rows it has not exported yet are kept.
+/// Which rows of a table are past retention.
+struct Expiry<'a> {
+    column: &'a str,
+    rows: Duration,
+    /// The kept class and its retention (`None` keeps the class's rows).
+    kept: Option<(&'a KeptClass, Option<Duration>)>,
+    /// With an evidence export, rows it has not exported are kept.
+    evidence_state_key: Option<&'a str>,
+}
+
+impl Expiry<'_> {
+    /// The SQL condition true for a row past retention. Every value in it is
+    /// a number or a constant of this module, so it is written inline.
+    fn condition(&self) -> String {
+        let column = qi(self.column);
+        let before =
+            |retention: Duration| format!("now() - interval '{} seconds'", retention.as_secs());
+        let cutoff = match self.evidence_state_key {
+            Some(key) => format!(
+                "LEAST({}, COALESCE((SELECT last_occurred_at FROM {EVIDENCE_STATE} \
+                 WHERE worker = {}), 'epoch'::timestamptz))",
+                before(self.rows),
+                ql(key)
+            ),
+            None => before(self.rows),
+        };
+        let class = match self.kept {
+            None => String::new(),
+            Some((class, None)) => format!(" AND NOT ({})", class.predicate),
+            Some((class, Some(kept))) => format!(
+                " AND (NOT ({}) OR {column} < {})",
+                class.predicate,
+                before(kept)
+            ),
+        };
+        format!("{column} < {cutoff}{class}")
+    }
+}
+
+/// Begin a transaction with the platform-admin escape: these tables FORCE
+/// row-level security and retention is cross-tenant system work.
+async fn admin_tx(pool: &PgPool) -> Result<sqlx::Transaction<'static, sqlx::Postgres>, String> {
+    let mut tx = pool.begin().await.map_err(|err| err.to_string())?;
+    sqlx::query("SELECT set_config('app.platform_admin', 'true', true)")
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| err.to_string())?;
+    Ok(tx)
+}
+
+/// Delete an unpartitioned table's rows past retention. The scheduled pass
+/// deletes bounded batches (at most [`MAX_BATCHES_PER_PASS`]); `udb cleanup
+/// run` sweeps the whole table once, page range by page range, so a large
+/// backlog costs one read of the table.
 async fn delete_expired_rows(
     pool: &PgPool,
     target: &Target,
-    column: &str,
-    evidence_state_key: Option<&str>,
-    retention: Duration,
-    batch: i64,
+    expiry: &Expiry<'_>,
+    mode: PassMode,
 ) -> Result<i64, String> {
-    let relation = target.relation();
-    let cutoff = match evidence_state_key {
-        Some(_) => format!(
-            "LEAST(now() - $1::interval, COALESCE((SELECT last_occurred_at FROM {EVIDENCE_STATE} \
-             WHERE worker = $3), 'epoch'::timestamptz))"
-        ),
-        None => "now() - $1::interval".to_string(),
-    };
-    let sql = format!(
-        "DELETE FROM {relation} WHERE ctid IN ( \
-             SELECT ctid FROM {relation} WHERE {column} < {cutoff} LIMIT $2)",
-        column = qi(column),
-    );
-    let evidence_ready = match evidence_state_key {
-        Some(_) => sqlx::query_scalar::<_, bool>("SELECT to_regclass($1) IS NOT NULL")
+    if expiry.evidence_state_key.is_some() {
+        let ready: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
             .bind(EVIDENCE_STATE)
             .fetch_one(pool)
             .await
-            .map_err(|err| format!("look up the evidence export state: {err}"))?,
-        None => true,
+            .map_err(|err| format!("look up the evidence export state: {err}"))?;
+        if !ready {
+            // The export is on but has never run: nothing is exported, so
+            // nothing may be deleted.
+            return Ok(0);
+        }
+    }
+    let relation = target.relation();
+    let deleted = if mode.drain {
+        sweep_expired_rows(pool, &relation, expiry).await?
+    } else {
+        let batch = mode.batch.max(1);
+        let sql = format!(
+            "DELETE FROM {relation} WHERE ctid IN ( \
+                 SELECT ctid FROM {relation} WHERE {} LIMIT {batch})",
+            expiry.condition()
+        );
+        let mut deleted = 0i64;
+        for _ in 0..MAX_BATCHES_PER_PASS {
+            let mut tx = admin_tx(pool).await?;
+            let done = sqlx::query(&sql)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| format!("delete expired rows: {err}"))?;
+            tx.commit().await.map_err(|err| err.to_string())?;
+            let rows = done.rows_affected() as i64;
+            deleted += rows;
+            if rows < batch {
+                break;
+            }
+        }
+        deleted
     };
-    if !evidence_ready {
-        // The export is on but has never run: nothing is exported, so nothing
-        // may be deleted.
-        return Ok(0);
-    }
-    let batch = batch.max(1);
-    let mut deleted = 0i64;
-    for _ in 0..MAX_BATCHES_PER_PASS {
-        let mut tx = pool.begin().await.map_err(|err| err.to_string())?;
-        sqlx::query("SELECT set_config('app.platform_admin', 'true', true)")
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| err.to_string())?;
-        let mut query = sqlx::query(&sql)
-            .bind(format!("{} seconds", retention.as_secs()))
-            .bind(batch);
-        if let Some(key) = evidence_state_key {
-            query = query.bind(key);
-        }
-        let done = query
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| format!("delete expired rows: {err}"))?;
-        tx.commit().await.map_err(|err| err.to_string())?;
-        let rows = done.rows_affected() as i64;
-        deleted += rows;
-        if rows < batch {
-            break;
-        }
-    }
     if deleted > 0 {
-        tracing::info!(table = %target.qualified(), deleted, retention_secs = retention.as_secs(), "deleted rows past retention");
+        tracing::info!(table = %target.qualified(), deleted, retention_secs = expiry.rows.as_secs(), "deleted rows past retention");
     }
     Ok(deleted)
+}
+
+/// Delete every row of `relation` past retention in one pass over the heap,
+/// [`SWEEP_PAGES`] pages per statement (a TID range scan), each statement its
+/// own short transaction. Rows written after the pass started are newer than
+/// any cutoff, so the page count read at the start is enough.
+async fn sweep_expired_rows(
+    pool: &PgPool,
+    relation: &str,
+    expiry: &Expiry<'_>,
+) -> Result<i64, String> {
+    let pages: i64 = sqlx::query_scalar(
+        "SELECT pg_relation_size($1::regclass) / current_setting('block_size')::bigint",
+    )
+    .bind(relation)
+    .fetch_one(pool)
+    .await
+    .map_err(|err| format!("size {relation}: {err}"))?;
+    let condition = expiry.condition();
+    let mut deleted = 0i64;
+    let mut first = 0i64;
+    while first < pages {
+        let last = first + SWEEP_PAGES;
+        let sql = format!(
+            "DELETE FROM {relation} WHERE ctid >= '({first},0)'::tid \
+             AND ctid < '({last},0)'::tid AND {condition}"
+        );
+        let mut tx = admin_tx(pool).await?;
+        let done = sqlx::query(&sql)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| format!("delete expired rows from {relation}: {err}"))?;
+        tx.commit().await.map_err(|err| err.to_string())?;
+        deleted += done.rows_affected() as i64;
+        first = last;
+    }
+    Ok(deleted)
+}
+
+/// The partitions of `target` that can hold rows older than `rows`: those
+/// whose lower bound is before the cutoff (a default partition always can).
+/// Each is swept directly; the parent's tenant policy would hide other
+/// tenants' rows from a delete through it.
+async fn partitions_with_expired_rows(
+    pool: &PgPool,
+    target: &Target,
+    rows: Duration,
+) -> Result<Vec<String>, String> {
+    let children: Vec<(String, String)> = sqlx::query_as(
+        "SELECT n.nspname::text, c.relname::text FROM ( \
+             SELECT i.inhrelid AS oid, \
+                    (regexp_match(pg_get_expr(c.relpartbound, c.oid), 'FROM \\(''([^'']+)''\\)'))[1] AS lower_bound \
+             FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid \
+             WHERE i.inhparent = to_regclass($1) \
+         ) AS bounds \
+         JOIN pg_class c ON c.oid = bounds.oid \
+         JOIN pg_namespace n ON n.oid = c.relnamespace \
+         WHERE bounds.lower_bound IS NULL \
+            OR bounds.lower_bound::timestamptz < now() - $2::interval \
+         ORDER BY c.relname",
+    )
+    .bind(target.relation())
+    .bind(format!("{} seconds", rows.as_secs()))
+    .fetch_all(pool)
+    .await
+    .map_err(|err| format!("list partitions: {err}"))?;
+    Ok(children
+        .into_iter()
+        .map(|(schema, table)| format!("{}.{}", qi(&schema), qi(&table)))
+        .collect())
 }
 
 fn split_relation(relation: &str) -> Option<(String, String)> {
@@ -907,6 +1240,52 @@ mod tests {
         );
         assert!(config.retention.values().any(Option::is_none));
 
+        // Denies follow the table unless set, and are never kept shorter.
+        let audit = targets
+            .iter()
+            .find(|t| t.qualified() == "udb_authz.access_decision_audits")
+            .unwrap();
+        assert!(audit.kept_class.is_some());
+        let days = |n: u64| Some(Duration::from_secs(n * 86_400));
+        let config = parse_retention("access_decision_audits=7d", &targets).unwrap();
+        assert_eq!(
+            config.retention_of(audit),
+            Retention {
+                rows: days(7),
+                kept: days(7)
+            }
+        );
+        let config = parse_retention(
+            "access_decision_audits=7d,access_decision_audits:deny=90d",
+            &targets,
+        )
+        .unwrap();
+        assert_eq!(
+            config.retention_of(audit),
+            Retention {
+                rows: days(7),
+                kept: days(90)
+            }
+        );
+        let config = parse_retention(
+            "access_decision_audits=30d,udb_authz.access_decision_audits:deny=7d",
+            &targets,
+        )
+        .unwrap();
+        assert_eq!(config.retention_of(audit).kept, days(30), "never shorter");
+        let config = parse_retention(
+            "access_decision_audits=7d,access_decision_audits:deny=keep",
+            &targets,
+        )
+        .unwrap();
+        assert_eq!(
+            config.retention_of(audit),
+            Retention {
+                rows: days(7),
+                kept: None
+            }
+        );
+
         // The default list follows the declared retention; a setting overrides
         // one entry and keeps the others.
         let defaults = parse_retention(DEFAULT_CLEANUP_RETENTION, &targets).unwrap();
@@ -941,6 +1320,11 @@ mod tests {
                 "UDB_CDC_JOURNAL_RETENTION",
             ),
             ("api_key_usages=soon", "unit"),
+            ("usage_events:deny=30d", "no row class"),
+            (
+                "access_decision_audits:allow=30d",
+                "only the row class `deny`",
+            ),
         ] {
             let err = parse_retention(raw, &targets).unwrap_err();
             assert!(err.contains(why), "{raw}: {err}");
@@ -1003,7 +1387,9 @@ mod tests {
             table: "audit".to_string(),
             service: "authz".to_string(),
             declared: None,
+            kept_class: None,
             kind: TargetKind::Partitioned {
+                column: "decided_at".to_string(),
                 unit: "month".to_string(),
                 interval: "1 month".to_string(),
                 suffix_format: "YYYYMM".to_string(),
@@ -1011,12 +1397,17 @@ mod tests {
             },
         };
         let month = Duration::from_secs(30 * 86_400);
+        let scheduled = PassMode {
+            batch: 5_000,
+            drain: false,
+            sweep_partitions: false,
+        };
 
         // Retention unset: partitions are created ahead, nothing is dropped.
-        let created = maintain_target(&pool, &audit, Ok(None), 5_000)
+        let created = maintain_target(&pool, &audit, Ok(Retention::default()), scheduled)
             .await
             .unwrap();
-        assert_eq!(created, 5, "the current month and four ahead");
+        assert_eq!(created.created, 5, "the current month and four ahead");
         assert!(exists(format!("{schema}.audit_p_202001")).await);
         run(format!(
             "INSERT INTO {schema}.audit VALUES (1, now()), (2, now() + interval '3 months')"
@@ -1024,23 +1415,25 @@ mod tests {
         .await;
 
         // Retention set: the expired UDB partition goes, the hand-made one stays.
-        let dropped = maintain_target(&pool, &audit, Ok(Some(month)), 5_000)
+        let dropped = maintain_target(&pool, &audit, Ok(Retention::uniform(month)), scheduled)
             .await
             .unwrap();
-        assert_eq!(dropped, 1);
+        assert_eq!(dropped.dropped, 1);
         assert!(!exists(format!("{schema}.audit_p_202001")).await);
         assert!(exists(format!("{schema}.audit_manual")).await);
         // A malformed retention list never removes anything.
         assert_eq!(
-            maintain_target(&pool, &audit, Err("bad".to_string()), 5_000)
+            maintain_target(&pool, &audit, Err("bad".to_string()), scheduled)
                 .await
-                .unwrap(),
+                .unwrap()
+                .total(),
             0
         );
         assert_eq!(
-            maintain_target(&pool, &audit, Ok(Some(month)), 5_000)
+            maintain_target(&pool, &audit, Ok(Retention::uniform(month)), scheduled)
                 .await
-                .unwrap(),
+                .unwrap()
+                .total(),
             0,
             "a second pass changes nothing"
         );
@@ -1062,23 +1455,144 @@ mod tests {
             table: "log".to_string(),
             service: "metering".to_string(),
             declared: None,
+            kept_class: None,
             kind: TargetKind::Rows {
                 column: "occurred_at".to_string(),
                 evidence_state_key: None,
             },
         };
-        assert_eq!(maintain_target(&pool, &log, Ok(None), 2).await.unwrap(), 0);
+        let small = PassMode {
+            batch: 2,
+            ..scheduled
+        };
+        let deleted = |outcome: Outcome| outcome.deleted;
         assert_eq!(
-            maintain_target(&pool, &log, Ok(Some(month)), 2)
-                .await
-                .unwrap(),
+            deleted(
+                maintain_target(&pool, &log, Ok(Retention::default()), small)
+                    .await
+                    .unwrap()
+            ),
+            0
+        );
+        assert_eq!(
+            deleted(
+                maintain_target(&pool, &log, Ok(Retention::uniform(month)), small)
+                    .await
+                    .unwrap()
+            ),
             3
         );
-        let left: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM {schema}.log"))
-            .fetch_one(&pool)
+        let count = |relation: String| {
+            let pool = pool.clone();
+            async move {
+                sqlx::query_scalar::<_, i64>(&format!("SELECT count(*) FROM {relation}"))
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap()
+            }
+        };
+        assert_eq!(count(format!("{schema}.log")).await, 2);
+        // `udb cleanup run` sweeps the whole table in page ranges.
+        run(format!(
+            "INSERT INTO {schema}.log SELECT g, now() - interval '40 days' FROM generate_series(6, 9) g"
+        ))
+        .await;
+        let drain = PassMode {
+            drain: true,
+            ..small
+        };
+        assert_eq!(
+            deleted(
+                maintain_target(&pool, &log, Ok(Retention::uniform(month)), drain)
+                    .await
+                    .unwrap()
+            ),
+            4
+        );
+        assert_eq!(count(format!("{schema}.log")).await, 2);
+
+        // Rows past retention inside a partition that is kept are swept out,
+        // and denied decisions are kept longer (or for good) when asked.
+        run(format!(
+            "CREATE TABLE {schema}.decisions (id INT, effect TEXT NOT NULL, decided_at TIMESTAMPTZ NOT NULL) \
+             PARTITION BY RANGE (decided_at)"
+        ))
+        .await;
+        run(format!(
+            "CREATE TABLE {schema}.decisions_all PARTITION OF {schema}.decisions \
+             FOR VALUES FROM ('2000-01-01') TO ('2100-01-01')"
+        ))
+        .await;
+        run(format!(
+            "INSERT INTO {schema}.decisions VALUES \
+             (1, 'ALLOW', now() - interval '40 days'), (2, 'DENY', now() - interval '40 days'), \
+             (3, 'DENY', now() - interval '400 days'), (4, 'ALLOW', now() - interval '1 hour')"
+        ))
+        .await;
+        let decisions = Target {
+            schema: schema.clone(),
+            table: "decisions".to_string(),
+            service: "authz".to_string(),
+            declared: None,
+            kept_class: Some(KeptClass {
+                name: "deny".to_string(),
+                predicate: "effect IS DISTINCT FROM 'ALLOW'".to_string(),
+            }),
+            kind: TargetKind::Partitioned {
+                column: "decided_at".to_string(),
+                unit: "month".to_string(),
+                interval: "1 month".to_string(),
+                suffix_format: "YYYYMM".to_string(),
+                premake: 0,
+            },
+        };
+        let year = Duration::from_secs(365 * 86_400);
+        let sweep = PassMode {
+            sweep_partitions: true,
+            ..scheduled
+        };
+        let allows_month_denies_year = Retention {
+            rows: Some(month),
+            kept: Some(year),
+        };
+        // Without a sweep (the scheduled pass between daily sweeps) nothing goes.
+        assert_eq!(
+            deleted(
+                maintain_target(&pool, &decisions, Ok(allows_month_denies_year), scheduled)
+                    .await
+                    .unwrap()
+            ),
+            0
+        );
+        let outcome = maintain_target(&pool, &decisions, Ok(allows_month_denies_year), sweep)
             .await
             .unwrap();
-        assert_eq!(left, 2);
+        assert_eq!(outcome.deleted, 2, "the old allow and the deny past a year");
+        assert_eq!(outcome.dropped, 0, "a hand-made partition is never dropped");
+        let left: Vec<i32> =
+            sqlx::query_scalar(&format!("SELECT id FROM {schema}.decisions ORDER BY id"))
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(left, vec![2, 4]);
+        run(format!(
+            "INSERT INTO {schema}.decisions VALUES (5, 'DENY', now() - interval '900 days')"
+        ))
+        .await;
+        let denies_kept = Retention {
+            rows: Some(month),
+            kept: None,
+        };
+        assert_eq!(
+            deleted(
+                maintain_target(&pool, &decisions, Ok(denies_kept), sweep)
+                    .await
+                    .unwrap()
+            ),
+            0,
+            "denies kept for good"
+        );
+        assert_eq!(count(format!("{schema}.decisions")).await, 3);
 
         run(format!("DROP SCHEMA {schema} CASCADE")).await;
     }
@@ -1097,6 +1611,8 @@ mod tests {
             .unwrap();
         assert_eq!(audit["retention"], "30d");
         assert_eq!(audit["declared"], "30d");
+        assert_eq!(audit["kept_class"]["name"], "deny");
+        assert_eq!(audit["kept_class"]["retention"], "30d");
 
         let set = CleanupSettings::from_values(
             Some("false"),

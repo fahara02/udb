@@ -412,17 +412,22 @@ fn run_cleanup_command(command: args::CleanupCommand) -> i32 {
             };
             let cleanup = cleanup.clone();
             with_catalog_runtime("cleanup run", dsn.as_deref(), |rt| async move {
+                // A manual run drains the whole backlog. Without --reclaim it
+                // reclaims as configured, only where it deleted rows.
                 let result = match reclaim {
                     Some(mode) => {
-                        udb::runtime::cleanup::run_cleanup_with(
-                            &rt,
-                            &cleanup,
-                            mode,
-                            mode == udb::runtime::cleanup::Reclaim::Full,
-                        )
-                        .await
+                        udb::runtime::cleanup::run_cleanup_with(&rt, &cleanup, mode, true, true)
+                            .await
                     }
-                    None => udb::runtime::cleanup::run_cleanup_once(&rt, &cleanup).await,
+                    None => match cleanup.reclaim.clone() {
+                        Ok(mode) => {
+                            udb::runtime::cleanup::run_cleanup_with(
+                                &rt, &cleanup, mode, true, false,
+                            )
+                            .await
+                        }
+                        Err(err) => Err(err),
+                    },
                 };
                 match result {
                     Ok(changes) => {

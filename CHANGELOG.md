@@ -7,6 +7,26 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.19] - 2026-11-16
+
+### Breaking for callers
+
+- None.
+
+### Added
+
+- **The cleanup service prunes inside the partitions it keeps.** Rows past retention in a kept
+  partition (the current month, a hand-made partition) are deleted once a day, in one pass
+  over each partition at 32 MiB per statement. A month-partitioned log no longer has to wait
+  for the whole month to expire.
+- **Denied decisions can be kept longer than allows.** `UDB_CLEANUP_RETENTION` accepts
+  `access_decision_audits:deny=90d` (or `=keep`). Allows follow `access_decision_audits`. A
+  partition is dropped only once its denies are past retention too, and a class is never
+  kept shorter than its table. The default keeps both for the declared 30 days.
+- **`udb cleanup run` takes the whole backlog.** It has no per-pass cap and sweeps
+  unpartitioned logs page range by page range, so a large backlog is read once. `--reclaim
+  vacuum|full` also reclaims the CDC journal.
+
 ## [0.6.18] - 2026-11-15
 
 ### Breaking for callers
