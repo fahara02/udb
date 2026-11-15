@@ -7,6 +7,78 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.18] - 2026-11-15
+
+### Breaking for callers
+
+- **Identical delegated allows are audited once per window.** A service that checks access
+  for its users (`CheckAccess` / `BatchCheckPermissions` with `udb:authz:check-access-for`)
+  wrote one decision-audit row, one outbox event, one CDC journal row and one auth-audit-log
+  row for every allow. On a busy gateway that filled the disk. Now the first allow of an identical
+  decision (same tenant, project, caller, subject, resource, action, matched rule and policy and
+  relationship versions) in `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW` (default `1h`) is written.
+  Repeats are counted, and the next written row carries `suppressed_identical_allows`. Every
+  deny is still written.
+  - detect: a report that counts delegated ALLOW rows or `udb.authz.check.access.delegated.v1`
+    events per request
+  - fix: add `suppressed_identical_allows`, or set `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW=0`
+- **UDB's own log tables now follow their declared retention by default.** The new cleanup
+  service deletes rows older than the table's proto `retention_days`:
+  - `access_decision_audits`: 30 days, down from a declared 7 years that nothing enforced;
+  - `auth_audit_log`: the same as the decision audit;
+  - `usage_events`: 400 days.
+
+  Before, nothing was ever deleted.
+  - detect: `udb cleanup show` lists a retention for those three tables
+  - fix: to keep more, set `UDB_CLEANUP_RETENTION=access_decision_audits=365d,auth_audit_log=365d`
+    (or `keep`; also a `.env` entry or `udb serve --cleanup-retention`)
+    or turn the service off with `UDB_CLEANUP_ENABLED=false`
+
+### Added
+
+- **The cleanup service for UDB's own tables.** A leader-elected worker, on by default, keeps
+  UDB's logs from filling the disk. Every pass does three things:
+  - creates the time partitions ahead of writes;
+  - applies a per-table retention;
+  - reclaims the space of deleted rows.
+
+  Every setting is an environment variable, a `.env` entry or a `udb serve` flag (the flag wins):
+  - `UDB_CLEANUP_ENABLED` / `--cleanup-enabled`;
+  - `UDB_CLEANUP_RETENTION` / `--cleanup-retention`: `table=90d|declared|keep`, merged over the
+    defaults;
+  - `UDB_CLEANUP_INTERVAL` / `--cleanup-interval`;
+  - `UDB_CLEANUP_BATCH` / `--cleanup-batch`;
+  - `UDB_CLEANUP_RECLAIM` / `--cleanup-reclaim`: `off`, `vacuum` or `full`;
+  - `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW` / `--delegated-allow-audit-window`;
+  - `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_MAX_TRACKED` / `--delegated-allow-audit-max-tracked`;
+  - `UDB_CDC_JOURNAL_RETENTION` / `--cdc-journal-retention`.
+
+  How it treats each kind of table:
+  - A partitioned table drops whole partitions past the retention, and only partitions UDB
+    created. With pg_partman, the retention is written to `partman.part_config`.
+  - `auth_audit_log` and `usage_events` delete old rows in batches.
+  - `auth_audit_log` keeps rows the compliance evidence export has not exported yet.
+
+  `udb cleanup show` prints what is in force; `udb cleanup run [--reclaim full]` runs a pass
+  now. `docs/operations.md` lists what writes each table.
+- **Time partitions are created ahead of writes.** Without pg_partman, the migration created
+  only a few partitions from the day it ran, and the first write past the last one failed
+  (for example `access_decision_audits` four months after a deploy). The cleanup service now
+  keeps the current period and the declared number of future ones on every time-partitioned
+  UDB table.
+- **`udb auth api-key update --key-id <uuid> --scope <s>...`** reviews a key's scopes against
+  its service account's current grant without reissuing the secret.
+
+### Fixed
+
+- **Adding a scope to a service account's grant no longer breaks its keys.** Any grant replace
+  bumped the revision and every API key and certificate binding failed until it was reviewed,
+  so adding a scope to a running service caused an outage between the two steps. A replace
+  that only adds scopes (same project, same identity, every previous scope kept) now carries
+  the account's keys and bindings to the new revision in the same transaction. A key still
+  holds only its own scopes; `udb auth api-key update` adds the new one. Removing a scope or
+  changing the project still invalidates them until each is reviewed.
+
 ## [0.6.17] - 2026-11-14
 
 ### Breaking for callers

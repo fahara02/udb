@@ -27,6 +27,7 @@ pub mod authn; // Stage 1 auth: UDB-owned authn primitives (sessions, API keys, 
 pub mod authz; // Stage 1 auth: UDB-owned authz engine (Decision/Principal/ResourceRef, RBAC/ABAC/ReBAC)
 pub mod backend_context; // NW-deep: uniform request-context applicator across all backends
 pub mod canonical_store; // P2P: pluggable canonical-store trait + Postgres/MySQL/SQLite impls
+pub mod cleanup; // leader-elected partition upkeep + UDB_CLEANUP_RETENTION for UDB's own logs
 pub mod consistency;
 pub mod consistency_fence;
 pub mod credential_layer; // fix_plan §1: async verified-principal resolution before dispatch

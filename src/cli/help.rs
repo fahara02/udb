@@ -58,7 +58,38 @@ const COMMANDS: &[CmdHelp] = &[
   <data-addr>   data-plane bind (default 0.0.0.0:50051); auth plane = port+10
   Wait for the \"UDB DataBroker is ready: data=… auth=…\" line before clients.
   Run `udb requirements` and `udb doctor --enterprise` FIRST.
+  Setting flags (each also an environment variable or `.env` entry; a flag wins):
+    --cleanup-enabled <true|false>         UDB_CLEANUP_ENABLED
+    --cleanup-retention <table=dur,...>     UDB_CLEANUP_RETENTION
+    --cleanup-reclaim <off|vacuum|full>    UDB_CLEANUP_RECLAIM
+    --cleanup-interval <dur>      UDB_CLEANUP_INTERVAL
+    --cleanup-batch <rows>        UDB_CLEANUP_BATCH
+    --delegated-allow-audit-window <dur>   UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW
+    --delegated-allow-audit-max-tracked <n> UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_MAX_TRACKED
+    --cdc-journal-retention <dur>          UDB_CDC_JOURNAL_RETENTION
   Example: udb serve proto \"\" 0.0.0.0:50051",
+    },
+    CmdHelp {
+        name: "cleanup",
+        group: "Core",
+        summary: "The cleanup service for UDB's own tables: show its settings or run a pass now.",
+        usage: "udb cleanup show  |  udb cleanup run [--dsn <postgres-dsn>] [--reclaim off|vacuum|full]",
+        details: "\
+  show  prints each UDB table the cleanup service keeps (decision audit, auth
+        audit log, metering events, every time-partitioned table), the retention
+        in force (`keep`, or days) and the proto-declared one, plus every
+        cleanup setting. Takes the same setting flags as `udb serve`.
+  run   runs one pass against the database (`--dsn` or UDB_PG_DSN): creates the
+        time partitions ahead of writes, drops partitions past retention,
+        deletes expired log rows, then reclaims their space. `--reclaim full`
+        runs VACUUM FULL on every log table (gives disk back to the OS; locks
+        each table while it runs, so use a maintenance window).
+  The broker runs the same pass every UDB_CLEANUP_INTERVAL (default 10m) unless
+  UDB_CLEANUP_ENABLED=false. Every setting is an environment variable, a `.env`
+  entry or a `udb serve` flag (`udb help serve`).
+  Defaults: UDB's own logs follow their declared retention
+  (access_decision_audits, auth_audit_log, usage_events = declared); reclaim =
+  vacuum. Override per table: UDB_CLEANUP_RETENTION=access_decision_audits=90d,usage_events=keep",
     },
     CmdHelp {
         name: "catalog bootstrap",
@@ -438,7 +469,21 @@ const COMMANDS: &[CmdHelp] = &[
            --expected-revision <n> [--reason <r>]
   revoke:  --tenant <tenant-id> --user <uuid> [--reason <r>]
   Wildcard/admin/owner scopes are always rejected. Replace and identity rotation
-  bump the revision, invalidating dependent keys and bindings until re-issued.",
+  bump the revision. A replace that only ADDS scopes (same project) carries the
+  account's keys and bindings to the new revision; any other change invalidates
+  them until each is reviewed (`udb auth api-key update`).",
+    },
+    CmdHelp {
+        name: "auth api-key update",
+        group: "Auth & policy",
+        summary: "Review a key's scopes against its account's current grant, keeping the secret.",
+        usage: "udb auth api-key update --key-id <uuid> --scope <s> [--scope <s>…]",
+        details: "  Needs UDB_AUTH_TARGET (or UDB_GRPC_TARGET) and UDB_AUTH_TOKEN. The scopes REPLACE the
+  key's scopes and must be within the service account's current grant (a scope
+  outside it is refused). The key is re-pinned to the current grant revision.
+  To add a scope to a running service: `udb auth grant replace` with the scope
+  added, then this command with the key's scopes plus the new one. A token
+  minted from the key carries the key's scopes within the grant.",
     },
     CmdHelp {
         name: "auth membership",

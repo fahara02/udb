@@ -794,6 +794,38 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
             let dsn = require_pg_dsn()?;
             udb::runtime::service::cli_api_key_list(&dsn, &owner_id).await
         }
+        AuthCommand::ApiKeyUpdate { key_id, scopes } => {
+            require("key-id", &key_id)?;
+            if scopes.is_empty() {
+                return Err(
+                    "--scope is required (repeat for each scope the key keeps; the list replaces \
+                     the key's scopes)"
+                        .to_string(),
+                );
+            }
+            let mut client = apikey_client().await?;
+            let response = client
+                .update_api_key(with_metadata(apikey_pb::UpdateApiKeyRequest {
+                    key_id,
+                    scopes,
+                    update_mask: Some(prost_types::FieldMask {
+                        paths: vec!["scopes".to_string()],
+                    }),
+                    ..Default::default()
+                }))
+                .await
+                .map_err(|error| format!("api-key update failed: {error}"))?
+                .into_inner();
+            Ok(json!({
+                "key_id": response.key.as_ref().map(|key| key.key_id.clone()).unwrap_or_default(),
+                "scopes": response
+                    .key
+                    .as_ref()
+                    .map(|key| serde_json::from_str::<serde_json::Value>(&key.scopes_json)
+                        .unwrap_or(serde_json::Value::Null))
+                    .unwrap_or(serde_json::Value::Null),
+            }))
+        }
         AuthCommand::ApiKeyCreate {
             owner_id,
             name,

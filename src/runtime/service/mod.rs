@@ -62,6 +62,12 @@ mod asset_service;
 pub(crate) mod auth_service;
 pub(crate) mod cross_tenant_read;
 mod wrong_listener;
+
+/// The delegated-allow audit window in force
+/// (`UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW`), for `udb cleanup show`.
+pub fn delegated_allow_audit_window() -> std::time::Duration {
+    auth_service::authz::allow_audit::configured_window()
+}
 // Phase 9.10: native BackupService — tenant-level logical backup and restore.
 // The leader wires `build_backup_service` + `add_service(backup_service::
 // BackupServiceServer::new(...))` in `serve()`, mirroring `tenant_service`/
@@ -3555,6 +3561,40 @@ pub async fn serve(
                             )
                             .await?;
                         Ok::<i64, tonic::Status>(pruned + fired)
+                    }
+                },
+            );
+        }
+    }
+    // Leader-elected upkeep of UDB's own append-only tables: time partitions are
+    // created ahead of writes (without pg_partman nothing else does), and the
+    // per-table UDB_CLEANUP_RETENTION is applied (partitions dropped, log rows
+    // deleted in batches).
+    let cleanup_settings = crate::runtime::cleanup::CleanupSettings::from_env();
+    if !cleanup_settings.enabled {
+        tracing::info!("cleanup worker disabled: UDB_CLEANUP_ENABLED=false");
+    } else {
+        match cleanup_settings.describe() {
+            Ok(tables) => tracing::info!(
+                tables = %serde_json::Value::Array(tables),
+                "cleanup retention in force (UDB_CLEANUP_RETENTION)"
+            ),
+            Err(why) => tracing::error!("{why}; no table is pruned until it is fixed"),
+        }
+        let retention_runtime = service.runtime.load_full();
+        if let Ok(lease_pool) = retention_runtime.native_store_pool_for_service("authz", true, "") {
+            let singleton_relation = retention_runtime.config().cdc.lock_log_relation();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_SYSTEM_CLEANUP,
+                "cleanup created/dropped partitions and deleted expired log rows",
+                lease_pool,
+                singleton_relation,
+                cleanup_settings.interval,
+                move || {
+                    let runtime = retention_runtime.clone();
+                    let settings = cleanup_settings.clone();
+                    async move {
+                        crate::runtime::cleanup::run_cleanup_once(runtime.as_ref(), &settings).await
                     }
                 },
             );

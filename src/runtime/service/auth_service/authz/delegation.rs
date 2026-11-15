@@ -26,9 +26,11 @@
 //! scopes, a policy that declares `required_scopes` never allows a delegated
 //! check — the subject's token scopes are not known to the PDP.
 //!
-//! Every delegated decision, allow and deny, is written to the access-decision
-//! audit with the caller in `evaluated_by` / `evaluated_by_service_identity`,
-//! and published as `udb.authz.check.access.delegated.v1`.
+//! Every delegated deny, and the first of identical delegated allows in the
+//! `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW` (see `allow_audit`), is written to
+//! the access-decision audit with the caller in `evaluated_by` /
+//! `evaluated_by_service_identity`, and published as
+//! `udb.authz.check.access.delegated.v1`.
 
 use tonic::Status;
 use uuid::Uuid;
@@ -50,6 +52,9 @@ pub(crate) struct DelegatedEvaluation {
     pub(super) evaluated_by: String,
     /// The caller's grant service identity.
     pub(super) evaluated_by_service_identity: String,
+    /// Identical allows of this decision that were counted, not written, since
+    /// the last written one (see `allow_audit`).
+    pub(super) suppressed_identical_allows: u64,
 }
 
 impl DelegatedEvaluation {
@@ -57,6 +62,53 @@ impl DelegatedEvaluation {
         Self {
             evaluated_by: ctx.subject.trim().to_string(),
             evaluated_by_service_identity: ctx.service_identity.trim().to_string(),
+            suppressed_identical_allows: 0,
+        }
+    }
+}
+
+/// Whether and how one decision is audited.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum DelegatedAudit {
+    /// Not a delegated decision: the ordinary audit rules apply.
+    NotDelegated,
+    /// Write the audit row and publish the delegated event.
+    Write(DelegatedEvaluation),
+    /// An identical delegated allow was written inside the window.
+    Suppressed,
+}
+
+impl DelegatedAudit {
+    pub(super) fn evaluation(&self) -> Option<&DelegatedEvaluation> {
+        match self {
+            DelegatedAudit::Write(evaluation) => Some(evaluation),
+            _ => None,
+        }
+    }
+}
+
+/// Decide how a decision is audited: every deny is written; identical
+/// delegated allows go through the process-wide allow-audit window.
+pub(super) fn delegated_audit(
+    delegation: Option<&DelegatedEvaluation>,
+    subject: &Principal,
+    resource: &ResourceRef,
+    action: &str,
+    decision: &Decision,
+) -> DelegatedAudit {
+    let Some(delegation) = delegation else {
+        return DelegatedAudit::NotDelegated;
+    };
+    if !decision.allowed {
+        return DelegatedAudit::Write(delegation.clone());
+    }
+    let key = super::allow_audit::decision_key(delegation, subject, resource, action, decision);
+    match super::allow_audit::AllowAuditWindow::global().admit(&key, std::time::Instant::now()) {
+        super::allow_audit::AllowAudit::Suppress => DelegatedAudit::Suppressed,
+        super::allow_audit::AllowAudit::Write { suppressed_before } => {
+            let mut evaluation = delegation.clone();
+            evaluation.suppressed_identical_allows = suppressed_before;
+            DelegatedAudit::Write(evaluation)
         }
     }
 }
@@ -306,6 +358,7 @@ impl AuthzServiceImpl {
                     "allowed": decision.allowed,
                     "decision_id": decision.decision_id.clone(),
                     "matched_policy_ids": decision.matched_policy_ids.clone(),
+                    "suppressed_identical_allows": delegation.suppressed_identical_allows,
                 }),
             )
             .with_correlation(correlation)

@@ -45,7 +45,7 @@ public final class AccessDecisionAuditProto {
       "\032\037google/protobuf/timestamp.proto\032$udb/c" +
       "ore/authz/entity/v1/enums.proto\032\033udb/cor" +
       "e/common/v1/db.proto\032!udb/core/common/v1" +
-      "/security.proto\"\364\023\n\023AccessDecisionAudit\022" +
+      "/security.proto\"\362\023\n\023AccessDecisionAudit\022" +
       "`\n\021decision_audit_id\030\001 \001(\tB4\202\267\0300\n\021decisi" +
       "on_audit_id\022\004UUID\030\001(\001:\021gen_random_uuid()" +
       "R\017decisionAuditId\022[\n\007user_id\030\002 \001(\tBB\202\267\030>" +
@@ -100,22 +100,22 @@ public final class AccessDecisionAuditProto {
       ")R\013evaluatedBy\022l\n\035evaluated_by_service_i" +
       "dentity\030\034 \001(\tB)\202\267\030%\n\035evaluated_by_servic" +
       "e_identity\022\004TEXTR\032evaluatedByServiceIden" +
-      "tity:\347\002\372\266\030\315\001\n\026access_decision_audits\022\tud" +
+      "tity:\345\002\372\266\030\314\001\n\026access_decision_audits\022\tud" +
       "b_authz\030\005 \001*1Decision trail for sensitiv" +
-      "e authorization checks@\001H\003R\ndecided_atX\373" +
-      "\023b^\n\020tenant_isolation\032H(tenant_id::text " +
-      "= current_setting(\'app.current_tenant_id" +
-      "\', true)::text)(\001\212\262\031\220\001\n\006tenant\032\ttenant_i" +
-      "d*4tenant_id = current_setting(\'app.curr" +
-      "ent_tenant_id\')2\004none:\021authz.operational" +
-      "@\373\023H\002R\006tenantZ\010standardr\025tenant.data_res" +
-      "idencyB\203\002\n\034com.udb.core.authz.entity.v1B" +
-      "\030AccessDecisionAuditProtoP\001ZDgithub.com/" +
-      "fahara02/udb/sdk/go/gen/udb/core/authz/e" +
-      "ntity/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Auth" +
-      "z.Entity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002" +
-      "$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\352\002\034" +
-      "Udb::Core::Authz::Entity::V1b\006proto3"
+      "e authorization checks@\001H\003R\ndecided_atX\036" +
+      "b^\n\020tenant_isolation\032H(tenant_id::text =" +
+      " current_setting(\'app.current_tenant_id\'" +
+      ", true)::text)(\001\212\262\031\217\001\n\006tenant\032\ttenant_id" +
+      "*4tenant_id = current_setting(\'app.curre" +
+      "nt_tenant_id\')2\004none:\021authz.operational@" +
+      "\036H\002R\006tenantZ\010standardr\025tenant.data_resid" +
+      "encyB\203\002\n\034com.udb.core.authz.entity.v1B\030A" +
+      "ccessDecisionAuditProtoP\001ZDgithub.com/fa" +
+      "hara02/udb/sdk/go/gen/udb/core/authz/ent" +
+      "ity/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Authz." +
+      "Entity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$U" +
+      "db\\GPBMetadata\\Core\\Authz\\Entity\\V1\352\002\034Ud" +
+      "b::Core::Authz::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -232,6 +232,9 @@ pub(crate) enum Command {
     /// Declarative operations over files: `udb policy diff|apply`,
     /// `udb identity diff|apply`, `udb data seed`.
     Ops(OpsCommand),
+    /// `udb cleanup show|run`: the cleanup settings in force for UDB's own
+    /// tables, and one cleanup pass now against the database.
+    Cleanup(CleanupCommand),
     /// `udb self verify|install` — release binaries checked against the
     /// release's manifest.json.
     SelfUpdate(SelfCommand),
@@ -468,6 +471,13 @@ pub(crate) enum AuthCommand {
     },
     ApiKeyList {
         owner_id: String,
+    },
+    /// `udb auth api-key update --key-id <uuid> --scope <s>...`: review a key's
+    /// scopes against its service account's CURRENT grant without reissuing
+    /// the secret (adds a scope the grant now holds; re-pins the key).
+    ApiKeyUpdate {
+        key_id: String,
+        scopes: Vec<String>,
     },
     /// urgent_fix #20: OFFLINE root bootstrap. Creates an initial verified user
     /// directly against the database (constructing the authn service in-process,
@@ -1041,6 +1051,10 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
         (Some("api-key"), Some("list")) => AuthCommand::ApiKeyList {
             owner_id: flag_value("--owner").unwrap_or_default(),
         },
+        (Some("api-key"), Some("update")) => AuthCommand::ApiKeyUpdate {
+            key_id: flag_value("--key-id").unwrap_or_default(),
+            scopes: flag_values("--scope"),
+        },
         (Some("migrate-grants"), _) => AuthCommand::MigrateGrants {
             dry_run: has_flag("--dry-run"),
         },
@@ -1491,7 +1505,17 @@ pub(crate) fn split_csv(value: &str) -> Vec<String> {
 
 /// Flags that consume the following argv token as their value. The positional
 /// collector and `collect_positional_services` use this to skip flag values.
-const VALUE_FLAGS: &[&str] = &[
+pub(crate) const VALUE_FLAGS: &[&str] = &[
+    "--key-id",
+    "--cleanup-retention",
+    "--cleanup-enabled",
+    "--cleanup-reclaim",
+    "--reclaim",
+    "--cleanup-interval",
+    "--cleanup-batch",
+    "--delegated-allow-audit-window",
+    "--delegated-allow-audit-max-tracked",
+    "--cdc-journal-retention",
     "--addr",
     "--expires-in-days",
     "--home-tenant",
@@ -2021,6 +2045,23 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             offset = 1;
             Command::Serve
         }
+        Some("cleanup") => match args.get(1).map(String::as_str) {
+            Some("show") => {
+                offset = 2;
+                Command::Cleanup(CleanupCommand::Show)
+            }
+            Some("run") => {
+                offset = 2;
+                Command::Cleanup(CleanupCommand::Run {
+                    dsn: flag_value("--dsn"),
+                    reclaim: flag_value("--reclaim"),
+                })
+            }
+            _ => Command::InvalidUsage {
+                message: "usage: udb cleanup show | udb cleanup run [--dsn <postgres-dsn>] [--reclaim full]"
+                    .to_string(),
+            },
+        },
         // `udb proto export [--out <dir>] [--buf-yaml] [--fmt]`
         Some("proto") if args.get(1).map(|value| value.as_str()) == Some("export") => {
             offset = 2;
@@ -2293,8 +2334,12 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 return None;
             }
 
-            // Drop boolean flags and value-flag names themselves.
+            // Drop boolean flags and value-flag names themselves, and a
+            // setting flag written as `--flag=value`.
             if VALUE_FLAGS.contains(&arg.as_str())
+                || SETTING_FLAGS
+                    .iter()
+                    .any(|(flag, _)| arg.starts_with(&format!("{flag}=")))
                 || matches!(
                     arg.as_str(),
                     "--human"
@@ -2361,4 +2406,64 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         .or_else(|| env::var("UDB_GRPC_ADDR").ok())
         .unwrap_or_else(|| DEFAULT_GRPC_BIND_ADDR.to_string());
     (command, proto_root, namespace, serve_addr)
+}
+
+/// `udb retention` subcommands.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CleanupCommand {
+    /// Print the retention in force per table and the related settings.
+    Show,
+    /// Run one cleanup pass now (partition upkeep, retention, reclaim);
+    /// `--reclaim off|vacuum|full` overrides `UDB_CLEANUP_RECLAIM` for it.
+    Run {
+        dsn: Option<String>,
+        reclaim: Option<String>,
+    },
+}
+
+/// Settings `udb serve` (and `udb retention`) take as flags. A flag sets its
+/// environment variable for this process, so it wins over `.env` and the
+/// shell; without the flag the environment (or `.env`) decides.
+pub const SETTING_FLAGS: &[(&str, &str)] = &[
+    ("--cleanup-enabled", "UDB_CLEANUP_ENABLED"),
+    ("--cleanup-reclaim", "UDB_CLEANUP_RECLAIM"),
+    ("--cleanup-retention", "UDB_CLEANUP_RETENTION"),
+    ("--cleanup-interval", "UDB_CLEANUP_INTERVAL"),
+    ("--cleanup-batch", "UDB_CLEANUP_BATCH"),
+    (
+        "--delegated-allow-audit-window",
+        "UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW",
+    ),
+    (
+        "--delegated-allow-audit-max-tracked",
+        "UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_MAX_TRACKED",
+    ),
+    ("--cdc-journal-retention", "UDB_CDC_JOURNAL_RETENTION"),
+];
+
+/// The `(env var, value)` pairs the setting flags in `args` ask for.
+pub fn setting_flag_values(args: &[String]) -> Vec<(&'static str, String)> {
+    let mut values = Vec::new();
+    for (flag, env) in SETTING_FLAGS {
+        let mut found = None;
+        let mut i = 0;
+        while i < args.len() {
+            let arg = &args[i];
+            if arg == flag {
+                if let Some(value) = args.get(i + 1) {
+                    found = Some(value.clone());
+                }
+                i += 2;
+                continue;
+            }
+            if let Some(value) = arg.strip_prefix(&format!("{flag}=")) {
+                found = Some(value.to_string());
+            }
+            i += 1;
+        }
+        if let Some(value) = found {
+            values.push((*env, value));
+        }
+    }
+    values
 }

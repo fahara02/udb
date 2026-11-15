@@ -25,7 +25,7 @@ message AccessDecisionAudit {
     enable_rls: true
     partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
     partition_column: "decided_at"
-    retention_days: 2555 // 7 years — authorization decisions are compliance records
+    retention_days: 30 // the cleanup service enforces it by default; raise it with UDB_CLEANUP_RETENTION=access_decision_audits=365d (or keep)
     rls_policies: {
       policy_name: "tenant_isolation"
       using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
@@ -38,7 +38,7 @@ message AccessDecisionAudit {
     rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
     soft_delete_mode: "none"
     retention_class: "authz.operational"
-    retention_days: 2555
+    retention_days: 30
     audit_mode: AUDIT_MODE_MUTATION
     encryption_profile: "tenant"
     pii_profile: "standard"

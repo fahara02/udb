@@ -126,6 +126,29 @@ async fn live_postgres_delegated_check_access_evaluates_and_audits_the_subject()
     assert!(!denied.allowed);
     assert_eq!(denied.evaluated_subject, patient.user_id);
 
+    // A gateway asks the same question on every request: identical allows in
+    // the allow-audit window are counted, not written again; every deny is.
+    for _ in 0..4 {
+        let repeat = scope_claim_context_for_test(
+            ctx.clone(),
+            authz.check_access(chart_check(&patient.user_id, "read")),
+        )
+        .await
+        .expect("repeated delegated allow")
+        .into_inner();
+        assert!(repeat.allowed);
+    }
+    for _ in 0..2 {
+        let repeat = scope_claim_context_for_test(
+            ctx.clone(),
+            authz.check_access(chart_check(&patient.user_id, "delete")),
+        )
+        .await
+        .expect("repeated delegated deny")
+        .into_inner();
+        assert!(!repeat.allowed);
+    }
+
     // A person of another tenant and an id that does not exist get the SAME
     // refusal, so the call cannot tell them apart.
     let cross_tenant = scope_claim_context_for_test(
@@ -191,6 +214,24 @@ async fn live_postgres_delegated_check_access_evaluates_and_audits_the_subject()
                 && audit.tenant_id == "acme"
         ),
         "delegated rows name the caller's service identity and stay in its tenant"
+    );
+    let count = |action: &str, effect: authz_entity_pb::PolicyEffect| {
+        delegated
+            .iter()
+            .filter(|audit| {
+                audit.object == "chart" && audit.action == action && audit.effect == effect as i32
+            })
+            .count()
+    };
+    assert_eq!(
+        count("read", authz_entity_pb::PolicyEffect::Allow),
+        1,
+        "five identical delegated allows inside the window write one row: {audits:?}"
+    );
+    assert_eq!(
+        count("delete", authz_entity_pb::PolicyEffect::Deny),
+        3,
+        "every delegated deny is written: {audits:?}"
     );
 
     cleanup_native_auth_db(&pool).await;

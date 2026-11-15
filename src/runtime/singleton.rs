@@ -120,6 +120,10 @@ pub const WORKER_MESSAGING_INBOX_RETENTION: &str = "udb:messaging:inbox-retentio
 /// Leader-elected backup maintenance: enforces each enabled `BackupPolicy`'s
 /// retention (prunes old runs + their objects) and fires due scheduled backups.
 pub const WORKER_BACKUP_RETENTION: &str = "udb:backup:retention";
+/// Leader-elected upkeep of UDB's own append-only tables: keeps time partitions
+/// created ahead of writes and applies `UDB_CLEANUP_RETENTION`. The pass body is
+/// `cleanup::run_cleanup_once`.
+pub const WORKER_SYSTEM_CLEANUP: &str = "udb:system:cleanup";
 
 const MIN_LEASE_TTL_SECS: u64 = 5;
 pub const WORKER_SINGLETON_LEASE_TTL: Duration = Duration::from_secs(30);

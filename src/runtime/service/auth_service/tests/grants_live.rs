@@ -1229,6 +1229,153 @@ async fn live_postgres_mtls_native_listener_is_binding_backed_and_revocable() {
     cleanup_native_auth_db(&pool).await;
 }
 
+/// Adding a scope to a running service account: the grant gains the scope and
+/// the key is reviewed to hold it. A grant replacement that only ADDS scopes
+/// carries the account's keys to the new revision (no outage between the two
+/// steps); a narrowing still invalidates them until each is reviewed.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_grant_widening_keeps_keys_and_key_update_adds_the_scope -- --ignored --nocapture"]
+async fn live_postgres_grant_widening_keeps_keys_and_key_update_adds_the_scope() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone());
+    let apikey = api_key_service(pool.clone());
+    let (user, grant) = create_service_account_with_grant(
+        &authn,
+        "grant_widening",
+        "CorrectHorse1!",
+        &["udb:read", "udb:write"],
+    )
+    .await;
+    let claim = || test_claim_context(&user.user_id, "acme", "billing", &[], &[]);
+    let created = scope_claim_context_for_test(
+        claim(),
+        apikey.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+            name: "widening-key".to_string(),
+            owner_id: user.user_id.clone(),
+            scopes: vec!["udb:read".to_string()],
+            context: Some(common_pb::RequestContext {
+                principal_id: user.user_id.clone(),
+                tenant: Some(common_pb::TenantContext {
+                    tenant_id: "acme".to_string(),
+                    project_id: "billing".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect("create grant-backed API key")
+    .into_inner();
+    let key_id = created.key.as_ref().expect("created key").key_id.clone();
+    let validate = |scope: &'static str| {
+        let plain_key = created.plain_key.clone();
+        let apikey = &apikey;
+        async move {
+            apikey
+                .validate_api_key(Request::new(apikey_pb::ValidateApiKeyRequest {
+                    plain_key,
+                    required_scope: scope.to_string(),
+                    ..Default::default()
+                }))
+                .await
+                .expect("validate API key")
+                .into_inner()
+                .valid
+        }
+    };
+    let replace = |scopes: &[&str], expected_revision: i64| {
+        authn.replace_service_account_grant(Request::new(
+            authn_pb::ReplaceServiceAccountGrantRequest {
+                tenant_id: "acme".to_string(),
+                user_id: user.user_id.clone(),
+                approved_scopes: scopes.iter().map(|s| (*s).to_string()).collect(),
+                project_id: "billing".to_string(),
+                reason: "live grant change".to_string(),
+                expected_revision,
+            },
+        ))
+    };
+    assert!(validate("udb:read").await);
+    assert!(!validate("udb:authn:get-user").await);
+
+    // 1. Widen the grant: the key keeps working, still without the new scope.
+    let widened = replace(
+        &["udb:read", "udb:write", "udb:authn:get-user"],
+        grant.revision,
+    )
+    .await
+    .expect("widen the grant")
+    .into_inner();
+    assert!(
+        widened.message.contains("carried to the new revision"),
+        "{}",
+        widened.message
+    );
+    let widened = widened.grant.expect("widened grant");
+    assert_eq!(widened.revision, grant.revision + 1);
+    assert!(
+        validate("udb:read").await,
+        "a key reviewed before a widening keeps working"
+    );
+    assert!(
+        !validate("udb:authn:get-user").await,
+        "a key never gains a scope it was not given"
+    );
+
+    // 2. Review the key to hold the new scope.
+    let updated = scope_claim_context_for_test(
+        claim(),
+        apikey.update_api_key(Request::new(apikey_pb::UpdateApiKeyRequest {
+            key_id: key_id.clone(),
+            scopes: vec!["udb:read".to_string(), "udb:authn:get-user".to_string()],
+            update_mask: Some(prost_types::FieldMask {
+                paths: vec!["scopes".to_string()],
+            }),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect("add the scope to the key")
+    .into_inner()
+    .key
+    .expect("updated key");
+    assert!(updated.scopes_json.contains("udb:authn:get-user"));
+    assert!(validate("udb:authn:get-user").await);
+    assert!(validate("udb:read").await);
+
+    // A scope the grant does not hold is refused, not silently dropped.
+    let refused = scope_claim_context_for_test(
+        claim(),
+        apikey.update_api_key(Request::new(apikey_pb::UpdateApiKeyRequest {
+            key_id: key_id.clone(),
+            scopes: vec!["udb:admin".to_string()],
+            update_mask: Some(prost_types::FieldMask {
+                paths: vec!["scopes".to_string()],
+            }),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect_err("a scope outside the grant is refused");
+    assert_ne!(refused.code(), tonic::Code::Ok);
+    assert!(validate("udb:authn:get-user").await);
+
+    // 3. Narrow the grant: the key fails closed until it is reviewed again.
+    replace(&["udb:read"], widened.revision)
+        .await
+        .expect("narrow the grant");
+    assert!(
+        !validate("udb:read").await,
+        "a narrowing invalidates keys reviewed against the wider grant"
+    );
+
+    cleanup_native_auth_db(&pool).await;
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_service_credentials_follow_grant_and_account_state -- --ignored --nocapture"]
 async fn live_postgres_service_credentials_follow_grant_and_account_state() {

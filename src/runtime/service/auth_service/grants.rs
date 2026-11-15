@@ -2510,6 +2510,7 @@ pub(crate) async fn replace_service_account_grant(
     let updated_by = caller_updated_by();
     // HIGH-6: CAS UPDATE + audit-event outbox row commit in ONE transaction.
     let mut tx = begin_grants_tx(pool, "grant_replace_tx").await?;
+    let previous = get_grant_by_user(&mut *tx, &tenant_id, &req.user_id).await?;
     let record = replace_grant(
         &mut *tx,
         &tenant_id,
@@ -2521,28 +2522,139 @@ pub(crate) async fn replace_service_account_grant(
         req.expected_revision,
     )
     .await?;
-    svc.emit_event_in_tx(
-        &mut *tx,
-        build_grant_event(
-            &record.grant_id,
-            &record.tenant_id,
-            &record.user_id,
-            &record.service_identity,
-            record.revision,
-            "replace",
-            "grant_replaced",
-            &updated_by,
-        ),
-    )
-    .await?;
+    // A replacement that only ADDS scopes (same project) cannot widen what any
+    // key reviewed against the previous revision can do: a key's effective
+    // scopes are its own scopes within the grant. Those keys are carried to the
+    // new revision in this transaction instead of failing until re-reviewed.
+    // Any other change (a scope removed, another project) still requires an
+    // explicit review of every key (UpdateApiKey with its scopes).
+    let carried_keys = match previous.as_ref() {
+        Some(previous) if grant_change_only_widens(previous, &record) => {
+            carry_api_keys_to_revision(
+                &mut *tx,
+                &record.tenant_id,
+                &record.user_id,
+                previous.revision,
+                record.revision,
+            )
+            .await?
+        }
+        _ => 0,
+    };
+    let mut event = build_grant_event(
+        &record.grant_id,
+        &record.tenant_id,
+        &record.user_id,
+        &record.service_identity,
+        record.revision,
+        "replace",
+        "grant_replaced",
+        &updated_by,
+    );
+    if let Some(body) = event.body.as_object_mut() {
+        body.insert(
+            "carried_forward_credentials".to_string(),
+            serde_json::Value::from(carried_keys),
+        );
+    }
+    svc.emit_event_in_tx(&mut *tx, event).await?;
     commit_grants_tx(tx, "grant_replace_tx").await?;
     Ok(Response::new(
         authn_pb::ReplaceServiceAccountGrantResponse {
-            message: "service-account grant replaced".to_string(),
+            message: if carried_keys > 0 {
+                format!(
+                    "service-account grant replaced; {carried_keys} API key(s) and certificate binding(s) carried to the new revision"
+                )
+            } else {
+                "service-account grant replaced".to_string()
+            },
             error: None,
             grant: Some(record.to_pb()),
         },
     ))
+}
+
+/// Whether replacing `previous` with `next` only added scopes: the same
+/// ACTIVE grant, the same project, and every previous scope still held.
+fn grant_change_only_widens(previous: &GrantRecord, next: &GrantRecord) -> bool {
+    previous.status == STATUS_ACTIVE
+        && next.status == STATUS_ACTIVE
+        && previous.project_id.trim() == next.project_id.trim()
+        && previous.service_identity.trim() == next.service_identity.trim()
+        && previous.scopes.iter().all(|scope| {
+            next.scopes
+                .iter()
+                .any(|held| held.trim().eq_ignore_ascii_case(scope.trim()))
+        })
+}
+
+/// Move the live API keys and active certificate bindings of `owner_user_id`
+/// reviewed at `from_revision` to
+/// `to_revision`. Returns how many moved.
+async fn carry_api_keys_to_revision(
+    conn: &mut sqlx::PgConnection,
+    tenant_id: &str,
+    owner_user_id: &str,
+    from_revision: i64,
+    to_revision: i64,
+) -> Result<u64, Status> {
+    let keys = crate::runtime::native_catalog::native_model(
+        "udb.core.apikey.entity.v1.ApiKey",
+        &["tenant_id", "owner_id", "metadata_json", "deleted_at"],
+    );
+    let metadata = keys.q("metadata_json");
+    let sql = format!(
+        "UPDATE {rel} SET {metadata} = jsonb_set({metadata}, '{{grant_revision}}', to_jsonb($4::BIGINT)) \
+         WHERE {tenant} = $1 AND {owner} = $2 AND {deleted} IS NULL \
+           AND ({metadata}->>'grant_revision') = $3::BIGINT::TEXT",
+        rel = keys.relation,
+        tenant = keys.q("tenant_id"),
+        owner = keys.q("owner_id"),
+        deleted = keys.q("deleted_at"),
+    );
+    let result = sqlx::query(&sql)
+        .bind(tenant_id)
+        .bind(owner_user_id)
+        .bind(from_revision)
+        .bind(to_revision)
+        .execute(&mut *conn)
+        .await
+        .map_err(map_err("carry API keys to the new grant revision failed"))?;
+    // Certificate bindings are reviewed against the grant the same way (their
+    // scope subset is within the grant), so they move with the keys.
+    let user = parse_uuid(owner_user_id, "user_id")?;
+    let bindings = native_model(
+        BINDING_MSG,
+        &[
+            "tenant_id",
+            "user_id",
+            "grant_revision",
+            "status",
+            "updated_at",
+        ],
+    );
+    let binding_sql = format!(
+        "UPDATE {rel} SET {grev} = $4, {updated} = NOW() \
+         WHERE {tenant} = $1 AND {uid} = $2 AND {grev} = $3 AND {status} = $5",
+        rel = bindings.relation,
+        grev = bindings.q("grant_revision"),
+        updated = bindings.q("updated_at"),
+        tenant = bindings.q("tenant_id"),
+        uid = bindings.q("user_id"),
+        status = bindings.q("status"),
+    );
+    let moved_bindings = sqlx::query(&binding_sql)
+        .bind(tenant_id)
+        .bind(user)
+        .bind(from_revision)
+        .bind(to_revision)
+        .bind(STATUS_ACTIVE)
+        .execute(&mut *conn)
+        .await
+        .map_err(map_err(
+            "carry certificate bindings to the new grant revision failed",
+        ))?;
+    Ok(result.rows_affected() + moved_bindings.rows_affected())
 }
 
 pub(crate) async fn rotate_service_account_identity(
@@ -2824,6 +2936,43 @@ mod tests {
             .get_bin(ERROR_DETAIL_METADATA_KEY)
             .expect("typed detail trailer is present");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn only_a_scope_addition_carries_keys_to_the_new_revision() {
+        let grant = |scopes: &[&str], project: &str, status: &str| GrantRecord {
+            service_identity: "svc.billing".to_string(),
+            project_id: project.to_string(),
+            scopes: scopes.iter().map(|s| (*s).to_string()).collect(),
+            status: status.to_string(),
+            ..GrantRecord::default()
+        };
+        let before = grant(&["udb:read", "udb:write"], "billing", STATUS_ACTIVE);
+        assert!(grant_change_only_widens(
+            &before,
+            &grant(
+                &["UDB:READ", "udb:write", "udb:authn:get-user"],
+                "billing",
+                STATUS_ACTIVE
+            )
+        ));
+        assert!(grant_change_only_widens(&before, &before.clone()));
+        // A removed scope, another project or an inactive grant forces review.
+        assert!(!grant_change_only_widens(
+            &before,
+            &grant(&["udb:read"], "billing", STATUS_ACTIVE)
+        ));
+        assert!(!grant_change_only_widens(
+            &before,
+            &grant(&["udb:read", "udb:write"], "other", STATUS_ACTIVE)
+        ));
+        assert!(!grant_change_only_widens(
+            &before,
+            &grant(&["udb:read", "udb:write"], "billing", "SUSPENDED")
+        ));
+        let mut renamed = before.clone();
+        renamed.service_identity = "svc.other".to_string();
+        assert!(!grant_change_only_widens(&before, &renamed));
     }
 
     fn strings(items: &[&str]) -> Vec<String> {

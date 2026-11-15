@@ -344,6 +344,101 @@ pub(super) fn manifest_entities(manifest: &CatalogManifest) -> Vec<(String, Stri
         .collect()
 }
 
+/// Apply the setting flags (`udb serve --cleanup-retention ...`) as environment
+/// variables of this process, before any thread starts: a flag wins over
+/// `.env` and the shell.
+fn apply_setting_flags(args: &[String]) {
+    for (key, value) in args::setting_flag_values(args) {
+        #[allow(unused_unsafe)]
+        unsafe {
+            env::set_var(key, value);
+        }
+    }
+}
+
+/// `udb cleanup show|run`.
+fn run_cleanup_command(command: args::CleanupCommand) -> i32 {
+    let cleanup = udb::runtime::cleanup::CleanupSettings::from_env();
+    let settings = || {
+        serde_json::json!({
+            "UDB_CLEANUP_ENABLED": cleanup.enabled,
+            "UDB_CLEANUP_RECLAIM": cleanup
+                .reclaim
+                .clone()
+                .map(|reclaim| reclaim.as_str().to_string())
+                .unwrap_or_else(|err| err),
+            "UDB_CDC_JOURNAL_RETENTION": env::var("UDB_CDC_JOURNAL_RETENTION")
+                .unwrap_or_else(|_| "7d (default)".to_string()),
+            "UDB_CLEANUP_INTERVAL": format!(
+                "{}s",
+                cleanup.interval.as_secs()
+            ),
+            "UDB_CLEANUP_BATCH": cleanup.batch,
+            "UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW": format!(
+                "{}s",
+                udb::runtime::service::delegated_allow_audit_window().as_secs()
+            ),
+        })
+    };
+    match command {
+        args::CleanupCommand::Show => match cleanup.describe() {
+            Ok(tables) => {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "tables": tables,
+                        "settings": settings(),
+                    }))
+                    .unwrap_or_default()
+                );
+                0
+            }
+            Err(err) => {
+                eprintln!("cleanup show: {err}");
+                2
+            }
+        },
+        args::CleanupCommand::Run { dsn, reclaim } => {
+            let reclaim = match reclaim
+                .as_deref()
+                .map(udb::runtime::cleanup::Reclaim::parse)
+            {
+                Some(Err(err)) => {
+                    eprintln!("cleanup run: {err}");
+                    return 2;
+                }
+                Some(Ok(mode)) => Some(mode),
+                None => None,
+            };
+            let cleanup = cleanup.clone();
+            with_catalog_runtime("cleanup run", dsn.as_deref(), |rt| async move {
+                let result = match reclaim {
+                    Some(mode) => {
+                        udb::runtime::cleanup::run_cleanup_with(
+                            &rt,
+                            &cleanup,
+                            mode,
+                            mode == udb::runtime::cleanup::Reclaim::Full,
+                        )
+                        .await
+                    }
+                    None => udb::runtime::cleanup::run_cleanup_once(&rt, &cleanup).await,
+                };
+                match result {
+                    Ok(changes) => {
+                        println!("{}", serde_json::json!({"changes": changes}));
+                        0
+                    }
+                    Err(err) => {
+                        eprintln!("cleanup run: {err}");
+                        1
+                    }
+                }
+            })
+        }
+    }
+}
+
 /// Runs `body` against a runtime connected to the catalog store (`--dsn`, or
 /// `UDB_PG_DSN`), for the `udb catalog` subcommands. Returns the exit code.
 fn with_catalog_runtime<F, Fut>(label: &str, dsn: Option<&str>, body: F) -> i32
@@ -875,6 +970,10 @@ pub fn run() {
         }
         Command::Ops(ops_command) => {
             process::exit(ops_cli::run_ops_command(ops_command));
+        }
+        Command::Cleanup(retention_command) => {
+            apply_setting_flags(&args);
+            process::exit(run_cleanup_command(retention_command));
         }
         Command::SelfUpdate(self_command) => {
             process::exit(self_cli::run_self_command(self_command));
@@ -1774,6 +1873,7 @@ pub fn run() {
             process::exit(exit_code);
         }
         Command::Serve => {
+            apply_setting_flags(&args);
             install_serve_panic_hook();
             let manifest = CatalogManifest::from_schemas(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
@@ -2034,6 +2134,7 @@ pub fn run() {
         | Command::Authz(_)
         | Command::Compliance(_)
         | Command::Ops(_)
+        | Command::Cleanup(_)
         | Command::SelfUpdate(_)
         | Command::GenEdge { .. }
         | Command::Upgrade { .. }

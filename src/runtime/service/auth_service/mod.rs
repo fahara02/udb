@@ -20,7 +20,7 @@
 mod apikey;
 pub(crate) mod audit_export;
 mod authn;
-mod authz;
+pub(crate) mod authz;
 mod control_plane;
 // `pub(crate)` so the native data-plane helper (`service::native_helpers`) can
 // reuse the ONE shared compliance-envelope builder/validator (Phase 10 telemetry

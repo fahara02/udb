@@ -930,6 +930,93 @@ fn parse_args_recognizes_auth_commands() {
 }
 
 #[test]
+fn serve_setting_flags_become_environment_and_never_the_proto_root() {
+    let args: Vec<String> = [
+        "serve",
+        "--cleanup-retention",
+        "access_decision_audits=90d,usage_events=keep",
+        "--delegated-allow-audit-window=15m",
+        "proto",
+    ]
+    .iter()
+    .map(|s| (*s).to_string())
+    .collect();
+    let (command, proto_root, _, _) = parse_args(&args);
+    assert!(matches!(command, Command::Serve));
+    assert_eq!(proto_root, "proto");
+    assert_eq!(
+        setting_flag_values(&args),
+        vec![
+            (
+                "UDB_CLEANUP_RETENTION",
+                "access_decision_audits=90d,usage_events=keep".to_string()
+            ),
+            ("UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW", "15m".to_string()),
+        ]
+    );
+    // Every setting flag takes a value, so none is mistaken for a positional.
+    for (flag, _) in SETTING_FLAGS {
+        assert!(VALUE_FLAGS.contains(flag), "{flag} must be a value flag");
+    }
+}
+
+#[test]
+fn parse_args_recognizes_cleanup() {
+    let show: Vec<String> = vec!["cleanup".into(), "show".into()];
+    assert!(matches!(
+        parse_args(&show).0,
+        Command::Cleanup(CleanupCommand::Show)
+    ));
+    let run: Vec<String> = vec![
+        "cleanup".into(),
+        "run".into(),
+        "--dsn".into(),
+        "postgres://x".into(),
+    ];
+    assert!(matches!(
+        parse_args(&run).0,
+        Command::Cleanup(CleanupCommand::Run { dsn: Some(dsn), reclaim: None }) if dsn == "postgres://x"
+    ));
+    let full: Vec<String> = vec![
+        "cleanup".into(),
+        "run".into(),
+        "--reclaim".into(),
+        "full".into(),
+    ];
+    assert!(matches!(
+        parse_args(&full).0,
+        Command::Cleanup(CleanupCommand::Run { dsn: None, reclaim: Some(mode) }) if mode == "full"
+    ));
+    let bad: Vec<String> = vec!["cleanup".into(), "prune".into()];
+    assert!(matches!(parse_args(&bad).0, Command::InvalidUsage { .. }));
+}
+
+#[test]
+fn parse_args_recognizes_api_key_update() {
+    let args: Vec<String> = [
+        "auth",
+        "api-key",
+        "update",
+        "--key-id",
+        "6f1d3c1e-0000-4000-8000-000000000001",
+        "--scope",
+        "udb:read",
+        "--scope",
+        "udb:authn:get-user",
+    ]
+    .iter()
+    .map(|s| (*s).to_string())
+    .collect();
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::ApiKeyUpdate { key_id, scopes })
+            if key_id == "6f1d3c1e-0000-4000-8000-000000000001"
+                && scopes == ["udb:read", "udb:authn:get-user"]
+    ));
+}
+
+#[test]
 fn parse_args_recognizes_offline_platform_admin_bootstrap() {
     let args = vec![
         "auth".to_string(),

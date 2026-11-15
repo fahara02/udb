@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.17 | protocol v1.0.0                                          │
+│    crate v0.6.18 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -492,6 +492,67 @@ An anonymous stream that resumes with `since_event_id` gets `NotFound` once
 that event is pruned. Durable consumers (`consumer_name`) keep their position
 across retention, and a progress marker's token (below) is always accepted.
 
+### The cleanup service: UDB's own tables
+
+UDB writes a few tables of its own on busy paths. The cleanup service keeps
+them small. It is a leader-elected worker, so one broker in the cluster runs
+it; it is on by default.
+
+| Table | What writes a row | Default retention |
+| --- | --- | --- |
+| `udb_authz.access_decision_audits` (monthly partitions) | every deny; a delegated allow (a service checking access for a user) once per window for the same decision | `declared`: 30 days (monthly partitions: a month is dropped once its last day is 30 days old) |
+| `udb_system.auth_audit_log` | every auth event, when `UDB_AUDIT_EXPORT_POSTGRES=1` | `declared`: same as the decision audit |
+| `udb_metering.usage_events` | every native-service call | `declared`: 400 days |
+| other time-partitioned UDB tables (sessions, notification log, ...) | | kept; listed tables only |
+| `udb_system.udb_cdc_event_journal` | every published event | `UDB_CDC_JOURNAL_RETENTION` (above, 7 days) |
+
+`declared` is the table's proto `retention_days`. `udb cleanup show` prints the
+retention in force for every table and every setting below.
+
+Every setting is an environment variable, an entry in `.env`, or a `udb serve`
+flag. A flag wins over the environment and `.env`.
+
+| Setting | `udb serve` flag | Default | Meaning |
+| --- | --- | --- | --- |
+| `UDB_CLEANUP_ENABLED` | `--cleanup-enabled` | `true` | `false` stops the worker. `udb cleanup run` still works. |
+| `UDB_CLEANUP_RETENTION` | `--cleanup-retention` | the three log tables above = `declared` | Comma-separated `table=value`, merged over the defaults entry by entry: `access_decision_audits=90d,usage_events=keep`. A table is named by its table name or `schema.table`. A value is a duration (`d` or `h`, at least `1d`), `declared` or `keep`. An unknown table or a bad value is logged as an error and nothing is pruned until it is fixed; partitions are still created. |
+| `UDB_CLEANUP_INTERVAL` | `--cleanup-interval` | `10m` | How often a pass runs (`30s`, `10m`, `1h`). |
+| `UDB_CLEANUP_BATCH` | `--cleanup-batch` | `5000` | Rows one delete removes; at most 20 deletes per table per pass. |
+| `UDB_CLEANUP_RECLAIM` | `--cleanup-reclaim` | `vacuum` | After rows were deleted from a table: `vacuum` runs `VACUUM (ANALYZE)` (the space is reused at once, nothing is locked); `full` runs `VACUUM FULL` (the space goes back to the operating system, the table is locked while it runs); `off` leaves it to autovacuum. |
+| `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW` | `--delegated-allow-audit-window` | `1h` | Identical delegated allows inside this window are audited once. The next written row carries the count of the others as `suppressed_identical_allows` in `decision_input`. `0` audits every allow. Denies are always audited. |
+| `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_MAX_TRACKED` | `--delegated-allow-audit-max-tracked` | `100000` | Distinct decisions one broker tracks for the window. When full, allows are written (never dropped). |
+| `UDB_CDC_JOURNAL_RETENTION` | `--cdc-journal-retention` | `7d` | See journal retention above. |
+
+Each pass:
+
+1. **Keeps time partitions ahead of writes** on every time-partitioned UDB
+   table. Without pg_partman, the migration creates only a few partitions from
+   the day it runs, and a write past the last one fails. The pass creates the
+   current period and the declared number of future ones. A table pg_partman
+   manages is left to pg_partman.
+2. **Applies the retention.** A partitioned table drops each partition whose
+   whole range is older than the retention, which frees its disk space at once.
+   Only partitions UDB created (`<table>_p_<period>`) are dropped, never a
+   default or hand-made one; with pg_partman the retention is written to
+   `partman.part_config` instead. `auth_audit_log` and `usage_events` delete
+   old rows in batches. When the compliance evidence export is on
+   (`UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED`), `auth_audit_log` rows it has not
+   exported yet are kept, so the exported hash chain stays complete.
+3. **Reclaims space** as `UDB_CLEANUP_RECLAIM` says.
+
+Run a pass by hand:
+
+```sh
+udb cleanup show                      # what is in force
+udb cleanup run                       # one pass now (UDB_PG_DSN or --dsn)
+udb cleanup run --reclaim full        # also VACUUM FULL every log table: maintenance window
+```
+
+The first pass after an upgrade can delete a large backlog. `udb cleanup run
+--reclaim full` afterwards gives that disk back; `pg_repack` does the same
+without locking, if it is installed. The CDC journal is not covered by
+`--reclaim`; run `VACUUM FULL` or `pg_repack` on it yourself if needed.
+
 ### Consumer start and progress markers
 
 A new `consumer_name` starts at the journal head: it receives only events
@@ -624,7 +685,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.6.17"
+python scripts/bench_snapshot.py --label "release-0.6.18"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

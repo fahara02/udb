@@ -1660,6 +1660,10 @@ mod tests {
             // via OnceLock at worker spawn.
             "src/runtime/service/messaging_service/",
             "src/runtime/service/workflow_service/",
+            // The cleanup service resolves every setting ONCE in
+            // `CleanupSettings::from_env` (at worker spawn, or by `udb cleanup`);
+            // its passes take the resolved settings. Its live test reads its DSN.
+            "src/runtime/cleanup.rs",
             // `#[cfg(test)]` live seam test: reads its backend DSNs from env.
             "src/runtime/service/tenant_service/vector_purge_live.rs",
             "src/runtime/service/tenant_service/graph_purge_live.rs",

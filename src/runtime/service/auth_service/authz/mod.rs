@@ -45,6 +45,7 @@ use super::events::{self, AuthEvent, AuthEventSink, topics};
 
 // Topic submodules: inherent `impl AuthzServiceImpl` blocks (+ helpers); the
 // single `impl AuthzService` trait block below delegates to them.
+pub(crate) mod allow_audit;
 mod audit;
 mod delegation;
 mod tuples;
@@ -1584,8 +1585,9 @@ impl AuthzServiceImpl {
     /// deriving a stable UUID from it (service/external identities aren't UUIDs).
     ///
     /// `delegation` is set when a service account evaluated the decision for
-    /// another user (delegated CheckAccess): such a decision is ALWAYS audited,
-    /// allow included, with the caller in `evaluated_by` /
+    /// another user (delegated CheckAccess): such a decision is audited, allow
+    /// included (callers pass it only when the allow-audit window admits it), with
+    /// the caller in `evaluated_by` /
     /// `evaluated_by_service_identity`.
     pub(super) async fn write_decision_audit(
         &self,
@@ -1637,8 +1639,27 @@ impl AuthzServiceImpl {
             "external"
         };
         let scopes = decision.required_scopes.join(",");
-        let decision_input = serde_json::from_str(&ctx.decision_input)
+        let mut decision_input = serde_json::from_str(&ctx.decision_input)
             .unwrap_or_else(|_| serde_json::Value::String(ctx.decision_input.clone()));
+        if let Some(suppressed) = delegation
+            .map(|delegation| delegation.suppressed_identical_allows)
+            .filter(|suppressed| *suppressed > 0)
+        {
+            match decision_input.as_object_mut() {
+                Some(input) => {
+                    input.insert(
+                        "suppressed_identical_allows".to_string(),
+                        serde_json::Value::from(suppressed),
+                    );
+                }
+                None => {
+                    decision_input = serde_json::json!({
+                        "input": decision_input,
+                        "suppressed_identical_allows": suppressed,
+                    });
+                }
+            }
+        }
         let mut record = LogicalRecord::new();
         record.insert(
             "decision_audit_id".to_string(),
@@ -3085,16 +3106,25 @@ impl AuthzService for AuthzServiceImpl {
             )
             .await;
         let audit_ctx = AuditContext::from_attributes(&attributes, &req.purpose);
-        self.write_decision_audit(
+        let audit = delegation::delegated_audit(
+            delegated.as_ref(),
             &principal,
             &resource,
             &req.action,
             &decision,
-            &audit_ctx,
-            delegated.as_ref(),
-        )
-        .await;
-        if let Some(delegated) = delegated.as_ref() {
+        );
+        if audit != delegation::DelegatedAudit::Suppressed {
+            self.write_decision_audit(
+                &principal,
+                &resource,
+                &req.action,
+                &decision,
+                &audit_ctx,
+                audit.evaluation(),
+            )
+            .await;
+        }
+        if let Some(delegated) = audit.evaluation() {
             self.emit_delegated_decision_event(
                 delegated,
                 &principal,
@@ -4397,16 +4427,25 @@ impl AuthzService for AuthzServiceImpl {
             let decision = self
                 .decide_with_snapshot(&snap, &principal, &resource, &check.action, "", &attributes)
                 .await;
-            self.write_decision_audit(
+            let audit = delegation::delegated_audit(
+                delegated.as_ref(),
                 &principal,
                 &resource,
                 &check.action,
                 &decision,
-                &audit_ctx,
-                delegated.as_ref(),
-            )
-            .await;
-            if let Some(delegated) = delegated.as_ref() {
+            );
+            if audit != delegation::DelegatedAudit::Suppressed {
+                self.write_decision_audit(
+                    &principal,
+                    &resource,
+                    &check.action,
+                    &decision,
+                    &audit_ctx,
+                    audit.evaluation(),
+                )
+                .await;
+            }
+            if let Some(delegated) = audit.evaluation() {
                 self.emit_delegated_decision_event(
                     delegated,
                     &principal,
