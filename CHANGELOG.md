@@ -162,9 +162,12 @@ release line was tagged.
   run now applies the same retention (`UDB_CDC_JOURNAL_RETENTION`, its topic overrides and the
   dead-letter retention), removing only published and acknowledged rows and respecting named
   consumers.
-- **A database or role `statement_timeout` no longer cancels cleanup.** Cleanup's deletes,
-  sweeps and VACUUMs run with their own timeout, `UDB_CLEANUP_STATEMENT_TIMEOUT` (default none),
-  and the sweep range is a setting, `UDB_CLEANUP_SWEEP_PAGES`.
+- **Cleanup's VACUUM FULL is no longer cancelled after 30 seconds.** UDB's pool gives every
+  connection a 30-second `statement_timeout` when it opens, which a DSN option cannot lift, so
+  `cleanup run --reclaim full` failed on any table larger than a few GB. Cleanup's deletes,
+  sweeps and VACUUMs now run with their own timeout, `UDB_CLEANUP_STATEMENT_TIMEOUT` (default
+  none), and hand the connection back with the pool's timeout restored. The sweep range is a
+  setting, `UDB_CLEANUP_SWEEP_PAGES`.
 
 - **`--dsn` commands say why PostgreSQL is unreachable.** `udb cleanup run`, `verify --live`
   and the other commands that open the database printed "PostgreSQL is not configured" even

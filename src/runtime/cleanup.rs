@@ -1404,10 +1404,18 @@ async fn reclaim_space(pool: &PgPool, relation: &str, vacuum: &str) -> Result<()
         return Ok(());
     }
     // VACUUM runs outside a transaction, so the timeout is set on the
-    // session it uses and reset before the connection goes back.
+    // session it uses. The pool gives every connection its own timeout when it
+    // opens (30 s), which a DSN or role setting cannot lift; cleanup lifts it
+    // for this statement and puts the pool's value back afterwards. `RESET`
+    // would not: it returns to the connection's startup value, not the pool's.
     let mut conn = pool.acquire().await.map_err(|err| err.to_string())?;
-    let set = format!("SET statement_timeout = '{}'", statement_timeout());
-    sqlx::Executor::execute(&mut *conn, sqlx::raw_sql(&set))
+    let previous: String = sqlx::query_scalar("SELECT current_setting('statement_timeout')")
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(|err| format!("read statement_timeout: {err}"))?;
+    sqlx::query("SELECT set_config('statement_timeout', $1, false)")
+        .bind(statement_timeout())
+        .execute(&mut *conn)
         .await
         .map_err(|err| format!("set statement_timeout: {err}"))?;
     let sql = format!("{vacuum} {relation}");
@@ -1417,7 +1425,14 @@ async fn reclaim_space(pool: &PgPool, relation: &str, vacuum: &str) -> Result<()
             tracing::info!(table = %relation, statement = vacuum, "cleanup reclaimed space");
         })
         .map_err(|err| format!("{vacuum}: {err}"));
-    let _ = sqlx::Executor::execute(&mut *conn, sqlx::raw_sql("RESET statement_timeout")).await;
+    let restored = sqlx::query("SELECT set_config('statement_timeout', $1, false)")
+        .bind(&previous)
+        .execute(&mut *conn)
+        .await;
+    if restored.is_err() {
+        // Never hand the pool a connection with cleanup's timeout on it.
+        conn.close_on_drop();
+    }
     result
 }
 
@@ -2690,6 +2705,75 @@ mod tests {
         );
         // A parent without row-level security leaves its partitions alone.
         assert!(rls_sync_statements(relation, &RlsState::default(), &drifted).is_empty());
+    }
+
+    /// The pool sets its own statement timeout on every connection it opens,
+    /// which a DSN option cannot lift. Cleanup's VACUUM FULL must run without
+    /// it, and the connection must go back to the pool with the pool's timeout
+    /// (not `RESET` to the startup value). Here the pool's timeout is 1 ms, far
+    /// shorter than rewriting 200k rows.
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_PG_DSN=... cargo test --lib live_postgres_cleanup_vacuum -- --ignored --nocapture"]
+    async fn live_postgres_cleanup_vacuum_lifts_the_pool_timeout_and_restores_it() {
+        let dsn = std::env::var("UDB_LIVE_AUTH_PG_DSN")
+            .or_else(|_| std::env::var("UDB_INTEGRATION_PG_DSN"))
+            .unwrap_or_else(|_| "postgres://udb:udb@127.0.0.1:55432/udb".to_string());
+        let setup = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&dsn)
+            .await
+            .expect("connect live postgres");
+        let schema = format!("udb_vacuum_{}", uuid::Uuid::new_v4().simple());
+        let relation = format!("{schema}.journal");
+        for sql in [
+            format!("CREATE SCHEMA {schema}"),
+            format!("CREATE TABLE {relation} (id BIGINT, body TEXT)"),
+            format!(
+                "INSERT INTO {relation} SELECT g, repeat('x', 200) FROM generate_series(1, 200000) g"
+            ),
+            format!("DELETE FROM {relation} WHERE id % 2 = 0"),
+        ] {
+            sqlx::query(&sql)
+                .execute(&setup)
+                .await
+                .unwrap_or_else(|err| panic!("{sql}: {err}"));
+        }
+        // One connection, so the VACUUM and the check below share a session.
+        let timed = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(|conn, _| {
+                Box::pin(async move {
+                    sqlx::Executor::execute(conn, "SET statement_timeout = 1").await?;
+                    Ok(())
+                })
+            })
+            .connect(&dsn)
+            .await
+            .expect("connect timed pool");
+        // Without the lift the pool's 1 ms timeout cancels the rewrite.
+        let refused =
+            sqlx::Executor::execute(&timed, sqlx::raw_sql(&format!("VACUUM (FULL) {relation}")))
+                .await;
+        assert!(
+            refused.is_err_and(|err| err.to_string().contains("statement timeout")),
+            "the fixture must be too large for the pool's 1 ms timeout"
+        );
+        reclaim_space(&timed, &relation, "VACUUM (FULL, ANALYZE)")
+            .await
+            .expect("cleanup's VACUUM FULL runs without the pool's timeout");
+        let after: String = sqlx::query_scalar("SELECT current_setting('statement_timeout')")
+            .fetch_one(&timed)
+            .await
+            .expect("read the pooled connection's timeout");
+        assert_eq!(
+            after, "1ms",
+            "the pool's own timeout is back on the connection"
+        );
+        timed.close().await;
+        sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+            .execute(&setup)
+            .await
+            .expect("drop fixture schema");
     }
 
     /// Against a real Postgres, on fixture tables of a throwaway schema:
