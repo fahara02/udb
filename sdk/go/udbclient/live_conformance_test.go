@@ -182,7 +182,7 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 			callCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 			defer cancel()
 			err := probeLiveRPC(callCtx, gen, rpc, tenant, project)
-			if isLiveMountFailure(err) {
+			if isLiveMountFailure(err) && !isFieldLevelRefusal(rpc.FullMethod, err) {
 				t.Fatalf("%s did not reach an implemented live RPC: %v", rpc.FullMethod, err)
 			}
 		})
@@ -1601,6 +1601,23 @@ func isLiveMountFailure(err error) bool {
 	default:
 		return false
 	}
+}
+
+// isFieldLevelRefusal reports whether an UNIMPLEMENTED came from the RPC's own
+// handler refusing one request field it cannot honour ("CacheSet.idempotency_key
+// is not supported: ..."), with the broker's typed error detail attached. That
+// proves the call reached the implemented RPC: the populated probe request set a
+// field the broker refuses loudly instead of ignoring. A bare UNIMPLEMENTED (no
+// detail, or no field named) is still a mount failure.
+func isFieldLevelRefusal(fullMethod string, err error) bool {
+	st, ok := status.FromError(err)
+	if !ok || st.Code() != codes.Unimplemented || len(st.Details()) == 0 {
+		return false
+	}
+	method := fullMethod[strings.LastIndex(fullMethod, "/")+1:]
+	message := st.Message()
+	at := strings.Index(message, method+".")
+	return at >= 0 && strings.Contains(message[at:], " is not supported")
 }
 
 func assertRequiredLiveBackends(t *testing.T, enabled []string) {
