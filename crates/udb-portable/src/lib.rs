@@ -165,7 +165,8 @@ pub mod backend {
 /// resolves identically to the server.
 pub mod broker {
     pub use crate::generation::manifest_index::{
-        TableLookup, describe_table_lookup_miss, table_for_message, table_lookup,
+        SHARED_TENANT_MARKER, TableLookup, describe_table_lookup_miss, is_shared_tenant_marker,
+        table_for_message, table_lookup,
     };
 }
 

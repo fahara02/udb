@@ -2331,16 +2331,9 @@ fn tenant_column(table: &ManifestTable) -> String {
 /// say) write rows of a shared table without holding full platform authority.
 pub const GLOBAL_WRITE_SCOPE: &str = "udb:global:write";
 
-/// Reserved tenant value carried by everything derived from a shared table's
-/// rows: change events, projected documents/points/nodes. Readers match their
-/// own tenant OR this value, never another tenant. No real tenant may use it,
-/// so a tenant row can never be mistaken for a shared one.
-pub const SHARED_TENANT_MARKER: &str = "*shared*";
-
-/// Whether `tenant_id` is the reserved shared marker.
-pub fn is_shared_tenant_marker(tenant_id: &str) -> bool {
-    tenant_id.trim() == SHARED_TENANT_MARKER
-}
+// The shared-tenant marker lives in the portable manifest index so the
+// browser/edge compilers (udb-portable) resolve it the same way.
+pub use crate::generation::manifest_index::{SHARED_TENANT_MARKER, is_shared_tenant_marker};
 
 /// A shared (global) table: it explicitly declares tenant isolation off
 /// (`none`, `global`, `disabled` or `off`) and has no tenant column at all.

@@ -312,6 +312,17 @@ pub fn describe_table_lookup_miss(manifest: &CatalogManifest, message_type: &str
     }
 }
 
+/// Reserved tenant value carried by everything derived from a shared table's
+/// rows: change events, projected documents/points/nodes. Readers match their
+/// own tenant OR this value, never another tenant. No real tenant may use it,
+/// so a tenant row can never be mistaken for a shared one.
+pub const SHARED_TENANT_MARKER: &str = "*shared*";
+
+/// Whether `tenant_id` is the reserved shared marker.
+pub fn is_shared_tenant_marker(tenant_id: &str) -> bool {
+    tenant_id.trim() == SHARED_TENANT_MARKER
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
