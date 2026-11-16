@@ -478,6 +478,28 @@ pub(crate) async fn run_doctor(
             Err(err) => errors.push(format!("failed to inspect UDB system catalog: {err}")),
         }
 
+        // Project storage isolation: unlabeled backends serving several
+        // projects under Permissive routing, and tables ACTIVE catalogs of
+        // different projects already share. Needs the catalog tables.
+        if system_catalog
+            .as_ref()
+            .is_some_and(|inspection| inspection.ok)
+        {
+            match runtime.project_storage_isolation_findings().await {
+                Ok(findings) => {
+                    for finding in findings {
+                        if !warnings.contains(&finding) {
+                            warnings.push(finding);
+                        }
+                    }
+                }
+                Err(err) => warnings.push(format!(
+                    "could not check project storage isolation: {}",
+                    err.message()
+                )),
+            }
+        }
+
         // PostgreSQL privilege checks.
         let priv_report = runtime.check_postgres_privileges().await;
         if !priv_report.create_schema {

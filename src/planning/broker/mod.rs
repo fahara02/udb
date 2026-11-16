@@ -100,6 +100,12 @@ pub struct SelectPlanRequest {
     pub fields: Vec<String>,
     pub limit: i32,
     pub sort: Vec<SortSpec>,
+    /// Also return soft-deleted rows: the planner leaves out its
+    /// `<soft_delete_column> IS NULL` predicate. Refused on an entity without
+    /// soft delete. The caller's scope (`udb:deleted:read`) and the audit record
+    /// are the runtime's job; the planner only shapes the SQL.
+    #[serde(default)]
+    pub include_deleted: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
@@ -393,7 +399,7 @@ impl QueryPlan {
 ///   4. `fields` in request order — order is preserved into `selected_columns`,
 ///      so it is part of the output identity and must NOT be reordered.
 ///   5. sort specs (field + direction, in order).
-///   6. `limit`.
+///   6. `limit`, then `include_deleted` (it drops the soft-delete predicate).
 ///   7. planning-affecting `RequestContext` bits: effective SQL backend
 ///      (`target_backend` drives `effective_sql_backend`, which selects the SQL
 ///      dialect), `tenant_id`, `project_id`, `purpose`, and the sorted `scopes`
@@ -415,13 +421,14 @@ fn select_plan_cache_key(manifest: &CatalogManifest, request: &SelectPlanRequest
         .collect::<Vec<_>>()
         .join(",");
     format!(
-        "{ck}\u{1f}msg={msg}\u{1f}flt={flt}\u{1f}fields={fields}\u{1f}sort={sort}\u{1f}limit={limit}\u{1f}backend={backend:?}\u{1f}tenant={tenant}\u{1f}project={project}\u{1f}purpose={purpose}\u{1f}scopes={scopes}",
+        "{ck}\u{1f}msg={msg}\u{1f}flt={flt}\u{1f}fields={fields}\u{1f}sort={sort}\u{1f}limit={limit}\u{1f}deleted={deleted}\u{1f}backend={backend:?}\u{1f}tenant={tenant}\u{1f}project={project}\u{1f}purpose={purpose}\u{1f}scopes={scopes}",
         ck = manifest_key,
         msg = request.message_type,
         flt = request.filter,
         fields = request.fields.join(","),
         sort = sort_key,
         limit = request.limit,
+        deleted = request.include_deleted,
         tenant = ctx.tenant_id,
         project = ctx.project_id,
         purpose = ctx.purpose,
@@ -628,7 +635,10 @@ pub(crate) fn build_select_logical_read(
     // `<soft_delete_column> IS NULL` with the caller filter (which already carries
     // the tenant/project isolation predicates); `.and()` keeps the tree flat.
     // Malformed soft-delete metadata fails closed via the pushed error below.
-    if let Some(column) = resolve_soft_delete_column(table, &allowed, &mut errors) {
+    // `include_deleted` drops only the predicate; the metadata is still checked.
+    let soft_delete_column = resolve_soft_delete_column(table, &allowed, &mut errors);
+    errors.extend(include_deleted_error(table, request.include_deleted));
+    if let Some(column) = soft_delete_column.filter(|_| !request.include_deleted) {
         let live_rows = LogicalFilter::IsNull(column);
         filter = Some(match filter {
             Some(existing) => existing.and(live_rows),
@@ -764,8 +774,12 @@ fn build_select_query_plan_uncached(
     // tenant/project mandatory filters, and the LIMIT below. The predicate binds
     // no parameter, so `$N` numbering is unchanged. Malformed soft-delete metadata
     // fails closed via the pushed error rather than leaking deleted rows.
+    // `include_deleted` leaves the predicate out (the metadata is still checked,
+    // and the request is refused on an entity without soft delete).
     let soft_delete_predicate = resolve_soft_delete_column(table, &allowed, &mut errors)
+        .filter(|_| !request.include_deleted)
         .map(|column| format!("{} IS NULL", qi(&column)));
+    errors.extend(include_deleted_error(table, request.include_deleted));
     // The checks above only prove the caller MENTIONED the isolation columns;
     // the values are caller-supplied. This SQL is served whenever the bridged
     // emitter declines a filter shape (`$contains`, `$has_key`, …) or is
@@ -2444,6 +2458,29 @@ fn resolve_soft_delete_column(
         return None;
     }
     Some(column)
+}
+
+/// `include_deleted` on an entity without soft delete has no deleted rows to
+/// add, so the request is refused rather than quietly read as a plain Select.
+fn include_deleted_error(table: &ManifestTable, include_deleted: bool) -> Option<String> {
+    (include_deleted && !table.soft_delete).then(|| {
+        format!(
+            "include_deleted: {}.{} has no soft delete, so it has no deleted rows to include",
+            table.schema, table.table
+        )
+    })
+}
+
+/// The soft-delete column an `include_deleted` read marks each row with, or why
+/// the entity cannot serve such a read (no soft delete, or a soft-delete column
+/// that is not a declared column). The physical `column_name`.
+pub(crate) fn soft_delete_read_column(table: &ManifestTable) -> Result<String, String> {
+    if let Some(error) = include_deleted_error(table, true) {
+        return Err(error);
+    }
+    let mut errors = Vec::new();
+    resolve_soft_delete_column(table, &allowed_columns(table), &mut errors)
+        .ok_or_else(|| errors.join("; "))
 }
 
 fn unresolved_tenant_column_error(table: &ManifestTable) -> String {
@@ -4391,6 +4428,103 @@ mod tests {
         );
     }
 
+    // include_deleted: the planner SQL and the neutral-IR read both leave the
+    // live-row predicate out, the tenant predicates stay, and the plan cache
+    // never hands a plain read the include_deleted plan (or the reverse).
+    #[test]
+    fn select_include_deleted_drops_only_the_live_row_predicate() {
+        let mut manifest = soft_delete_test_manifest();
+        manifest.checksum_sha256 = "sd-include-deleted".to_string();
+        let request = |include_deleted| SelectPlanRequest {
+            context: read_context(),
+            message_type: "acme.test.v1.Widget".to_string(),
+            filter: json!({"tenant_id": "tenant-a"}),
+            include_deleted,
+            ..SelectPlanRequest::default()
+        };
+        let plain = build_select_query_plan(&manifest, &request(false));
+        let with_deleted = build_select_query_plan(&manifest, &request(true));
+        assert_eq!(with_deleted.errors, Vec::<String>::new());
+        assert!(
+            plain.sql.contains("\"deleted_at\" IS NULL"),
+            "{}",
+            plain.sql
+        );
+        assert!(
+            with_deleted
+                .sql
+                .ends_with("WHERE \"tenant_id\" = $1 AND \"tenant_id\" = $2"),
+            "{}",
+            with_deleted.sql
+        );
+        assert_eq!(with_deleted.context_parameter_values, ["tenant-a"]);
+        assert_ne!(
+            select_plan_cache_key(&manifest, &request(false)),
+            select_plan_cache_key(&manifest, &request(true))
+        );
+        // The plain plan is still served after the include_deleted one was cached.
+        assert_eq!(
+            build_select_query_plan(&manifest, &request(false)).sql,
+            plain.sql
+        );
+
+        let read = build_select_logical_read(&manifest, &request(true))
+            .expect("an include_deleted read lowers to neutral read");
+        let mut fields = Vec::new();
+        read.filter
+            .as_ref()
+            .expect("filter")
+            .referenced_fields(&mut fields);
+        fields.sort();
+        fields.dedup();
+        assert_eq!(fields, vec!["tenant_id"]);
+    }
+
+    // include_deleted on an entity without soft delete is refused by both
+    // builders, never read as a plain Select.
+    #[test]
+    fn select_include_deleted_on_a_table_without_soft_delete_is_refused() {
+        let mut manifest = soft_delete_test_manifest();
+        manifest.tables[0].soft_delete = false;
+        manifest.checksum_sha256 = "sd-include-deleted-nonsoft".to_string();
+        let request = SelectPlanRequest {
+            context: read_context(),
+            message_type: "acme.test.v1.Widget".to_string(),
+            filter: json!({"tenant_id": "tenant-a"}),
+            include_deleted: true,
+            ..SelectPlanRequest::default()
+        };
+        let plan = build_select_query_plan(&manifest, &request);
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.starts_with("include_deleted:")),
+            "{:?}",
+            plan.errors
+        );
+        let errors = build_select_logical_read(&manifest, &request)
+            .expect_err("the neutral read refuses it too");
+        assert!(
+            errors.iter().any(|e| e.starts_with("include_deleted:")),
+            "{errors:?}"
+        );
+        assert!(soft_delete_read_column(&manifest.tables[0]).is_err());
+    }
+
+    // The column an include_deleted read marks rows with is the declared
+    // soft-delete column; malformed metadata is reported, not guessed.
+    #[test]
+    fn soft_delete_read_column_names_the_declared_column() {
+        let mut manifest = soft_delete_test_manifest();
+        assert_eq!(
+            soft_delete_read_column(&manifest.tables[0]).as_deref(),
+            Ok("deleted_at")
+        );
+        manifest.tables[0].soft_delete_column = "gone".to_string();
+        let error = soft_delete_read_column(&manifest.tables[0]).expect_err("undeclared column");
+        assert!(error.contains("'gone' is not a declared column"), "{error}");
+    }
+
     fn test_manifest(mut table: ManifestTable) -> CatalogManifest {
         table.message_name = "acme.test.v1.Widget".to_string();
         table.schema = "public".to_string();
@@ -4966,6 +5100,7 @@ mod tests {
                 descending: true,
             }],
             limit: 10,
+            include_deleted: false,
         };
 
         let legacy_plan = build_select_query_plan(&manifest, &request);

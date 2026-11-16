@@ -14,6 +14,8 @@ use Fahara02\UdbLaravel\Support\TlsCredentials;
 use Udb\Core\Authn\Services\V1\AuthnRequest;
 use Udb\Core\Authn\Services\V1\AuthnResponse;
 use Udb\Core\Authn\Services\V1\AuthnServiceClient;
+use Udb\Core\Authn\Services\V1\ExchangeTokenForJobRequest;
+use Udb\Core\Authn\Services\V1\ExchangeTokenForJobResponse;
 use Udb\Core\Authn\Services\V1\LoginRequest;
 use Udb\Core\Authn\Services\V1\LoginResponse;
 use Udb\Core\Authz\Services\V1\AuthzRequest;
@@ -154,6 +156,90 @@ class UdbAuthClient
         ?UdbMetadata $metadata = null,
     ): LoginResponse {
         return $this->login($username, $password, $totpCode, $mfaOtpId, $metadata);
+    }
+
+    // ── Delegated job tokens ──────────────────────────────────────────────────
+    /**
+     * Exchange a user's current access token for a delegated job token
+     * (`AuthnService.ExchangeTokenForJob`), so a durable job (an export, a
+     * report, a nightly sync) acts for that user after the user's own
+     * short-lived token expired. Call it with the SERVICE's own bearer on the
+     * metadata (a service account whose grant holds `udb:token:delegate`, in the
+     * user's tenant); the broker refuses any other caller, and any subject token
+     * that is not a valid user access token of that tenant, with
+     * PERMISSION_DENIED ({@see UdbRpcException}).
+     *
+     * The token names the user as subject and the service as actor, carries
+     * `$purpose` and `$jobId`, and lives at most `$ttlSeconds` (0 = the broker's
+     * maximum, UDB_DELEGATED_TOKEN_MAX_TTL, 24 hours by default). It has no
+     * refresh token, cannot be exchanged again, and stops working as soon as the
+     * user, the token or the service's grant is revoked: see
+     * {@see UdbRpcException::isTokenExpired()} and
+     * {@see UdbRpcException::isTokenRevoked()}.
+     *
+     * @throws UdbConfigurationException when a required argument is blank or $ttlSeconds is negative
+     * @throws UdbRpcException           when the broker refuses the exchange
+     */
+    public function exchangeTokenForJob(
+        string $subjectToken,
+        string $purpose,
+        string $jobId,
+        int $ttlSeconds = 0,
+        ?UdbMetadata $metadata = null,
+    ): DelegatedJobToken {
+        $request = self::jobTokenRequest($subjectToken, $purpose, $jobId, $ttlSeconds);
+        $response = $this->invoke(
+            'ExchangeTokenForJob',
+            fn (array $md, array $o) => $this->authn()->ExchangeTokenForJob($request, $md, $o),
+            $metadata,
+            ExchangeTokenForJobResponse::class,
+        );
+
+        return self::delegatedJobToken($response, $jobId);
+    }
+
+    /** @internal Builds and checks the request; public for the unit tests only. */
+    public static function jobTokenRequest(string $subjectToken, string $purpose, string $jobId, int $ttlSeconds): ExchangeTokenForJobRequest
+    {
+        if (trim($subjectToken) === '') {
+            throw new UdbConfigurationException('exchangeTokenForJob: subjectToken is required');
+        }
+        if (trim($jobId) === '') {
+            throw new UdbConfigurationException('exchangeTokenForJob: jobId is required');
+        }
+        if (trim($purpose) === '') {
+            throw new UdbConfigurationException('exchangeTokenForJob: purpose is required');
+        }
+        if ($ttlSeconds < 0) {
+            throw new UdbConfigurationException('exchangeTokenForJob: ttlSeconds must not be negative');
+        }
+
+        return (new ExchangeTokenForJobRequest())
+            ->setSubjectToken($subjectToken)
+            ->setPurpose($purpose)
+            ->setJobId($jobId)
+            ->setTtlSeconds($ttlSeconds);
+    }
+
+    /** @internal Maps the response; public for the unit tests only. */
+    public static function delegatedJobToken(ExchangeTokenForJobResponse $response, string $jobId): DelegatedJobToken
+    {
+        if ($response->getAccessToken() === '') {
+            throw new UdbConfigurationException("exchangeTokenForJob: the broker returned no token for job {$jobId}");
+        }
+
+        return new DelegatedJobToken(
+            accessToken: $response->getAccessToken(),
+            jti: $response->getJti(),
+            expiresAtUnix: (int) $response->getExpiresAtUnix(),
+            subject: $response->getSubject(),
+            actor: $response->getActor(),
+            purpose: $response->getPurpose(),
+            jobId: $response->getJobId(),
+            scopes: array_values(array_map('strval', iterator_to_array($response->getScopes()))),
+            tenantId: $response->getTenantId(),
+            projectId: $response->getProjectId(),
+        );
     }
 
     // ── Authorization ─────────────────────────────────────────────────────────

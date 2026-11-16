@@ -81,4 +81,15 @@ public interface ScanRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getPageTokenBytes();
+
+  /**
+   * <pre>
+   * Read the shared namespace (the reserved shared-tenant keyspace every
+   * tenant reads) instead of the caller's tenant keyspace.
+   * </pre>
+   *
+   * <code>bool shared = 6 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  boolean getShared();
 }

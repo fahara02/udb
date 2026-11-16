@@ -39,6 +39,13 @@ class ScanRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
      */
     protected $page_token = '';
+    /**
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     *
+     * Generated from protobuf field <code>bool shared = 6 [json_name = "shared"];</code>
+     */
+    protected $shared = false;
 
     /**
      * Constructor.
@@ -54,6 +61,9 @@ class ScanRequest extends \Google\Protobuf\Internal\Message
      *     @type int $limit
      *     @type string $page_token
      *           Opaque Redis SCAN cursor from a prior page ("" / "0" starts a fresh scan).
+     *     @type bool $shared
+     *           Read the shared namespace (the reserved shared-tenant keyspace every
+     *           tenant reads) instead of the caller's tenant keyspace.
      * }
      */
     public function __construct($data = NULL) {
@@ -177,6 +187,34 @@ class ScanRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->page_token = $var;
+
+        return $this;
+    }
+
+    /**
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     *
+     * Generated from protobuf field <code>bool shared = 6 [json_name = "shared"];</code>
+     * @return bool
+     */
+    public function getShared()
+    {
+        return $this->shared;
+    }
+
+    /**
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     *
+     * Generated from protobuf field <code>bool shared = 6 [json_name = "shared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->shared = $var;
 
         return $this;
     }

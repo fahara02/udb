@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 427 RPCs across 29 services.
+Current generated RPC surface: 428 RPCs across 29 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -43,7 +43,7 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | CacheService | 8 | 3 | 4 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 84 | 35 | 42 | 7 | 0 |
+| DataBroker | 85 | 35 | 43 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -255,6 +255,7 @@ benchmark harnesses.
 | DataBroker | `DataBroker/BatchUpsert` | `batch_upsert` | `batchUpsert` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/BeginTx` | `begin_tx` | `beginTx` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/BulkCas` | `bulk_cas` | `bulkCas` | MUTATION | data_broker.md |
+| DataBroker | `DataBroker/BulkUpsert` | `bulk_upsert` | `bulkUpsert` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/CacheDelete` | `cache_delete` | `cacheDelete` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/CacheGet` | `cache_get` | `cacheGet` | READ_ONLY | data_broker.md |
 | DataBroker | `DataBroker/CacheScan` | `cache_scan` | `cacheScan` | READ_ONLY | data_broker.md |

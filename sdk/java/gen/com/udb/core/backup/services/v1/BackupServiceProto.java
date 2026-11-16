@@ -146,7 +146,7 @@ public final class BackupServiceProto {
       "nt\030\005 \001(\003R\010rowCount\022\'\n\017checksum_sha256\030\006 " +
       "\001(\tR\016checksumSha256\"[\n\023BackupExcludedTab" +
       "le\022\026\n\006schema\030\001 \001(\tR\006schema\022\024\n\005table\030\002 \001(" +
-      "\tR\005table\022\026\n\006reason\030\003 \001(\tR\006reason\"\370\003\n\020Bac" +
+      "\tR\005table\022\026\n\006reason\030\003 \001(\tR\006reason\"\270\004\n\020Bac" +
       "kupRunSummary\022\033\n\tbackup_id\030\001 \001(\tR\010backup" +
       "Id\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022\022\n\004kind\030" +
       "\003 \001(\tR\004kind\022\026\n\006status\030\004 \001(\tR\006status\022#\n\ro" +
@@ -159,211 +159,218 @@ public final class BackupServiceProto {
       "id\030\013 \001(\tR\016targetTenantId\022&\n\017created_at_u" +
       "nix\030\014 \001(\003R\rcreatedAtUnix\022*\n\021completed_at" +
       "_unix\030\r \001(\003R\017completedAtUnix\022\035\n\nproject_" +
-      "id\030\016 \001(\tR\tprojectId\"\300\003\n\020BackupPolicyView" +
-      "\022\033\n\tpolicy_id\030\001 \001(\tR\010policyId\022\033\n\ttenant_" +
-      "id\030\002 \001(\tR\010tenantId\022\037\n\013policy_name\030\003 \001(\tR" +
-      "\npolicyName\022#\n\rschedule_cron\030\004 \001(\tR\014sche" +
-      "duleCron\022%\n\016retention_days\030\005 \001(\005R\rretent" +
-      "ionDays\0220\n\024max_retained_backups\030\006 \001(\005R\022m" +
-      "axRetainedBackups\022\030\n\007enabled\030\007 \001(\010R\007enab" +
-      "led\022%\n\016object_backend\030\010 \001(\tR\robjectBacke" +
-      "nd\022#\n\robject_bucket\030\t \001(\tR\014objectBucket\022" +
-      "&\n\017created_at_unix\030\n \001(\003R\rcreatedAtUnix\022" +
-      "&\n\017updated_at_unix\030\013 \001(\003R\rupdatedAtUnix\022" +
-      "\035\n\nproject_id\030\014 \001(\tR\tprojectId\"\350\001\n\030Start" +
-      "TenantBackupRequest\022\033\n\ttenant_id\030\001 \001(\tR\010" +
-      "tenantId\022\037\n\013policy_name\030\002 \001(\tR\npolicyNam" +
-      "e\022%\n\016object_backend\030\003 \001(\tR\robjectBackend" +
-      "\022#\n\robject_bucket\030\004 \001(\tR\014objectBucket\022#\n" +
-      "\rmetadata_json\030\005 \001(\tR\014metadataJson:\035\232\262\031\031" +
-      "\010\001\032\003udb(\260\352\0010\003@\001J\006backupP\001\"\363\003\n\031StartTenan" +
-      "tBackupResponse\022\033\n\tbackup_id\030\001 \001(\tR\010back" +
-      "upId\022#\n\robject_prefix\030\002 \001(\tR\014objectPrefi" +
-      "x\022+\n\021manifest_checksum\030\003 \001(\tR\020manifestCh" +
-      "ecksum\022\037\n\013table_count\030\004 \001(\005R\ntableCount\022" +
-      "\035\n\ntotal_rows\030\005 \001(\003R\ttotalRows\022%\n\016exclud" +
-      "ed_count\030\006 \001(\005R\rexcludedCount\022E\n\006tables\030" +
-      "\007 \003(\0132-.udb.core.backup.services.v1.Back" +
-      "upTableEntryR\006tables\022L\n\010excluded\030\010 \003(\01320" +
-      ".udb.core.backup.services.v1.BackupExclu" +
-      "dedTableR\010excluded\022\030\n\007message\030\t \001(\tR\007mes" +
-      "sage\0222\n\005error\030\n \001(\0132\034.udb.core.common.v1" +
+      "id\030\016 \001(\tR\tprojectId\022>\n\005scope\030\017 \001(\0162(.udb" +
+      ".core.backup.services.v1.BackupScopeR\005sc" +
+      "ope\"\300\003\n\020BackupPolicyView\022\033\n\tpolicy_id\030\001 " +
+      "\001(\tR\010policyId\022\033\n\ttenant_id\030\002 \001(\tR\010tenant" +
+      "Id\022\037\n\013policy_name\030\003 \001(\tR\npolicyName\022#\n\rs" +
+      "chedule_cron\030\004 \001(\tR\014scheduleCron\022%\n\016rete" +
+      "ntion_days\030\005 \001(\005R\rretentionDays\0220\n\024max_r" +
+      "etained_backups\030\006 \001(\005R\022maxRetainedBackup" +
+      "s\022\030\n\007enabled\030\007 \001(\010R\007enabled\022%\n\016object_ba" +
+      "ckend\030\010 \001(\tR\robjectBackend\022#\n\robject_buc" +
+      "ket\030\t \001(\tR\014objectBucket\022&\n\017created_at_un" +
+      "ix\030\n \001(\003R\rcreatedAtUnix\022&\n\017updated_at_un" +
+      "ix\030\013 \001(\003R\rupdatedAtUnix\022\035\n\nproject_id\030\014 " +
+      "\001(\tR\tprojectId\"\250\002\n\030StartTenantBackupRequ" +
+      "est\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013poli" +
+      "cy_name\030\002 \001(\tR\npolicyName\022%\n\016object_back" +
+      "end\030\003 \001(\tR\robjectBackend\022#\n\robject_bucke" +
+      "t\030\004 \001(\tR\014objectBucket\022#\n\rmetadata_json\030\005" +
+      " \001(\tR\014metadataJson\022>\n\005scope\030\006 \001(\0162(.udb." +
+      "core.backup.services.v1.BackupScopeR\005sco" +
+      "pe:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006backupP\001\"\363\003\n\031St" +
+      "artTenantBackupResponse\022\033\n\tbackup_id\030\001 \001" +
+      "(\tR\010backupId\022#\n\robject_prefix\030\002 \001(\tR\014obj" +
+      "ectPrefix\022+\n\021manifest_checksum\030\003 \001(\tR\020ma" +
+      "nifestChecksum\022\037\n\013table_count\030\004 \001(\005R\ntab" +
+      "leCount\022\035\n\ntotal_rows\030\005 \001(\003R\ttotalRows\022%" +
+      "\n\016excluded_count\030\006 \001(\005R\rexcludedCount\022E\n" +
+      "\006tables\030\007 \003(\0132-.udb.core.backup.services" +
+      ".v1.BackupTableEntryR\006tables\022L\n\010excluded" +
+      "\030\010 \003(\01320.udb.core.backup.services.v1.Bac" +
+      "kupExcludedTableR\010excluded\022\030\n\007message\030\t " +
+      "\001(\tR\007message\0222\n\005error\030\n \001(\0132\034.udb.core.c" +
+      "ommon.v1.ApiErrorR\005error:\035\232\262\031\031\010\001\032\003udb(\260\352" +
+      "\0010\003@\001J\006backupP\001\"\350\002\n\024RestoreTenantRequest" +
+      "\022(\n\020source_tenant_id\030\001 \001(\tR\016sourceTenant" +
+      "Id\022(\n\020target_tenant_id\030\002 \001(\tR\016targetTena" +
+      "ntId\022\033\n\tbackup_id\030\003 \001(\tR\010backupId\022-\n\022con" +
+      "firmation_token\030\004 \001(\tR\021confirmationToken" +
+      "\022,\n\022allow_cross_tenant\030\005 \001(\010R\020allowCross" +
+      "Tenant\022#\n\rmetadata_json\030\006 \001(\tR\014metadataJ" +
+      "son\022>\n\005scope\030\007 \001(\0162(.udb.core.backup.ser" +
+      "vices.v1.BackupScopeR\005scope:\035\232\262\031\031\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\006backupP\001\"\252\002\n\025RestoreTenantResp" +
+      "onse\022\033\n\tbackup_id\030\001 \001(\tR\010backupId\0220\n\024sou" +
+      "rce_object_prefix\030\002 \001(\tR\022sourceObjectPre" +
+      "fix\0220\n\024restored_table_count\030\003 \001(\005R\022resto" +
+      "redTableCount\022#\n\rrestored_rows\030\004 \001(\003R\014re" +
+      "storedRows\022\030\n\007message\030\005 \001(\tR\007message\0222\n\005" +
+      "error\030\006 \001(\0132\034.udb.core.common.v1.ApiErro" +
+      "rR\005error:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006backupP\001\"" +
+      "\240\001\n\022ListBackupsRequest\022\033\n\ttenant_id\030\001 \001(" +
+      "\tR\010tenantId\022\033\n\tpage_size\030\002 \001(\005R\010pageSize" +
+      "\022\035\n\npage_token\030\003 \001(\tR\tpageToken\022\022\n\004kind\030" +
+      "\004 \001(\tR\004kind:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006backup" +
+      "P\001\"\331\001\n\023ListBackupsResponse\022G\n\007backups\030\001 " +
+      "\003(\0132-.udb.core.backup.services.v1.Backup" +
+      "RunSummaryR\007backups\022&\n\017next_page_token\030\002" +
+      " \001(\tR\rnextPageToken\0222\n\005error\030\003 \001(\0132\034.udb" +
+      ".core.common.v1.ApiErrorR\005error:\035\232\262\031\031\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\006backupP\001\"k\n\020GetBackupReque" +
+      "st\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\033\n\tbacku" +
+      "p_id\030\002 \001(\tR\010backupId:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@" +
+      "\001J\006backupP\001\"\302\002\n\021GetBackupResponse\022E\n\006bac" +
+      "kup\030\001 \001(\0132-.udb.core.backup.services.v1." +
+      "BackupRunSummaryR\006backup\022E\n\006tables\030\002 \003(\013" +
+      "2-.udb.core.backup.services.v1.BackupTab" +
+      "leEntryR\006tables\022L\n\010excluded\030\003 \003(\01320.udb." +
+      "core.backup.services.v1.BackupExcludedTa" +
+      "bleR\010excluded\0222\n\005error\030\004 \001(\0132\034.udb.core." +
+      "common.v1.ApiErrorR\005error:\035\232\262\031\031\010\001\032\003udb(\260" +
+      "\352\0010\003@\001J\006backupP\001\"\376\002\n\026PutBackupPolicyRequ" +
+      "est\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013poli" +
+      "cy_name\030\002 \001(\tR\npolicyName\022#\n\rschedule_cr" +
+      "on\030\003 \001(\tR\014scheduleCron\022%\n\016retention_days" +
+      "\030\004 \001(\005R\rretentionDays\0220\n\024max_retained_ba" +
+      "ckups\030\005 \001(\005R\022maxRetainedBackups\022\030\n\007enabl" +
+      "ed\030\006 \001(\010R\007enabled\022%\n\016object_backend\030\007 \001(" +
+      "\tR\robjectBackend\022#\n\robject_bucket\030\010 \001(\tR" +
+      "\014objectBucket\022#\n\rmetadata_json\030\t \001(\tR\014me" +
+      "tadataJson:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006backupP" +
+      "\001\"\243\001\n\027PutBackupPolicyResponse\022\033\n\tpolicy_" +
+      "id\030\001 \001(\tR\010policyId\022\030\n\007message\030\002 \001(\tR\007mes" +
+      "sage\0222\n\005error\030\003 \001(\0132\034.udb.core.common.v1" +
       ".ApiErrorR\005error:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006b" +
-      "ackupP\001\"\250\002\n\024RestoreTenantRequest\022(\n\020sour" +
-      "ce_tenant_id\030\001 \001(\tR\016sourceTenantId\022(\n\020ta" +
-      "rget_tenant_id\030\002 \001(\tR\016targetTenantId\022\033\n\t" +
-      "backup_id\030\003 \001(\tR\010backupId\022-\n\022confirmatio" +
-      "n_token\030\004 \001(\tR\021confirmationToken\022,\n\022allo" +
-      "w_cross_tenant\030\005 \001(\010R\020allowCrossTenant\022#" +
-      "\n\rmetadata_json\030\006 \001(\tR\014metadataJson:\035\232\262\031" +
-      "\031\010\001\032\003udb(\260\352\0010\003@\001J\006backupP\001\"\252\002\n\025RestoreTe" +
-      "nantResponse\022\033\n\tbackup_id\030\001 \001(\tR\010backupI" +
-      "d\0220\n\024source_object_prefix\030\002 \001(\tR\022sourceO" +
-      "bjectPrefix\0220\n\024restored_table_count\030\003 \001(" +
-      "\005R\022restoredTableCount\022#\n\rrestored_rows\030\004" +
-      " \001(\003R\014restoredRows\022\030\n\007message\030\005 \001(\tR\007mes" +
-      "sage\0222\n\005error\030\006 \001(\0132\034.udb.core.common.v1" +
+      "ackupP\001\"u\n\026GetBackupPolicyRequest\022\033\n\tten" +
+      "ant_id\030\001 \001(\tR\010tenantId\022\037\n\013policy_name\030\002 " +
+      "\001(\tR\npolicyName:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006ba" +
+      "ckupP\001\"\263\001\n\027GetBackupPolicyResponse\022E\n\006po" +
+      "licy\030\001 \001(\0132-.udb.core.backup.services.v1" +
+      ".BackupPolicyViewR\006policy\0222\n\005error\030\002 \001(\013" +
+      "2\034.udb.core.common.v1.ApiErrorR\005error:\035\232" +
+      "\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006backupP\001\"\223\001\n\031ListBac" +
+      "kupPoliciesRequest\022\033\n\ttenant_id\030\001 \001(\tR\010t" +
+      "enantId\022\033\n\tpage_size\030\002 \001(\005R\010pageSize\022\035\n\n" +
+      "page_token\030\003 \001(\tR\tpageToken:\035\232\262\031\031\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\006backupP\001\"\342\001\n\032ListBackupPolicie" +
+      "sResponse\022I\n\010policies\030\001 \003(\0132-.udb.core.b" +
+      "ackup.services.v1.BackupPolicyViewR\010poli" +
+      "cies\022&\n\017next_page_token\030\002 \001(\tR\rnextPageT" +
+      "oken\0222\n\005error\030\003 \001(\0132\034.udb.core.common.v1" +
       ".ApiErrorR\005error:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006b" +
-      "ackupP\001\"\240\001\n\022ListBackupsRequest\022\033\n\ttenant" +
-      "_id\030\001 \001(\tR\010tenantId\022\033\n\tpage_size\030\002 \001(\005R\010" +
-      "pageSize\022\035\n\npage_token\030\003 \001(\tR\tpageToken\022" +
-      "\022\n\004kind\030\004 \001(\tR\004kind:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\006backupP\001\"\331\001\n\023ListBackupsResponse\022G\n\007ba" +
-      "ckups\030\001 \003(\0132-.udb.core.backup.services.v" +
-      "1.BackupRunSummaryR\007backups\022&\n\017next_page" +
-      "_token\030\002 \001(\tR\rnextPageToken\0222\n\005error\030\003 \001" +
-      "(\0132\034.udb.core.common.v1.ApiErrorR\005error:" +
-      "\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006backupP\001\"k\n\020GetBac" +
-      "kupRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022" +
-      "\033\n\tbackup_id\030\002 \001(\tR\010backupId:\035\232\262\031\031\010\001\032\003ud" +
-      "b(\260\352\0010\003@\001J\006backupP\001\"\302\002\n\021GetBackupRespons" +
-      "e\022E\n\006backup\030\001 \001(\0132-.udb.core.backup.serv" +
-      "ices.v1.BackupRunSummaryR\006backup\022E\n\006tabl" +
-      "es\030\002 \003(\0132-.udb.core.backup.services.v1.B" +
-      "ackupTableEntryR\006tables\022L\n\010excluded\030\003 \003(" +
-      "\01320.udb.core.backup.services.v1.BackupEx" +
-      "cludedTableR\010excluded\0222\n\005error\030\004 \001(\0132\034.u" +
-      "db.core.common.v1.ApiErrorR\005error:\035\232\262\031\031\010" +
-      "\001\032\003udb(\260\352\0010\003@\001J\006backupP\001\"\376\002\n\026PutBackupPo" +
-      "licyRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId" +
-      "\022\037\n\013policy_name\030\002 \001(\tR\npolicyName\022#\n\rsch" +
-      "edule_cron\030\003 \001(\tR\014scheduleCron\022%\n\016retent" +
-      "ion_days\030\004 \001(\005R\rretentionDays\0220\n\024max_ret" +
-      "ained_backups\030\005 \001(\005R\022maxRetainedBackups\022" +
-      "\030\n\007enabled\030\006 \001(\010R\007enabled\022%\n\016object_back" +
-      "end\030\007 \001(\tR\robjectBackend\022#\n\robject_bucke" +
-      "t\030\010 \001(\tR\014objectBucket\022#\n\rmetadata_json\030\t" +
-      " \001(\tR\014metadataJson:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J" +
-      "\006backupP\001\"\243\001\n\027PutBackupPolicyResponse\022\033\n" +
-      "\tpolicy_id\030\001 \001(\tR\010policyId\022\030\n\007message\030\002 " +
+      "ackupP\001\"x\n\031DeleteBackupPolicyRequest\022\033\n\t" +
+      "tenant_id\030\001 \001(\tR\010tenantId\022\037\n\013policy_name" +
+      "\030\002 \001(\tR\npolicyName:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\006backupP\001\"\243\001\n\032DeleteBackupPolicyResponse" +
+      "\022\030\n\007deleted\030\001 \001(\010R\007deleted\022\030\n\007message\030\002 " +
       "\001(\tR\007message\0222\n\005error\030\003 \001(\0132\034.udb.core.c" +
       "ommon.v1.ApiErrorR\005error:\035\232\262\031\031\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\006backupP\001\"u\n\026GetBackupPolicyReques" +
-      "t\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013policy" +
-      "_name\030\002 \001(\tR\npolicyName:\035\232\262\031\031\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\006backupP\001\"\263\001\n\027GetBackupPolicyRespon" +
-      "se\022E\n\006policy\030\001 \001(\0132-.udb.core.backup.ser" +
-      "vices.v1.BackupPolicyViewR\006policy\0222\n\005err" +
-      "or\030\002 \001(\0132\034.udb.core.common.v1.ApiErrorR\005" +
-      "error:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006backupP\001\"\223\001\n" +
-      "\031ListBackupPoliciesRequest\022\033\n\ttenant_id\030" +
-      "\001 \001(\tR\010tenantId\022\033\n\tpage_size\030\002 \001(\005R\010page" +
-      "Size\022\035\n\npage_token\030\003 \001(\tR\tpageToken:\035\232\262\031" +
-      "\031\010\001\032\003udb(\260\352\0010\003@\001J\006backupP\001\"\342\001\n\032ListBacku" +
-      "pPoliciesResponse\022I\n\010policies\030\001 \003(\0132-.ud" +
-      "b.core.backup.services.v1.BackupPolicyVi" +
-      "ewR\010policies\022&\n\017next_page_token\030\002 \001(\tR\rn" +
-      "extPageToken\0222\n\005error\030\003 \001(\0132\034.udb.core.c" +
-      "ommon.v1.ApiErrorR\005error:\035\232\262\031\031\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\006backupP\001\"x\n\031DeleteBackupPolicyReq" +
-      "uest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013pol" +
-      "icy_name\030\002 \001(\tR\npolicyName:\035\232\262\031\031\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\006backupP\001\"\243\001\n\032DeleteBackupPolicy" +
-      "Response\022\030\n\007deleted\030\001 \001(\010R\007deleted\022\030\n\007me" +
-      "ssage\030\002 \001(\tR\007message\0222\n\005error\030\003 \001(\0132\034.ud" +
-      "b.core.common.v1.ApiErrorR\005error:\035\232\262\031\031\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\006backupP\0012\247\035\n\rBackupServic" +
-      "e\022\351\003\n\021StartTenantBackup\0225.udb.core.backu" +
-      "p.services.v1.StartTenantBackupRequest\0326" +
-      ".udb.core.backup.services.v1.StartTenant" +
-      "BackupResponse\"\344\002\312\363\030F\010\002\032\036udb:backup:star" +
-      "t-tenant-backup \001J\003\001\002\004j\030backup.StartTena" +
-      "ntBackup\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030A\010\001\022\023start_tenan" +
-      "t_backup\032\003udb(\260\352\0010\003@\001J\006backupP\001Z\021startTe" +
-      "nantBackup\352\363\030c\n\030backup.StartTenantBackup" +
-      "\022\033udb.backup.run.completed.v1\032\ttenant_id" +
-      "\"\010standard*\rat_least_once2\006stable\362\363\030@\n\006b" +
-      "ackup\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\026\"\021/v1/bac" +
-      "kups:start:\001*\022\316\003\n\rRestoreTenant\0221.udb.co" +
-      "re.backup.services.v1.RestoreTenantReque" +
-      "st\0322.udb.core.backup.services.v1.Restore" +
-      "TenantResponse\"\325\002\312\363\030<\010\002\032\031udb:backup:rest" +
-      "ore-tenant \001J\002\001\002j\024backup.RestoreTenant\220\001" +
-      "\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\016restore_tenant\032\003udb(\260" +
-      "\352\0010\003@\001J\006backupP\001Z\rrestoreTenant\352\363\030e\n\024bac" +
-      "kup.RestoreTenant\022\032udb.backup.run.restor" +
-      "ed.v1\032\020target_tenant_id\"\010standard*\rat_le" +
+      "\0010\003@\001J\006backupP\001*]\n\013BackupScope\022\034\n\030BACKUP" +
+      "_SCOPE_UNSPECIFIED\020\000\022\027\n\023BACKUP_SCOPE_TEN" +
+      "ANT\020\001\022\027\n\023BACKUP_SCOPE_SHARED\020\0022\247\035\n\rBacku" +
+      "pService\022\351\003\n\021StartTenantBackup\0225.udb.cor" +
+      "e.backup.services.v1.StartTenantBackupRe" +
+      "quest\0326.udb.core.backup.services.v1.Star" +
+      "tTenantBackupResponse\"\344\002\312\363\030F\010\002\032\036udb:back" +
+      "up:start-tenant-backup \001J\003\001\002\004j\030backup.St" +
+      "artTenantBackup\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030A\010\001\022\023star" +
+      "t_tenant_backup\032\003udb(\260\352\0010\003@\001J\006backupP\001Z\021" +
+      "startTenantBackup\352\363\030c\n\030backup.StartTenan" +
+      "tBackup\022\033udb.backup.run.completed.v1\032\tte" +
+      "nant_id\"\010standard*\rat_least_once2\006stable" +
+      "\362\363\030@\n\006backup\032\010postgres2\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\026\"\021" +
+      "/v1/backups:start:\001*\022\316\003\n\rRestoreTenant\0221" +
+      ".udb.core.backup.services.v1.RestoreTena" +
+      "ntRequest\0322.udb.core.backup.services.v1." +
+      "RestoreTenantResponse\"\325\002\312\363\030<\010\002\032\031udb:back" +
+      "up:restore-tenant \001J\002\001\002j\024backup.RestoreT" +
+      "enant\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\016restore_tenant" +
+      "\032\003udb(\260\352\0010\003@\001J\006backupP\001Z\rrestoreTenant\352\363" +
+      "\030e\n\024backup.RestoreTenant\022\032udb.backup.run" +
+      ".restored.v1\032\020target_tenant_id\"\010standard" +
+      "*\rat_least_once2\006stable\362\363\030@\n\006backup\032\010pos" +
+      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\003\202\323\344\223\002\030\"\023/v1/backups:resto" +
+      "re:\001*\022\314\002\n\013ListBackups\022/.udb.core.backup." +
+      "services.v1.ListBackupsRequest\0320.udb.cor" +
+      "e.backup.services.v1.ListBackupsResponse" +
+      "\"\331\001\312\363\0308\010\002\032\027udb:backup:list-backups \001J\002\001\002" +
+      "j\022backup.ListBackups\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022" +
+      "\014list_backups\032\003udb(\260\352\0010\003@\001J\006backupP\001Z\013li" +
+      "stBackups\362\363\030@\n\006backup\032\010postgres2\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
+      "\001\202\323\344\223\002\r\022\013/v1/backups\022\312\002\n\tGetBackup\022-.udb" +
+      ".core.backup.services.v1.GetBackupReques" +
+      "t\032..udb.core.backup.services.v1.GetBacku" +
+      "pResponse\"\335\001\312\363\0304\010\002\032\025udb:backup:get-backu" +
+      "p \001J\002\001\002j\020backup.GetBackup\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\0300\010\001\022\nget_backup\032\003udb(\260\352\0010\003@\001J\006backupP\001Z" +
+      "\tgetBackup\362\363\030@\n\006backup\032\010postgres2\033UDB_NA" +
+      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
+      "\030\001\202\323\344\223\002\031\022\027/v1/backups/{backup_id}\022\335\003\n\017Pu" +
+      "tBackupPolicy\0223.udb.core.backup.services" +
+      ".v1.PutBackupPolicyRequest\0324.udb.core.ba" +
+      "ckup.services.v1.PutBackupPolicyResponse" +
+      "\"\336\002\312\363\030A\010\002\032\034udb:backup:put-backup-policy " +
+      "\001J\002\001\002j\026backup.PutBackupPolicy\220\001\001\322\363\030\006\010\001\020\001" +
+      " \001\332\363\030=\010\001\022\021put_backup_policy\032\003udb(\260\352\0010\003@\001" +
+      "J\006backupP\001Z\017putBackupPolicy\352\363\030c\n\026backup." +
+      "PutBackupPolicy\022\035udb.backup.policy.upser" +
+      "ted.v1\032\ttenant_id\"\010standard*\rat_least_on" +
+      "ce2\006stable\362\363\030@\n\006backup\032\010postgres2\033UDB_NA" +
+      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
+      "\030\002\202\323\344\223\002\031\"\024/v1/backups/policies:\001*\022\201\003\n\017Ge" +
+      "tBackupPolicy\0223.udb.core.backup.services" +
+      ".v1.GetBackupPolicyRequest\0324.udb.core.ba" +
+      "ckup.services.v1.GetBackupPolicyResponse" +
+      "\"\202\002\312\363\030A\010\002\032\034udb:backup:get-backup-policy " +
+      "\001J\002\001\002j\026backup.GetBackupPolicy\220\001\001\322\363\030\006\010\001\020\001" +
+      " \001\332\363\030=\010\001\022\021get_backup_policy\032\003udb(\260\352\0010\003@\001" +
+      "J\006backupP\001Z\017getBackupPolicy\362\363\030@\n\006backup\032" +
+      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
+      "UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002$\022\"/v1/backups/p" +
+      "olicies/{policy_name}\022\210\003\n\022ListBackupPoli" +
+      "cies\0226.udb.core.backup.services.v1.ListB" +
+      "ackupPoliciesRequest\0327.udb.core.backup.s" +
+      "ervices.v1.ListBackupPoliciesResponse\"\200\002" +
+      "\312\363\030G\010\002\032\037udb:backup:list-backup-policies " +
+      "\001J\002\001\002j\031backup.ListBackupPolicies\220\001\001\322\363\030\006\010" +
+      "\001\020\001 \001\332\363\030C\010\001\022\024list_backup_policies\032\003udb(\260" +
+      "\352\0010\003@\001J\006backupP\001Z\022listBackupPolicies\362\363\030@" +
+      "\n\006backup\032\010postgres2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\026\022\024/v1/" +
+      "backups/policies\022\377\003\n\022DeleteBackupPolicy\022" +
+      "6.udb.core.backup.services.v1.DeleteBack" +
+      "upPolicyRequest\0327.udb.core.backup.servic" +
+      "es.v1.DeleteBackupPolicyResponse\"\367\002\312\363\030G\010" +
+      "\002\032\037udb:backup:delete-backup-policy \001J\002\001\002" +
+      "j\031backup.DeleteBackupPolicy\220\001\001\322\363\030\006\010\001\020\001 \001" +
+      "\332\363\030C\010\001\022\024delete_backup_policy\032\003udb(\260\352\0010\003@" +
+      "\001J\006backupP\001Z\022deleteBackupPolicy\352\363\030e\n\031bac" +
+      "kup.DeleteBackupPolicy\022\034udb.backup.polic" +
+      "y.deleted.v1\032\ttenant_id\"\010standard*\rat_le" +
       "ast_once2\006stable\362\363\030@\n\006backup\032\010postgres2\033" +
       "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
-      "RGET\370\363\030\003\202\323\344\223\002\030\"\023/v1/backups:restore:\001*\022\314" +
-      "\002\n\013ListBackups\022/.udb.core.backup.service" +
-      "s.v1.ListBackupsRequest\0320.udb.core.backu" +
-      "p.services.v1.ListBackupsResponse\"\331\001\312\363\0308" +
-      "\010\002\032\027udb:backup:list-backups \001J\002\001\002j\022backu" +
-      "p.ListBackups\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\014list_b" +
-      "ackups\032\003udb(\260\352\0010\003@\001J\006backupP\001Z\013listBacku" +
-      "ps\362\363\030@\n\006backup\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\r" +
-      "\022\013/v1/backups\022\312\002\n\tGetBackup\022-.udb.core.b" +
-      "ackup.services.v1.GetBackupRequest\032..udb" +
-      ".core.backup.services.v1.GetBackupRespon" +
-      "se\"\335\001\312\363\0304\010\002\032\025udb:backup:get-backup \001J\002\001\002" +
-      "j\020backup.GetBackup\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\ng" +
-      "et_backup\032\003udb(\260\352\0010\003@\001J\006backupP\001Z\tgetBac" +
-      "kup\362\363\030@\n\006backup\032\010postgres2\033UDB_NATIVE_SE" +
-      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002" +
-      "\031\022\027/v1/backups/{backup_id}\022\335\003\n\017PutBackup" +
-      "Policy\0223.udb.core.backup.services.v1.Put" +
-      "BackupPolicyRequest\0324.udb.core.backup.se" +
-      "rvices.v1.PutBackupPolicyResponse\"\336\002\312\363\030A" +
-      "\010\002\032\034udb:backup:put-backup-policy \001J\002\001\002j\026" +
-      "backup.PutBackupPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030=\010" +
-      "\001\022\021put_backup_policy\032\003udb(\260\352\0010\003@\001J\006backu" +
-      "pP\001Z\017putBackupPolicy\352\363\030c\n\026backup.PutBack" +
-      "upPolicy\022\035udb.backup.policy.upserted.v1\032" +
-      "\ttenant_id\"\010standard*\rat_least_once2\006sta" +
-      "ble\362\363\030@\n\006backup\032\010postgres2\033UDB_NATIVE_SE" +
-      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002" +
-      "\031\"\024/v1/backups/policies:\001*\022\201\003\n\017GetBackup" +
-      "Policy\0223.udb.core.backup.services.v1.Get" +
-      "BackupPolicyRequest\0324.udb.core.backup.se" +
-      "rvices.v1.GetBackupPolicyResponse\"\202\002\312\363\030A" +
-      "\010\002\032\034udb:backup:get-backup-policy \001J\002\001\002j\026" +
-      "backup.GetBackupPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030=\010" +
-      "\001\022\021get_backup_policy\032\003udb(\260\352\0010\003@\001J\006backu" +
-      "pP\001Z\017getBackupPolicy\362\363\030@\n\006backup\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\370\363\030\001\202\323\344\223\002$\022\"/v1/backups/policies" +
-      "/{policy_name}\022\210\003\n\022ListBackupPolicies\0226." +
-      "udb.core.backup.services.v1.ListBackupPo" +
-      "liciesRequest\0327.udb.core.backup.services" +
-      ".v1.ListBackupPoliciesResponse\"\200\002\312\363\030G\010\002\032" +
-      "\037udb:backup:list-backup-policies \001J\002\001\002j\031" +
-      "backup.ListBackupPolicies\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\030C\010\001\022\024list_backup_policies\032\003udb(\260\352\0010\003@\001J" +
-      "\006backupP\001Z\022listBackupPolicies\362\363\030@\n\006backu" +
-      "p\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
-      "2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\026\022\024/v1/backups" +
-      "/policies\022\377\003\n\022DeleteBackupPolicy\0226.udb.c" +
-      "ore.backup.services.v1.DeleteBackupPolic" +
-      "yRequest\0327.udb.core.backup.services.v1.D" +
-      "eleteBackupPolicyResponse\"\367\002\312\363\030G\010\002\032\037udb:" +
-      "backup:delete-backup-policy \001J\002\001\002j\031backu" +
-      "p.DeleteBackupPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030C\010\001\022" +
-      "\024delete_backup_policy\032\003udb(\260\352\0010\003@\001J\006back" +
-      "upP\001Z\022deleteBackupPolicy\352\363\030e\n\031backup.Del" +
-      "eteBackupPolicy\022\034udb.backup.policy.delet" +
-      "ed.v1\032\ttenant_id\"\010standard*\rat_least_onc" +
-      "e2\006stable\362\363\030@\n\006backup\032\010postgres2\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
-      "\002\202\323\344\223\002$*\"/v1/backups/policies/{policy_na" +
-      "me}\032\313\002\312\360\031X\n\006backup\022\006backup\032\006backup\"\006Back" +
-      "up*\006backup0\0018\001h\001z\006backup\202\001\006backup\212\001\006back" +
-      "up\222\001\rnative.backup\322\360\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006b" +
-      "ackupP\001\332\360\031\211\001\n\006backup\022\021udb/native/backup\032" +
-      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T" +
-      "ARGET\"\030udb.native.backup.config:\006backupJ" +
-      "\013UDB_API_KEYZ\017udb native lint\342\360\031@\n\006backu" +
-      "p\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
-      "2\017UDB_GRPC_TARGETB\221\002\n\037com.udb.core.backu" +
-      "p.services.v1B\022BackupServiceProtoP\001ZIgit" +
-      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
-      "/backup/services/v1;servicesv1\242\002\004UCBS\252\002\033" +
-      "Udb.Core.Backup.Services.V1\312\002\033Udb\\Core\\B" +
-      "ackup\\Services\\V1\342\002\'Udb\\GPBMetadata\\Core" +
-      "\\Backup\\Services\\V1\352\002\037Udb::Core::Backup:" +
-      ":Services::V1b\006proto3"
+      "RGET\370\363\030\002\202\323\344\223\002$*\"/v1/backups/policies/{po" +
+      "licy_name}\032\313\002\312\360\031X\n\006backup\022\006backup\032\006backu" +
+      "p\"\006Backup*\006backup0\0018\001h\001z\006backup\202\001\006backup" +
+      "\212\001\006backup\222\001\rnative.backup\322\360\031\031\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\006backupP\001\332\360\031\211\001\n\006backup\022\021udb/native/" +
+      "backup\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB" +
+      "_GRPC_TARGET\"\030udb.native.backup.config:\006" +
+      "backupJ\013UDB_API_KEYZ\017udb native lint\342\360\031@" +
+      "\n\006backup\032\010postgres2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGETB\221\002\n\037com.udb.cor" +
+      "e.backup.services.v1B\022BackupServiceProto" +
+      "P\001ZIgithub.com/fahara02/udb/sdk/go/gen/u" +
+      "db/core/backup/services/v1;servicesv1\242\002\004" +
+      "UCBS\252\002\033Udb.Core.Backup.Services.V1\312\002\033Udb" +
+      "\\Core\\Backup\\Services\\V1\342\002\'Udb\\GPBMetada" +
+      "ta\\Core\\Backup\\Services\\V1\352\002\037Udb::Core::" +
+      "Backup::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -389,7 +396,7 @@ public final class BackupServiceProto {
     internal_static_udb_core_backup_services_v1_BackupRunSummary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_backup_services_v1_BackupRunSummary_descriptor,
-        new java.lang.String[] { "BackupId", "TenantId", "Kind", "Status", "ObjectPrefix", "ManifestChecksum", "TableCount", "TotalRows", "ExcludedCount", "SourceTenantId", "TargetTenantId", "CreatedAtUnix", "CompletedAtUnix", "ProjectId", });
+        new java.lang.String[] { "BackupId", "TenantId", "Kind", "Status", "ObjectPrefix", "ManifestChecksum", "TableCount", "TotalRows", "ExcludedCount", "SourceTenantId", "TargetTenantId", "CreatedAtUnix", "CompletedAtUnix", "ProjectId", "Scope", });
     internal_static_udb_core_backup_services_v1_BackupPolicyView_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_udb_core_backup_services_v1_BackupPolicyView_fieldAccessorTable = new
@@ -401,7 +408,7 @@ public final class BackupServiceProto {
     internal_static_udb_core_backup_services_v1_StartTenantBackupRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_backup_services_v1_StartTenantBackupRequest_descriptor,
-        new java.lang.String[] { "TenantId", "PolicyName", "ObjectBackend", "ObjectBucket", "MetadataJson", });
+        new java.lang.String[] { "TenantId", "PolicyName", "ObjectBackend", "ObjectBucket", "MetadataJson", "Scope", });
     internal_static_udb_core_backup_services_v1_StartTenantBackupResponse_descriptor =
       getDescriptor().getMessageTypes().get(5);
     internal_static_udb_core_backup_services_v1_StartTenantBackupResponse_fieldAccessorTable = new
@@ -413,7 +420,7 @@ public final class BackupServiceProto {
     internal_static_udb_core_backup_services_v1_RestoreTenantRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_backup_services_v1_RestoreTenantRequest_descriptor,
-        new java.lang.String[] { "SourceTenantId", "TargetTenantId", "BackupId", "ConfirmationToken", "AllowCrossTenant", "MetadataJson", });
+        new java.lang.String[] { "SourceTenantId", "TargetTenantId", "BackupId", "ConfirmationToken", "AllowCrossTenant", "MetadataJson", "Scope", });
     internal_static_udb_core_backup_services_v1_RestoreTenantResponse_descriptor =
       getDescriptor().getMessageTypes().get(7);
     internal_static_udb_core_backup_services_v1_RestoreTenantResponse_fieldAccessorTable = new

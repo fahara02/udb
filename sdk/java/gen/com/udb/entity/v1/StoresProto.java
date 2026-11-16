@@ -169,169 +169,171 @@ public final class StoresProto {
       ".v1\032\034google/protobuf/struct.proto\032\037googl" +
       "e/protobuf/timestamp.proto\032\033udb/entity/v" +
       "1/context.proto\032\035udb/entity/v1/operation" +
-      ".proto\032\036udb/entity/v1/relational.proto\"\254" +
+      ".proto\032\036udb/entity/v1/relational.proto\"\304" +
       "\001\n\017CacheGetRequest\0227\n\007context\030\001 \001(\0132\035.ud" +
       "b.entity.v1.RequestContextR\007context\0228\n\010r" +
       "esource\030\002 \001(\0132\034.udb.entity.v1.StoreResou" +
       "rceR\010resource\022\020\n\003key\030\003 \001(\tR\003key\022\024\n\005touch" +
-      "\030\004 \001(\010R\005touch\"\267\001\n\020CacheGetResponse\022\024\n\005fo" +
-      "und\030\001 \001(\010R\005found\022\024\n\005value\030\002 \001(\014R\005value\022!" +
-      "\n\014content_type\030\003 \001(\tR\013contentType\022\037\n\013ttl" +
-      "_seconds\030\004 \001(\003R\nttlSeconds\0223\n\010metadata\030\005" +
-      " \001(\0132\027.google.protobuf.StructR\010metadata\"" +
-      "\234\003\n\017CacheSetRequest\0227\n\007context\030\001 \001(\0132\035.u" +
-      "db.entity.v1.RequestContextR\007context\0228\n\010" +
-      "resource\030\002 \001(\0132\034.udb.entity.v1.StoreReso" +
-      "urceR\010resource\022\020\n\003key\030\003 \001(\tR\003key\022\024\n\005valu" +
-      "e\030\004 \001(\014R\005value\022!\n\014content_type\030\005 \001(\tR\013co" +
-      "ntentType\022\037\n\013ttl_seconds\030\006 \001(\003R\nttlSecon" +
-      "ds\022$\n\016only_if_absent\030\007 \001(\010R\014onlyIfAbsent" +
-      "\022&\n\017only_if_present\030\010 \001(\010R\ronlyIfPresent" +
-      "\022\'\n\017idempotency_key\030\t \001(\tR\016idempotencyKe" +
-      "y\0223\n\010metadata\030\n \001(\0132\027.google.protobuf.St" +
-      "ructR\010metadata\"\302\001\n\022CacheDeleteRequest\0227\n" +
-      "\007context\030\001 \001(\0132\035.udb.entity.v1.RequestCo" +
-      "ntextR\007context\0228\n\010resource\030\002 \001(\0132\034.udb.e" +
-      "ntity.v1.StoreResourceR\010resource\022\020\n\003key\030" +
-      "\003 \001(\tR\003key\022\'\n\017idempotency_key\030\004 \001(\tR\016ide" +
-      "mpotencyKey\"\333\001\n\020CacheScanRequest\0227\n\007cont" +
-      "ext\030\001 \001(\0132\035.udb.entity.v1.RequestContext" +
-      "R\007context\0228\n\010resource\030\002 \001(\0132\034.udb.entity" +
-      ".v1.StoreResourceR\010resource\022\037\n\013key_patte" +
-      "rn\030\003 \001(\tR\nkeyPattern\022\024\n\005limit\030\004 \001(\005R\005lim" +
-      "it\022\035\n\npage_token\030\005 \001(\tR\tpageToken\"\255\001\n\nCa" +
-      "cheEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(" +
-      "\014R\005value\022!\n\014content_type\030\003 \001(\tR\013contentT" +
-      "ype\022\037\n\013ttl_seconds\030\004 \001(\003R\nttlSeconds\0223\n\010" +
-      "metadata\030\005 \001(\0132\027.google.protobuf.StructR" +
-      "\010metadata\"\245\001\n\021CacheScanResponse\0223\n\007entri" +
-      "es\030\001 \003(\0132\031.udb.entity.v1.CacheEntryR\007ent" +
-      "ries\022&\n\017next_page_token\030\002 \001(\tR\rnextPageT" +
-      "oken\0223\n\005stats\030\003 \001(\0132\035.udb.entity.v1.Oper" +
-      "ationStatsR\005stats\"\300\001\n\022DocumentGetRequest" +
+      "\030\004 \001(\010R\005touch\022\026\n\006shared\030\005 \001(\010R\006shared\"\267\001" +
+      "\n\020CacheGetResponse\022\024\n\005found\030\001 \001(\010R\005found" +
+      "\022\024\n\005value\030\002 \001(\014R\005value\022!\n\014content_type\030\003" +
+      " \001(\tR\013contentType\022\037\n\013ttl_seconds\030\004 \001(\003R\n" +
+      "ttlSeconds\0223\n\010metadata\030\005 \001(\0132\027.google.pr" +
+      "otobuf.StructR\010metadata\"\264\003\n\017CacheSetRequ" +
+      "est\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Req" +
+      "uestContextR\007context\0228\n\010resource\030\002 \001(\0132\034" +
+      ".udb.entity.v1.StoreResourceR\010resource\022\020" +
+      "\n\003key\030\003 \001(\tR\003key\022\024\n\005value\030\004 \001(\014R\005value\022!" +
+      "\n\014content_type\030\005 \001(\tR\013contentType\022\037\n\013ttl" +
+      "_seconds\030\006 \001(\003R\nttlSeconds\022$\n\016only_if_ab" +
+      "sent\030\007 \001(\010R\014onlyIfAbsent\022&\n\017only_if_pres" +
+      "ent\030\010 \001(\010R\ronlyIfPresent\022\'\n\017idempotency_" +
+      "key\030\t \001(\tR\016idempotencyKey\0223\n\010metadata\030\n " +
+      "\001(\0132\027.google.protobuf.StructR\010metadata\022\026" +
+      "\n\006shared\030\013 \001(\010R\006shared\"\332\001\n\022CacheDeleteRe" +
+      "quest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.R" +
+      "equestContextR\007context\0228\n\010resource\030\002 \001(\013" +
+      "2\034.udb.entity.v1.StoreResourceR\010resource" +
+      "\022\020\n\003key\030\003 \001(\tR\003key\022\'\n\017idempotency_key\030\004 " +
+      "\001(\tR\016idempotencyKey\022\026\n\006shared\030\005 \001(\010R\006sha" +
+      "red\"\363\001\n\020CacheScanRequest\0227\n\007context\030\001 \001(" +
+      "\0132\035.udb.entity.v1.RequestContextR\007contex" +
+      "t\0228\n\010resource\030\002 \001(\0132\034.udb.entity.v1.Stor" +
+      "eResourceR\010resource\022\037\n\013key_pattern\030\003 \001(\t" +
+      "R\nkeyPattern\022\024\n\005limit\030\004 \001(\005R\005limit\022\035\n\npa" +
+      "ge_token\030\005 \001(\tR\tpageToken\022\026\n\006shared\030\006 \001(" +
+      "\010R\006shared\"\255\001\n\nCacheEntry\022\020\n\003key\030\001 \001(\tR\003k" +
+      "ey\022\024\n\005value\030\002 \001(\014R\005value\022!\n\014content_type" +
+      "\030\003 \001(\tR\013contentType\022\037\n\013ttl_seconds\030\004 \001(\003" +
+      "R\nttlSeconds\0223\n\010metadata\030\005 \001(\0132\027.google." +
+      "protobuf.StructR\010metadata\"\245\001\n\021CacheScanR" +
+      "esponse\0223\n\007entries\030\001 \003(\0132\031.udb.entity.v1" +
+      ".CacheEntryR\007entries\022&\n\017next_page_token\030" +
+      "\002 \001(\tR\rnextPageToken\0223\n\005stats\030\003 \001(\0132\035.ud" +
+      "b.entity.v1.OperationStatsR\005stats\"\300\001\n\022Do" +
+      "cumentGetRequest\0227\n\007context\030\001 \001(\0132\035.udb." +
+      "entity.v1.RequestContextR\007context\0228\n\010res" +
+      "ource\030\002 \001(\0132\034.udb.entity.v1.StoreResourc" +
+      "eR\010resource\022\037\n\013document_id\030\003 \001(\tR\ndocume" +
+      "ntId\022\026\n\006fields\030\004 \003(\tR\006fields\"\257\002\n\023Documen" +
+      "tFindRequest\0227\n\007context\030\001 \001(\0132\035.udb.enti" +
+      "ty.v1.RequestContextR\007context\0228\n\010resourc" +
+      "e\030\002 \001(\0132\034.udb.entity.v1.StoreResourceR\010r" +
+      "esource\022/\n\006filter\030\003 \001(\0132\027.google.protobu" +
+      "f.StructR\006filter\022\026\n\006fields\030\004 \003(\tR\006fields" +
+      "\022\024\n\005limit\030\005 \001(\005R\005limit\022\035\n\npage_token\030\006 \001" +
+      "(\tR\tpageToken\022\'\n\004sort\030\007 \003(\0132\023.udb.entity" +
+      ".v1.SortR\004sort\"\306\002\n\025DocumentUpsertRequest" +
       "\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reques" +
       "tContextR\007context\0228\n\010resource\030\002 \001(\0132\034.ud" +
       "b.entity.v1.StoreResourceR\010resource\022\037\n\013d" +
-      "ocument_id\030\003 \001(\tR\ndocumentId\022\026\n\006fields\030\004" +
-      " \003(\tR\006fields\"\257\002\n\023DocumentFindRequest\0227\n\007" +
-      "context\030\001 \001(\0132\035.udb.entity.v1.RequestCon" +
-      "textR\007context\0228\n\010resource\030\002 \001(\0132\034.udb.en" +
-      "tity.v1.StoreResourceR\010resource\022/\n\006filte" +
-      "r\030\003 \001(\0132\027.google.protobuf.StructR\006filter" +
-      "\022\026\n\006fields\030\004 \003(\tR\006fields\022\024\n\005limit\030\005 \001(\005R" +
-      "\005limit\022\035\n\npage_token\030\006 \001(\tR\tpageToken\022\'\n" +
-      "\004sort\030\007 \003(\0132\023.udb.entity.v1.SortR\004sort\"\306" +
-      "\002\n\025DocumentUpsertRequest\0227\n\007context\030\001 \001(" +
-      "\0132\035.udb.entity.v1.RequestContextR\007contex" +
-      "t\0228\n\010resource\030\002 \001(\0132\034.udb.entity.v1.Stor" +
-      "eResourceR\010resource\022\037\n\013document_id\030\003 \001(\t" +
-      "R\ndocumentId\0223\n\010document\030\004 \001(\0132\027.google." +
-      "protobuf.StructR\010document\022!\n\014merge_field" +
-      "s\030\005 \003(\tR\013mergeFields\022\030\n\007replace\030\006 \001(\010R\007r" +
-      "eplace\022\'\n\017idempotency_key\030\007 \001(\tR\016idempot" +
-      "encyKey\"\205\002\n\025DocumentDeleteRequest\0227\n\007con" +
-      "text\030\001 \001(\0132\035.udb.entity.v1.RequestContex" +
-      "tR\007context\0228\n\010resource\030\002 \001(\0132\034.udb.entit" +
-      "y.v1.StoreResourceR\010resource\022\037\n\013document" +
-      "_id\030\003 \001(\tR\ndocumentId\022/\n\006filter\030\004 \001(\0132\027." +
-      "google.protobuf.StructR\006filter\022\'\n\017idempo" +
-      "tency_key\030\005 \001(\tR\016idempotencyKey\"\241\001\n\013Docu" +
-      "mentSet\0225\n\tdocuments\030\001 \003(\0132\027.google.prot" +
-      "obuf.StructR\tdocuments\022&\n\017next_page_toke" +
-      "n\030\002 \001(\tR\rnextPageToken\0223\n\005stats\030\003 \001(\0132\035." +
-      "udb.entity.v1.OperationStatsR\005stats\"\344\002\n\021" +
-      "GraphQueryRequest\0227\n\007context\030\001 \001(\0132\035.udb" +
-      ".entity.v1.RequestContextR\007context\0228\n\010re" +
-      "source\030\002 \001(\0132\034.udb.entity.v1.StoreResour" +
-      "ceR\010resource\022\024\n\005query\030\003 \001(\tR\005query\0227\n\npa" +
-      "rameters\030\004 \001(\0132\027.google.protobuf.StructR" +
-      "\nparameters\022\024\n\005limit\030\005 \001(\005R\005limit\022\035\n\npag" +
-      "e_token\030\006 \001(\tR\tpageToken\022\033\n\tread_only\030\007 " +
-      "\001(\010R\010readOnly\022;\n\ttraversal\030\010 \001(\0132\035.udb.e" +
-      "ntity.v1.GraphTraversalR\ttraversal\"\345\005\n\016G" +
-      "raphTraversal\022\037\n\013start_label\030\001 \001(\tR\nstar" +
-      "tLabel\022\031\n\010start_id\030\002 \001(\tR\007startId\022-\n\022rel" +
-      "ationship_types\030\003 \003(\tR\021relationshipTypes" +
-      "\022D\n\tdirection\030\004 \001(\0162&.udb.entity.v1.Grap" +
-      "hTraversalDirectionR\tdirection\022\033\n\tmin_de" +
-      "pth\030\005 \001(\005R\010minDepth\022\033\n\tmax_depth\030\006 \001(\005R\010" +
-      "maxDepth\022\037\n\013node_labels\030\007 \003(\tR\nnodeLabel" +
-      "s\022g\n\024node_property_equals\030\010 \003(\01325.udb.en" +
-      "tity.v1.GraphTraversal.NodePropertyEqual" +
-      "sEntryR\022nodePropertyEquals\022\024\n\005limit\030\t \001(" +
-      "\005R\005limit\0221\n\024return_relationships\030\n \001(\010R\023" +
-      "returnRelationships\022\177\n\034relationship_prop" +
-      "erty_equals\030\013 \003(\0132=.udb.entity.v1.GraphT" +
-      "raversal.RelationshipPropertyEqualsEntry" +
-      "R\032relationshipPropertyEquals\032E\n\027NodeProp" +
-      "ertyEqualsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005val" +
-      "ue\030\002 \001(\tR\005value:\0028\001\032M\n\037RelationshipPrope" +
-      "rtyEqualsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005valu" +
-      "e\030\002 \001(\tR\005value:\0028\001\"\201\002\n\024GraphMutationRequ" +
-      "est\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Req" +
-      "uestContextR\007context\0228\n\010resource\030\002 \001(\0132\034" +
-      ".udb.entity.v1.StoreResourceR\010resource\022\024" +
-      "\n\005query\030\003 \001(\tR\005query\0227\n\nparameters\030\004 \001(\013" +
-      "2\027.google.protobuf.StructR\nparameters\022\'\n" +
-      "\017idempotency_key\030\005 \001(\tR\016idempotencyKey\"\240" +
-      "\001\n\016GraphResultSet\0221\n\007records\030\001 \003(\0132\027.goo" +
-      "gle.protobuf.StructR\007records\022&\n\017next_pag" +
-      "e_token\030\002 \001(\tR\rnextPageToken\0223\n\005stats\030\003 " +
-      "\001(\0132\035.udb.entity.v1.OperationStatsR\005stat" +
-      "s\"\362\002\n\017TimeSeriesPoint\0228\n\ttimestamp\030\001 \001(\013" +
-      "2\032.google.protobuf.TimestampR\ttimestamp\022" +
-      "<\n\004tags\030\002 \003(\0132(.udb.entity.v1.TimeSeries" +
-      "Point.TagsEntryR\004tags\022B\n\006values\030\003 \003(\0132*." +
-      "udb.entity.v1.TimeSeriesPoint.ValuesEntr" +
-      "yR\006values\022/\n\006fields\030\004 \001(\0132\027.google.proto" +
-      "buf.StructR\006fields\0327\n\tTagsEntry\022\020\n\003key\030\001" +
-      " \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\0329\n\013V" +
-      "aluesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 " +
-      "\001(\001R\005value:\0028\001\"\354\001\n\026TimeSeriesWriteReques" +
-      "t\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reque" +
-      "stContextR\007context\0228\n\010resource\030\002 \001(\0132\034.u" +
-      "db.entity.v1.StoreResourceR\010resource\0226\n\006" +
-      "points\030\003 \003(\0132\036.udb.entity.v1.TimeSeriesP" +
-      "ointR\006points\022\'\n\017idempotency_key\030\004 \001(\tR\016i" +
-      "dempotencyKey\"\266\003\n\026TimeSeriesQueryRequest" +
-      "\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reques" +
-      "tContextR\007context\0228\n\010resource\030\002 \001(\0132\034.ud" +
-      "b.entity.v1.StoreResourceR\010resource\022.\n\004f" +
-      "rom\030\003 \001(\0132\032.google.protobuf.TimestampR\004f" +
-      "rom\022*\n\002to\030\004 \001(\0132\032.google.protobuf.Timest" +
-      "ampR\002to\022/\n\006filter\030\005 \001(\0132\027.google.protobu" +
-      "f.StructR\006filter\022\026\n\006fields\030\006 \003(\tR\006fields" +
-      "\022\031\n\010group_by\030\007 \001(\tR\007groupBy\022\034\n\taggregate" +
-      "\030\010 \001(\tR\taggregate\022\026\n\006window\030\t \001(\tR\006windo" +
-      "w\022\024\n\005limit\030\n \001(\005R\005limit\022\035\n\npage_token\030\013 " +
-      "\001(\tR\tpageToken\"\256\001\n\027TimeSeriesQueryRespon" +
-      "se\0226\n\006points\030\001 \003(\0132\036.udb.entity.v1.TimeS" +
-      "eriesPointR\006points\022&\n\017next_page_token\030\002 " +
-      "\001(\tR\rnextPageToken\0223\n\005stats\030\003 \001(\0132\035.udb." +
-      "entity.v1.OperationStatsR\005stats\"\250\002\n\026Anal" +
-      "yticalQueryRequest\0227\n\007context\030\001 \001(\0132\035.ud" +
-      "b.entity.v1.RequestContextR\007context\0228\n\010r" +
-      "esource\030\002 \001(\0132\034.udb.entity.v1.StoreResou" +
-      "rceR\010resource\022\024\n\005query\030\003 \001(\tR\005query\0227\n\np" +
-      "arameters\030\004 \001(\0132\027.google.protobuf.Struct" +
-      "R\nparameters\022\024\n\005limit\030\005 \001(\005R\005limit\022\035\n\npa" +
-      "ge_token\030\006 \001(\tR\tpageToken\022\027\n\007dry_run\030\007 \001" +
-      "(\010R\006dryRun\"\333\001\n\027AnalyticalQueryResponse\022&" +
-      "\n\004rows\030\001 \003(\0132\022.udb.entity.v1.RowR\004rows\022&" +
+      "ocument_id\030\003 \001(\tR\ndocumentId\0223\n\010document" +
+      "\030\004 \001(\0132\027.google.protobuf.StructR\010documen" +
+      "t\022!\n\014merge_fields\030\005 \003(\tR\013mergeFields\022\030\n\007" +
+      "replace\030\006 \001(\010R\007replace\022\'\n\017idempotency_ke" +
+      "y\030\007 \001(\tR\016idempotencyKey\"\205\002\n\025DocumentDele" +
+      "teRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity." +
+      "v1.RequestContextR\007context\0228\n\010resource\030\002" +
+      " \001(\0132\034.udb.entity.v1.StoreResourceR\010reso" +
+      "urce\022\037\n\013document_id\030\003 \001(\tR\ndocumentId\022/\n" +
+      "\006filter\030\004 \001(\0132\027.google.protobuf.StructR\006" +
+      "filter\022\'\n\017idempotency_key\030\005 \001(\tR\016idempot" +
+      "encyKey\"\241\001\n\013DocumentSet\0225\n\tdocuments\030\001 \003" +
+      "(\0132\027.google.protobuf.StructR\tdocuments\022&" +
       "\n\017next_page_token\030\002 \001(\tR\rnextPageToken\0223" +
       "\n\005stats\030\003 \001(\0132\035.udb.entity.v1.OperationS" +
-      "tatsR\005stats\022;\n\010warnings\030\004 \003(\0132\037.udb.enti" +
-      "ty.v1.OperationWarningR\010warnings*\270\001\n\027Gra" +
-      "phTraversalDirection\022)\n%GRAPH_TRAVERSAL_" +
-      "DIRECTION_UNSPECIFIED\020\000\022&\n\"GRAPH_TRAVERS" +
-      "AL_DIRECTION_OUTGOING\020\001\022&\n\"GRAPH_TRAVERS" +
-      "AL_DIRECTION_INCOMING\020\002\022\"\n\036GRAPH_TRAVERS" +
-      "AL_DIRECTION_BOTH\020\003B\261\001\n\021com.udb.entity.v" +
-      "1B\013StoresProtoP\001Z9github.com/fahara02/ud" +
-      "b/sdk/go/gen/udb/entity/v1;entityv1\242\002\003UE" +
-      "X\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\" +
-      "GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V1b" +
-      "\006proto3"
+      "tatsR\005stats\"\344\002\n\021GraphQueryRequest\0227\n\007con" +
+      "text\030\001 \001(\0132\035.udb.entity.v1.RequestContex" +
+      "tR\007context\0228\n\010resource\030\002 \001(\0132\034.udb.entit" +
+      "y.v1.StoreResourceR\010resource\022\024\n\005query\030\003 " +
+      "\001(\tR\005query\0227\n\nparameters\030\004 \001(\0132\027.google." +
+      "protobuf.StructR\nparameters\022\024\n\005limit\030\005 \001" +
+      "(\005R\005limit\022\035\n\npage_token\030\006 \001(\tR\tpageToken" +
+      "\022\033\n\tread_only\030\007 \001(\010R\010readOnly\022;\n\ttravers" +
+      "al\030\010 \001(\0132\035.udb.entity.v1.GraphTraversalR" +
+      "\ttraversal\"\345\005\n\016GraphTraversal\022\037\n\013start_l" +
+      "abel\030\001 \001(\tR\nstartLabel\022\031\n\010start_id\030\002 \001(\t" +
+      "R\007startId\022-\n\022relationship_types\030\003 \003(\tR\021r" +
+      "elationshipTypes\022D\n\tdirection\030\004 \001(\0162&.ud" +
+      "b.entity.v1.GraphTraversalDirectionR\tdir" +
+      "ection\022\033\n\tmin_depth\030\005 \001(\005R\010minDepth\022\033\n\tm" +
+      "ax_depth\030\006 \001(\005R\010maxDepth\022\037\n\013node_labels\030" +
+      "\007 \003(\tR\nnodeLabels\022g\n\024node_property_equal" +
+      "s\030\010 \003(\01325.udb.entity.v1.GraphTraversal.N" +
+      "odePropertyEqualsEntryR\022nodePropertyEqua" +
+      "ls\022\024\n\005limit\030\t \001(\005R\005limit\0221\n\024return_relat" +
+      "ionships\030\n \001(\010R\023returnRelationships\022\177\n\034r" +
+      "elationship_property_equals\030\013 \003(\0132=.udb." +
+      "entity.v1.GraphTraversal.RelationshipPro" +
+      "pertyEqualsEntryR\032relationshipPropertyEq" +
+      "uals\032E\n\027NodePropertyEqualsEntry\022\020\n\003key\030\001" +
+      " \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\032M\n\037R" +
+      "elationshipPropertyEqualsEntry\022\020\n\003key\030\001 " +
+      "\001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\201\002\n\024G" +
+      "raphMutationRequest\0227\n\007context\030\001 \001(\0132\035.u" +
+      "db.entity.v1.RequestContextR\007context\0228\n\010" +
+      "resource\030\002 \001(\0132\034.udb.entity.v1.StoreReso" +
+      "urceR\010resource\022\024\n\005query\030\003 \001(\tR\005query\0227\n\n" +
+      "parameters\030\004 \001(\0132\027.google.protobuf.Struc" +
+      "tR\nparameters\022\'\n\017idempotency_key\030\005 \001(\tR\016" +
+      "idempotencyKey\"\240\001\n\016GraphResultSet\0221\n\007rec" +
+      "ords\030\001 \003(\0132\027.google.protobuf.StructR\007rec" +
+      "ords\022&\n\017next_page_token\030\002 \001(\tR\rnextPageT" +
+      "oken\0223\n\005stats\030\003 \001(\0132\035.udb.entity.v1.Oper" +
+      "ationStatsR\005stats\"\362\002\n\017TimeSeriesPoint\0228\n" +
+      "\ttimestamp\030\001 \001(\0132\032.google.protobuf.Times" +
+      "tampR\ttimestamp\022<\n\004tags\030\002 \003(\0132(.udb.enti" +
+      "ty.v1.TimeSeriesPoint.TagsEntryR\004tags\022B\n" +
+      "\006values\030\003 \003(\0132*.udb.entity.v1.TimeSeries" +
+      "Point.ValuesEntryR\006values\022/\n\006fields\030\004 \001(" +
+      "\0132\027.google.protobuf.StructR\006fields\0327\n\tTa" +
+      "gsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\t" +
+      "R\005value:\0028\001\0329\n\013ValuesEntry\022\020\n\003key\030\001 \001(\tR" +
+      "\003key\022\024\n\005value\030\002 \001(\001R\005value:\0028\001\"\354\001\n\026TimeS" +
+      "eriesWriteRequest\0227\n\007context\030\001 \001(\0132\035.udb" +
+      ".entity.v1.RequestContextR\007context\0228\n\010re" +
+      "source\030\002 \001(\0132\034.udb.entity.v1.StoreResour" +
+      "ceR\010resource\0226\n\006points\030\003 \003(\0132\036.udb.entit" +
+      "y.v1.TimeSeriesPointR\006points\022\'\n\017idempote" +
+      "ncy_key\030\004 \001(\tR\016idempotencyKey\"\266\003\n\026TimeSe" +
+      "riesQueryRequest\0227\n\007context\030\001 \001(\0132\035.udb." +
+      "entity.v1.RequestContextR\007context\0228\n\010res" +
+      "ource\030\002 \001(\0132\034.udb.entity.v1.StoreResourc" +
+      "eR\010resource\022.\n\004from\030\003 \001(\0132\032.google.proto" +
+      "buf.TimestampR\004from\022*\n\002to\030\004 \001(\0132\032.google" +
+      ".protobuf.TimestampR\002to\022/\n\006filter\030\005 \001(\0132" +
+      "\027.google.protobuf.StructR\006filter\022\026\n\006fiel" +
+      "ds\030\006 \003(\tR\006fields\022\031\n\010group_by\030\007 \001(\tR\007grou" +
+      "pBy\022\034\n\taggregate\030\010 \001(\tR\taggregate\022\026\n\006win" +
+      "dow\030\t \001(\tR\006window\022\024\n\005limit\030\n \001(\005R\005limit\022" +
+      "\035\n\npage_token\030\013 \001(\tR\tpageToken\"\256\001\n\027TimeS" +
+      "eriesQueryResponse\0226\n\006points\030\001 \003(\0132\036.udb" +
+      ".entity.v1.TimeSeriesPointR\006points\022&\n\017ne" +
+      "xt_page_token\030\002 \001(\tR\rnextPageToken\0223\n\005st" +
+      "ats\030\003 \001(\0132\035.udb.entity.v1.OperationStats" +
+      "R\005stats\"\250\002\n\026AnalyticalQueryRequest\0227\n\007co" +
+      "ntext\030\001 \001(\0132\035.udb.entity.v1.RequestConte" +
+      "xtR\007context\0228\n\010resource\030\002 \001(\0132\034.udb.enti" +
+      "ty.v1.StoreResourceR\010resource\022\024\n\005query\030\003" +
+      " \001(\tR\005query\0227\n\nparameters\030\004 \001(\0132\027.google" +
+      ".protobuf.StructR\nparameters\022\024\n\005limit\030\005 " +
+      "\001(\005R\005limit\022\035\n\npage_token\030\006 \001(\tR\tpageToke" +
+      "n\022\027\n\007dry_run\030\007 \001(\010R\006dryRun\"\333\001\n\027Analytica" +
+      "lQueryResponse\022&\n\004rows\030\001 \003(\0132\022.udb.entit" +
+      "y.v1.RowR\004rows\022&\n\017next_page_token\030\002 \001(\tR" +
+      "\rnextPageToken\0223\n\005stats\030\003 \001(\0132\035.udb.enti" +
+      "ty.v1.OperationStatsR\005stats\022;\n\010warnings\030" +
+      "\004 \003(\0132\037.udb.entity.v1.OperationWarningR\010" +
+      "warnings*\270\001\n\027GraphTraversalDirection\022)\n%" +
+      "GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED\020\000\022" +
+      "&\n\"GRAPH_TRAVERSAL_DIRECTION_OUTGOING\020\001\022" +
+      "&\n\"GRAPH_TRAVERSAL_DIRECTION_INCOMING\020\002\022" +
+      "\"\n\036GRAPH_TRAVERSAL_DIRECTION_BOTH\020\003B\261\001\n\021" +
+      "com.udb.entity.v1B\013StoresProtoP\001Z9github" +
+      ".com/fahara02/udb/sdk/go/gen/udb/entity/" +
+      "v1;entityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\" +
+      "Entity\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017" +
+      "Udb::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -347,7 +349,7 @@ public final class StoresProto {
     internal_static_udb_entity_v1_CacheGetRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CacheGetRequest_descriptor,
-        new java.lang.String[] { "Context", "Resource", "Key", "Touch", });
+        new java.lang.String[] { "Context", "Resource", "Key", "Touch", "Shared", });
     internal_static_udb_entity_v1_CacheGetResponse_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_udb_entity_v1_CacheGetResponse_fieldAccessorTable = new
@@ -359,19 +361,19 @@ public final class StoresProto {
     internal_static_udb_entity_v1_CacheSetRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CacheSetRequest_descriptor,
-        new java.lang.String[] { "Context", "Resource", "Key", "Value", "ContentType", "TtlSeconds", "OnlyIfAbsent", "OnlyIfPresent", "IdempotencyKey", "Metadata", });
+        new java.lang.String[] { "Context", "Resource", "Key", "Value", "ContentType", "TtlSeconds", "OnlyIfAbsent", "OnlyIfPresent", "IdempotencyKey", "Metadata", "Shared", });
     internal_static_udb_entity_v1_CacheDeleteRequest_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_udb_entity_v1_CacheDeleteRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CacheDeleteRequest_descriptor,
-        new java.lang.String[] { "Context", "Resource", "Key", "IdempotencyKey", });
+        new java.lang.String[] { "Context", "Resource", "Key", "IdempotencyKey", "Shared", });
     internal_static_udb_entity_v1_CacheScanRequest_descriptor =
       getDescriptor().getMessageTypes().get(4);
     internal_static_udb_entity_v1_CacheScanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CacheScanRequest_descriptor,
-        new java.lang.String[] { "Context", "Resource", "KeyPattern", "Limit", "PageToken", });
+        new java.lang.String[] { "Context", "Resource", "KeyPattern", "Limit", "PageToken", "Shared", });
     internal_static_udb_entity_v1_CacheEntry_descriptor =
       getDescriptor().getMessageTypes().get(5);
     internal_static_udb_entity_v1_CacheEntry_fieldAccessorTable = new

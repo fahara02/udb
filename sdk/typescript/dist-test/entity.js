@@ -14,6 +14,7 @@ exports.parseRecordJson = parseRecordJson;
 exports.udbEnumToText = udbEnumToText;
 exports.udbEnumFromText = udbEnumFromText;
 exports.udbBigInt = udbBigInt;
+const recordCodec_1 = require("./recordCodec");
 const DATABROKER = "udb.services.v1.DataBroker";
 /** Encode a JS record as `record_json` bytes the broker expects. */
 function jsonBytes(record) {
@@ -233,6 +234,8 @@ class EntityHandle {
             request.fields = [...opts.fields];
         if (opts.includeTotal)
             request.include_total = true;
+        if (opts.includeDeleted)
+            request.include_deleted = true;
         if (opts.orderBy?.length) {
             request.sort = opts.orderBy.map((column) => ({
                 field: column.startsWith("-") ? column.slice(1) : column,
@@ -405,6 +408,7 @@ class TypedTable {
                 pageToken: opts.pageToken,
                 orderBy: opts.orderBy?.map((column) => column.startsWith("-") ? `-${this.fieldOf(column.slice(1))}` : this.fieldOf(column)),
                 includeTotal: opts.includeTotal,
+                includeDeleted: opts.includeDeleted,
                 fields: opts.fields
                     ? opts.fields.map((name) => this.fieldOf(name))
                     : opts.includePii
@@ -660,9 +664,11 @@ exports.TypedRepo = TypedRepo;
 class UdbColumn {
     field;
     enumPrefix;
-    constructor(field, enumPrefix = "") {
+    enumAllowed;
+    constructor(field, enumPrefix = "", enumAllowed = []) {
         this.field = field;
         this.enumPrefix = enumPrefix;
+        this.enumAllowed = enumAllowed;
     }
     value(v) {
         if (v === null || v === undefined) {
@@ -671,7 +677,7 @@ class UdbColumn {
         if (typeof v === "number" && Number.isInteger(v) && !Number.isSafeInteger(v)) {
             throw new Error(`udb: predicate ${this.field}: integer exceeds the exact filter number range; pass it as a string`);
         }
-        return this.enumPrefix ? udbEnumToText(v, this.enumPrefix) : v;
+        return this.enumPrefix || this.enumAllowed.length ? udbEnumToText(v, this.enumPrefix, this.enumAllowed) : v;
     }
     compare(op, v) {
         return { [this.field]: { [op]: this.value(v) } };
@@ -690,11 +696,21 @@ class UdbColumn {
     notNull() { return { [this.field]: { $not_null: true } }; }
 }
 exports.UdbColumn = UdbColumn;
-/** Stored text of an enum value: the value name without the common prefix. */
-function udbEnumToText(value, prefix) {
-    return typeof value === "string" && value.startsWith(prefix) ? value.slice(prefix.length) : value;
+/** Stored text of an enum value (a full name or a short token). With `allowed` (the
+ *  column's enum_values, which its CHECK lists) it is the matching list entry, and a value
+ *  outside the list throws; without, it is the short token (the name without the common
+ *  prefix). */
+function udbEnumToText(value, prefix, allowed = []) {
+    if (typeof value !== "string")
+        return value;
+    const stored = (0, recordCodec_1.enumStoredText)(value, prefix, allowed);
+    if (stored === undefined) {
+        throw new Error(`udb: enum value ${value} is not in the column's enum_values (${allowed.join(", ")}); the value breaks its CHECK constraint`);
+    }
+    return stored;
 }
-/** The enum value name for stored text. */
+/** The enum value name for stored text. Rows written by older SDKs may hold the short
+ *  token; it reads back as the full name. */
 function udbEnumFromText(value, prefix) {
     return typeof value === "string" && !value.startsWith(prefix) ? prefix + value : value;
 }

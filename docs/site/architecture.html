@@ -93,7 +93,7 @@
         <table>
           <thead><tr><th>Plane</th><th>Listener</th><th>Surface</th><th class="n">RPCs</th></tr></thead>
           <tbody>
-            <tr><td><b>Data plane</b></td><td>Public <code>DataBroker</code>, <code>:50051</code></td><td>Relational, vector, object, cache, document, graph, time-series, analytical; transactions, CDC, catalog, migration, saga</td><td class="n"><span data-udb-count="data_rpcs">84</span></td></tr>
+            <tr><td><b>Data plane</b></td><td>Public <code>DataBroker</code>, <code>:50051</code></td><td>Relational, vector, object, cache, document, graph, time-series, analytical; transactions, CDC, catalog, migration, saga</td><td class="n"><span data-udb-count="data_rpcs">85</span></td></tr>
             <tr><td><b>Control plane</b></td><td>Isolated <code>UDB_AUTH_GRPC_ADDR</code>, loopback <code>:50061</code> (data port + 10) by default</td><td><span data-udb-count="native_services">28</span> native services — authn, authz, API keys, IdP, tenant, notification, analytics, storage, asset, WebRTC, policy distribution, vault, metering, scheduler, search, webhook, workflow, lock, livequery, config, backup, embedding, messaging, and cache. Per-RPC scopes and credentials: <a href="https://github.com/fahara02/udb/blob/main/docs/generated/native-services.md">generated service reference</a></td><td class="n"><span data-udb-count="native_rpcs">343</span></td></tr>
             <tr><td><b>WebRTC peer</b></td><td><code>UDB_WEBRTC_GRPC_ADDR</code>, loopback <code>:50071</code> (data port + 20)</td><td>Peer-token RPCs for browser and app peers</td><td class="n">—</td></tr>
             <tr><td><b>Metrics</b></td><td><code>UDB_METRICS_ADDR</code>, <code>0.0.0.0:50052</code></td><td>Prometheus metrics</td><td class="n">—</td></tr>
@@ -120,7 +120,7 @@
       <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT License</a>
     </nav>
   </div>
-  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.6.21 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.6.22 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
 </footer>
 
 <script defer src="./app.js"></script>

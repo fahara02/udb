@@ -270,6 +270,10 @@ export class EntityHandle<T = any> {
       /** Sort columns; `-column` for descending. */
       orderBy?: readonly string[];
       includeTotal?: boolean;
+      /** Also return soft-deleted rows, each with its soft-delete column (for
+       *  example `deleted_at`) set. Needs scope `udb:deleted:read`, works only on
+       *  an entity with soft delete, and every such read is audited. */
+      includeDeleted?: boolean;
       call?: CallOptions;
     } = {},
   ): Promise<EntityPage<T>> {
@@ -282,6 +286,7 @@ export class EntityHandle<T = any> {
     if (opts.pageToken) request.page_token = opts.pageToken;
     if (opts.fields?.length) request.fields = [...opts.fields];
     if (opts.includeTotal) request.include_total = true;
+    if (opts.includeDeleted) request.include_deleted = true;
     if (opts.orderBy?.length) {
       request.sort = opts.orderBy.map((column) => ({
         field: column.startsWith("-") ? column.slice(1) : column,
@@ -507,6 +512,11 @@ export interface TypedSelectOptions extends TypedReadOptions {
   includeTotal?: boolean;
   /** Read only these columns, so rows are partial. */
   fields?: readonly string[];
+  /** Also return soft-deleted rows; a deleted row has its soft-delete column
+   *  (for example `deletedAt`) set. Needs scope `udb:deleted:read`
+   *  (`ErrorCode.ScopeMissing` without it), works only on an entity with soft
+   *  delete (`ErrorCode.Invalid` otherwise), and every such read is audited. */
+  includeDeleted?: boolean;
 }
 
 /** Options of a write on a {@link TypedTable}. */
@@ -580,6 +590,7 @@ export class TypedTable<Row extends object, Key extends object> {
           column.startsWith("-") ? `-${this.fieldOf(column.slice(1))}` : this.fieldOf(column),
         ),
         includeTotal: opts.includeTotal,
+        includeDeleted: opts.includeDeleted,
         fields: opts.fields
           ? opts.fields.map((name) => this.fieldOf(name))
           : opts.includePii

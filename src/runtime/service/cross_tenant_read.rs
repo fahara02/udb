@@ -122,27 +122,36 @@ pub(crate) async fn admit(
         "trace_id": security.trace_id,
         "decision_id": decision_id,
     });
-    let mut envelope = envelope;
-    let audit = audit_sink_for(&pool);
+    let written = record_privileged_read(&pool, "udb.data.cross_tenant_read", envelope).await;
+    if let Some(refusal) = refusal {
+        return Err(refusal);
+    }
+    written.map_err(|err| audit_failure(&err))
+}
+
+/// Write one privileged-read record (a cross-tenant read, a read that includes
+/// soft-deleted rows) to the durable audit log `udb_system.auth_audit_log`,
+/// through the one sink per data-plane pool, with each bounded value fitted to
+/// its column. `Err` means the record is not durable; the caller refuses the read.
+pub(crate) async fn record_privileged_read(
+    pool: &sqlx::PgPool,
+    topic: &str,
+    mut envelope: serde_json::Value,
+) -> Result<(), String> {
+    let audit = audit_sink_for(pool);
     if let Some(widths) = audit.widths().await {
         let truncated = fit_envelope_to_widths(&mut envelope, widths);
         if !truncated.is_empty() {
             tracing::warn!(
                 columns = ?truncated,
                 relation = AUTH_AUDIT_RELATION,
-                "cross-tenant read audit: value(s) longer than the audit column were cut to the \
+                topic,
+                "privileged read audit: value(s) longer than the audit column were cut to the \
                  column width; the full values are kept in the record's envelope under `untruncated`"
             );
         }
     }
-    let written = audit
-        .sink
-        .export("udb.data.cross_tenant_read", &envelope)
-        .await;
-    if let Some(refusal) = refusal {
-        return Err(refusal);
-    }
-    written.map_err(|err| audit_failure(&err))
+    audit.sink.export(topic, &envelope).await
 }
 
 /// The relation [`PostgresAuditLogSink::new`] writes. Kept in lock-step with it.

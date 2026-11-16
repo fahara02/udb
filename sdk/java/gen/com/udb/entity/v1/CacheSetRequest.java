@@ -287,6 +287,24 @@ private static final long serialVersionUID = 0L;
     return metadata_ == null ? com.google.protobuf.Struct.getDefaultInstance() : metadata_;
   }
 
+  public static final int SHARED_FIELD_NUMBER = 11;
+  private boolean shared_ = false;
+  /**
+   * <pre>
+   * Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+   * every tenant) instead of the caller's tenant namespace. Requires
+   * `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+   * (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+   * </pre>
+   *
+   * <code>bool shared = 11 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  @java.lang.Override
+  public boolean getShared() {
+    return shared_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -330,6 +348,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000004) != 0)) {
       output.writeMessage(10, getMetadata());
+    }
+    if (shared_ != false) {
+      output.writeBool(11, shared_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -377,6 +398,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(10, getMetadata());
     }
+    if (shared_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(11, shared_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -421,6 +446,8 @@ private static final long serialVersionUID = 0L;
       if (!getMetadata()
           .equals(other.getMetadata())) return false;
     }
+    if (getShared()
+        != other.getShared()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -461,6 +488,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + METADATA_FIELD_NUMBER;
       hash = (53 * hash) + getMetadata().hashCode();
     }
+    hash = (37 * hash) + SHARED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getShared());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -622,6 +652,7 @@ private static final long serialVersionUID = 0L;
         metadataBuilder_.dispose();
         metadataBuilder_ = null;
       }
+      shared_ = false;
       return this;
     }
 
@@ -695,6 +726,9 @@ private static final long serialVersionUID = 0L;
             : metadataBuilder_.build();
         to_bitField0_ |= 0x00000004;
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.shared_ = shared_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -745,6 +779,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasMetadata()) {
         mergeMetadata(other.getMetadata());
+      }
+      if (other.getShared() != false) {
+        setShared(other.getShared());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -828,6 +865,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 88: {
+              shared_ = input.readBool();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 88
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1550,6 +1592,59 @@ private static final long serialVersionUID = 0L;
         metadata_ = null;
       }
       return metadataBuilder_;
+    }
+
+    private boolean shared_ ;
+    /**
+     * <pre>
+     * Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Requires
+     * `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+     * (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+     * </pre>
+     *
+     * <code>bool shared = 11 [json_name = "shared"];</code>
+     * @return The shared.
+     */
+    @java.lang.Override
+    public boolean getShared() {
+      return shared_;
+    }
+    /**
+     * <pre>
+     * Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Requires
+     * `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+     * (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+     * </pre>
+     *
+     * <code>bool shared = 11 [json_name = "shared"];</code>
+     * @param value The shared to set.
+     * @return This builder for chaining.
+     */
+    public Builder setShared(boolean value) {
+
+      shared_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Requires
+     * `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+     * (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+     * </pre>
+     *
+     * <code>bool shared = 11 [json_name = "shared"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearShared() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      shared_ = false;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.CacheSetRequest)

@@ -104,4 +104,34 @@ public interface GraphStoreOptionsOrBuilder extends
    */
   com.google.protobuf.ByteString
       getPayloadSchemaJsonBytes();
+
+  /**
+   * <pre>
+   * Row filter: only rows matching this expression are projected; a row that
+   * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+   * the store, and a delete still deletes. Columns of this entity compared with
+   * literals: =, &lt;&gt;, &lt;, &lt;=, &gt;, &gt;=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+   * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+   * Validated when the catalog is built.
+   * </pre>
+   *
+   * <code>string projection_filter = 9 [json_name = "projectionFilter"];</code>
+   * @return The projectionFilter.
+   */
+  java.lang.String getProjectionFilter();
+  /**
+   * <pre>
+   * Row filter: only rows matching this expression are projected; a row that
+   * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+   * the store, and a delete still deletes. Columns of this entity compared with
+   * literals: =, &lt;&gt;, &lt;, &lt;=, &gt;, &gt;=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+   * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+   * Validated when the catalog is built.
+   * </pre>
+   *
+   * <code>string projection_filter = 9 [json_name = "projectionFilter"];</code>
+   * @return The bytes for projectionFilter.
+   */
+  com.google.protobuf.ByteString
+      getProjectionFilterBytes();
 }

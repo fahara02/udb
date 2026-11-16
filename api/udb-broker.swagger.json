@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.6.21",
+    "version": "0.6.22",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -24660,7 +24660,7 @@
     },
     "/v1/backups:restore": {
       "post": {
-        "summary": "Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires\nan explicit confirmation token, the cross-tenant movement scope check, and a\ntarget tenant that holds no rows (restoring over a live tenant is refused).",
+        "summary": "Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires\nan explicit confirmation token, the cross-tenant movement scope check, and a\ntarget tenant that holds no rows (restoring over a live tenant is refused).\nWith `scope: BACKUP_SCOPE_SHARED` (platform admin only) it restores a shared\nbackup into the project's shared tables, which must hold no rows.",
         "operationId": "restoreTenant",
         "responses": {
           "200": {
@@ -24803,7 +24803,7 @@
     },
     "/v1/backups:start": {
       "post": {
-        "summary": "Start a logical backup of the calling tenant. Enumerates tenant-owned tables\nvia the shared resolver, encrypts each table's rows to object storage, and\njournals the run. Tenant-less tables are reported as excluded.",
+        "summary": "Start a logical backup of the calling tenant. Enumerates tenant-owned tables\nvia the shared resolver, encrypts each table's rows to object storage, and\njournals the run. Tenant-less tables are reported as excluded. With\n`scope: BACKUP_SCOPE_SHARED` (platform admin only) it backs up the rows of\nthe project's shared tables instead.",
         "operationId": "startTenantBackup",
         "responses": {
           "200": {
@@ -25214,6 +25214,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "shared",
+            "description": "Read the shared namespace (the reserved shared-tenant keyspace every\ntenant reads) instead of the caller's tenant keyspace.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -25517,6 +25524,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "shared",
+            "description": "Read the shared namespace (the reserved shared-tenant keyspace every\ntenant reads) instead of the caller's tenant keyspace.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -25668,6 +25682,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "shared",
+            "description": "Write the shared namespace (the reserved shared-tenant keyspace every\ntenant reads) instead of the caller's tenant keyspace. Requires a platform\nadmin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -26144,6 +26165,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "shared",
+            "description": "Read the shared namespace (the reserved shared-tenant keyspace every\ntenant reads) instead of the caller's tenant keyspace.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -53467,6 +53495,10 @@
         "confirmationToken": {
           "type": "string",
           "description": "Required explicit confirmation token; an empty token fails closed\n(DESTRUCTIVE namespace flush)."
+        },
+        "shared": {
+          "type": "boolean",
+          "description": "Write the shared namespace (the reserved shared-tenant keyspace every\ntenant reads) instead of the caller's tenant keyspace. Requires a platform\nadmin or the `udb:global:write` scope; otherwise PERMISSION_DENIED."
         }
       }
     },
@@ -53484,6 +53516,10 @@
           "type": "string",
           "format": "int64",
           "description": "0 = use the namespace default TTL (or no expiry if none configured)."
+        },
+        "shared": {
+          "type": "boolean",
+          "description": "Write the shared namespace (the reserved shared-tenant keyspace every\ntenant reads) instead of the caller's tenant keyspace. Requires a platform\nadmin or the `udb:global:write` scope; otherwise PERMISSION_DENIED."
         }
       }
     },
@@ -55768,7 +55804,7 @@
           "type": "string"
         }
       },
-      "description": "A table excluded from the backup because it has no resolvable tenant column.\nReported, never silently skipped."
+      "description": "A table excluded from the backup: in a tenant backup one with no resolvable\ntenant column, in a shared backup one that is not a shared table. Reported,\nnever silently skipped."
     },
     "v1BackupPolicyView": {
       "type": "object",
@@ -55867,9 +55903,23 @@
         "projectId": {
           "type": "string",
           "description": "First-class project owner of this journal row."
+        },
+        "scope": {
+          "$ref": "#/definitions/v1BackupScope",
+          "description": "BACKUP_SCOPE_SHARED for a shared-table backup or restore (its\nsource_tenant_id is the reserved shared marker `*shared*`), otherwise\nBACKUP_SCOPE_TENANT."
         }
       },
       "description": "A backup/restore journal row."
+    },
+    "v1BackupScope": {
+      "type": "string",
+      "enum": [
+        "BACKUP_SCOPE_UNSPECIFIED",
+        "BACKUP_SCOPE_TENANT",
+        "BACKUP_SCOPE_SHARED"
+      ],
+      "default": "BACKUP_SCOPE_UNSPECIFIED",
+      "description": "Which rows a backup or restore moves.\n\n - BACKUP_SCOPE_UNSPECIFIED: Treated as BACKUP_SCOPE_TENANT.\n - BACKUP_SCOPE_TENANT: One tenant's rows in the tenant-owned tables (the default).\n - BACKUP_SCOPE_SHARED: Every row of the active project catalog's shared (global) tables: tenant\nisolation declared none/global/disabled/off and no tenant column. Platform\nadmin only; tenant-owned tables are reported as excluded."
     },
     "v1BackupTableEntry": {
       "type": "object",
@@ -56038,6 +56088,10 @@
           "type": "string",
           "format": "int64",
           "description": "Upper bound for the new value; 0 = no bound. An increment that would take\nthe value above `max` is not applied and the response has `refused` set."
+        },
+        "shared": {
+          "type": "boolean",
+          "description": "Write the shared namespace (the reserved shared-tenant keyspace every\ntenant reads) instead of the caller's tenant keyspace. Requires a platform\nadmin or the `udb:global:write` scope; otherwise PERMISSION_DENIED."
         }
       }
     },
@@ -56925,6 +56979,10 @@
           "type": "string",
           "format": "int64",
           "description": "Default TTL applied to a Set that does not specify one. 0 = no default."
+        },
+        "shared": {
+          "type": "boolean",
+          "description": "Write the shared namespace (the reserved shared-tenant keyspace every\ntenant reads) instead of the caller's tenant keyspace. Requires a platform\nadmin or the `udb:global:write` scope; otherwise PERMISSION_DENIED."
         }
       }
     },
@@ -65123,6 +65181,10 @@
         },
         "metadataJson": {
           "type": "string"
+        },
+        "scope": {
+          "$ref": "#/definitions/v1BackupScope",
+          "description": "BACKUP_SCOPE_SHARED restores a shared backup into the project's shared\ntables. Platform admin only. `source_tenant_id` names the tenant whose\njournal holds the run (the `tenant_id` the shared backup was started with);\n`target_tenant_id` and `allow_cross_tenant` must be left empty, since shared\nrows belong to no tenant. A shared backup is never restored with the\ntenant scope, nor a tenant backup with the shared scope."
         }
       }
     },
@@ -67196,6 +67258,10 @@
         },
         "metadataJson": {
           "type": "string"
+        },
+        "scope": {
+          "$ref": "#/definitions/v1BackupScope",
+          "description": "BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the\ntenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is\njournaled under `tenant_id`."
         }
       }
     },

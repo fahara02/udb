@@ -14,7 +14,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/relational.proto.
  */
 export const file_udb_entity_v1_relational: GenFile = /*@__PURE__*/
-  fileDesc("Ch51ZGIvZW50aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8SDXVkYi5lbnRpdHkudjEiKQoEU29ydBINCgVmaWVsZBgBIAEoCRISCgpkZXNjZW5kaW5nGAIgASgIIk4KDENhY2hlT3B0aW9ucxITCgtieXBhc3NfcmVhZBgBIAEoCBIUCgxieXBhc3Nfd3JpdGUYAiABKAgSEwoLdHRsX3NlY29uZHMYAyABKAUifAoDUm93Ei4KBmZpZWxkcxgBIAMoCzIeLnVkYi5lbnRpdHkudjEuUm93LkZpZWxkc0VudHJ5GkUKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAEiyQEKCVJlY29yZFNldBIUCgxyZWNvcmRzX2pzb24YASADKAwSIAoEcm93cxgCIAMoCzISLnVkYi5lbnRpdHkudjEuUm93EhcKD25leHRfcGFnZV90b2tlbhgDIAEoCRIYChByZWNvcmRfcmV2aXNpb25zGAUgAygJEhAKCGhhc19tb3JlGAYgASgIEhMKC2V4YWN0X3RvdGFsGAcgASgDEhcKD3JlZGFjdGVkX2ZpZWxkcxgIIAMoCUoECAQQBVILdG90YWxfY291bnQisQIKDVNlbGVjdFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEicKBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSDgoGZmllbGRzGAQgAygJEg0KBWxpbWl0GAUgASgFEhIKCnBhZ2VfdG9rZW4YBiABKAkSIQoEc29ydBgHIAMoCzITLnVkYi5lbnRpdHkudjEuU29ydBIqCgVjYWNoZRgIIAEoCzIbLnVkYi5lbnRpdHkudjEuQ2FjaGVPcHRpb25zEhgKEGluY2x1ZGVfcmV2aXNpb24YCSABKAgSFQoNaW5jbHVkZV90b3RhbBgKIAEoCCLeAgoNVXBzZXJ0UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSEwoLcmVjb3JkX2pzb24YAyABKAwSKAoHcGF5bG9hZBgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPY29uZmxpY3RfZmllbGRzGAUgAygJEhUKDXJldHVybl9yZWNvcmQYBiABKAgSKgoFY2FjaGUYByABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0aW9ucxIXCg9pZGVtcG90ZW5jeV9rZXkYCCABKAkSKQoIZXhwZWN0ZWQYCSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhEKCWxvY2tfbmFtZRgKIAEoCRIVCg1mZW5jaW5nX3Rva2VuGAsgASgDIqECCg1EZWxldGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhcKD2lkZW1wb3RlbmN5X2tleRgEIAEoCRIpCghleHBlY3RlZBgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSGQoRZXhwZWN0ZWRfcmV2aXNpb24YBiABKAkSEQoJbG9ja19uYW1lGAcgASgJEhUKDWZlbmNpbmdfdG9rZW4YCCABKAMSGAoQcmVxdWlyZV9hZmZlY3RlZBgJIAEoDSLKAwoNVXBkYXRlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSJwoGZmlsdGVyGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIoCgdjaGFuZ2VzGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIpCghleHBlY3RlZBgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSOgoKaW5jcmVtZW50cxgGIAMoCzImLnVkYi5lbnRpdHkudjEuVXBkYXRlUmVxdWVzdC5JbmNyZW1lbnQSFwoPaWRlbXBvdGVuY3lfa2V5GAcgASgJEhUKDXJldHVybl9yZWNvcmQYCCABKAgSGQoRZXhwZWN0ZWRfcmV2aXNpb24YCSABKAkSEQoJbG9ja19uYW1lGAogASgJEhUKDWZlbmNpbmdfdG9rZW4YCyABKAMSGAoQcmVxdWlyZV9hZmZlY3RlZBgMIAEoDRoqCglJbmNyZW1lbnQSDgoGY29sdW1uGAEgASgJEg0KBWRlbHRhGAIgASgBIpIBCg5WaWV3RGVmaW5pdGlvbhIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIOCgZzY2hlbWEYAiABKAkSDAoEbmFtZRgDIAEoCRINCgVxdWVyeRgEIAEoCRIRCgl3aXRoX2RhdGEYBSABKAgSEAoIdHRsX2RheXMYBiABKAUi4gEKC0J1bGtDYXNJdGVtEicKBmZpbHRlchgBIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSKAoHY2hhbmdlcxgCIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAyABKAkSKQoIZXhwZWN0ZWQYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjoKCmluY3JlbWVudHMYBSADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50IqwBCg5CdWxrQ2FzUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSKQoFaXRlbXMYAyADKAsyGi51ZGIuZW50aXR5LnYxLkJ1bGtDYXNJdGVtEhcKD2lkZW1wb3RlbmN5X2tleRgEIAEoCRIQCghtYXhfcm93cxgFIAEoBSJbChFCdWxrQ2FzSXRlbVJlc3VsdBIPCgdtYXRjaGVkGAEgASgIEg8KB2NoYW5nZWQYAiABKAgSEgoKY29uZmxpY3RlZBgDIAEoCBIQCghyZXZpc2lvbhgEIAEoCSKWAQoPQnVsa0Nhc1Jlc3BvbnNlEg8KB21hdGNoZWQYASABKAUSDwoHY2hhbmdlZBgCIAEoBRISCgpjb25mbGljdGVkGAMgASgFEhoKEndyaXRlX3JlY2VpcHRfanNvbhgEIAEoCRIxCgdyZXN1bHRzGAUgAygLMiAudWRiLmVudGl0eS52MS5CdWxrQ2FzSXRlbVJlc3VsdEK1AQoRY29tLnVkYi5lbnRpdHkudjFCD1JlbGF0aW9uYWxQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_udb_entity_v1_context]);
+  fileDesc("Ch51ZGIvZW50aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8SDXVkYi5lbnRpdHkudjEiKQoEU29ydBINCgVmaWVsZBgBIAEoCRISCgpkZXNjZW5kaW5nGAIgASgIIk4KDENhY2hlT3B0aW9ucxITCgtieXBhc3NfcmVhZBgBIAEoCBIUCgxieXBhc3Nfd3JpdGUYAiABKAgSEwoLdHRsX3NlY29uZHMYAyABKAUifAoDUm93Ei4KBmZpZWxkcxgBIAMoCzIeLnVkYi5lbnRpdHkudjEuUm93LkZpZWxkc0VudHJ5GkUKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAEiyQEKCVJlY29yZFNldBIUCgxyZWNvcmRzX2pzb24YASADKAwSIAoEcm93cxgCIAMoCzISLnVkYi5lbnRpdHkudjEuUm93EhcKD25leHRfcGFnZV90b2tlbhgDIAEoCRIYChByZWNvcmRfcmV2aXNpb25zGAUgAygJEhAKCGhhc19tb3JlGAYgASgIEhMKC2V4YWN0X3RvdGFsGAcgASgDEhcKD3JlZGFjdGVkX2ZpZWxkcxgIIAMoCUoECAQQBVILdG90YWxfY291bnQiygIKDVNlbGVjdFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEicKBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSDgoGZmllbGRzGAQgAygJEg0KBWxpbWl0GAUgASgFEhIKCnBhZ2VfdG9rZW4YBiABKAkSIQoEc29ydBgHIAMoCzITLnVkYi5lbnRpdHkudjEuU29ydBIqCgVjYWNoZRgIIAEoCzIbLnVkYi5lbnRpdHkudjEuQ2FjaGVPcHRpb25zEhgKEGluY2x1ZGVfcmV2aXNpb24YCSABKAgSFQoNaW5jbHVkZV90b3RhbBgKIAEoCBIXCg9pbmNsdWRlX2RlbGV0ZWQYCyABKAgi3gIKDVVwc2VydFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEhMKC3JlY29yZF9qc29uGAMgASgMEigKB3BheWxvYWQYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhcKD2NvbmZsaWN0X2ZpZWxkcxgFIAMoCRIVCg1yZXR1cm5fcmVjb3JkGAYgASgIEioKBWNhY2hlGAcgASgLMhsudWRiLmVudGl0eS52MS5DYWNoZU9wdGlvbnMSFwoPaWRlbXBvdGVuY3lfa2V5GAggASgJEikKCGV4cGVjdGVkGAkgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIRCglsb2NrX25hbWUYCiABKAkSFQoNZmVuY2luZ190b2tlbhgLIAEoAyKhAgoNRGVsZXRlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSJwoGZmlsdGVyGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIXCg9pZGVtcG90ZW5jeV9rZXkYBCABKAkSKQoIZXhwZWN0ZWQYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhkKEWV4cGVjdGVkX3JldmlzaW9uGAYgASgJEhEKCWxvY2tfbmFtZRgHIAEoCRIVCg1mZW5jaW5nX3Rva2VuGAggASgDEhgKEHJlcXVpcmVfYWZmZWN0ZWQYCSABKA0iygMKDVVwZGF0ZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEicKBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSKAoHY2hhbmdlcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSKQoIZXhwZWN0ZWQYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjoKCmluY3JlbWVudHMYBiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50EhcKD2lkZW1wb3RlbmN5X2tleRgHIAEoCRIVCg1yZXR1cm5fcmVjb3JkGAggASgIEhkKEWV4cGVjdGVkX3JldmlzaW9uGAkgASgJEhEKCWxvY2tfbmFtZRgKIAEoCRIVCg1mZW5jaW5nX3Rva2VuGAsgASgDEhgKEHJlcXVpcmVfYWZmZWN0ZWQYDCABKA0aKgoJSW5jcmVtZW50Eg4KBmNvbHVtbhgBIAEoCRINCgVkZWx0YRgCIAEoASKSAQoOVmlld0RlZmluaXRpb24SLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSDgoGc2NoZW1hGAIgASgJEgwKBG5hbWUYAyABKAkSDQoFcXVlcnkYBCABKAkSEQoJd2l0aF9kYXRhGAUgASgIEhAKCHR0bF9kYXlzGAYgASgFIuIBCgtCdWxrQ2FzSXRlbRInCgZmaWx0ZXIYASABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EigKB2NoYW5nZXMYAiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhkKEWV4cGVjdGVkX3JldmlzaW9uGAMgASgJEikKCGV4cGVjdGVkGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBI6CgppbmNyZW1lbnRzGAUgAygLMiYudWRiLmVudGl0eS52MS5VcGRhdGVSZXF1ZXN0LkluY3JlbWVudCKsAQoOQnVsa0Nhc1JlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEikKBWl0ZW1zGAMgAygLMhoudWRiLmVudGl0eS52MS5CdWxrQ2FzSXRlbRIXCg9pZGVtcG90ZW5jeV9rZXkYBCABKAkSEAoIbWF4X3Jvd3MYBSABKAUiWwoRQnVsa0Nhc0l0ZW1SZXN1bHQSDwoHbWF0Y2hlZBgBIAEoCBIPCgdjaGFuZ2VkGAIgASgIEhIKCmNvbmZsaWN0ZWQYAyABKAgSEAoIcmV2aXNpb24YBCABKAkilgEKD0J1bGtDYXNSZXNwb25zZRIPCgdtYXRjaGVkGAEgASgFEg8KB2NoYW5nZWQYAiABKAUSEgoKY29uZmxpY3RlZBgDIAEoBRIaChJ3cml0ZV9yZWNlaXB0X2pzb24YBCABKAkSMQoHcmVzdWx0cxgFIAMoCzIgLnVkYi5lbnRpdHkudjEuQnVsa0Nhc0l0ZW1SZXN1bHQiswEKEUJ1bGtVcHNlcnRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRIUCgxyZWNvcmRzX2pzb24YAyADKAwSFwoPY29uZmxpY3RfZmllbGRzGAQgAygJEhcKD2lkZW1wb3RlbmN5X2tleRgFIAEoCRIQCghiYXRjaF9pZBgGIAEoCSLoAQoSQnVsa1Vwc2VydFJlc3BvbnNlEhAKCGJhdGNoX2lkGAEgASgJEhEKCXJvd19jb3VudBgCIAEoDRIVCg1hZmZlY3RlZF9yb3dzGAMgASgDEhMKC2tleXNfc2hhMjU2GAQgASgJEhEKCWZpcnN0X2tleRgFIAEoCRIQCghsYXN0X2tleRgGIAEoCRIaChJ3cml0ZV9yZWNlaXB0X2pzb24YByABKAkSFwoPc3RhdGVtZW50X2NvdW50GAggASgNEhAKCGV2ZW50X2lkGAkgASgJEhUKDXdhc19kdXBsaWNhdGUYCiABKAhCtQEKEWNvbS51ZGIuZW50aXR5LnYxQg9SZWxhdGlvbmFsUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_google_protobuf_struct, file_udb_entity_v1_context]);
 
 /**
  * @generated from message udb.entity.v1.Sort
@@ -246,6 +246,21 @@ export type SelectRequest = Message<"udb.entity.v1.SelectRequest"> & {
    * @generated from field: bool include_total = 10;
    */
   includeTotal: boolean;
+
+  /**
+   * Also return soft-deleted rows. Each returned row carries the entity's own
+   * soft-delete column (for example `deleted_at`), non-null on a deleted row,
+   * which the broker adds to an explicit `fields` list when it is missing.
+   * Needs scope `udb:deleted:read`; without it the read is refused with
+   * PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+   * without soft delete refuses it with INVALID_ARGUMENT naming this field.
+   * Every such read is written to the audit log (tenant, actor, entity, row
+   * count) before its rows are returned; it stays inside the caller's tenant
+   * and project, and it is never answered from or stored in the read cache.
+   *
+   * @generated from field: bool include_deleted = 11;
+   */
+  includeDeleted: boolean;
 };
 
 /**
@@ -794,3 +809,170 @@ export type BulkCasResponse = Message<"udb.entity.v1.BulkCasResponse"> & {
  */
 export const BulkCasResponseSchema: GenMessage<BulkCasResponse> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_relational, 12);
+
+/**
+ * Audited bulk load: write a batch of whole rows to ONE table in ONE write
+ * transaction — every row is stored or none is. Built for large reference
+ * data (millions of rows sent as many batches). Each row goes through the
+ * same validation, tenant/project scoping, encryption and RLS context as a
+ * single Upsert; what changes is the cost per row:
+ *   * rows are written with multi-row INSERT … ON CONFLICT statements
+ *     (as many rows per statement as PostgreSQL's 65535-parameter limit
+ *     allows), not one statement per row;
+ *   * the batch emits ONE change event (operation `bulk_upsert`) that
+ *     summarises it, not one event per row, and ONE audit record with the
+ *     row count;
+ *   * projection tasks for the batch's rows are enqueued with one statement;
+ *   * the rate limiter charges ceil(rows / UDB_BULK_UPSERT_ROWS_PER_RATE_UNIT)
+ *     units for the batch instead of one per row.
+ * Splitting a large load into batches is the client's job; the SDK bulk
+ * helpers do it. See docs/integration.md "Loading large reference data".
+ *
+ * @generated from message udb.entity.v1.BulkUpsertRequest
+ */
+export type BulkUpsertRequest = Message<"udb.entity.v1.BulkUpsertRequest"> & {
+  /**
+   * @generated from field: udb.entity.v1.RequestContext context = 1;
+   */
+  context?: RequestContext | undefined;
+
+  /**
+   * @generated from field: string message_type = 2;
+   */
+  messageType: string;
+
+  /**
+   * One JSON object per row, in the exact form of UpsertRequest.record_json.
+   * Every row of a batch must carry the same set of fields (send null for an
+   * empty value); a row with a different set is refused with
+   * `UDB_BULK_ROW_SHAPE_MISMATCH`. Two rows with the same conflict key are
+   * refused with `UDB_BULK_DUPLICATE_KEY`. More rows than the broker's
+   * `UDB_BULK_UPSERT_MAX_ROWS` (default 10000) is refused with
+   * `UDB_BULK_BATCH_TOO_LARGE`. The whole request must also fit the gRPC
+   * message limit (`UDB_GRPC_MAX_MESSAGE_BYTES`, default 10 MiB).
+   *
+   * @generated from field: repeated bytes records_json = 3;
+   */
+  recordsJson: Uint8Array[];
+
+  /**
+   * Conflict target, as UpsertRequest.conflict_fields (empty = primary key).
+   *
+   * @generated from field: repeated string conflict_fields = 4;
+   */
+  conflictFields: string[];
+
+  /**
+   * Optional whole-batch idempotency: a retry with the same key and the same
+   * batch returns the original response with was_duplicate=true and writes
+   * nothing; the same key with a different batch is refused with
+   * `UDB_IDEMPOTENCY_REUSE`.
+   *
+   * @generated from field: string idempotency_key = 5;
+   */
+  idempotencyKey: string;
+
+  /**
+   * Optional caller label for the batch (for example
+   * "countries-2026-11/0007"), carried in the change event and the audit
+   * record. Empty = the broker assigns a UUID. At most 128 characters, no
+   * whitespace or control characters.
+   *
+   * @generated from field: string batch_id = 6;
+   */
+  batchId: string;
+};
+
+/**
+ * Describes the message udb.entity.v1.BulkUpsertRequest.
+ * Use `create(BulkUpsertRequestSchema)` to create a new message.
+ */
+export const BulkUpsertRequestSchema: GenMessage<BulkUpsertRequest> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_relational, 13);
+
+/**
+ * @generated from message udb.entity.v1.BulkUpsertResponse
+ */
+export type BulkUpsertResponse = Message<"udb.entity.v1.BulkUpsertResponse"> & {
+  /**
+   * The batch label: the request's batch_id, or the UUID the broker assigned.
+   *
+   * @generated from field: string batch_id = 1;
+   */
+  batchId: string;
+
+  /**
+   * Rows in the request.
+   *
+   * @generated from field: uint32 row_count = 2;
+   */
+  rowCount: number;
+
+  /**
+   * Rows inserted or updated. Lower than row_count only when the table's
+   * conflict action is DO NOTHING and some rows were already present.
+   *
+   * @generated from field: int64 affected_rows = 3;
+   */
+  affectedRows: bigint;
+
+  /**
+   * SHA-256 (hex) over the batch's conflict keys in request order: the same
+   * value the change event and the audit record carry.
+   *
+   * @generated from field: string keys_sha256 = 4;
+   */
+  keysSha256: string;
+
+  /**
+   * First and last conflict key of the batch, in request order. Empty when a
+   * key column is PII, encrypted or masked in logs (only keys_sha256 is sent).
+   *
+   * @generated from field: string first_key = 5;
+   */
+  firstKey: string;
+
+  /**
+   * @generated from field: string last_key = 6;
+   */
+  lastKey: string;
+
+  /**
+   * JSON-encoded WriteReceipt for read-your-writes fencing over the batch.
+   *
+   * @generated from field: string write_receipt_json = 7;
+   */
+  writeReceiptJson: string;
+
+  /**
+   * SQL statements the broker ran inside the batch's transaction (row
+   * writes plus revision, projection, outbox and idempotency bookkeeping).
+   * Grows with ceil(rows * columns / 65535), not with rows.
+   *
+   * @generated from field: uint32 statement_count = 8;
+   */
+  statementCount: number;
+
+  /**
+   * Id of the batch's change event; empty when the table emits no change
+   * events (no cdc_topic, or CDC delivery disabled).
+   *
+   * @generated from field: string event_id = 9;
+   */
+  eventId: string;
+
+  /**
+   * True when this response replays an earlier batch with the same
+   * idempotency_key; nothing was written by this call.
+   *
+   * @generated from field: bool was_duplicate = 10;
+   */
+  wasDuplicate: boolean;
+};
+
+/**
+ * Describes the message udb.entity.v1.BulkUpsertResponse.
+ * Use `create(BulkUpsertResponseSchema)` to create a new message.
+ */
+export const BulkUpsertResponseSchema: GenMessage<BulkUpsertResponse> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_relational, 14);

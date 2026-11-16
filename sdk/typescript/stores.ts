@@ -63,6 +63,9 @@ const REASON_CODES: Record<string, ErrorCode> = {
   UDB_GRANT_OWNED_BY_OTHER: ErrorCode.Conflict,
   UDB_CAS_KEY_NOT_PK: ErrorCode.Precondition,
   UDB_IDEMPOTENCY_REUSE: ErrorCode.Precondition,
+  UDB_BULK_ROW_SHAPE_MISMATCH: ErrorCode.Invalid,
+  UDB_BULK_DUPLICATE_KEY: ErrorCode.Invalid,
+  UDB_BULK_BATCH_TOO_LARGE: ErrorCode.Invalid,
   UDB_NO_ROWS_AFFECTED: ErrorCode.NotFound,
   UDB_UNIQUE_VIOLATION: ErrorCode.Unique,
   UDB_NOT_NULL_VIOLATION: ErrorCode.NotNull,
@@ -74,6 +77,7 @@ const REASON_CODES: Record<string, ErrorCode> = {
   UDB_TENANT_MISMATCH: ErrorCode.PolicyDenied,
   UDB_TABLE_NOT_TENANT_SCOPED: ErrorCode.Invalid,
   UDB_SCOPE_MISSING: ErrorCode.ScopeMissing,
+  UDB_DELETED_READ_SCOPE_MISSING: ErrorCode.ScopeMissing,
   UDB_POLICY_DENIED: ErrorCode.PolicyDenied,
   UDB_REDACTED_VALUE_WRITE: ErrorCode.Redacted,
   UDB_RATE_LIMITED: ErrorCode.RateLimited,
@@ -278,6 +282,11 @@ export interface TableSelectOptions {
   includeTotal?: boolean;
   /** Read only these columns (empty = every non-PII column). */
   fields?: readonly string[];
+  /** Also return soft-deleted rows; a deleted row has its soft-delete column
+   *  (for example `deleted_at`) set. Needs scope `udb:deleted:read`
+   *  (`ErrorCode.ScopeMissing` without it), works only on an entity with soft
+   *  delete (`ErrorCode.Invalid` otherwise), and every such read is audited. */
+  includeDeleted?: boolean;
   primaryRead?: boolean;
 }
 
@@ -440,6 +449,7 @@ export class Table<T extends Record<string, unknown> = Record<string, unknown>> 
       limit: opts.limit ?? 0,
       include_total: opts.includeTotal ?? false,
     };
+    if (opts.includeDeleted) request.include_deleted = true;
     if (opts.pageToken) request.page_token = opts.pageToken;
     if (opts.fields?.length) request.fields = [...opts.fields];
     if (opts.orderBy?.length) {
@@ -491,6 +501,27 @@ export class Table<T extends Record<string, unknown> = Record<string, unknown>> 
    *  and never replaces the existing row. */
   async insert(row: T, opts: TableWriteOptions = {}): Promise<void> {
     await this.write("Insert", row, opts);
+  }
+
+  /** Upsert `rows` as ONE batch in one transaction: every row is written or none is.
+   *  See {@link bulkUpsert}. The table's explicit key is the conflict key by default. */
+  bulkUpsert(rows: readonly T[], opts: Omit<BulkUpsertOptions, "schemas" | "fence"> = {}): Promise<BulkUpsertResponse> {
+    return bulkUpsert(this.plane, this.messageType, rows, {
+      ...opts,
+      conflictFields: opts.conflictFields ?? this.explicitKey,
+      schemas: this.schemas,
+      fence: this.fence,
+    });
+  }
+
+  /** Load any number of rows in sequential BulkUpsert batches. See {@link bulkLoad}. */
+  bulkLoad(rows: Iterable<T> | AsyncIterable<T>, opts: Omit<BulkLoadOptions, "schemas" | "fence"> = {}): Promise<BulkLoadResult> {
+    return bulkLoad(this.plane, this.messageType, rows, {
+      ...opts,
+      conflictFields: opts.conflictFields ?? this.explicitKey,
+      schemas: this.schemas,
+      fence: this.fence,
+    });
   }
 
   private async write(rpc: "Upsert" | "Insert", row: T, opts: TableWriteOptions): Promise<void> {
@@ -942,6 +973,223 @@ export async function selectMany<T = Record<string, unknown>>(
     next: String(response?.next_page_token ?? ""),
     redacted: Array.isArray(response?.redacted_fields) ? response.redacted_fields : [],
   }));
+}
+
+// ── Bulk writes ─────────────────────────────────────────────────────────────
+
+/** The most rows the broker accepts in one BulkUpsert batch. */
+export const BULK_MAX_ROWS = 10_000;
+const BULK_DEFAULT_ROWS = 1000;
+const BULK_DEFAULT_BYTES = 4 * 1024 * 1024;
+
+/** The broker's answer to one BulkUpsert batch (`udb.entity.v1.BulkUpsertResponse`). */
+export interface BulkUpsertResponse {
+  /** The batch id sent, or the UUID the broker assigned when none was. */
+  batch_id: string;
+  row_count: number;
+  affected_rows: number;
+  /** Lowercase hex SHA-256 of the rows' key tuples, joined by "\n" in request order. */
+  keys_sha256: string;
+  first_key: string;
+  last_key: string;
+  write_receipt_json: string;
+  statement_count: number;
+  /** The batch's one change event; empty when the entity has no CDC topic or nothing changed. */
+  event_id: string;
+  /** The idempotency key replayed an earlier identical batch; nothing was written. */
+  was_duplicate: boolean;
+}
+
+/** Options of {@link bulkUpsert}. */
+export interface BulkUpsertOptions {
+  /** The columns that identify a row; the primary key when omitted. */
+  conflictFields?: readonly string[];
+  /** Makes the batch safe to retry: the broker replays the first result for the key.
+   *  Reusing a key with a different batch is refused. */
+  idempotencyKey?: string;
+  /** Names the batch in its change event (at most 128 characters, no whitespace or
+   *  control characters); the broker assigns a UUID when empty. */
+  batchId?: string;
+  /** The proto tree declaring the message; the bundled one by default. */
+  schemas?: ProtoSchemas;
+  fence?: SessionFence;
+  call?: CallOptions;
+}
+
+/** Options of {@link bulkLoad}. */
+export interface BulkLoadOptions {
+  /** Rows per batch, 1..10000 (default 1000). */
+  batchRows?: number;
+  /** Encoded bytes per batch (default 4 MiB): a batch closes before a row that would
+   *  exceed it; one row larger than this throws before it is sent. */
+  maxBatchBytes?: number;
+  conflictFields?: readonly string[];
+  /** When set, batch `i` is named `<prefix>/<i as 6 digits>` (0-based). */
+  batchIdPrefix?: string;
+  /** When set, batch `i` carries the key `<prefix>-<i>` (0-based), so re-running the
+   *  same load replays the committed batches instead of writing them again. */
+  idempotencyKeyPrefix?: string;
+  /** Called after each batch commits. */
+  onBatch?: (index: number, response: BulkUpsertResponse) => void | Promise<void>;
+  schemas?: ProtoSchemas;
+  fence?: SessionFence;
+  call?: CallOptions;
+}
+
+/** What a {@link bulkLoad} committed. */
+export interface BulkLoadResult {
+  batches: number;
+  rows: number;
+  affectedRows: number;
+  responses: BulkUpsertResponse[];
+}
+
+/** A {@link bulkLoad} stopped. The batches before the failing one are committed and
+ *  described by this error's fields; the failing batch wrote nothing. The broker's
+ *  error is the `cause`, so {@link inspect} still reads its reason. */
+export class BulkLoadError extends Error {
+  constructor(
+    message: string,
+    readonly batches: number,
+    readonly rows: number,
+    readonly affectedRows: number,
+    readonly responses: BulkUpsertResponse[],
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = "BulkLoadError";
+  }
+}
+
+function bulkResponse(raw: any): BulkUpsertResponse {
+  return {
+    batch_id: String(raw?.batch_id ?? ""),
+    row_count: Number(raw?.row_count ?? 0),
+    affected_rows: Number(raw?.affected_rows ?? 0),
+    keys_sha256: String(raw?.keys_sha256 ?? ""),
+    first_key: String(raw?.first_key ?? ""),
+    last_key: String(raw?.last_key ?? ""),
+    write_receipt_json: String(raw?.write_receipt_json ?? ""),
+    statement_count: Number(raw?.statement_count ?? 0),
+    event_id: String(raw?.event_id ?? ""),
+    was_duplicate: Boolean(raw?.was_duplicate),
+  };
+}
+
+/** One row as BulkUpsert carries it: encoded like an upsert's record. */
+function bulkRowBytes(schemas: ProtoSchemas, messageType: string, row: Record<string, unknown>): Buffer {
+  return jsonBytes(writeRecord(schemaOf(schemas, messageType), schemas, messageType, row));
+}
+
+async function sendBulk(
+  plane: StorePlane,
+  messageType: string,
+  records: Buffer[],
+  opts: { conflictFields?: readonly string[]; idempotencyKey?: string; batchId?: string; fence?: SessionFence; call?: CallOptions },
+): Promise<BulkUpsertResponse> {
+  const request: Record<string, unknown> = { message_type: messageType, records_json: records };
+  if (opts.conflictFields?.length) request.conflict_fields = [...opts.conflictFields];
+  if (opts.idempotencyKey) request.idempotency_key = opts.idempotencyKey;
+  if (opts.batchId) request.batch_id = opts.batchId;
+  const raw = await plane.unary(DATABROKER, "BulkUpsert", request, opts.call).catch((err) => {
+    throw classify(err);
+  });
+  opts.fence?.rememberWrite(raw);
+  return bulkResponse(raw);
+}
+
+/** Write `rows` of `messageType` as ONE batch in one transaction: every row is
+ *  written or none is. Each row is checked and scoped as an upsert's is; the rows
+ *  must all carry the same fields and no two may share a key. The broker emits one
+ *  change event for the batch when the entity declares a CDC topic. */
+export async function bulkUpsert(
+  plane: StorePlane,
+  messageType: string,
+  rows: readonly Record<string, unknown>[],
+  opts: BulkUpsertOptions = {},
+): Promise<BulkUpsertResponse> {
+  const schemas = schemasOf(plane, opts.schemas);
+  return sendBulk(
+    plane,
+    messageType,
+    rows.map((row) => bulkRowBytes(schemas, messageType, row)),
+    opts,
+  );
+}
+
+/** Load any number of rows of `messageType` in BulkUpsert batches, one after another.
+ *  Each batch is its own transaction; the first failure stops the load and throws a
+ *  {@link BulkLoadError} saying how many batches committed. Nothing is retried: set
+ *  `idempotencyKeyPrefix` to make a re-run of the same load safe. */
+export async function bulkLoad(
+  plane: StorePlane,
+  messageType: string,
+  rows: Iterable<Record<string, unknown>> | AsyncIterable<Record<string, unknown>>,
+  opts: BulkLoadOptions = {},
+): Promise<BulkLoadResult> {
+  const batchRows = opts.batchRows ?? BULK_DEFAULT_ROWS;
+  const maxBatchBytes = opts.maxBatchBytes ?? BULK_DEFAULT_BYTES;
+  if (!Number.isInteger(batchRows) || batchRows < 1 || batchRows > BULK_MAX_ROWS) {
+    throw new Error(`udb: bulkLoad batchRows must be 1..${BULK_MAX_ROWS}, got ${batchRows}`);
+  }
+  if (!(maxBatchBytes > 0)) throw new Error(`udb: bulkLoad maxBatchBytes must be positive, got ${maxBatchBytes}`);
+  const schemas = schemasOf(plane, opts.schemas);
+  const result: BulkLoadResult = { batches: 0, rows: 0, affectedRows: 0, responses: [] };
+  const stopped = (why: string, cause?: unknown) =>
+    new BulkLoadError(
+      `udb: bulkLoad of ${messageType} stopped after ${result.batches} committed batch(es) (${result.rows} row(s)): ${why}`,
+      result.batches,
+      result.rows,
+      result.affectedRows,
+      [...result.responses],
+      cause === undefined ? undefined : { cause },
+    );
+  let pending: Buffer[] = [];
+  let pendingBytes = 0;
+  const flush = async () => {
+    if (pending.length === 0) return;
+    const index = result.batches;
+    let response: BulkUpsertResponse;
+    try {
+      response = await sendBulk(plane, messageType, pending, {
+        conflictFields: opts.conflictFields,
+        batchId: opts.batchIdPrefix ? `${opts.batchIdPrefix}/${String(index).padStart(6, "0")}` : undefined,
+        idempotencyKey: opts.idempotencyKeyPrefix ? `${opts.idempotencyKeyPrefix}-${index}` : undefined,
+        fence: opts.fence,
+        call: opts.call,
+      });
+    } catch (err) {
+      throw stopped((err as Error)?.message ?? String(err), err);
+    }
+    result.batches += 1;
+    result.rows += pending.length;
+    result.affectedRows += response.affected_rows;
+    result.responses.push(response);
+    pending = [];
+    pendingBytes = 0;
+    if (!opts.onBatch) return;
+    try {
+      await opts.onBatch(index, response);
+    } catch (err) {
+      throw stopped(`onBatch(${index}) failed: ${(err as Error)?.message ?? String(err)}`, err);
+    }
+  };
+  for await (const row of rows) {
+    let encoded: Buffer;
+    try {
+      encoded = bulkRowBytes(schemas, messageType, row);
+    } catch (err) {
+      throw stopped((err as Error)?.message ?? String(err), err);
+    }
+    if (encoded.length > maxBatchBytes) {
+      throw stopped(`a row encodes to ${encoded.length} bytes, more than maxBatchBytes ${maxBatchBytes}`);
+    }
+    if (pending.length > 0 && (pending.length >= batchRows || pendingBytes + encoded.length > maxBatchBytes)) await flush();
+    pending.push(encoded);
+    pendingBytes += encoded.length;
+  }
+  await flush();
+  return result;
 }
 
 // ── Durable consumers ───────────────────────────────────────────────────────
@@ -1495,6 +1743,9 @@ export class InMemoryDataPlane implements StorePlane {
     this.rows.set(request.message_type, table);
     switch (method) {
       case "Select": {
+        if (request.include_deleted) {
+          this.refuse(3, "", "include_deleted: the in-memory data plane keeps no deleted rows; use createFake from @udb_plus/sdk/udbtest");
+        }
         const found = table.filter((row) => this.matches(row, request.filter));
         const limited = request.limit ? found.slice(0, request.limit) : found;
         return {

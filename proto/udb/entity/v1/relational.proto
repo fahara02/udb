@@ -107,6 +107,16 @@ message SelectRequest {
   // Also count every matching row into `RecordSet.exact_total` (one extra
   // COUNT over the same filter and scope; the read cache is skipped).
   bool include_total = 10;
+  // Also return soft-deleted rows. Each returned row carries the entity's own
+  // soft-delete column (for example `deleted_at`), non-null on a deleted row,
+  // which the broker adds to an explicit `fields` list when it is missing.
+  // Needs scope `udb:deleted:read`; without it the read is refused with
+  // PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+  // without soft delete refuses it with INVALID_ARGUMENT naming this field.
+  // Every such read is written to the audit log (tenant, actor, entity, row
+  // count) before its rows are returned; it stays inside the caller's tenant
+  // and project, and it is never answered from or stored in the read cache.
+  bool include_deleted = 11;
 }
 
 message UpsertRequest {
@@ -299,4 +309,75 @@ message BulkCasResponse {
   string write_receipt_json = 4;
   // Per-item outcome, index-aligned with BulkCasRequest.items.
   repeated BulkCasItemResult results = 5;
+}
+
+// Audited bulk load: write a batch of whole rows to ONE table in ONE write
+// transaction — every row is stored or none is. Built for large reference
+// data (millions of rows sent as many batches). Each row goes through the
+// same validation, tenant/project scoping, encryption and RLS context as a
+// single Upsert; what changes is the cost per row:
+//   * rows are written with multi-row INSERT … ON CONFLICT statements
+//     (as many rows per statement as PostgreSQL's 65535-parameter limit
+//     allows), not one statement per row;
+//   * the batch emits ONE change event (operation `bulk_upsert`) that
+//     summarises it, not one event per row, and ONE audit record with the
+//     row count;
+//   * projection tasks for the batch's rows are enqueued with one statement;
+//   * the rate limiter charges ceil(rows / UDB_BULK_UPSERT_ROWS_PER_RATE_UNIT)
+//     units for the batch instead of one per row.
+// Splitting a large load into batches is the client's job; the SDK bulk
+// helpers do it. See docs/integration.md "Loading large reference data".
+message BulkUpsertRequest {
+  RequestContext context = 1;
+  string message_type = 2;
+  // One JSON object per row, in the exact form of UpsertRequest.record_json.
+  // Every row of a batch must carry the same set of fields (send null for an
+  // empty value); a row with a different set is refused with
+  // `UDB_BULK_ROW_SHAPE_MISMATCH`. Two rows with the same conflict key are
+  // refused with `UDB_BULK_DUPLICATE_KEY`. More rows than the broker's
+  // `UDB_BULK_UPSERT_MAX_ROWS` (default 10000) is refused with
+  // `UDB_BULK_BATCH_TOO_LARGE`. The whole request must also fit the gRPC
+  // message limit (`UDB_GRPC_MAX_MESSAGE_BYTES`, default 10 MiB).
+  repeated bytes records_json = 3;
+  // Conflict target, as UpsertRequest.conflict_fields (empty = primary key).
+  repeated string conflict_fields = 4;
+  // Optional whole-batch idempotency: a retry with the same key and the same
+  // batch returns the original response with was_duplicate=true and writes
+  // nothing; the same key with a different batch is refused with
+  // `UDB_IDEMPOTENCY_REUSE`.
+  string idempotency_key = 5;
+  // Optional caller label for the batch (for example
+  // "countries-2026-11/0007"), carried in the change event and the audit
+  // record. Empty = the broker assigns a UUID. At most 128 characters, no
+  // whitespace or control characters.
+  string batch_id = 6;
+}
+
+message BulkUpsertResponse {
+  // The batch label: the request's batch_id, or the UUID the broker assigned.
+  string batch_id = 1;
+  // Rows in the request.
+  uint32 row_count = 2;
+  // Rows inserted or updated. Lower than row_count only when the table's
+  // conflict action is DO NOTHING and some rows were already present.
+  int64 affected_rows = 3;
+  // SHA-256 (hex) over the batch's conflict keys in request order: the same
+  // value the change event and the audit record carry.
+  string keys_sha256 = 4;
+  // First and last conflict key of the batch, in request order. Empty when a
+  // key column is PII, encrypted or masked in logs (only keys_sha256 is sent).
+  string first_key = 5;
+  string last_key = 6;
+  // JSON-encoded WriteReceipt for read-your-writes fencing over the batch.
+  string write_receipt_json = 7;
+  // SQL statements the broker ran inside the batch's transaction (row
+  // writes plus revision, projection, outbox and idempotency bookkeeping).
+  // Grows with ceil(rows * columns / 65535), not with rows.
+  uint32 statement_count = 8;
+  // Id of the batch's change event; empty when the table emits no change
+  // events (no cdc_topic, or CDC delivery disabled).
+  string event_id = 9;
+  // True when this response replays an earlier batch with the same
+  // idempotency_key; nothing was written by this call.
+  bool was_duplicate = 10;
 }

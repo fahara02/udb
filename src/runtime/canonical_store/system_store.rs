@@ -1604,6 +1604,13 @@ pub enum AdminAuditBreakReason {
     /// Stored `current_hash` doesn't match the SHA-256 we just
     /// computed from the canonical-JSON of the row's fields.
     CurrentHashMismatch,
+    /// The oldest row links to an earlier row, but no prune anchor records
+    /// that the cleanup service removed the rows before it.
+    PrunedWithoutAnchor,
+    /// A prune anchor exists, but the oldest row does not follow it: it does
+    /// not link to the anchor's hash, sits at or before the anchor, or no row
+    /// is left at all.
+    AnchorMismatch,
 }
 
 impl AdminAuditBreakReason {
@@ -1612,6 +1619,8 @@ impl AdminAuditBreakReason {
             Self::PreviousHashMismatch => "previous_hash_mismatch",
             Self::MissingCurrentHash => "missing_current_hash",
             Self::CurrentHashMismatch => "current_hash_mismatch",
+            Self::PrunedWithoutAnchor => "pruned_without_anchor",
+            Self::AnchorMismatch => "anchor_mismatch",
         }
     }
 }
@@ -1728,6 +1737,86 @@ pub fn verify_admin_audit_chain_step(
         });
     }
     Ok(row.current_hash.clone())
+}
+
+/// Postgres advisory-lock key dedicated to the admin audit chain.
+/// `0x7564625F6175_6469` is "udb_audi" in ASCII — encoded as the 64-bit
+/// integer the `pg_advisory_xact_lock()` builtin takes. Appends hold it, and
+/// so does the cleanup service while it prunes the front of the chain.
+pub const ADMIN_AUDIT_CHAIN_LOCK_KEY: i64 = 0x7564_625F_6175_6469;
+
+/// The key of an admin audit table's prune anchor in
+/// `udb_system.evidence_export_state` (one row per table): the cleanup
+/// service writes it with every prune, the verifier reads it. `relation` is
+/// the table, quoted or not.
+pub fn admin_audit_prune_anchor_key(relation: &str) -> String {
+    format!("udb:admin-audit:prune-anchor:{}", relation.replace('"', ""))
+}
+
+/// How far the cleanup service pruned an admin audit chain: the newest row it
+/// removed. The oldest row left must follow it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AdminAuditPruneAnchor {
+    /// The removed row's `audit_id`, as text.
+    pub audit_id: String,
+    pub created_at: DateTime<Utc>,
+    /// The removed row's `current_hash`: the oldest row left links to it.
+    pub hash: String,
+}
+
+/// Where a verify run starts. Without an anchor the chain must start at its
+/// first row (an empty `previous_hash`), exactly as an unpruned chain does;
+/// with one, the oldest row left must link to the anchor's hash and come after
+/// the anchor in chain order (`created_at`, `audit_id`), so the anchor is the
+/// row right before it. Returns the `previous_hash` to feed into
+/// [`verify_admin_audit_chain_step`] for that row. `oldest` is `None` when no
+/// row is left: fine without an anchor, a break with one (the head is never
+/// pruned).
+pub fn verify_admin_audit_chain_start(
+    oldest: Option<&AdminAuditRow>,
+    anchor: Option<&AdminAuditPruneAnchor>,
+) -> Result<String, AdminAuditChainReport> {
+    let failed = |audit_id: Uuid, reason: AdminAuditBreakReason, expected: &str, actual: &str| {
+        AdminAuditChainReport::Failed {
+            checked_count: 0,
+            first_broken_audit_id: audit_id,
+            reason,
+            expected_previous_hash: expected.to_string(),
+            actual_previous_hash: actual.to_string(),
+            expected_current_hash: String::new(),
+            actual_current_hash: String::new(),
+        }
+    };
+    match (oldest, anchor) {
+        (None, None) => Ok(String::new()),
+        (Some(row), None) if row.previous_hash.is_empty() => Ok(String::new()),
+        (Some(row), None) => Err(failed(
+            row.audit_id,
+            AdminAuditBreakReason::PrunedWithoutAnchor,
+            "",
+            &row.previous_hash,
+        )),
+        (None, Some(anchor)) => Err(failed(
+            Uuid::parse_str(&anchor.audit_id).unwrap_or(Uuid::nil()),
+            AdminAuditBreakReason::AnchorMismatch,
+            &anchor.hash,
+            "",
+        )),
+        (Some(row), Some(anchor)) => {
+            let after = (row.created_at, row.audit_id.to_string())
+                > (anchor.created_at, anchor.audit_id.clone());
+            if after && !anchor.hash.is_empty() && row.previous_hash == anchor.hash {
+                Ok(anchor.hash.clone())
+            } else {
+                Err(failed(
+                    row.audit_id,
+                    AdminAuditBreakReason::AnchorMismatch,
+                    &anchor.hash,
+                    &row.previous_hash,
+                ))
+            }
+        }
+    }
 }
 
 /// The admin-audit-store trait. Same pattern as `SagaStore` /
@@ -2793,6 +2882,134 @@ mod tests {
         let next_previous =
             verify_admin_audit_chain_step(&row, "", 0).expect("first row links the empty seed");
         assert_eq!(next_previous, row.current_hash);
+    }
+
+    /// Verify a whole chain the way the Postgres verifier walks it: the start
+    /// from the anchor, then one step per row.
+    fn verify_rows(
+        rows: &[AdminAuditRow],
+        anchor: Option<&AdminAuditPruneAnchor>,
+    ) -> Result<String, AdminAuditChainReport> {
+        let mut previous = verify_admin_audit_chain_start(rows.first(), anchor)?;
+        for (checked, row) in rows.iter().enumerate() {
+            previous = verify_admin_audit_chain_step(row, &previous, checked as i64)?;
+        }
+        Ok(previous)
+    }
+
+    /// Four linked rows, one second apart, oldest first.
+    fn sample_chain() -> Vec<AdminAuditRow> {
+        let start = Utc::now() - chrono::Duration::days(400);
+        let mut rows: Vec<AdminAuditRow> = Vec::new();
+        for i in 0..4 {
+            let previous = rows
+                .last()
+                .map(|row| row.current_hash.clone())
+                .unwrap_or_default();
+            let mut row = sample_audit_row(Uuid::new_v4(), &previous);
+            row.created_at = start + chrono::Duration::seconds(i);
+            rows.push(row);
+        }
+        rows
+    }
+
+    fn anchor_of(row: &AdminAuditRow) -> AdminAuditPruneAnchor {
+        AdminAuditPruneAnchor {
+            audit_id: row.audit_id.to_string(),
+            created_at: row.created_at,
+            hash: row.current_hash.clone(),
+        }
+    }
+
+    fn reason(result: Result<String, AdminAuditChainReport>) -> AdminAuditBreakReason {
+        match result {
+            Err(AdminAuditChainReport::Failed { reason, .. }) => reason,
+            other => panic!("expected a break, got {other:?}"),
+        }
+    }
+
+    /// Pin: an unpruned chain verifies from the empty hash, as before anchors.
+    #[test]
+    fn an_unpruned_chain_verifies_from_the_empty_hash() {
+        let rows = sample_chain();
+        assert_eq!(verify_rows(&rows, None), Ok(rows[3].current_hash.clone()));
+        assert_eq!(
+            verify_admin_audit_chain_start(None, None),
+            Ok(String::new())
+        );
+    }
+
+    /// Pin: a pruned chain verifies from the anchor the prune recorded.
+    #[test]
+    fn an_anchored_chain_verifies_from_its_anchor() {
+        let rows = sample_chain();
+        let anchor = anchor_of(&rows[1]);
+        assert_eq!(
+            verify_rows(&rows[2..], Some(&anchor)),
+            Ok(rows[3].current_hash.clone())
+        );
+    }
+
+    /// Pin: rows removed from the front with no anchor are a break.
+    #[test]
+    fn a_front_deletion_without_an_anchor_fails() {
+        let rows = sample_chain();
+        assert_eq!(
+            reason(verify_rows(&rows[2..], None)),
+            AdminAuditBreakReason::PrunedWithoutAnchor
+        );
+    }
+
+    /// Pin: an anchor the oldest row does not follow is a break: rows removed
+    /// past the anchor, an anchor naming a row still present, a forged hash,
+    /// or every row gone.
+    #[test]
+    fn an_anchor_that_does_not_link_fails() {
+        let rows = sample_chain();
+        // Rows 0 and 1 pruned, but the anchor names row 0: row 1 went silently.
+        assert_eq!(
+            reason(verify_rows(&rows[2..], Some(&anchor_of(&rows[0])))),
+            AdminAuditBreakReason::AnchorMismatch
+        );
+        // The anchor names a row that is still there.
+        assert_eq!(
+            reason(verify_rows(&rows[1..], Some(&anchor_of(&rows[1])))),
+            AdminAuditBreakReason::AnchorMismatch
+        );
+        // The anchor's hash was changed.
+        let mut forged = anchor_of(&rows[1]);
+        forged.hash = "forged".to_string();
+        assert_eq!(
+            reason(verify_rows(&rows[2..], Some(&forged))),
+            AdminAuditBreakReason::AnchorMismatch
+        );
+        // An anchor with no row left (the head is never pruned).
+        assert_eq!(
+            reason(verify_rows(&[], Some(&anchor_of(&rows[3])))),
+            AdminAuditBreakReason::AnchorMismatch
+        );
+        assert_eq!(
+            AdminAuditBreakReason::AnchorMismatch.as_str(),
+            "anchor_mismatch"
+        );
+        assert_eq!(
+            AdminAuditBreakReason::PrunedWithoutAnchor.as_str(),
+            "pruned_without_anchor"
+        );
+    }
+
+    /// Pin: the anchor key ignores identifier quoting, so the cleanup service
+    /// and the verifier agree on it.
+    #[test]
+    fn the_prune_anchor_key_ignores_quoting() {
+        assert_eq!(
+            admin_audit_prune_anchor_key("\"udb_system\".\"udb_admin_audit_log\""),
+            admin_audit_prune_anchor_key("udb_system.udb_admin_audit_log")
+        );
+        assert_eq!(
+            admin_audit_prune_anchor_key("udb_system.udb_admin_audit_log"),
+            "udb:admin-audit:prune-anchor:udb_system.udb_admin_audit_log"
+        );
     }
 
     /// Pin: tampering with `previous_hash` is flagged.

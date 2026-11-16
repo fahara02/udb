@@ -13,10 +13,10 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.21 | protocol v1.0.0                                          │
+│    crate v0.6.22 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-Alongside the data plane that reads and writes your app's tables, UDB 0.6.21 includes a native control plane
+Alongside the data plane that reads and writes your app's tables, UDB 0.6.22 includes a native control plane
 — a set of built-in gRPC services that handle the plumbing
 most applications end up building anyway. If you need login and access control, file
 storage, asset pipelines, realtime coordination, multi-tenancy, notifications,
@@ -136,10 +136,10 @@ numbers are descriptor-owned, not hand-maintained here.
 | `LockService` | Distributed advisory locks with fencing tokens (acquire, renew, release) |
 | `LiveQueryService` | Server-streaming subscriptions to live data-plane changes |
 | `ConfigService` | Feature flags and flag evaluation |
-| `BackupService` | Tenant backup/restore and backup policies |
+| `BackupService` | Tenant backup/restore, platform backup/restore of shared tables, and backup policies |
 | `EmbeddingService` | Embedding sources, backfill enumeration, and vector retrieval |
 | `MessagingService` | End-to-end-encrypted (MLS) messaging: devices, key packages, groups, commits, inbox streaming, encrypted backups |
-| `CacheService` | Tenant-scoped cache namespaces: get, set, increment, delete, scan, namespace stats |
+| `CacheService` | Tenant-scoped cache namespaces plus a shared namespace every tenant reads: get, set, increment, delete, scan, namespace stats |
 | `RoomService` / `PeerService` / `TrackService` | WebRTC room, peer, and track lifecycle (incl. egress/SFU) |
 | `TurnService` / `SignalingService` | TURN credential issuance and the bidirectional signaling bridge |
 

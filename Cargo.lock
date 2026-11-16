@@ -8483,7 +8483,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "udb"
-version = "0.6.21"
+version = "0.6.22"
 dependencies = [
  "aead 0.5.2",
  "aes-gcm-siv",
@@ -8583,7 +8583,7 @@ dependencies = [
 
 [[package]]
 name = "udb-mls"
-version = "0.6.21"
+version = "0.6.22"
 dependencies = [
  "argon2",
  "chacha20poly1305",
@@ -8600,7 +8600,7 @@ dependencies = [
 
 [[package]]
 name = "udb-mls-wasm"
-version = "0.6.21"
+version = "0.6.22"
 dependencies = [
  "getrandom 0.2.17",
  "js-sys",

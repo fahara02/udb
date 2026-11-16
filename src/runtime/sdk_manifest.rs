@@ -159,6 +159,14 @@ pub struct EntityColumnDescriptor {
     /// short-token ⇄ enum map from these values (the proto enum's value names
     /// when the enum resolves, else the column's declared `enum_values`).
     pub enum_values: Vec<String>,
+    /// The proto enum's value numbers, parallel to `enum_values`, when those are
+    /// the resolved enum's value names; empty when the enum did not resolve (the
+    /// values are then the column's declared list, which carries no numbers).
+    /// Lets a generator name the values an INTEGER-stored enum column carries.
+    /// Emitter-only; `#[serde(skip)]` keeps the sdk-manifest JSON surface
+    /// unchanged.
+    #[serde(skip)]
+    pub enum_numbers: Vec<i32>,
     /// The values the column's generated CHECK allows: its declared
     /// `enum_values`, verbatim (full names or short tokens), when the column
     /// declares them and no custom `check_constraint`. Empty ⇒ no enum CHECK,
@@ -461,6 +469,8 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
 #[derive(Debug, Clone, Default)]
 struct EnumRegistryEntry {
     values: Vec<String>,
+    /// The value numbers, parallel to `values`.
+    numbers: Vec<i32>,
     go_package: String,
 }
 
@@ -708,6 +718,12 @@ fn entity_descriptor_from_table(
                                 .unwrap_or_else(|| column.enum_values.clone());
                         (values, cross, None)
                     };
+                // The numbers belong to the resolved enum's own names; a declared list
+                // that did not resolve carries none.
+                let enum_numbers =
+                    resolve_enum_numbers(&column.proto_type, &table.proto_package, enum_registry)
+                        .filter(|numbers| numbers.len() == enum_values.len())
+                        .unwrap_or_default();
                 let check_values = if column.check_constraint.trim().is_empty() {
                     column.enum_values.clone()
                 } else {
@@ -723,6 +739,7 @@ fn entity_descriptor_from_table(
                     has_presence: column.has_presence,
                     oneof_group: column.oneof_group.clone(),
                     enum_values,
+                    enum_numbers,
                     check_values,
                     enum_cross_package,
                     enum_go_import,
@@ -916,6 +933,12 @@ pub fn entity_manifest_from_proto_dir(
                     .iter()
                     .map(|value| value.name.clone())
                     .collect(),
+                numbers: decl
+                    .enum_def
+                    .values
+                    .iter()
+                    .map(|value| value.number)
+                    .collect(),
                 go_package: decl.go_package.clone(),
             });
     }
@@ -937,6 +960,7 @@ pub fn entity_manifest_from_proto_dir(
                         .iter()
                         .map(|value| value.name.clone())
                         .collect(),
+                    numbers: nested.values.iter().map(|value| value.number).collect(),
                     go_package: schema
                         .language_option("go_package")
                         .map(str::to_string)
@@ -1015,6 +1039,17 @@ fn resolve_enum(
         }
     }
     None
+}
+
+/// The value numbers of the enum a column's proto type resolves to, parallel to
+/// the value names [`resolve_enum`] returns.
+fn resolve_enum_numbers(
+    proto_type: &str,
+    entity_package: &str,
+    enum_registry: Option<&EnumRegistry>,
+) -> Option<Vec<i32>> {
+    let (fqn, _, _) = resolve_enum(proto_type, entity_package, enum_registry)?;
+    enum_registry?.get(&fqn).map(|entry| entry.numbers.clone())
 }
 
 /// The proto package of a resolved enum FQN (everything before the final `.`).

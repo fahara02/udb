@@ -25,8 +25,8 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 427 RPCs across 29 services
-// (UDB v0.6.21, wire protocol 1.0.0).
+// Covers 428 RPCs across 29 services
+// (UDB v0.6.22, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.6.21"
+const SDKVersion = "0.6.22"
 
 // VersionMismatchError reports an absent, malformed, or incompatible broker
 // release header. Compatibility requires the same major and minor release;
@@ -1407,6 +1407,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BatchUpsert", Name: "BatchUpsert", APIAlias: "batch_upsert", OperationID: "batchUpsert", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BeginTx", Name: "BeginTx", APIAlias: "begin_tx", OperationID: "beginTx", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BulkCas", Name: "BulkCas", APIAlias: "bulk_cas", OperationID: "bulkCas", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BulkUpsert", Name: "BulkUpsert", APIAlias: "bulk_upsert", OperationID: "bulkUpsert", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheDelete", Name: "CacheDelete", APIAlias: "cache_delete", OperationID: "cacheDelete", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheGet", Name: "CacheGet", APIAlias: "cache_get", OperationID: "cacheGet", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheScan", Name: "CacheScan", APIAlias: "cache_scan", OperationID: "cacheScan", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
@@ -1513,7 +1514,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.webrtc.services.v1.TrackService": 4,
 	"udb.core.webrtc.services.v1.TurnService": 1,
 	"udb.core.workflow.services.v1.WorkflowService": 6,
-	"udb.services.v1.DataBroker": 84,
+	"udb.services.v1.DataBroker": 85,
 }
 
 // Entities is the catalog-derived entity registry, generated from the annotated

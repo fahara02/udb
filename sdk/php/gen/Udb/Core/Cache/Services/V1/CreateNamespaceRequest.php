@@ -35,6 +35,14 @@ class CreateNamespaceRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int64 default_ttl_seconds = 4 [json_name = "defaultTtlSeconds"];</code>
      */
     protected $default_ttl_seconds = 0;
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 5 [json_name = "shared"];</code>
+     */
+    protected $shared = false;
 
     /**
      * Constructor.
@@ -49,6 +57,10 @@ class CreateNamespaceRequest extends \Google\Protobuf\Internal\Message
      *           fails closed with resource_exhausted. 0 = the service default budget.
      *     @type int|string $default_ttl_seconds
      *           Default TTL applied to a Set that does not specify one. 0 = no default.
+     *     @type bool $shared
+     *           Write the shared namespace (the reserved shared-tenant keyspace every
+     *           tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     *           admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
      * }
      */
     public function __construct($data = NULL) {
@@ -150,6 +162,36 @@ class CreateNamespaceRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt64($var);
         $this->default_ttl_seconds = $var;
+
+        return $this;
+    }
+
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 5 [json_name = "shared"];</code>
+     * @return bool
+     */
+    public function getShared()
+    {
+        return $this->shared;
+    }
+
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 5 [json_name = "shared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->shared = $var;
 
         return $this;
     }

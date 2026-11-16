@@ -11,6 +11,7 @@ mod asset_vector_live;
 mod audit_sink_live;
 mod authz_deny_path_live;
 mod backup_live;
+mod bulk_upsert_live;
 mod catalog_authority_live;
 mod catalog_reviewed_transition_live;
 #[cfg(feature = "kafka")]
@@ -24,6 +25,7 @@ mod data_plane_live;
 mod data_plane_seam_live;
 mod data_plane_tenant_rls_live;
 mod data_revision_live;
+mod include_deleted_live;
 mod journal_reader_gate_live;
 #[cfg(feature = "kafka")]
 mod livequery_journal_live;
@@ -34,6 +36,7 @@ mod native_worker_seams_live;
 pub(super) mod notification_http_live;
 pub(super) mod ops_seams_live;
 mod pipeline_live;
+mod project_relation_claims_live;
 mod projection_drift_live;
 #[cfg(feature = "redis")]
 mod rate_limit_live;

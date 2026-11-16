@@ -101,6 +101,16 @@ public final class RelationalProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_BulkCasResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_BulkUpsertRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_BulkUpsertRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_BulkUpsertResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_BulkUpsertResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -128,7 +138,7 @@ public final class RelationalProto {
       "ions\022\031\n\010has_more\030\006 \001(\010R\007hasMore\022\037\n\013exact" +
       "_total\030\007 \001(\003R\nexactTotal\022\'\n\017redacted_fie" +
       "lds\030\010 \003(\tR\016redactedFieldsJ\004\010\004\020\005R\013total_c" +
-      "ount\"\225\003\n\rSelectRequest\0227\n\007context\030\001 \001(\0132" +
+      "ount\"\276\003\n\rSelectRequest\0227\n\007context\030\001 \001(\0132" +
       "\035.udb.entity.v1.RequestContextR\007context\022" +
       "!\n\014message_type\030\002 \001(\tR\013messageType\022/\n\006fi" +
       "lter\030\003 \001(\0132\027.google.protobuf.StructR\006fil" +
@@ -138,76 +148,92 @@ public final class RelationalProto {
       "t\0221\n\005cache\030\010 \001(\0132\033.udb.entity.v1.CacheOp" +
       "tionsR\005cache\022)\n\020include_revision\030\t \001(\010R\017" +
       "includeRevision\022#\n\rinclude_total\030\n \001(\010R\014" +
-      "includeTotal\"\340\003\n\rUpsertRequest\0227\n\007contex" +
-      "t\030\001 \001(\0132\035.udb.entity.v1.RequestContextR\007" +
-      "context\022!\n\014message_type\030\002 \001(\tR\013messageTy" +
-      "pe\022\037\n\013record_json\030\003 \001(\014R\nrecordJson\0221\n\007p" +
-      "ayload\030\004 \001(\0132\027.google.protobuf.StructR\007p" +
-      "ayload\022\'\n\017conflict_fields\030\005 \003(\tR\016conflic" +
-      "tFields\022#\n\rreturn_record\030\006 \001(\010R\014returnRe" +
-      "cord\0221\n\005cache\030\007 \001(\0132\033.udb.entity.v1.Cach" +
-      "eOptionsR\005cache\022\'\n\017idempotency_key\030\010 \001(\t" +
-      "R\016idempotencyKey\0223\n\010expected\030\t \001(\0132\027.goo" +
-      "gle.protobuf.StructR\010expected\022\033\n\tlock_na" +
-      "me\030\n \001(\tR\010lockName\022#\n\rfencing_token\030\013 \001(" +
-      "\003R\014fencingToken\"\224\003\n\rDeleteRequest\0227\n\007con" +
-      "text\030\001 \001(\0132\035.udb.entity.v1.RequestContex" +
-      "tR\007context\022!\n\014message_type\030\002 \001(\tR\013messag" +
-      "eType\022/\n\006filter\030\003 \001(\0132\027.google.protobuf." +
-      "StructR\006filter\022\'\n\017idempotency_key\030\004 \001(\tR" +
-      "\016idempotencyKey\0223\n\010expected\030\005 \001(\0132\027.goog" +
-      "le.protobuf.StructR\010expected\022+\n\021expected" +
-      "_revision\030\006 \001(\tR\020expectedRevision\022\033\n\tloc" +
-      "k_name\030\007 \001(\tR\010lockName\022#\n\rfencing_token\030" +
-      "\010 \001(\003R\014fencingToken\022)\n\020require_affected\030" +
-      "\t \001(\rR\017requireAffected\"\357\004\n\rUpdateRequest" +
-      "\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reques" +
-      "tContextR\007context\022!\n\014message_type\030\002 \001(\tR" +
-      "\013messageType\022/\n\006filter\030\003 \001(\0132\027.google.pr" +
-      "otobuf.StructR\006filter\0221\n\007changes\030\004 \001(\0132\027" +
-      ".google.protobuf.StructR\007changes\0223\n\010expe" +
-      "cted\030\005 \001(\0132\027.google.protobuf.StructR\010exp" +
-      "ected\022F\n\nincrements\030\006 \003(\0132&.udb.entity.v" +
-      "1.UpdateRequest.IncrementR\nincrements\022\'\n" +
-      "\017idempotency_key\030\007 \001(\tR\016idempotencyKey\022#" +
-      "\n\rreturn_record\030\010 \001(\010R\014returnRecord\022+\n\021e" +
-      "xpected_revision\030\t \001(\tR\020expectedRevision" +
-      "\022\033\n\tlock_name\030\n \001(\tR\010lockName\022#\n\rfencing" +
-      "_token\030\013 \001(\003R\014fencingToken\022)\n\020require_af" +
-      "fected\030\014 \001(\rR\017requireAffected\0329\n\tIncreme" +
-      "nt\022\026\n\006column\030\001 \001(\tR\006column\022\024\n\005delta\030\002 \001(" +
-      "\001R\005delta\"\303\001\n\016ViewDefinition\0227\n\007context\030\001" +
-      " \001(\0132\035.udb.entity.v1.RequestContextR\007con" +
-      "text\022\026\n\006schema\030\002 \001(\tR\006schema\022\022\n\004name\030\003 \001" +
-      "(\tR\004name\022\024\n\005query\030\004 \001(\tR\005query\022\033\n\twith_d" +
-      "ata\030\005 \001(\010R\010withData\022\031\n\010ttl_days\030\006 \001(\005R\007t" +
-      "tlDays\"\233\002\n\013BulkCasItem\022/\n\006filter\030\001 \001(\0132\027" +
-      ".google.protobuf.StructR\006filter\0221\n\007chang" +
-      "es\030\002 \001(\0132\027.google.protobuf.StructR\007chang" +
-      "es\022+\n\021expected_revision\030\003 \001(\tR\020expectedR" +
-      "evision\0223\n\010expected\030\004 \001(\0132\027.google.proto" +
-      "buf.StructR\010expected\022F\n\nincrements\030\005 \003(\013" +
-      "2&.udb.entity.v1.UpdateRequest.Increment" +
-      "R\nincrements\"\342\001\n\016BulkCasRequest\0227\n\007conte" +
+      "includeTotal\022\'\n\017include_deleted\030\013 \001(\010R\016i" +
+      "ncludeDeleted\"\340\003\n\rUpsertRequest\0227\n\007conte" +
       "xt\030\001 \001(\0132\035.udb.entity.v1.RequestContextR" +
       "\007context\022!\n\014message_type\030\002 \001(\tR\013messageT" +
-      "ype\0220\n\005items\030\003 \003(\0132\032.udb.entity.v1.BulkC" +
-      "asItemR\005items\022\'\n\017idempotency_key\030\004 \001(\tR\016" +
-      "idempotencyKey\022\031\n\010max_rows\030\005 \001(\005R\007maxRow" +
-      "s\"\203\001\n\021BulkCasItemResult\022\030\n\007matched\030\001 \001(\010" +
-      "R\007matched\022\030\n\007changed\030\002 \001(\010R\007changed\022\036\n\nc" +
-      "onflicted\030\003 \001(\010R\nconflicted\022\032\n\010revision\030" +
-      "\004 \001(\tR\010revision\"\317\001\n\017BulkCasResponse\022\030\n\007m" +
-      "atched\030\001 \001(\005R\007matched\022\030\n\007changed\030\002 \001(\005R\007" +
-      "changed\022\036\n\nconflicted\030\003 \001(\005R\nconflicted\022" +
-      ",\n\022write_receipt_json\030\004 \001(\tR\020writeReceip" +
-      "tJson\022:\n\007results\030\005 \003(\0132 .udb.entity.v1.B" +
-      "ulkCasItemResultR\007resultsB\265\001\n\021com.udb.en" +
-      "tity.v1B\017RelationalProtoP\001Z9github.com/f" +
-      "ahara02/udb/sdk/go/gen/udb/entity/v1;ent" +
-      "ityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity" +
-      "\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::E" +
-      "ntity::V1b\006proto3"
+      "ype\022\037\n\013record_json\030\003 \001(\014R\nrecordJson\0221\n\007" +
+      "payload\030\004 \001(\0132\027.google.protobuf.StructR\007" +
+      "payload\022\'\n\017conflict_fields\030\005 \003(\tR\016confli" +
+      "ctFields\022#\n\rreturn_record\030\006 \001(\010R\014returnR" +
+      "ecord\0221\n\005cache\030\007 \001(\0132\033.udb.entity.v1.Cac" +
+      "heOptionsR\005cache\022\'\n\017idempotency_key\030\010 \001(" +
+      "\tR\016idempotencyKey\0223\n\010expected\030\t \001(\0132\027.go" +
+      "ogle.protobuf.StructR\010expected\022\033\n\tlock_n" +
+      "ame\030\n \001(\tR\010lockName\022#\n\rfencing_token\030\013 \001" +
+      "(\003R\014fencingToken\"\224\003\n\rDeleteRequest\0227\n\007co" +
+      "ntext\030\001 \001(\0132\035.udb.entity.v1.RequestConte" +
+      "xtR\007context\022!\n\014message_type\030\002 \001(\tR\013messa" +
+      "geType\022/\n\006filter\030\003 \001(\0132\027.google.protobuf" +
+      ".StructR\006filter\022\'\n\017idempotency_key\030\004 \001(\t" +
+      "R\016idempotencyKey\0223\n\010expected\030\005 \001(\0132\027.goo" +
+      "gle.protobuf.StructR\010expected\022+\n\021expecte" +
+      "d_revision\030\006 \001(\tR\020expectedRevision\022\033\n\tlo" +
+      "ck_name\030\007 \001(\tR\010lockName\022#\n\rfencing_token" +
+      "\030\010 \001(\003R\014fencingToken\022)\n\020require_affected" +
+      "\030\t \001(\rR\017requireAffected\"\357\004\n\rUpdateReques" +
+      "t\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reque" +
+      "stContextR\007context\022!\n\014message_type\030\002 \001(\t" +
+      "R\013messageType\022/\n\006filter\030\003 \001(\0132\027.google.p" +
+      "rotobuf.StructR\006filter\0221\n\007changes\030\004 \001(\0132" +
+      "\027.google.protobuf.StructR\007changes\0223\n\010exp" +
+      "ected\030\005 \001(\0132\027.google.protobuf.StructR\010ex" +
+      "pected\022F\n\nincrements\030\006 \003(\0132&.udb.entity." +
+      "v1.UpdateRequest.IncrementR\nincrements\022\'" +
+      "\n\017idempotency_key\030\007 \001(\tR\016idempotencyKey\022" +
+      "#\n\rreturn_record\030\010 \001(\010R\014returnRecord\022+\n\021" +
+      "expected_revision\030\t \001(\tR\020expectedRevisio" +
+      "n\022\033\n\tlock_name\030\n \001(\tR\010lockName\022#\n\rfencin" +
+      "g_token\030\013 \001(\003R\014fencingToken\022)\n\020require_a" +
+      "ffected\030\014 \001(\rR\017requireAffected\0329\n\tIncrem" +
+      "ent\022\026\n\006column\030\001 \001(\tR\006column\022\024\n\005delta\030\002 \001" +
+      "(\001R\005delta\"\303\001\n\016ViewDefinition\0227\n\007context\030" +
+      "\001 \001(\0132\035.udb.entity.v1.RequestContextR\007co" +
+      "ntext\022\026\n\006schema\030\002 \001(\tR\006schema\022\022\n\004name\030\003 " +
+      "\001(\tR\004name\022\024\n\005query\030\004 \001(\tR\005query\022\033\n\twith_" +
+      "data\030\005 \001(\010R\010withData\022\031\n\010ttl_days\030\006 \001(\005R\007" +
+      "ttlDays\"\233\002\n\013BulkCasItem\022/\n\006filter\030\001 \001(\0132" +
+      "\027.google.protobuf.StructR\006filter\0221\n\007chan" +
+      "ges\030\002 \001(\0132\027.google.protobuf.StructR\007chan" +
+      "ges\022+\n\021expected_revision\030\003 \001(\tR\020expected" +
+      "Revision\0223\n\010expected\030\004 \001(\0132\027.google.prot" +
+      "obuf.StructR\010expected\022F\n\nincrements\030\005 \003(" +
+      "\0132&.udb.entity.v1.UpdateRequest.Incremen" +
+      "tR\nincrements\"\342\001\n\016BulkCasRequest\0227\n\007cont" +
+      "ext\030\001 \001(\0132\035.udb.entity.v1.RequestContext" +
+      "R\007context\022!\n\014message_type\030\002 \001(\tR\013message" +
+      "Type\0220\n\005items\030\003 \003(\0132\032.udb.entity.v1.Bulk" +
+      "CasItemR\005items\022\'\n\017idempotency_key\030\004 \001(\tR" +
+      "\016idempotencyKey\022\031\n\010max_rows\030\005 \001(\005R\007maxRo" +
+      "ws\"\203\001\n\021BulkCasItemResult\022\030\n\007matched\030\001 \001(" +
+      "\010R\007matched\022\030\n\007changed\030\002 \001(\010R\007changed\022\036\n\n" +
+      "conflicted\030\003 \001(\010R\nconflicted\022\032\n\010revision" +
+      "\030\004 \001(\tR\010revision\"\317\001\n\017BulkCasResponse\022\030\n\007" +
+      "matched\030\001 \001(\005R\007matched\022\030\n\007changed\030\002 \001(\005R" +
+      "\007changed\022\036\n\nconflicted\030\003 \001(\005R\nconflicted" +
+      "\022,\n\022write_receipt_json\030\004 \001(\tR\020writeRecei" +
+      "ptJson\022:\n\007results\030\005 \003(\0132 .udb.entity.v1." +
+      "BulkCasItemResultR\007results\"\377\001\n\021BulkUpser" +
+      "tRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v" +
+      "1.RequestContextR\007context\022!\n\014message_typ" +
+      "e\030\002 \001(\tR\013messageType\022!\n\014records_json\030\003 \003" +
+      "(\014R\013recordsJson\022\'\n\017conflict_fields\030\004 \003(\t" +
+      "R\016conflictFields\022\'\n\017idempotency_key\030\005 \001(" +
+      "\tR\016idempotencyKey\022\031\n\010batch_id\030\006 \001(\tR\007bat" +
+      "chId\"\341\002\n\022BulkUpsertResponse\022\031\n\010batch_id\030" +
+      "\001 \001(\tR\007batchId\022\033\n\trow_count\030\002 \001(\rR\010rowCo" +
+      "unt\022#\n\raffected_rows\030\003 \001(\003R\014affectedRows" +
+      "\022\037\n\013keys_sha256\030\004 \001(\tR\nkeysSha256\022\033\n\tfir" +
+      "st_key\030\005 \001(\tR\010firstKey\022\031\n\010last_key\030\006 \001(\t" +
+      "R\007lastKey\022,\n\022write_receipt_json\030\007 \001(\tR\020w" +
+      "riteReceiptJson\022\'\n\017statement_count\030\010 \001(\r" +
+      "R\016statementCount\022\031\n\010event_id\030\t \001(\tR\007even" +
+      "tId\022#\n\rwas_duplicate\030\n \001(\010R\014wasDuplicate" +
+      "B\265\001\n\021com.udb.entity.v1B\017RelationalProtoP" +
+      "\001Z9github.com/fahara02/udb/sdk/go/gen/ud" +
+      "b/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Entity." +
+      "V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata\\Ent" +
+      "ity\\V1\352\002\017Udb::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -250,7 +276,7 @@ public final class RelationalProto {
     internal_static_udb_entity_v1_SelectRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SelectRequest_descriptor,
-        new java.lang.String[] { "Context", "MessageType", "Filter", "Fields", "Limit", "PageToken", "Sort", "Cache", "IncludeRevision", "IncludeTotal", });
+        new java.lang.String[] { "Context", "MessageType", "Filter", "Fields", "Limit", "PageToken", "Sort", "Cache", "IncludeRevision", "IncludeTotal", "IncludeDeleted", });
     internal_static_udb_entity_v1_UpsertRequest_descriptor =
       getDescriptor().getMessageTypes().get(5);
     internal_static_udb_entity_v1_UpsertRequest_fieldAccessorTable = new
@@ -305,6 +331,18 @@ public final class RelationalProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_BulkCasResponse_descriptor,
         new java.lang.String[] { "Matched", "Changed", "Conflicted", "WriteReceiptJson", "Results", });
+    internal_static_udb_entity_v1_BulkUpsertRequest_descriptor =
+      getDescriptor().getMessageTypes().get(13);
+    internal_static_udb_entity_v1_BulkUpsertRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_BulkUpsertRequest_descriptor,
+        new java.lang.String[] { "Context", "MessageType", "RecordsJson", "ConflictFields", "IdempotencyKey", "BatchId", });
+    internal_static_udb_entity_v1_BulkUpsertResponse_descriptor =
+      getDescriptor().getMessageTypes().get(14);
+    internal_static_udb_entity_v1_BulkUpsertResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_BulkUpsertResponse_descriptor,
+        new java.lang.String[] { "BatchId", "RowCount", "AffectedRows", "KeysSha256", "FirstKey", "LastKey", "WriteReceiptJson", "StatementCount", "EventId", "WasDuplicate", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.StructProto.getDescriptor();
     com.udb.entity.v1.ContextProto.getDescriptor();

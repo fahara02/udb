@@ -124,180 +124,185 @@ public final class CacheServiceProto {
       "ce.proto\022\032udb.core.cache.services.v1\032\034go" +
       "ogle/api/annotations.proto\032\034udb/core/com" +
       "mon/v1/dto.proto\032!udb/core/common/v1/sec" +
-      "urity.proto\"w\n\nGetRequest\022\033\n\ttenant_id\030\001" +
-      " \001(\tR\010tenantId\022\034\n\tnamespace\030\002 \001(\tR\tnames" +
-      "pace\022\020\n\003key\030\003 \001(\tR\003key:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\005cacheP\001\"\277\001\n\013GetResponse\022\024\n\005found\030\001 " +
-      "\001(\010R\005found\022\024\n\005value\030\002 \001(\014R\005value\0222\n\025ttl_" +
-      "remaining_seconds\030\003 \001(\003R\023ttlRemainingSec" +
-      "onds\0222\n\005error\030\004 \001(\0132\034.udb.core.common.v1" +
-      ".ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005c" +
-      "acheP\001\"\256\001\n\nSetRequest\022\033\n\ttenant_id\030\001 \001(\t" +
-      "R\010tenantId\022\034\n\tnamespace\030\002 \001(\tR\tnamespace" +
-      "\022\020\n\003key\030\003 \001(\tR\003key\022\024\n\005value\030\004 \001(\014R\005value" +
-      "\022\037\n\013ttl_seconds\030\005 \001(\003R\nttlSeconds:\034\232\262\031\030\010" +
-      "\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\315\001\n\013SetResponse\022" +
-      "\026\n\006stored\030\001 \001(\010R\006stored\022\035\n\nused_bytes\030\002 " +
-      "\001(\003R\tusedBytes\022\033\n\tmax_bytes\030\003 \001(\003R\010maxBy" +
-      "tes\022\030\n\007message\030\004 \001(\tR\007message\0222\n\005error\030\005" +
+      "urity.proto\"\217\001\n\nGetRequest\022\033\n\ttenant_id\030" +
+      "\001 \001(\tR\010tenantId\022\034\n\tnamespace\030\002 \001(\tR\tname" +
+      "space\022\020\n\003key\030\003 \001(\tR\003key\022\026\n\006shared\030\004 \001(\010R" +
+      "\006shared:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\277\001" +
+      "\n\013GetResponse\022\024\n\005found\030\001 \001(\010R\005found\022\024\n\005v" +
+      "alue\030\002 \001(\014R\005value\0222\n\025ttl_remaining_secon" +
+      "ds\030\003 \001(\003R\023ttlRemainingSeconds\0222\n\005error\030\004" +
       " \001(\0132\034.udb.core.common.v1.ApiErrorR\005erro" +
-      "r:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\332\001\n\020Incr" +
-      "ementRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantI" +
-      "d\022\034\n\tnamespace\030\002 \001(\tR\tnamespace\022\020\n\003key\030\003" +
-      " \001(\tR\003key\022\024\n\005delta\030\004 \001(\003R\005delta\0223\n\026ttl_s" +
-      "econds_if_created\030\005 \001(\003R\023ttlSecondsIfCre" +
-      "ated\022\020\n\003max\030\006 \001(\003R\003max:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
-      "\001@\001J\005cacheP\001\"\343\001\n\021IncrementResponse\022\024\n\005va" +
-      "lue\030\001 \001(\003R\005value\022\030\n\007created\030\002 \001(\010R\007creat" +
-      "ed\022\030\n\007refused\030\003 \001(\010R\007refused\0222\n\025ttl_rema" +
-      "ining_seconds\030\004 \001(\003R\023ttlRemainingSeconds" +
-      "\0222\n\005error\030\005 \001(\0132\034.udb.core.common.v1.Api" +
-      "ErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\001@\001J\005cache" +
-      "P\001\"z\n\rDeleteRequest\022\033\n\ttenant_id\030\001 \001(\tR\010" +
-      "tenantId\022\034\n\tnamespace\030\002 \001(\tR\tnamespace\022\020" +
-      "\n\003key\030\003 \001(\tR\003key:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005c" +
-      "acheP\001\"\265\001\n\016DeleteResponse\022\030\n\007deleted\030\001 \001" +
-      "(\010R\007deleted\022\035\n\nused_bytes\030\002 \001(\003R\tusedByt" +
-      "es\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005error\030\004 " +
-      "\001(\0132\034.udb.core.common.v1.ApiErrorR\005error" +
-      ":\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\272\001\n\013ScanR" +
+      "r:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\306\001\n\nSetR" +
       "equest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\034\n\tn" +
-      "amespace\030\002 \001(\tR\tnamespace\022\035\n\nkey_prefix\030" +
-      "\003 \001(\tR\tkeyPrefix\022\024\n\005limit\030\004 \001(\005R\005limit\022\035" +
-      "\n\npage_token\030\005 \001(\tR\tpageToken:\034\232\262\031\030\010\001\032\003u" +
-      "db(\260\352\0010\003@\001J\005cacheP\001\"\305\001\n\014ScanResponse\022;\n\005" +
-      "items\030\001 \003(\0132%.udb.core.cache.services.v1" +
-      ".CacheItemR\005items\022&\n\017next_page_token\030\002 \001" +
-      "(\tR\rnextPageToken\0222\n\005error\030\003 \001(\0132\034.udb.c" +
-      "ore.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003u" +
-      "db(\260\352\0010\003@\001J\005cacheP\001\"\205\001\n\tCacheItem\022\020\n\003key" +
-      "\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\014R\005value\0222\n\025ttl" +
-      "_remaining_seconds\030\003 \001(\003R\023ttlRemainingSe" +
-      "conds:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\276\001\n\026" +
-      "CreateNamespaceRequest\022\033\n\ttenant_id\030\001 \001(" +
-      "\tR\010tenantId\022\034\n\tnamespace\030\002 \001(\tR\tnamespac" +
-      "e\022\033\n\tmax_bytes\030\003 \001(\003R\010maxBytes\022.\n\023defaul" +
-      "t_ttl_seconds\030\004 \001(\003R\021defaultTtlSeconds:\034" +
-      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\360\001\n\027CreateN" +
-      "amespaceResponse\022\034\n\tnamespace\030\001 \001(\tR\tnam" +
-      "espace\022\033\n\tmax_bytes\030\002 \001(\003R\010maxBytes\022.\n\023d" +
-      "efault_ttl_seconds\030\003 \001(\003R\021defaultTtlSeco" +
-      "nds\022\030\n\007message\030\004 \001(\tR\007message\0222\n\005error\030\005" +
-      " \001(\0132\034.udb.core.common.v1.ApiErrorR\005erro" +
-      "r:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\240\001\n\026Dele" +
-      "teNamespaceRequest\022\033\n\ttenant_id\030\001 \001(\tR\010t" +
-      "enantId\022\034\n\tnamespace\030\002 \001(\tR\tnamespace\022-\n" +
-      "\022confirmation_token\030\003 \001(\tR\021confirmationT" +
-      "oken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\306\001\n\027D" +
-      "eleteNamespaceResponse\022\034\n\tnamespace\030\001 \001(" +
-      "\tR\tnamespace\022!\n\014keys_deleted\030\002 \001(\004R\013keys" +
-      "Deleted\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005err" +
-      "or\030\004 \001(\0132\034.udb.core.common.v1.ApiErrorR\005" +
-      "error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"s\n\030G" +
-      "etNamespaceStatsRequest\022\033\n\ttenant_id\030\001 \001" +
-      "(\tR\010tenantId\022\034\n\tnamespace\030\002 \001(\tR\tnamespa" +
-      "ce:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\346\001\n\031Get" +
-      "NamespaceStatsResponse\022\034\n\tnamespace\030\001 \001(" +
-      "\tR\tnamespace\022\035\n\nused_bytes\030\002 \001(\003R\tusedBy" +
-      "tes\022\033\n\tmax_bytes\030\003 \001(\003R\010maxBytes\022\035\n\nitem" +
-      "_count\030\004 \001(\004R\titemCount\0222\n\005error\030\005 \001(\0132\034" +
-      ".udb.core.common.v1.ApiErrorR\005error:\034\232\262\031" +
-      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\0012\261\033\n\014CacheServi" +
-      "ce\022\256\002\n\003Get\022&.udb.core.cache.services.v1." +
-      "GetRequest\032\'.udb.core.cache.services.v1." +
-      "GetResponse\"\325\001\312\363\030&\010\002\032\rudb:cache:get \001J\003\001" +
-      "\002\004j\tcache.Get\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\tcache_" +
-      "get\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\021cacheNamespac" +
-      "eGet\362\363\030<\n\005cache\032\005redis2\033UDB_NATIVE_SERVI" +
-      "CES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033" +
-      "/v1/cache/{namespace}/{key}\022\204\003\n\003Set\022&.ud" +
-      "b.core.cache.services.v1.SetRequest\032\'.ud" +
-      "b.core.cache.services.v1.SetResponse\"\253\002\312" +
-      "\363\030&\010\002\032\rudb:cache:set \001J\003\001\002\004j\tcache.Set\220\001" +
-      "\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\tcache_set\032\003udb(\260\352\0010\003@" +
-      "\001J\005cacheP\001Z\021cacheNamespaceSet\352\363\030O\n\tcache" +
-      ".Set\022\026udb.cache.entry.set.v1\032\tnamespace\"" +
-      "\010standard*\rat_least_once2\006stable\362\363\030<\n\005ca" +
-      "che\032\005redis2\033UDB_NATIVE_SERVICES_ENABLED2" +
-      "\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002 \032\033/v1/cache/{n" +
-      "amespace}/{key}:\001*\022\345\002\n\tIncrement\022,.udb.c" +
-      "ore.cache.services.v1.IncrementRequest\032-" +
-      ".udb.core.cache.services.v1.IncrementRes" +
-      "ponse\"\372\001\312\363\0302\010\002\032\023udb:cache:increment \001J\003\001" +
-      "\002\004j\017cache.Increment\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030B\010\001\022\017" +
-      "cache_increment\032\003udb(\260\352\0010\001@\001J\005cacheP\001Z\027c" +
-      "acheNamespaceIncrement\362\363\030<\n\005cache\032\005redis" +
-      "2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_" +
-      "TARGET\370\363\030\002\202\323\344\223\002*\"%/v1/cache/{namespace}/" +
-      "{key}:increment:\001*\022\235\003\n\006Delete\022).udb.core" +
-      ".cache.services.v1.DeleteRequest\032*.udb.c" +
-      "ore.cache.services.v1.DeleteResponse\"\273\002\312" +
-      "\363\030,\010\002\032\020udb:cache:delete \001J\003\001\002\004j\014cache.De" +
-      "lete\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\014cache_delete\032\003u" +
-      "db(\260\352\0010\003@\001J\005cacheP\001Z\024cacheNamespaceDelet" +
-      "e\352\363\030V\n\014cache.Delete\022\032udb.cache.entry.del" +
-      "eted.v1\032\tnamespace\"\010standard*\rat_least_o" +
-      "nce2\006stable\362\363\030<\n\005cache\032\005redis2\033UDB_NATIV" +
-      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202" +
-      "\323\344\223\002\035*\033/v1/cache/{namespace}/{key}\022\264\002\n\004S" +
-      "can\022\'.udb.core.cache.services.v1.ScanReq" +
-      "uest\032(.udb.core.cache.services.v1.ScanRe" +
-      "sponse\"\330\001\312\363\030(\010\002\032\016udb:cache:scan \001J\003\001\002\004j\n" +
-      "cache.Scan\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\ncache_sca" +
-      "n\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\022cacheNamespaceS" +
-      "can\362\363\030<\n\005cache\032\005redis2\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\022\032/" +
-      "v1/cache/{namespace}:scan\022\335\003\n\017CreateName" +
-      "space\0222.udb.core.cache.services.v1.Creat" +
-      "eNamespaceRequest\0323.udb.core.cache.servi" +
-      "ces.v1.CreateNamespaceResponse\"\340\002\312\363\030>\010\002\032" +
-      "\032udb:cache:create-namespace \001J\002\001\002j\025cache" +
-      ".CreateNamespace\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\026cre" +
-      "ate_cache_namespace\032\003udb(\260\352\0010\003@\001J\005cacheP" +
-      "\001Z\024createCacheNamespace\352\363\030c\n\025cache.Creat" +
-      "eNamespace\022\036udb.cache.namespace.created." +
+      "amespace\030\002 \001(\tR\tnamespace\022\020\n\003key\030\003 \001(\tR\003" +
+      "key\022\024\n\005value\030\004 \001(\014R\005value\022\037\n\013ttl_seconds" +
+      "\030\005 \001(\003R\nttlSeconds\022\026\n\006shared\030\006 \001(\010R\006shar" +
+      "ed:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\315\001\n\013Set" +
+      "Response\022\026\n\006stored\030\001 \001(\010R\006stored\022\035\n\nused" +
+      "_bytes\030\002 \001(\003R\tusedBytes\022\033\n\tmax_bytes\030\003 \001" +
+      "(\003R\010maxBytes\022\030\n\007message\030\004 \001(\tR\007message\0222" +
+      "\n\005error\030\005 \001(\0132\034.udb.core.common.v1.ApiEr" +
+      "rorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001" +
+      "\"\362\001\n\020IncrementRequest\022\033\n\ttenant_id\030\001 \001(\t" +
+      "R\010tenantId\022\034\n\tnamespace\030\002 \001(\tR\tnamespace" +
+      "\022\020\n\003key\030\003 \001(\tR\003key\022\024\n\005delta\030\004 \001(\003R\005delta" +
+      "\0223\n\026ttl_seconds_if_created\030\005 \001(\003R\023ttlSec" +
+      "ondsIfCreated\022\020\n\003max\030\006 \001(\003R\003max\022\026\n\006share" +
+      "d\030\007 \001(\010R\006shared:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\001@\001J\005ca" +
+      "cheP\001\"\343\001\n\021IncrementResponse\022\024\n\005value\030\001 \001" +
+      "(\003R\005value\022\030\n\007created\030\002 \001(\010R\007created\022\030\n\007r" +
+      "efused\030\003 \001(\010R\007refused\0222\n\025ttl_remaining_s" +
+      "econds\030\004 \001(\003R\023ttlRemainingSeconds\0222\n\005err" +
+      "or\030\005 \001(\0132\034.udb.core.common.v1.ApiErrorR\005" +
+      "error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\001@\001J\005cacheP\001\"\222\001\n\r" +
+      "DeleteRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenant" +
+      "Id\022\034\n\tnamespace\030\002 \001(\tR\tnamespace\022\020\n\003key\030" +
+      "\003 \001(\tR\003key\022\026\n\006shared\030\004 \001(\010R\006shared:\034\232\262\031\030" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\265\001\n\016DeleteRespo" +
+      "nse\022\030\n\007deleted\030\001 \001(\010R\007deleted\022\035\n\nused_by" +
+      "tes\030\002 \001(\003R\tusedBytes\022\030\n\007message\030\003 \001(\tR\007m" +
+      "essage\0222\n\005error\030\004 \001(\0132\034.udb.core.common." +
+      "v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\005cacheP\001\"\322\001\n\013ScanRequest\022\033\n\ttenant_id\030\001 " +
+      "\001(\tR\010tenantId\022\034\n\tnamespace\030\002 \001(\tR\tnamesp" +
+      "ace\022\035\n\nkey_prefix\030\003 \001(\tR\tkeyPrefix\022\024\n\005li" +
+      "mit\030\004 \001(\005R\005limit\022\035\n\npage_token\030\005 \001(\tR\tpa" +
+      "geToken\022\026\n\006shared\030\006 \001(\010R\006shared:\034\232\262\031\030\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\005cacheP\001\"\305\001\n\014ScanResponse\022;" +
+      "\n\005items\030\001 \003(\0132%.udb.core.cache.services." +
+      "v1.CacheItemR\005items\022&\n\017next_page_token\030\002" +
+      " \001(\tR\rnextPageToken\0222\n\005error\030\003 \001(\0132\034.udb" +
+      ".core.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\005cacheP\001\"\205\001\n\tCacheItem\022\020\n\003k" +
+      "ey\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\014R\005value\0222\n\025t" +
+      "tl_remaining_seconds\030\003 \001(\003R\023ttlRemaining" +
+      "Seconds:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\326\001" +
+      "\n\026CreateNamespaceRequest\022\033\n\ttenant_id\030\001 " +
+      "\001(\tR\010tenantId\022\034\n\tnamespace\030\002 \001(\tR\tnamesp" +
+      "ace\022\033\n\tmax_bytes\030\003 \001(\003R\010maxBytes\022.\n\023defa" +
+      "ult_ttl_seconds\030\004 \001(\003R\021defaultTtlSeconds" +
+      "\022\026\n\006shared\030\005 \001(\010R\006shared:\034\232\262\031\030\010\001\032\003udb(\260\352" +
+      "\0010\003@\001J\005cacheP\001\"\360\001\n\027CreateNamespaceRespon" +
+      "se\022\034\n\tnamespace\030\001 \001(\tR\tnamespace\022\033\n\tmax_" +
+      "bytes\030\002 \001(\003R\010maxBytes\022.\n\023default_ttl_sec" +
+      "onds\030\003 \001(\003R\021defaultTtlSeconds\022\030\n\007message" +
+      "\030\004 \001(\tR\007message\0222\n\005error\030\005 \001(\0132\034.udb.cor" +
+      "e.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\005cacheP\001\"\270\001\n\026DeleteNamespaceReq" +
+      "uest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\034\n\tnam" +
+      "espace\030\002 \001(\tR\tnamespace\022-\n\022confirmation_" +
+      "token\030\003 \001(\tR\021confirmationToken\022\026\n\006shared" +
+      "\030\004 \001(\010R\006shared:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cac" +
+      "heP\001\"\306\001\n\027DeleteNamespaceResponse\022\034\n\tname" +
+      "space\030\001 \001(\tR\tnamespace\022!\n\014keys_deleted\030\002" +
+      " \001(\004R\013keysDeleted\022\030\n\007message\030\003 \001(\tR\007mess" +
+      "age\0222\n\005error\030\004 \001(\0132\034.udb.core.common.v1." +
+      "ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005ca" +
+      "cheP\001\"\213\001\n\030GetNamespaceStatsRequest\022\033\n\tte" +
+      "nant_id\030\001 \001(\tR\010tenantId\022\034\n\tnamespace\030\002 \001" +
+      "(\tR\tnamespace\022\026\n\006shared\030\003 \001(\010R\006shared:\034\232" +
+      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\"\346\001\n\031GetNames" +
+      "paceStatsResponse\022\034\n\tnamespace\030\001 \001(\tR\tna" +
+      "mespace\022\035\n\nused_bytes\030\002 \001(\003R\tusedBytes\022\033" +
+      "\n\tmax_bytes\030\003 \001(\003R\010maxBytes\022\035\n\nitem_coun" +
+      "t\030\004 \001(\004R\titemCount\0222\n\005error\030\005 \001(\0132\034.udb." +
+      "core.common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\005cacheP\0012\261\033\n\014CacheService\022\256\002" +
+      "\n\003Get\022&.udb.core.cache.services.v1.GetRe" +
+      "quest\032\'.udb.core.cache.services.v1.GetRe" +
+      "sponse\"\325\001\312\363\030&\010\002\032\rudb:cache:get \001J\003\001\002\004j\tc" +
+      "ache.Get\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\tcache_get\032\003" +
+      "udb(\260\352\0010\003@\001J\005cacheP\001Z\021cacheNamespaceGet\362" +
+      "\363\030<\n\005cache\032\005redis2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/c" +
+      "ache/{namespace}/{key}\022\204\003\n\003Set\022&.udb.cor" +
+      "e.cache.services.v1.SetRequest\032\'.udb.cor" +
+      "e.cache.services.v1.SetResponse\"\253\002\312\363\030&\010\002" +
+      "\032\rudb:cache:set \001J\003\001\002\004j\tcache.Set\220\001\001\322\363\030\006" +
+      "\010\001\020\001 \001\332\363\0306\010\001\022\tcache_set\032\003udb(\260\352\0010\003@\001J\005ca" +
+      "cheP\001Z\021cacheNamespaceSet\352\363\030O\n\tcache.Set\022" +
+      "\026udb.cache.entry.set.v1\032\tnamespace\"\010stan" +
+      "dard*\rat_least_once2\006stable\362\363\030<\n\005cache\032\005" +
+      "redis2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\002\202\323\344\223\002 \032\033/v1/cache/{namesp" +
+      "ace}/{key}:\001*\022\345\002\n\tIncrement\022,.udb.core.c" +
+      "ache.services.v1.IncrementRequest\032-.udb." +
+      "core.cache.services.v1.IncrementResponse" +
+      "\"\372\001\312\363\0302\010\002\032\023udb:cache:increment \001J\003\001\002\004j\017c" +
+      "ache.Increment\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030B\010\001\022\017cache" +
+      "_increment\032\003udb(\260\352\0010\001@\001J\005cacheP\001Z\027cacheN" +
+      "amespaceIncrement\362\363\030<\n\005cache\032\005redis2\033UDB" +
+      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
+      "T\370\363\030\002\202\323\344\223\002*\"%/v1/cache/{namespace}/{key}" +
+      ":increment:\001*\022\235\003\n\006Delete\022).udb.core.cach" +
+      "e.services.v1.DeleteRequest\032*.udb.core.c" +
+      "ache.services.v1.DeleteResponse\"\273\002\312\363\030,\010\002" +
+      "\032\020udb:cache:delete \001J\003\001\002\004j\014cache.Delete\220" +
+      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\014cache_delete\032\003udb(\260\352" +
+      "\0010\003@\001J\005cacheP\001Z\024cacheNamespaceDelete\352\363\030V" +
+      "\n\014cache.Delete\022\032udb.cache.entry.deleted." +
       "v1\032\tnamespace\"\010standard*\rat_least_once2\006" +
       "stable\362\363\030<\n\005cache\032\005redis2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\031" +
-      "\"\024/v1/cache/namespaces:\001*\022\351\003\n\017DeleteName" +
-      "space\0222.udb.core.cache.services.v1.Delet" +
-      "eNamespaceRequest\0323.udb.core.cache.servi" +
-      "ces.v1.DeleteNamespaceResponse\"\354\002\312\363\030>\010\002\032" +
-      "\032udb:cache:delete-namespace \001J\002\001\002j\025cache" +
-      ".DeleteNamespace\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\026del" +
-      "ete_cache_namespace\032\003udb(\260\352\0010\003@\001J\005cacheP" +
-      "\001Z\024deleteCacheNamespace\352\363\030]\n\025cache.Delet" +
-      "eNamespace\022\030udb.cache.invalidated.v1\032\tna" +
-      "mespace\"\010standard*\rat_least_once2\006stable" +
-      "\362\363\030<\n\005cache\032\005redis2\033UDB_NATIVE_SERVICES_" +
-      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002+\"&/v1/" +
-      "cache/namespaces/{namespace}:flush:\001*\022\225\003" +
-      "\n\021GetNamespaceStats\0224.udb.core.cache.ser" +
-      "vices.v1.GetNamespaceStatsRequest\0325.udb." +
-      "core.cache.services.v1.GetNamespaceStats" +
-      "Response\"\222\002\312\363\030C\010\002\032\035udb:cache:get-namespa" +
-      "ce-stats \001J\002\001\002j\027cache.GetNamespaceStats\220" +
-      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030K\010\001\022\031get_cache_namespace_" +
-      "stats\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\026getCacheNam" +
-      "espaceStats\362\363\030<\n\005cache\032\005redis2\033UDB_NATIV" +
-      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202" +
-      "\323\344\223\002(\022&/v1/cache/namespaces/{namespace}/" +
-      "stats\032\305\002\312\360\031Q\n\005cache\022\005cache\032\005cache\"\005Cache" +
-      "*\005cache0\0018\001@\001h\001z\005cache\202\001\005cache\212\001\005cache\222\001" +
-      "\014native.cache\322\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP" +
-      "\001\332\360\031\205\001\n\005cache\022\020udb/native/cache\032\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\027u" +
-      "db.native.cache.config:\005cacheJ\013UDB_API_K" +
-      "EYZ\017udb native lint\342\360\031F\n\005cache\032\010postgres" +
-      "\032\005redis2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
-      "B_GRPC_TARGETB\212\002\n\036com.udb.core.cache.ser" +
-      "vices.v1B\021CacheServiceProtoP\001ZHgithub.co" +
-      "m/fahara02/udb/sdk/go/gen/udb/core/cache" +
-      "/services/v1;servicesv1\242\002\004UCCS\252\002\032Udb.Cor" +
-      "e.Cache.Services.V1\312\002\032Udb\\Core\\Cache\\Ser" +
-      "vices\\V1\342\002&Udb\\GPBMetadata\\Core\\Cache\\Se" +
-      "rvices\\V1\352\002\036Udb::Core::Cache::Services::" +
-      "V1b\006proto3"
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035" +
+      "*\033/v1/cache/{namespace}/{key}\022\264\002\n\004Scan\022\'" +
+      ".udb.core.cache.services.v1.ScanRequest\032" +
+      "(.udb.core.cache.services.v1.ScanRespons" +
+      "e\"\330\001\312\363\030(\010\002\032\016udb:cache:scan \001J\003\001\002\004j\ncache" +
+      ".Scan\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\ncache_scan\032\003ud" +
+      "b(\260\352\0010\003@\001J\005cacheP\001Z\022cacheNamespaceScan\362\363" +
+      "\030<\n\005cache\032\005redis2\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\022\032/v1/ca" +
+      "che/{namespace}:scan\022\335\003\n\017CreateNamespace" +
+      "\0222.udb.core.cache.services.v1.CreateName" +
+      "spaceRequest\0323.udb.core.cache.services.v" +
+      "1.CreateNamespaceResponse\"\340\002\312\363\030>\010\002\032\032udb:" +
+      "cache:create-namespace \001J\002\001\002j\025cache.Crea" +
+      "teNamespace\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\026create_c" +
+      "ache_namespace\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\024cr" +
+      "eateCacheNamespace\352\363\030c\n\025cache.CreateName" +
+      "space\022\036udb.cache.namespace.created.v1\032\tn" +
+      "amespace\"\010standard*\rat_least_once2\006stabl" +
+      "e\362\363\030<\n\005cache\032\005redis2\033UDB_NATIVE_SERVICES" +
+      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\031\"\024/v1" +
+      "/cache/namespaces:\001*\022\351\003\n\017DeleteNamespace" +
+      "\0222.udb.core.cache.services.v1.DeleteName" +
+      "spaceRequest\0323.udb.core.cache.services.v" +
+      "1.DeleteNamespaceResponse\"\354\002\312\363\030>\010\002\032\032udb:" +
+      "cache:delete-namespace \001J\002\001\002j\025cache.Dele" +
+      "teNamespace\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\026delete_c" +
+      "ache_namespace\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\024de" +
+      "leteCacheNamespace\352\363\030]\n\025cache.DeleteName" +
+      "space\022\030udb.cache.invalidated.v1\032\tnamespa" +
+      "ce\"\010standard*\rat_least_once2\006stable\362\363\030<\n" +
+      "\005cache\032\005redis2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002+\"&/v1/cache" +
+      "/namespaces/{namespace}:flush:\001*\022\225\003\n\021Get" +
+      "NamespaceStats\0224.udb.core.cache.services" +
+      ".v1.GetNamespaceStatsRequest\0325.udb.core." +
+      "cache.services.v1.GetNamespaceStatsRespo" +
+      "nse\"\222\002\312\363\030C\010\002\032\035udb:cache:get-namespace-st" +
+      "ats \001J\002\001\002j\027cache.GetNamespaceStats\220\001\001\322\363\030" +
+      "\006\010\001\020\001 \001\332\363\030K\010\001\022\031get_cache_namespace_stats" +
+      "\032\003udb(\260\352\0010\003@\001J\005cacheP\001Z\026getCacheNamespac" +
+      "eStats\362\363\030<\n\005cache\032\005redis2\033UDB_NATIVE_SER" +
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002(" +
+      "\022&/v1/cache/namespaces/{namespace}/stats" +
+      "\032\305\002\312\360\031Q\n\005cache\022\005cache\032\005cache\"\005Cache*\005cac" +
+      "he0\0018\001@\001h\001z\005cache\202\001\005cache\212\001\005cache\222\001\014nati" +
+      "ve.cache\322\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005cacheP\001\332\360\031\205" +
+      "\001\n\005cache\022\020udb/native/cache\032\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\027udb.na" +
+      "tive.cache.config:\005cacheJ\013UDB_API_KEYZ\017u" +
+      "db native lint\342\360\031F\n\005cache\032\010postgres\032\005red" +
+      "is2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
+      "C_TARGETB\212\002\n\036com.udb.core.cache.services" +
+      ".v1B\021CacheServiceProtoP\001ZHgithub.com/fah" +
+      "ara02/udb/sdk/go/gen/udb/core/cache/serv" +
+      "ices/v1;servicesv1\242\002\004UCCS\252\002\032Udb.Core.Cac" +
+      "he.Services.V1\312\002\032Udb\\Core\\Cache\\Services" +
+      "\\V1\342\002&Udb\\GPBMetadata\\Core\\Cache\\Service" +
+      "s\\V1\352\002\036Udb::Core::Cache::Services::V1b\006p" +
+      "roto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -311,7 +316,7 @@ public final class CacheServiceProto {
     internal_static_udb_core_cache_services_v1_GetRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_cache_services_v1_GetRequest_descriptor,
-        new java.lang.String[] { "TenantId", "Namespace", "Key", });
+        new java.lang.String[] { "TenantId", "Namespace", "Key", "Shared", });
     internal_static_udb_core_cache_services_v1_GetResponse_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_udb_core_cache_services_v1_GetResponse_fieldAccessorTable = new
@@ -323,7 +328,7 @@ public final class CacheServiceProto {
     internal_static_udb_core_cache_services_v1_SetRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_cache_services_v1_SetRequest_descriptor,
-        new java.lang.String[] { "TenantId", "Namespace", "Key", "Value", "TtlSeconds", });
+        new java.lang.String[] { "TenantId", "Namespace", "Key", "Value", "TtlSeconds", "Shared", });
     internal_static_udb_core_cache_services_v1_SetResponse_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_udb_core_cache_services_v1_SetResponse_fieldAccessorTable = new
@@ -335,7 +340,7 @@ public final class CacheServiceProto {
     internal_static_udb_core_cache_services_v1_IncrementRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_cache_services_v1_IncrementRequest_descriptor,
-        new java.lang.String[] { "TenantId", "Namespace", "Key", "Delta", "TtlSecondsIfCreated", "Max", });
+        new java.lang.String[] { "TenantId", "Namespace", "Key", "Delta", "TtlSecondsIfCreated", "Max", "Shared", });
     internal_static_udb_core_cache_services_v1_IncrementResponse_descriptor =
       getDescriptor().getMessageTypes().get(5);
     internal_static_udb_core_cache_services_v1_IncrementResponse_fieldAccessorTable = new
@@ -347,7 +352,7 @@ public final class CacheServiceProto {
     internal_static_udb_core_cache_services_v1_DeleteRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_cache_services_v1_DeleteRequest_descriptor,
-        new java.lang.String[] { "TenantId", "Namespace", "Key", });
+        new java.lang.String[] { "TenantId", "Namespace", "Key", "Shared", });
     internal_static_udb_core_cache_services_v1_DeleteResponse_descriptor =
       getDescriptor().getMessageTypes().get(7);
     internal_static_udb_core_cache_services_v1_DeleteResponse_fieldAccessorTable = new
@@ -359,7 +364,7 @@ public final class CacheServiceProto {
     internal_static_udb_core_cache_services_v1_ScanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_cache_services_v1_ScanRequest_descriptor,
-        new java.lang.String[] { "TenantId", "Namespace", "KeyPrefix", "Limit", "PageToken", });
+        new java.lang.String[] { "TenantId", "Namespace", "KeyPrefix", "Limit", "PageToken", "Shared", });
     internal_static_udb_core_cache_services_v1_ScanResponse_descriptor =
       getDescriptor().getMessageTypes().get(9);
     internal_static_udb_core_cache_services_v1_ScanResponse_fieldAccessorTable = new
@@ -377,7 +382,7 @@ public final class CacheServiceProto {
     internal_static_udb_core_cache_services_v1_CreateNamespaceRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_cache_services_v1_CreateNamespaceRequest_descriptor,
-        new java.lang.String[] { "TenantId", "Namespace", "MaxBytes", "DefaultTtlSeconds", });
+        new java.lang.String[] { "TenantId", "Namespace", "MaxBytes", "DefaultTtlSeconds", "Shared", });
     internal_static_udb_core_cache_services_v1_CreateNamespaceResponse_descriptor =
       getDescriptor().getMessageTypes().get(12);
     internal_static_udb_core_cache_services_v1_CreateNamespaceResponse_fieldAccessorTable = new
@@ -389,7 +394,7 @@ public final class CacheServiceProto {
     internal_static_udb_core_cache_services_v1_DeleteNamespaceRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_cache_services_v1_DeleteNamespaceRequest_descriptor,
-        new java.lang.String[] { "TenantId", "Namespace", "ConfirmationToken", });
+        new java.lang.String[] { "TenantId", "Namespace", "ConfirmationToken", "Shared", });
     internal_static_udb_core_cache_services_v1_DeleteNamespaceResponse_descriptor =
       getDescriptor().getMessageTypes().get(14);
     internal_static_udb_core_cache_services_v1_DeleteNamespaceResponse_fieldAccessorTable = new
@@ -401,7 +406,7 @@ public final class CacheServiceProto {
     internal_static_udb_core_cache_services_v1_GetNamespaceStatsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_cache_services_v1_GetNamespaceStatsRequest_descriptor,
-        new java.lang.String[] { "TenantId", "Namespace", });
+        new java.lang.String[] { "TenantId", "Namespace", "Shared", });
     internal_static_udb_core_cache_services_v1_GetNamespaceStatsResponse_descriptor =
       getDescriptor().getMessageTypes().get(16);
     internal_static_udb_core_cache_services_v1_GetNamespaceStatsResponse_fieldAccessorTable = new

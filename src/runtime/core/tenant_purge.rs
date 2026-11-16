@@ -130,6 +130,51 @@ pub(crate) fn plan_tenant_purge(manifest: &CatalogManifest) -> TenantPurgePlan {
     }
 }
 
+/// PURE planner for the platform-scoped shared-table backup: every shared
+/// (global) table of the manifest (`broker::is_global_table` — tenant isolation
+/// declared none/global/disabled/off and no tenant column), ordered children
+/// first exactly like [`plan_tenant_purge`] so a restore inserts parents first.
+/// Targets carry an EMPTY `tenant_column` (shared rows have none). Every other
+/// table is REPORTED as excluded with the reason it is not part of the shared
+/// set — never silently skipped.
+pub(crate) fn plan_shared_tables(manifest: &CatalogManifest) -> TenantPurgePlan {
+    let mut included: Vec<&ManifestTable> = Vec::new();
+    let mut excluded: Vec<ExcludedPurgeTable> = Vec::new();
+
+    for table in &manifest.tables {
+        if crate::broker::is_global_table(table) {
+            included.push(table);
+            continue;
+        }
+        let reason = if resolve_tenant_column_ref(table).is_some() {
+            "tenant-owned table; covered by the per-tenant backup"
+        } else {
+            "no tenant column, but tenant isolation is not declared none/global/disabled/off, so it is not a shared table"
+        };
+        excluded.push(ExcludedPurgeTable {
+            schema: table.schema.clone(),
+            table: table.table.clone(),
+            reason: reason.to_string(),
+        });
+    }
+
+    let (order, fk_ordered) = order_children_first(&included);
+    let targets = order
+        .into_iter()
+        .map(|i| PurgeTarget {
+            schema: included[i].schema.clone(),
+            table: included[i].table.clone(),
+            tenant_column: String::new(),
+        })
+        .collect();
+
+    TenantPurgePlan {
+        targets,
+        excluded,
+        fk_ordered,
+    }
+}
+
 /// Stable topological sort of the included tables so children (tables that
 /// reference another included table via a foreign key) are deleted BEFORE the
 /// tables they point at. Ties break by manifest position for determinism.

@@ -1256,6 +1256,26 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int CROSS_PROJECT_SHARED_FIELD_NUMBER = 34;
+  private boolean crossProjectShared_ = false;
+  /**
+   * <pre>
+   * cross_project_shared: this physical table is deliberately shared by every
+   * project whose catalog declares it. Tables carry no project prefix, so two
+   * projects that declare the same table on the same backend instance would
+   * read and write the same rows. UDB refuses to activate such a catalog
+   * unless BOTH projects set this flag on the table (or both scope its rows
+   * with a project column, see db_table_security.project_isolation_mode).
+   * </pre>
+   *
+   * <code>bool cross_project_shared = 34 [json_name = "crossProjectShared"];</code>
+   * @return The crossProjectShared.
+   */
+  @java.lang.Override
+  public boolean getCrossProjectShared() {
+    return crossProjectShared_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -1368,6 +1388,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nativeServiceId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 33, nativeServiceId_);
+    }
+    if (crossProjectShared_ != false) {
+      output.writeBool(34, crossProjectShared_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -1498,6 +1521,10 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nativeServiceId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(33, nativeServiceId_);
     }
+    if (crossProjectShared_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(34, crossProjectShared_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -1581,6 +1608,8 @@ private static final long serialVersionUID = 0L;
     }
     if (!getNativeServiceId()
         .equals(other.getNativeServiceId())) return false;
+    if (getCrossProjectShared()
+        != other.getCrossProjectShared()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1682,6 +1711,9 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + NATIVE_SERVICE_ID_FIELD_NUMBER;
     hash = (53 * hash) + getNativeServiceId().hashCode();
+    hash = (37 * hash) + CROSS_PROJECT_SHARED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getCrossProjectShared());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1906,6 +1938,7 @@ private static final long serialVersionUID = 0L;
         vectorStoreBuilder_ = null;
       }
       nativeServiceId_ = "";
+      crossProjectShared_ = false;
       return this;
     }
 
@@ -2093,6 +2126,9 @@ private static final long serialVersionUID = 0L;
       int from_bitField1_ = bitField1_;
       if (((from_bitField1_ & 0x00000001) != 0)) {
         result.nativeServiceId_ = nativeServiceId_;
+      }
+      if (((from_bitField1_ & 0x00000002) != 0)) {
+        result.crossProjectShared_ = crossProjectShared_;
       }
     }
 
@@ -2392,6 +2428,9 @@ private static final long serialVersionUID = 0L;
         bitField1_ |= 0x00000001;
         onChanged();
       }
+      if (other.getCrossProjectShared() != false) {
+        setCrossProjectShared(other.getCrossProjectShared());
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -2641,6 +2680,11 @@ private static final long serialVersionUID = 0L;
               bitField1_ |= 0x00000001;
               break;
             } // case 266
+            case 272: {
+              crossProjectShared_ = input.readBool();
+              bitField1_ |= 0x00000002;
+              break;
+            } // case 272
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -6598,6 +6642,65 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       nativeServiceId_ = value;
       bitField1_ |= 0x00000001;
+      onChanged();
+      return this;
+    }
+
+    private boolean crossProjectShared_ ;
+    /**
+     * <pre>
+     * cross_project_shared: this physical table is deliberately shared by every
+     * project whose catalog declares it. Tables carry no project prefix, so two
+     * projects that declare the same table on the same backend instance would
+     * read and write the same rows. UDB refuses to activate such a catalog
+     * unless BOTH projects set this flag on the table (or both scope its rows
+     * with a project column, see db_table_security.project_isolation_mode).
+     * </pre>
+     *
+     * <code>bool cross_project_shared = 34 [json_name = "crossProjectShared"];</code>
+     * @return The crossProjectShared.
+     */
+    @java.lang.Override
+    public boolean getCrossProjectShared() {
+      return crossProjectShared_;
+    }
+    /**
+     * <pre>
+     * cross_project_shared: this physical table is deliberately shared by every
+     * project whose catalog declares it. Tables carry no project prefix, so two
+     * projects that declare the same table on the same backend instance would
+     * read and write the same rows. UDB refuses to activate such a catalog
+     * unless BOTH projects set this flag on the table (or both scope its rows
+     * with a project column, see db_table_security.project_isolation_mode).
+     * </pre>
+     *
+     * <code>bool cross_project_shared = 34 [json_name = "crossProjectShared"];</code>
+     * @param value The crossProjectShared to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCrossProjectShared(boolean value) {
+
+      crossProjectShared_ = value;
+      bitField1_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * cross_project_shared: this physical table is deliberately shared by every
+     * project whose catalog declares it. Tables carry no project prefix, so two
+     * projects that declare the same table on the same backend instance would
+     * read and write the same rows. UDB refuses to activate such a catalog
+     * unless BOTH projects set this flag on the table (or both scope its rows
+     * with a project column, see db_table_security.project_isolation_mode).
+     * </pre>
+     *
+     * <code>bool cross_project_shared = 34 [json_name = "crossProjectShared"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCrossProjectShared() {
+      bitField1_ = (bitField1_ & ~0x00000002);
+      crossProjectShared_ = false;
       onChanged();
       return this;
     }

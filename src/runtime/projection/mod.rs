@@ -690,6 +690,90 @@ impl ProjectionEngine {
         Ok(task_keys)
     }
 
+    /// Insert the projection tasks for MANY rows of one message type inside
+    /// the caller's transaction with ONE statement (a `BulkUpsert` batch).
+    ///
+    /// Every row still gets its own task per target — the worker's per-row
+    /// ordering and the read fence are keyed by row, so a batch-wide task
+    /// would lose both — but the tasks are written together instead of one
+    /// INSERT per row. Returns the task idempotency keys (the read fence's
+    /// natural key) and the number of statements run (0 or 1).
+    pub async fn enqueue_write_tasks_batch_tx(
+        tx: &mut sqlx::Transaction<'_, Postgres>,
+        config: &SystemCatalogConfig,
+        project_id: &str,
+        message_type: &str,
+        operation: &str,
+        source_payloads: &[serde_json::Value],
+        plans: &[ProjectionPlan],
+    ) -> Result<(Vec<String>, u32), String> {
+        let mut columns: [Vec<String>; 12] = Default::default();
+        let mut seen = std::collections::HashSet::new();
+        for plan in plans
+            .iter()
+            .filter(|p| message_type_matches(&p.message_type, message_type))
+        {
+            for source_payload in source_payloads {
+                let source_payload = strip_nul_json(source_payload);
+                let source_row_key = plan.extract_row_key(&source_payload);
+                let source_checksum = Self::source_checksum(&source_payload);
+                for target in &plan.targets {
+                    let idempotency_key = Self::idempotency_key(
+                        project_id,
+                        &plan.source_table,
+                        &source_row_key,
+                        operation,
+                        &target.backend,
+                        &target.instance,
+                        &plan.manifest_checksum,
+                        &source_checksum,
+                    );
+                    // Identical key = identical content for the same row and
+                    // target: one task covers it.
+                    if !seen.insert(idempotency_key.clone()) {
+                        continue;
+                    }
+                    let target_options =
+                        serde_json::to_value(&target.options).unwrap_or(serde_json::Value::Null);
+                    for (column, value) in columns.iter_mut().zip([
+                        idempotency_key,
+                        plan.manifest_checksum.clone(),
+                        plan.source_schema.clone(),
+                        plan.source_table.clone(),
+                        source_row_key.to_string(),
+                        target.backend.clone(),
+                        target.instance.clone(),
+                        target.projection_kind.clone(),
+                        target.resource_name.clone(),
+                        target_options.to_string(),
+                        source_payload.to_string(),
+                        source_checksum.clone(),
+                    ]) {
+                        column.push(value);
+                    }
+                }
+            }
+        }
+        if columns[0].is_empty() {
+            return Ok((Vec::new(), 0));
+        }
+        let sql = projection_task_batch_insert_sql(&config.projection_tasks_relation());
+        let mut query = sqlx::query(&sql)
+            .bind(project_id)
+            .bind(message_type)
+            .bind(operation);
+        let mut task_keys = columns[0].clone();
+        for column in columns {
+            query = query.bind(column);
+        }
+        query
+            .execute(&mut **tx)
+            .await
+            .map_err(|err| format!("insert projection tasks (batch): {err}"))?;
+        task_keys.sort();
+        Ok((task_keys, 1))
+    }
+
     /// Replay projection tasks from the exact project's canonical PostgreSQL
     /// row identified by its primary-key JSON object, for example
     /// `{ "id": "p1" }`.
@@ -1101,7 +1185,53 @@ fn projection_task_insert_sql(rel: &str) -> String {
               source_payload, source_checksum, created_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15,
                      clock_timestamp())
-             ON CONFLICT (idempotency_key) DO UPDATE
+             {conflict}
+             RETURNING task_id
+         )
+         SELECT task_id::TEXT FROM inserted
+         UNION ALL
+         SELECT task_id::TEXT FROM {rel} WHERE idempotency_key = $1
+         LIMIT 1",
+        conflict = projection_task_conflict_sql(rel),
+    )
+}
+
+/// Many tasks in ONE statement (a `BulkUpsert` batch): the same columns and
+/// the same `ON CONFLICT` ordering/re-arm rules as
+/// [`projection_task_insert_sql`], fed from parallel `text[]` arrays.
+/// `row_revision` is drawn per row in array order (`WITH ORDINALITY`). The
+/// caller passes distinct idempotency keys: a key twice in one statement is
+/// refused by PostgreSQL ("cannot affect row a second time").
+fn projection_task_batch_insert_sql(rel: &str) -> String {
+    format!(
+        "INSERT INTO {rel} AS existing
+             (idempotency_key, project_id, manifest_checksum, message_type,
+              source_schema, source_table, source_row_key, operation, target_backend,
+              target_instance, projection_kind, resource_name, target_options,
+              source_payload, source_checksum, created_at)
+         SELECT u.idempotency_key, $1, u.manifest_checksum, $2, u.source_schema,
+                u.source_table, u.source_row_key::jsonb, $3, u.target_backend,
+                u.target_instance, u.projection_kind, u.resource_name,
+                u.target_options::jsonb, u.source_payload::jsonb, u.source_checksum,
+                clock_timestamp()
+         FROM UNNEST($4::text[], $5::text[], $6::text[], $7::text[], $8::text[],
+                     $9::text[], $10::text[], $11::text[], $12::text[], $13::text[],
+                     $14::text[], $15::text[])
+              WITH ORDINALITY AS u(idempotency_key, manifest_checksum, source_schema,
+                                   source_table, source_row_key, target_backend,
+                                   target_instance, projection_kind, resource_name,
+                                   target_options, source_payload, source_checksum, ord)
+         ORDER BY u.ord
+         {conflict}",
+        conflict = projection_task_conflict_sql(rel),
+    )
+}
+
+/// The `ON CONFLICT` clause both task INSERTs share (see
+/// [`projection_task_insert_sql`] for the ordering contract it enforces).
+fn projection_task_conflict_sql(rel: &str) -> String {
+    format!(
+        "ON CONFLICT (idempotency_key) DO UPDATE
                  SET row_revision = EXCLUDED.row_revision,
                      status = CASE WHEN existing.status = 'IN_PROGRESS'
                                    THEN existing.status ELSE 'PENDING' END,
@@ -1120,13 +1250,7 @@ fn projection_task_insert_sql(rel: &str) -> String {
                    AND EXISTS (
                        SELECT 1 FROM {rel} AS newer
                        WHERE {same_row}
-                         AND newer.row_revision > existing.row_revision)
-             RETURNING task_id
-         )
-         SELECT task_id::TEXT FROM inserted
-         UNION ALL
-         SELECT task_id::TEXT FROM {rel} WHERE idempotency_key = $1
-         LIMIT 1",
+                         AND newer.row_revision > existing.row_revision)",
         permanent_payload_prefix = crate::runtime::canonical_store::system_store::PROJECTION_PERMANENT_PAYLOAD_NAMESPACE_PREFIX,
         same_row =
             crate::runtime::canonical_store::postgres_projection::projection_task_same_row_sql(
@@ -1557,6 +1681,23 @@ impl ProjectionWorker {
         source_payload: &serde_json::Value,
     ) -> Result<(), ProjectionFailure> {
         let normalized_backend = normalize_backend(backend);
+        // The target's row filter: a row outside it is never written, and an
+        // update that moves a row out of it removes the row's projected
+        // record. Every enqueue path (live writes, replay, drift repair)
+        // reaches the target through here.
+        let filtered_out = filtered_out_delete_payload(
+            &normalized_backend,
+            projection_kind,
+            resource_name,
+            operation,
+            source_row_key,
+            target_options,
+            source_payload,
+        )?;
+        let (operation, source_payload) = match &filtered_out {
+            Some(identity) => ("delete", identity),
+            None => (operation, source_payload),
+        };
         // Every target is scoped — resolve the scope BEFORE dispatching, so no
         // backend can be reached with a record whose tenant is unknown. A
         // record that names a tenant field without a scalar value (a delete
@@ -2209,6 +2350,163 @@ pub(crate) const ROW_IDENTITY_OPTION_KEYS: [&str; 5] = [
     "primary_key",
     "partition_key",
 ];
+
+/// The target's `projection_filter`, parsed. The manifest build validated and
+/// canonicalized it against the source table; a value that no longer parses
+/// (a hand-edited manifest) is an error, never an unfiltered projection.
+pub(crate) fn target_row_filter(
+    options: &[ManifestStoreOption],
+) -> Result<Option<crate::ir::filter::LogicalFilter>, String> {
+    use crate::generation::manifest::projection_filter::{
+        PROJECTION_FILTER_OPTION, parse_projection_filter,
+    };
+    let Some(text) = options
+        .iter()
+        .find(|option| {
+            option
+                .key
+                .trim()
+                .eq_ignore_ascii_case(PROJECTION_FILTER_OPTION)
+        })
+        .map(|option| option.value.trim().to_string())
+    else {
+        return Ok(None);
+    };
+    parse_projection_filter(&text)
+        .map(Some)
+        .map_err(|err| format!("projection_filter \"{text}\" cannot be parsed: {err}"))
+}
+
+/// The record a task removes when its row is outside the target's
+/// `projection_filter`: `Ok(None)` when the task applies as enqueued (a
+/// delete, no filter, or a row the filter matches), `Ok(Some(identity))` when
+/// the row is outside the filter and the task becomes a delete addressed by
+/// `identity`. A row the filter cannot judge (a filter column missing from the
+/// projected row, or holding a value of another type) is an error: the task
+/// fails loudly instead of guessing which way the row goes.
+fn filtered_out_delete_payload(
+    backend: &str,
+    projection_kind: &str,
+    resource_name: &str,
+    operation: &str,
+    source_row_key: &serde_json::Value,
+    target_options: &serde_json::Value,
+    source_payload: &serde_json::Value,
+) -> Result<Option<serde_json::Value>, String> {
+    if operation.eq_ignore_ascii_case("delete") {
+        return Ok(None);
+    }
+    let Some(text) = option_value(
+        target_options,
+        crate::generation::manifest::projection_filter::PROJECTION_FILTER_OPTION,
+    ) else {
+        return Ok(None);
+    };
+    let filter = crate::generation::manifest::projection_filter::parse_projection_filter(&text)
+        .map_err(|err| {
+            format!(
+                "{backend} projection '{resource_name}': projection_filter \"{text}\" cannot be parsed: {err}"
+            )
+        })?;
+    let matches = crate::generation::manifest::projection_filter::projection_filter_matches(
+        &filter,
+        source_payload,
+    )
+    .map_err(|err| format!("{backend} projection '{resource_name}': {err}"))?;
+    if matches {
+        return Ok(None);
+    }
+    let cache_target = backend == "redis" || projection_kind.eq_ignore_ascii_case("cache");
+    Ok(Some(row_identity_payload(
+        resource_name,
+        source_row_key,
+        target_options,
+        source_payload,
+        cache_target,
+    )))
+}
+
+/// The fields a projected record is addressed by, taken from the source row:
+/// the primary key, the declared id / tenant fields and, for a cache target,
+/// the fields its key pattern names. A document target deletes by a FILTER on
+/// these fields, so the row's other (changed) values must not be in it — they
+/// would no longer match the stored document.
+fn row_identity_payload(
+    resource_name: &str,
+    source_row_key: &serde_json::Value,
+    target_options: &serde_json::Value,
+    source_payload: &serde_json::Value,
+    cache_target: bool,
+) -> serde_json::Value {
+    let mut fields: Vec<String> = source_row_key
+        .as_object()
+        .map(|key| key.keys().cloned().collect())
+        .unwrap_or_default();
+    for key in ROW_IDENTITY_OPTION_KEYS
+        .iter()
+        .chain(["tenant_field"].iter())
+    {
+        if let Some(field) = option_value(target_options, key) {
+            let field = field.trim();
+            if !field.is_empty() {
+                fields.push(field.to_string());
+            }
+        }
+    }
+    if cache_target {
+        let pattern = option_value(target_options, "key_pattern")
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| resource_name.to_string());
+        fields.extend(key_pattern_fields(&pattern));
+    }
+    let mut identity = serde_json::Map::new();
+    if let Some(row) = source_payload.as_object() {
+        for field in fields {
+            if let Some(value) = row.get(&field) {
+                identity.insert(field, value.clone());
+            }
+        }
+    }
+    if let Some(key) = source_row_key.as_object() {
+        for (field, value) in key {
+            identity
+                .entry(field.clone())
+                .or_insert_with(|| value.clone());
+        }
+    }
+    serde_json::Value::Object(identity)
+}
+
+/// The field names a cache key pattern substitutes: `{field}` and `:$field`
+/// (the two forms [`render_key_pattern`] fills).
+fn key_pattern_fields(pattern: &str) -> Vec<String> {
+    let mut fields = Vec::new();
+    let mut rest = pattern;
+    while let Some(start) = rest.find('{') {
+        let after = &rest[start + 1..];
+        let Some(end) = after.find('}') else {
+            break;
+        };
+        let name = after[..end].trim();
+        if !name.is_empty() {
+            fields.push(name.to_string());
+        }
+        rest = &after[end + 1..];
+    }
+    let mut rest = pattern;
+    while let Some(start) = rest.find(":$") {
+        let after = &rest[start + 2..];
+        let name: String = after
+            .chars()
+            .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '_')
+            .collect();
+        if !name.is_empty() {
+            fields.push(name.clone());
+        }
+        rest = &after[name.len()..];
+    }
+    fields
+}
 
 /// The comma-separated names under `key`, trimmed, empties dropped.
 fn option_list(options: &serde_json::Value, key: &str) -> Vec<String> {
@@ -3466,6 +3764,95 @@ mod tests {
         assert_eq!(delete["filter"]["id"], "p1");
     }
 
+    /// A row outside the target's `projection_filter` becomes a delete of its
+    /// projected record, addressed by identity only: the document target
+    /// deletes by filter, and the row's changed values (state RETIRED) would
+    /// not match the stored document (state PUBLISHED).
+    #[test]
+    fn projection_filter_turns_an_excluded_row_into_an_identity_delete() {
+        let options = json!([
+            {"key":"tenant_field","value":"tenant_id"},
+            {"key":"projection_filter","value":"state = 'PUBLISHED' AND to_seq IS NULL"}
+        ]);
+        let key = json!({"id":"c1"});
+        let disposition = |operation: &str, payload: serde_json::Value| {
+            filtered_out_delete_payload(
+                "mongodb", "document", "concepts", operation, &key, &options, &payload,
+            )
+        };
+        let published =
+            json!({"id":"c1","tenant_id":"t1","state":"PUBLISHED","to_seq":null,"title":"x"});
+        assert_eq!(disposition("upsert", published).unwrap(), None);
+        let retired =
+            json!({"id":"c1","tenant_id":"t1","state":"RETIRED","to_seq":null,"title":"x"});
+        let identity = disposition("upsert", retired)
+            .unwrap()
+            .expect("an excluded row becomes a delete");
+        assert_eq!(identity, json!({"id":"c1","tenant_id":"t1"}));
+        // A delete stays a delete, whatever the row holds.
+        assert_eq!(
+            disposition("delete", json!({"id":"c1","tenant_id":"t1"})).unwrap(),
+            None
+        );
+        // A row the filter cannot judge fails the task instead of guessing.
+        let error = disposition("upsert", json!({"id":"c1","tenant_id":"t1"})).unwrap_err();
+        assert!(error.contains("has no column 'state'"), "{error}");
+
+        let scope = ProjectionScope::resolve("proj-a", &options, &identity);
+        let delete = render_projection_mutation(
+            "mongodb", "document", "concepts", "delete", &key, &options, &identity, &scope,
+        )
+        .unwrap();
+        assert_eq!(
+            delete["filter"],
+            json!({"id":"c1","tenant_id":"t1","_tenant_id":"t1","_project_id":"proj-a"})
+        );
+
+        // No filter: every task applies as enqueued.
+        let unfiltered = json!([{"key":"tenant_field","value":"tenant_id"}]);
+        assert_eq!(
+            filtered_out_delete_payload(
+                "qdrant",
+                "vector",
+                "concepts",
+                "upsert",
+                &key,
+                &unfiltered,
+                &json!({"id":"c1","tenant_id":"t1","state":"RETIRED"}),
+            )
+            .unwrap(),
+            None
+        );
+    }
+
+    /// A cache target's key pattern may name non-key fields; the identity a
+    /// filtered-out row is deleted by carries them so the exact key renders.
+    #[test]
+    fn projection_filter_delete_keeps_the_cache_key_pattern_fields() {
+        assert_eq!(
+            key_pattern_fields("concept:{slug}:v{ version }:$lang/end"),
+            vec!["slug", "version", "lang"]
+        );
+        let options = json!([
+            {"key":"tenant_field","value":"tenant_id"},
+            {"key":"key_pattern","value":"concept:{slug}"},
+            {"key":"projection_filter","value":"state = 'PUBLISHED'"}
+        ]);
+        let key = json!({"id":"c1"});
+        let payload = json!({"id":"c1","tenant_id":"t1","slug":"heart","state":"DRAFT","body":"b"});
+        let identity = filtered_out_delete_payload(
+            "redis", "cache", "concepts", "upsert", &key, &options, &payload,
+        )
+        .unwrap()
+        .expect("an excluded row becomes a delete");
+        assert_eq!(identity, json!({"id":"c1","tenant_id":"t1","slug":"heart"}));
+        let scope = ProjectionScope::resolve("proj-a", &options, &identity);
+        assert_eq!(
+            redis_projection_key("concept:{slug}", &key, &identity, &scope).unwrap(),
+            "t:t1/p:proj-a/concept:heart"
+        );
+    }
+
     /// The bug: Qdrant point ids were the bare row id, so two tenants' rows with
     /// the same primary key collided on one point.
     #[test]
@@ -3752,6 +4139,24 @@ mod tests {
             "{sql}"
         );
         assert!(!sql.contains("DO NOTHING"), "{sql}");
+    }
+
+    /// A `BulkUpsert` batch enqueues its tasks with one statement that keeps
+    /// the single-row INSERT's ordering and ABA re-arm rules byte for byte.
+    #[test]
+    fn batch_task_insert_shares_the_single_row_conflict_rules() {
+        let rel = "\"udb_system\".\"udb_projection_tasks\"";
+        let single = projection_task_insert_sql(rel);
+        let batch = projection_task_batch_insert_sql(rel);
+        let conflict = projection_task_conflict_sql(rel);
+        assert!(single.contains(&conflict), "{single}");
+        assert!(batch.contains(&conflict), "{batch}");
+        assert!(batch.contains("FROM UNNEST($4::text[]"), "{batch}");
+        assert!(batch.contains("$15::text[])"), "{batch}");
+        assert!(batch.contains("WITH ORDINALITY"), "{batch}");
+        assert!(batch.contains("ORDER BY u.ord"), "{batch}");
+        assert!(batch.contains("u.source_payload::jsonb"), "{batch}");
+        assert!(!batch.contains("$16"), "{batch}");
     }
 
     /// Projection, IR and DDL must agree on the node label; declared endpoint

@@ -63,4 +63,17 @@ public interface CacheDeleteRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getIdempotencyKeyBytes();
+
+  /**
+   * <pre>
+   * Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+   * every tenant) instead of the caller's tenant namespace. Requires
+   * `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+   * (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+   * </pre>
+   *
+   * <code>bool shared = 5 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  boolean getShared();
 }

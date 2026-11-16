@@ -19,12 +19,21 @@ import copy
 from dataclasses import dataclass, field
 from inspect import isawaitable
 import json
-from typing import Any, Callable, Generic, Mapping, Sequence, TypeVar
+from typing import Any, Callable, Generic, Iterable, Mapping, Sequence, TypeVar
 
 from google.protobuf.descriptor import FieldDescriptor
 
 from udb.entity.v1 import types_pb2
 
+from .bulk import (
+    DEFAULT_BATCH_ROWS,
+    DEFAULT_MAX_BATCH_BYTES,
+    BulkLoadResult,
+    OnBatch,
+    bulk_upsert_request,
+    run_bulk_load,
+    run_bulk_load_async,
+)
 from .client import decode_records, to_record_json, to_struct
 from .error_code import classify
 from .exceptions import UdbConflict, UdbNotFound, UdbRpcError
@@ -137,6 +146,7 @@ class _TableBase(Generic[Row]):
         include_total: bool,
         fields: Sequence[str],
         include_pii: bool,
+        include_deleted: bool = False,
     ) -> types_pb2.SelectRequest:
         sort = []
         for column in order_by:
@@ -153,6 +163,7 @@ class _TableBase(Generic[Row]):
             page_token=page_token,
             sort=sort,
             include_total=include_total,
+            include_deleted=include_deleted,
             fields=list(fields) or (list(self._spec.fields) if include_pii else []),
         )
         # Read-your-writes: the fence of this client's latest write rides on reads.
@@ -187,6 +198,16 @@ class _TableBase(Generic[Row]):
             record_json=to_record_json(self._spec.to_record(row)),
             idempotency_key=idempotency_key,
         )
+
+    def _bulk_record(self, row: Mapping[str, Any]) -> bytes:
+        """One row of a bulk write, encoded as :meth:`upsert` encodes it."""
+        self._fields_of(row)  # An unknown column is refused, not dropped.
+        return to_record_json(self._spec.to_record(row))
+
+    def _bulk_request(
+        self, records: Sequence[bytes], idempotency_key: str, batch_id: str
+    ) -> Any:
+        return bulk_upsert_request(self._spec.message_type, records, (), idempotency_key, batch_id)
 
     def _after_write(self, response: Any) -> None:
         if response.affected_rows == 0:
@@ -313,14 +334,22 @@ class Table(_TableBase[Row]):
         include_total: bool = False,
         fields: Sequence[str] = (),
         include_pii: bool = False,
+        include_deleted: bool = False,
     ) -> TablePage[Row]:
         """One page of rows matching ``where``.
 
         ``order_by`` sorts by columns (``"-column"`` for descending); the primary
         key always breaks ties. ``fields`` reads only those columns. By default
         PII columns are left out; ``include_pii`` asks for them.
+        ``include_deleted`` also returns soft-deleted rows; a deleted row has its
+        soft-delete column (for example ``deleted_at``) set. It needs scope
+        ``udb:deleted:read`` (``ErrorCode.SCOPE_MISSING`` without it), works only
+        on an entity with soft delete (``ErrorCode.INVALID`` otherwise), and every
+        such read is audited.
         """
-        request = self._select_request(where, limit, page_token, order_by, include_total, fields, include_pii)
+        request = self._select_request(
+            where, limit, page_token, order_by, include_total, fields, include_pii, include_deleted
+        )
         return self._page_from(self._call("Select", request))
 
     def select_all(self, where: Filter | None, fn: Callable[[Row], None]) -> None:
@@ -346,6 +375,42 @@ class Table(_TableBase[Row]):
     def insert(self, row: Mapping[str, Any], *, idempotency_key: str = "") -> None:
         """Create ``row``. A key collision raises and never replaces the row."""
         self._after_write(self._call("Insert", self._write_request(row, idempotency_key)))
+
+    def bulk_upsert(
+        self, rows: Sequence[Mapping[str, Any]], *, idempotency_key: str = "", batch_id: str = ""
+    ) -> Any:
+        """Upsert ``rows`` as one batch in one broker transaction, keyed by the primary
+        key: every row is written or none is. Returns the ``BulkUpsertResponse``."""
+        request = self._bulk_request([self._bulk_record(row) for row in rows], idempotency_key, batch_id)
+        response = self._call("BulkUpsert", request)
+        self._client.remember_write(response)
+        return response
+
+    def bulk_load(
+        self,
+        rows: Iterable[Mapping[str, Any]],
+        *,
+        batch_rows: int = DEFAULT_BATCH_ROWS,
+        max_batch_bytes: int = DEFAULT_MAX_BATCH_BYTES,
+        batch_id_prefix: str = "",
+        idempotency_key_prefix: str = "",
+        on_batch: OnBatch | None = None,
+    ) -> BulkLoadResult:
+        """Upsert any number of ``rows`` batch after batch, as
+        :meth:`udb_client.client.UdbClient.bulk_load` does. The first failure raises
+        :class:`~udb_client.bulk.BulkLoadError` naming the batches that committed."""
+
+        def send(records: list[bytes], batch_id: str, key: str) -> Any:
+            response = self._call("BulkUpsert", self._bulk_request(records, key, batch_id))
+            self._client.remember_write(response)
+            return response
+
+        return run_bulk_load(
+            send, rows, self._bulk_record,
+            batch_rows=batch_rows, max_batch_bytes=max_batch_bytes,
+            batch_id_prefix=batch_id_prefix, idempotency_key_prefix=idempotency_key_prefix,
+            on_batch=on_batch,
+        )
 
     def patch(
         self, key: Mapping[str, Any], changes: Mapping[str, Any], *, idempotency_key: str = ""
@@ -447,9 +512,12 @@ class AsyncTable(_TableBase[Row]):
         include_total: bool = False,
         fields: Sequence[str] = (),
         include_pii: bool = False,
+        include_deleted: bool = False,
     ) -> TablePage[Row]:
         """See :meth:`Table.select`."""
-        request = self._select_request(where, limit, page_token, order_by, include_total, fields, include_pii)
+        request = self._select_request(
+            where, limit, page_token, order_by, include_total, fields, include_pii, include_deleted
+        )
         return self._page_from(await self._call("Select", request))
 
     async def select_all(self, where: Filter | None, fn: Callable[[Row], Any]) -> None:
@@ -476,6 +544,39 @@ class AsyncTable(_TableBase[Row]):
     async def insert(self, row: Mapping[str, Any], *, idempotency_key: str = "") -> None:
         """See :meth:`Table.insert`."""
         self._after_write(await self._call("Insert", self._write_request(row, idempotency_key)))
+
+    async def bulk_upsert(
+        self, rows: Sequence[Mapping[str, Any]], *, idempotency_key: str = "", batch_id: str = ""
+    ) -> Any:
+        """See :meth:`Table.bulk_upsert`."""
+        request = self._bulk_request([self._bulk_record(row) for row in rows], idempotency_key, batch_id)
+        response = await self._call("BulkUpsert", request)
+        self._client.remember_write(response)
+        return response
+
+    async def bulk_load(
+        self,
+        rows: Iterable[Mapping[str, Any]],
+        *,
+        batch_rows: int = DEFAULT_BATCH_ROWS,
+        max_batch_bytes: int = DEFAULT_MAX_BATCH_BYTES,
+        batch_id_prefix: str = "",
+        idempotency_key_prefix: str = "",
+        on_batch: OnBatch | None = None,
+    ) -> BulkLoadResult:
+        """See :meth:`Table.bulk_load`. ``on_batch`` may be a coroutine function."""
+
+        async def send(records: list[bytes], batch_id: str, key: str) -> Any:
+            response = await self._call("BulkUpsert", self._bulk_request(records, key, batch_id))
+            self._client.remember_write(response)
+            return response
+
+        return await run_bulk_load_async(
+            send, rows, self._bulk_record,
+            batch_rows=batch_rows, max_batch_bytes=max_batch_bytes,
+            batch_id_prefix=batch_id_prefix, idempotency_key_prefix=idempotency_key_prefix,
+            on_batch=on_batch,
+        )
 
     async def patch(
         self, key: Mapping[str, Any], changes: Mapping[str, Any], *, idempotency_key: str = ""

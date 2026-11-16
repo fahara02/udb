@@ -33,4 +33,15 @@ public interface GetNamespaceStatsRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getNamespaceBytes();
+
+  /**
+   * <pre>
+   * Read the shared namespace (the reserved shared-tenant keyspace every
+   * tenant reads) instead of the caller's tenant keyspace.
+   * </pre>
+   *
+   * <code>bool shared = 3 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  boolean getShared();
 }

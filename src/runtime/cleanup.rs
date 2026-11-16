@@ -59,8 +59,13 @@
 //!   projection tasks (7 days), resolved CDC dead letters (30 days), finished
 //!   sagas and XA decisions (30 days), catalog versions (30 days, never the
 //!   active version nor the newest `UDB_CLEANUP_KEEP_VERSIONS`, default 20,
-//!   per project) and the catalog reload log (90 days, never the activation
-//!   record of an active version nor the newest row).
+//!   per project), the catalog reload log (90 days, never the activation
+//!   record of an active version nor the newest row), migration runs
+//!   (completed and dry runs, 90 days, never a project's newest completed run
+//!   nor a run a reviewed catalog transition names) and the admin audit log
+//!   (365 days, oldest first and never its hash chain's head; each prune
+//!   records an anchor, the id and hash of the newest row it removed, in the
+//!   same statement, and chain verification starts from it).
 //! - Those last two groups are swept once per `UDB_CLEANUP_SWEEP_INTERVAL`
 //!   (default `24h`, the same interval as the kept-partition sweep), one pass
 //!   over each table in page ranges, so they need no index on their time column.
@@ -551,7 +556,25 @@ pub(crate) enum TargetKind {
         /// A further SQL condition a row must meet to be deleted (a finished
         /// status, not the active version, ...). Written by this module only.
         only_when: Option<String>,
+        /// What else decides which expired rows may go.
+        guard: RowGuard,
     },
+}
+
+/// What else decides which of a table's expired rows may go.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum RowGuard {
+    /// Nothing: every expired row that meets `only_when` goes.
+    Unguarded,
+    /// Another table whose rows point at this one's, as `(relation,
+    /// column)`: a row it points at is kept. That table may not exist yet (it
+    /// is created on first use); then no row is pointed at.
+    ReferencedBy(String, String),
+    /// The admin audit hash chain: rows go oldest first, always a contiguous
+    /// prefix of the chain that stops before its head, and each delete
+    /// records the prune anchor verification starts from, in the same
+    /// statement ([`admin_audit_prune_sql`]).
+    AdminAuditChain,
 }
 
 /// One UDB-owned table the worker looks after.
@@ -743,6 +766,7 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
             evidence_state_key: evidence_export
                 .then(|| crate::runtime::singleton::WORKER_EVIDENCE_EXPORT.to_string()),
             only_when: None,
+            guard: RowGuard::Unguarded,
         },
         default_retention: None,
         capped: true,
@@ -761,6 +785,7 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
                 column: usage.column("occurred_at").to_string(),
                 evidence_state_key: None,
                 only_when: None,
+                guard: RowGuard::Unguarded,
             },
             default_retention: None,
             capped: true,
@@ -786,6 +811,7 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
                 column,
                 evidence_state_key: None,
                 only_when: None,
+                guard: RowGuard::Unguarded,
             },
             default_retention: declared_days(table.retention_days),
             capped: false,
@@ -871,6 +897,7 @@ fn system_targets(keep_versions: u32) -> Vec<Target> {
             column: column.to_string(),
             evidence_state_key: None,
             only_when: Some(only_when),
+            guard: RowGuard::Unguarded,
         },
         default_retention: default,
         capped: false,
@@ -879,6 +906,38 @@ fn system_targets(keep_versions: u32) -> Vec<Target> {
     let bindings = config.project_catalog_bindings_relation();
     let versions = config.catalog_versions_relation();
     let reloads = config.catalog_reload_log_relation();
+    // A run a reviewed catalog transition names is that transition's record.
+    let mut migration_runs = target(
+        &config.migration_runs_table,
+        "started_at",
+        migration_runs_removable(&config.migration_runs_relation()),
+        days(90),
+    );
+    if let TargetKind::Rows { guard, .. } = &mut migration_runs.kind {
+        *guard = RowGuard::ReferencedBy(
+            format!(
+                "{}.{}",
+                qi(&schema),
+                qi(crate::runtime::core::REVIEWED_TRANSITIONS_TABLE)
+            ),
+            "run_id".to_string(),
+        );
+    }
+    // The admin audit log is pruned in chain order, never past its head, and
+    // every prune records the anchor verification starts from.
+    let mut admin_audit = target(
+        &config.admin_audit_log_table,
+        "created_at",
+        String::new(),
+        days(365),
+    );
+    if let TargetKind::Rows {
+        only_when, guard, ..
+    } = &mut admin_audit.kind
+    {
+        *only_when = None;
+        *guard = RowGuard::AdminAuditChain;
+    }
     vec![
         // A completed task only clears read fences of writes that recent.
         target(
@@ -919,7 +978,111 @@ fn system_targets(keep_versions: u32) -> Vec<Target> {
             catalog_reloads_removable(&reloads, &bindings),
             days(90),
         ),
+        migration_runs,
+        admin_audit,
     ]
+}
+
+/// A migration run may go once it completed or was only a dry run, unless it
+/// is its project's newest completed run (the record of the schema the
+/// project runs now). A run that failed, waits for approval or is applying
+/// stays, and so does a run a reviewed catalog transition names.
+fn migration_runs_removable(runs: &str) -> String {
+    format!(
+        "state IN ('COMPLETED', 'DRY_RUN') \
+         AND run_id NOT IN (SELECT DISTINCT ON (m.project_id) m.run_id FROM {runs} m \
+                            WHERE m.state = 'COMPLETED' \
+                            ORDER BY m.project_id, m.started_at DESC, m.run_id DESC)"
+    )
+}
+
+/// One page of the admin audit log's prune, as one statement: the oldest
+/// `batch` rows past retention that come before the chain's head (the newest
+/// hashed row, which the next append links to) are deleted, in chain order
+/// (`created_at`, `audit_id`), so what goes is always a contiguous prefix of
+/// the chain. The newest of them becomes the prune anchor in
+/// `udb_system.evidence_export_state` under `$1`
+/// ([`admin_audit_prune_anchor_key`]): its id, time and hash, with the rows
+/// pruned so far counted in `exported_count` and the time in `updated_at`.
+/// The verifier starts the chain from that anchor. Returns the rows deleted.
+fn admin_audit_prune_sql(log: &str, column: &str, retention: Duration, batch: i64) -> String {
+    let column = qi(column);
+    let seconds = retention.as_secs();
+    format!(
+        "WITH head AS ( \
+             SELECT h.{column} AS at, h.audit_id FROM {log} h WHERE h.current_hash <> '' \
+             ORDER BY h.{column} DESC, h.audit_id DESC LIMIT 1), \
+         doomed AS ( \
+             SELECT l.audit_id FROM {log} l, head \
+             WHERE l.{column} < now() - interval '{seconds} seconds' \
+               AND (l.{column}, l.audit_id) < (head.at, head.audit_id) \
+             ORDER BY l.{column}, l.audit_id LIMIT {batch}), \
+         gone AS ( \
+             DELETE FROM {log} d USING doomed WHERE d.audit_id = doomed.audit_id \
+             RETURNING d.audit_id, d.{column} AS at, d.current_hash), \
+         newest AS ( \
+             SELECT g.audit_id, g.at, g.current_hash FROM gone g \
+             ORDER BY g.at DESC, g.audit_id DESC LIMIT 1), \
+         anchored AS ( \
+             INSERT INTO {EVIDENCE_STATE} AS s \
+                 (worker, last_event_id, last_occurred_at, chain_head, exported_count, updated_at) \
+             SELECT $1, n.audit_id::text, n.at, n.current_hash, (SELECT count(*) FROM gone), NOW() \
+             FROM newest n \
+             ON CONFLICT (worker) DO UPDATE SET \
+                 last_event_id = EXCLUDED.last_event_id, \
+                 last_occurred_at = EXCLUDED.last_occurred_at, \
+                 chain_head = EXCLUDED.chain_head, \
+                 exported_count = s.exported_count + EXCLUDED.exported_count, \
+                 updated_at = NOW() \
+             RETURNING 1) \
+         SELECT count(*) FROM gone"
+    )
+}
+
+/// Prune the admin audit log past `retention`, page by page
+/// ([`admin_audit_prune_sql`]). Each page is its own transaction holding the
+/// chain's advisory lock, so no append runs while the head and the anchor
+/// move. A scheduled pass takes at most [`MAX_BATCHES_PER_PASS`] pages; a
+/// drain takes the whole backlog.
+async fn prune_admin_audit_chain(
+    pool: &PgPool,
+    target: &Target,
+    column: &str,
+    retention: Duration,
+    mode: PassMode,
+) -> Result<i64, String> {
+    let relation = target.relation();
+    ensure_rows_reachable(pool, &relation).await?;
+    crate::runtime::evidence_export::ensure_state_table(pool).await?;
+    let batch = mode.batch.max(1);
+    let sql = admin_audit_prune_sql(&relation, column, retention, batch);
+    let key =
+        crate::runtime::canonical_store::system_store::admin_audit_prune_anchor_key(&relation);
+    let mut deleted = 0i64;
+    let mut pages = 0usize;
+    loop {
+        let mut tx = admin_tx(pool).await?;
+        sqlx::query("SELECT pg_advisory_xact_lock($1)")
+            .bind(crate::runtime::canonical_store::system_store::ADMIN_AUDIT_CHAIN_LOCK_KEY)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| format!("lock the admin audit chain: {err}"))?;
+        let rows: i64 = sqlx::query_scalar(&sql)
+            .bind(&key)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|err| format!("prune the admin audit chain: {err}"))?;
+        tx.commit().await.map_err(|err| err.to_string())?;
+        deleted += rows;
+        pages += 1;
+        if rows < batch || (!mode.drain && pages >= MAX_BATCHES_PER_PASS) {
+            break;
+        }
+    }
+    if deleted > 0 {
+        tracing::info!(table = %target.qualified(), deleted, retention_secs = retention.as_secs(), "pruned the admin audit chain past retention");
+    }
+    Ok(deleted)
 }
 
 /// A catalog version may go only when it is not active, no project binds it
@@ -1532,9 +1695,30 @@ async fn upkeep_target(
             column,
             evidence_state_key,
             only_when,
+            guard,
         } => {
             let Some(rows) = retention.rows else {
                 return Ok(Outcome::default());
+            };
+            let only_when = match guard {
+                RowGuard::AdminAuditChain => {
+                    return Ok(Outcome {
+                        deleted: prune_admin_audit_chain(pool, target, column, rows, mode).await?,
+                        ..Outcome::default()
+                    });
+                }
+                RowGuard::ReferencedBy(relation, key) => {
+                    let present: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+                        .bind(relation.as_str())
+                        .fetch_one(pool)
+                        .await
+                        .map_err(|err| format!("look up {relation}: {err}"))?;
+                    unreferenced(
+                        only_when.as_deref(),
+                        present.then_some((relation.as_str(), key.as_str())),
+                    )
+                }
+                RowGuard::Unguarded => only_when.clone(),
             };
             let expiry = Expiry {
                 column,
@@ -1552,6 +1736,21 @@ async fn upkeep_target(
             })
         }
     }
+}
+
+/// `only_when` narrowed to the rows `reference` (`relation`, `column`) does
+/// not point at; `None` when the referencing table does not exist.
+fn unreferenced(only_when: Option<&str>, reference: Option<(&str, &str)>) -> Option<String> {
+    let Some((relation, key)) = reference else {
+        return only_when.map(str::to_string);
+    };
+    let key = qi(key);
+    let unreferenced =
+        format!("{key} NOT IN (SELECT r.{key} FROM {relation} r WHERE r.{key} IS NOT NULL)");
+    Some(match only_when {
+        Some(condition) => format!("({condition}) AND {unreferenced}"),
+        None => unreferenced,
+    })
 }
 
 async fn partman_manages(pool: &PgPool, target: &Target) -> Result<bool, String> {
@@ -2988,6 +3187,7 @@ mod tests {
                 column: "occurred_at".to_string(),
                 evidence_state_key: None,
                 only_when: None,
+                guard: RowGuard::Unguarded,
             },
         };
         let small = PassMode {
@@ -3165,6 +3365,7 @@ mod tests {
                 column: "expires_at".to_string(),
                 evidence_state_key: None,
                 only_when: None,
+                guard: RowGuard::Unguarded,
             },
         };
         let swept = PassMode {
@@ -3212,6 +3413,7 @@ mod tests {
                 column: "completed_at".to_string(),
                 evidence_state_key: None,
                 only_when: Some("status = 'COMPLETED'".to_string()),
+                guard: RowGuard::Unguarded,
             },
         };
         let week = Duration::from_secs(7 * 86_400);
@@ -3258,6 +3460,7 @@ mod tests {
                     &format!("{schema}.bindings"),
                     2,
                 )),
+                guard: RowGuard::Unguarded,
             },
             ..tasks.clone()
         };
@@ -3277,6 +3480,234 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(left, vec![1, 2, 5, 6, 7]);
+
+        // Migration runs lose only old completed and dry runs: never a run
+        // still in flight or failed, a project's newest completed run, nor a
+        // run a reviewed transition names (its foreign key would refuse).
+        run(format!(
+            "CREATE TABLE {schema}.runs (run_id INT PRIMARY KEY, project_id TEXT NOT NULL, \
+             state TEXT NOT NULL, started_at TIMESTAMPTZ NOT NULL)"
+        ))
+        .await;
+        run(format!(
+            "INSERT INTO {schema}.runs VALUES \
+             (1, 'a', 'COMPLETED', now() - interval '200 days'), \
+             (2, 'a', 'COMPLETED', now() - interval '150 days'), \
+             (3, 'a', 'DRY_RUN', now() - interval '190 days'), \
+             (4, 'a', 'ERROR', now() - interval '190 days'), \
+             (5, 'a', 'PREFLIGHT', now() - interval '190 days'), \
+             (6, 'b', 'COMPLETED', now() - interval '180 days'), \
+             (7, 'b', 'COMPLETED', now() - interval '190 days'), \
+             (8, 'b', 'DRY_RUN', now() - interval '10 days')"
+        ))
+        .await;
+        run(format!(
+            "CREATE TABLE {schema}.transitions (run_id INT PRIMARY KEY REFERENCES {schema}.runs (run_id))"
+        ))
+        .await;
+        run(format!("INSERT INTO {schema}.transitions VALUES (7)")).await;
+        let runs = Target {
+            table: "runs".to_string(),
+            kind: TargetKind::Rows {
+                column: "started_at".to_string(),
+                evidence_state_key: None,
+                only_when: Some(migration_runs_removable(&format!("{schema}.runs"))),
+                guard: RowGuard::ReferencedBy(
+                    format!("{schema}.transitions"),
+                    "run_id".to_string(),
+                ),
+            },
+            ..tasks.clone()
+        };
+        assert_eq!(
+            deleted(
+                maintain_target(&pool, &runs, Ok(Retention::uniform(month)), swept)
+                    .await
+                    .unwrap()
+            ),
+            2,
+            "runs 1 and 3"
+        );
+        let left: Vec<i32> =
+            sqlx::query_scalar(&format!("SELECT run_id FROM {schema}.runs ORDER BY run_id"))
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(left, vec![2, 4, 5, 6, 7, 8]);
+
+        run(format!("DROP SCHEMA {schema} CASCADE")).await;
+    }
+
+    /// The admin audit log is pruned from the front of its hash chain in
+    /// pages, the prune anchor is written with each page, and the chain still
+    /// verifies afterwards. Without the anchor, or with a forged one, it fails.
+    #[cfg(feature = "postgres")]
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_PG_DSN=... cargo test --lib live_postgres_cleanup_prunes_the_admin_audit_chain -- --ignored --nocapture"]
+    async fn live_postgres_cleanup_prunes_the_admin_audit_chain_with_an_anchor() {
+        use crate::runtime::canonical_store::postgres::PostgresCanonicalStore;
+        use crate::runtime::canonical_store::system_store::{
+            AdminAuditBreakReason, AdminAuditChainReport, AdminAuditInsert, AdminAuditStore,
+            admin_audit_prune_anchor_key,
+        };
+
+        let dsn = std::env::var("UDB_LIVE_AUTH_PG_DSN")
+            .or_else(|_| std::env::var("UDB_INTEGRATION_PG_DSN"))
+            .unwrap_or_else(|_| "postgres://udb:udb@127.0.0.1:55432/udb".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&dsn)
+            .await
+            .expect("connect live postgres");
+        let schema = format!("udb_admin_prune_{}", uuid::Uuid::new_v4().simple());
+        let run = |sql: String| {
+            let pool = pool.clone();
+            async move {
+                sqlx::query(&sql)
+                    .execute(&pool)
+                    .await
+                    .unwrap_or_else(|err| panic!("{sql}: {err}"));
+            }
+        };
+        run(format!("CREATE SCHEMA {schema}")).await;
+        let relation = format!("{schema}.admin_audit");
+        let store = PostgresCanonicalStore::new(pool.clone(), "primary", "")
+            .with_admin_audit_relation(relation.clone());
+        AdminAuditStore::ensure_admin_audit_tables(&store)
+            .await
+            .expect("admin audit table");
+        let mut ids = Vec::new();
+        for i in 0..5 {
+            ids.push(
+                AdminAuditStore::append_admin_audit(
+                    &store,
+                    &AdminAuditInsert {
+                        actor: "operator".to_string(),
+                        operation: format!("Op{i}"),
+                        target: "project".to_string(),
+                        request_json: serde_json::json!({"step": i}),
+                        result: "ok".to_string(),
+                        tenant_id: "tenant".to_string(),
+                        project_id: "project".to_string(),
+                        correlation_id: format!("corr-{i}"),
+                        signer_key_id: String::new(),
+                        external_anchor: String::new(),
+                    },
+                )
+                .await
+                .expect("append"),
+            );
+        }
+        // The three oldest rows age past a year; chain order is unchanged.
+        run(format!(
+            "UPDATE {relation} SET created_at = created_at - interval '400 days' \
+             WHERE audit_id IN ('{}', '{}', '{}')",
+            ids[0], ids[1], ids[2]
+        ))
+        .await;
+        let third_hash: String = sqlx::query_scalar(&format!(
+            "SELECT current_hash FROM {relation} WHERE audit_id = $1"
+        ))
+        .bind(ids[2])
+        .fetch_one(&pool)
+        .await
+        .expect("third row's hash");
+        assert!(
+            AdminAuditStore::verify_admin_audit_chain(&store, None)
+                .await
+                .expect("verify")
+                .is_passed(),
+            "the unpruned chain verifies"
+        );
+
+        let target = Target {
+            schema: schema.clone(),
+            table: "admin_audit".to_string(),
+            service: SYSTEM_STORE.to_string(),
+            declared: None,
+            kept_class: None,
+            default_retention: None,
+            capped: false,
+            periodic: true,
+            kind: TargetKind::Rows {
+                column: "created_at".to_string(),
+                evidence_state_key: None,
+                only_when: None,
+                guard: RowGuard::AdminAuditChain,
+            },
+        };
+        // Pages of two: the anchor is written with each page.
+        let paged = PassMode {
+            batch: 2,
+            drain: true,
+            sweep_partitions: false,
+        };
+        let outcome = maintain_target(
+            &pool,
+            &target,
+            Ok(Retention::uniform(Duration::from_secs(365 * 86_400))),
+            paged,
+        )
+        .await
+        .expect("prune");
+        assert_eq!(outcome.deleted, 3, "the three rows past a year");
+        let left: Vec<uuid::Uuid> = sqlx::query_scalar(&format!(
+            "SELECT audit_id FROM {relation} ORDER BY created_at, audit_id"
+        ))
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(left, ids[3..].to_vec());
+
+        let key = admin_audit_prune_anchor_key(&relation);
+        let (anchor_id, anchor_hash, pruned): (String, String, i64) = sqlx::query_as(&format!(
+            "SELECT last_event_id, chain_head, exported_count FROM {EVIDENCE_STATE} WHERE worker = $1"
+        ))
+        .bind(&key)
+        .fetch_one(&pool)
+        .await
+        .expect("the prune anchor");
+        assert_eq!(anchor_id, ids[2].to_string(), "the newest row pruned");
+        assert_eq!(anchor_hash, third_hash);
+        assert_eq!(pruned, 3);
+        match AdminAuditStore::verify_admin_audit_chain(&store, None)
+            .await
+            .expect("verify")
+        {
+            AdminAuditChainReport::Passed { checked_count, .. } => assert_eq!(checked_count, 2),
+            other => panic!("the pruned chain verifies from its anchor: {other:?}"),
+        }
+
+        // A forged anchor breaks verification.
+        run(format!(
+            "UPDATE {EVIDENCE_STATE} SET chain_head = 'forged' WHERE worker = '{key}'"
+        ))
+        .await;
+        let reason = |report: AdminAuditChainReport| match report {
+            AdminAuditChainReport::Failed { reason, .. } => reason,
+            other => panic!("expected a break: {other:?}"),
+        };
+        assert_eq!(
+            reason(
+                AdminAuditStore::verify_admin_audit_chain(&store, None)
+                    .await
+                    .expect("verify")
+            ),
+            AdminAuditBreakReason::AnchorMismatch
+        );
+        // Rows gone from the front without an anchor break it too.
+        run(format!(
+            "DELETE FROM {EVIDENCE_STATE} WHERE worker = '{key}'"
+        ))
+        .await;
+        assert_eq!(
+            reason(
+                AdminAuditStore::verify_admin_audit_chain(&store, None)
+                    .await
+                    .expect("verify")
+            ),
+            AdminAuditBreakReason::PrunedWithoutAnchor
+        );
 
         run(format!("DROP SCHEMA {schema} CASCADE")).await;
     }
@@ -3507,6 +3938,11 @@ mod tests {
                 days(30),
             ),
             (&config.catalog_reload_log_table, "reload_seq <", days(90)),
+            (
+                &config.migration_runs_table,
+                "state IN ('COMPLETED', 'DRY_RUN')",
+                days(90),
+            ),
         ] {
             let target = find_target(&settings.targets, &system(table));
             assert_eq!(target.service, SYSTEM_STORE);
@@ -3546,6 +3982,138 @@ mod tests {
         assert_eq!(
             settings.with_sweep_interval(Some("soon")).sweep_interval,
             DEFAULT_SWEEP_INTERVAL
+        );
+    }
+
+    /// Migration runs keep what the migration engine reads back: runs that
+    /// are not finished, failed runs, each project's newest completed run and
+    /// every run a reviewed catalog transition names. The admin audit log
+    /// keeps the head of its hash chain.
+    #[test]
+    fn migration_runs_and_the_admin_audit_log_keep_what_is_read_back() {
+        let settings = CleanupSettings::from_values(None, None, None, None, None, false);
+        let config = crate::runtime::system::SystemCatalogConfig::current();
+        let system = |table: &str| format!("{}.{table}", config.cdc.system_schema);
+
+        let runs = find_target(&settings.targets, &system(&config.migration_runs_table));
+        let TargetKind::Rows {
+            column,
+            only_when,
+            guard,
+            ..
+        } = &runs.kind
+        else {
+            panic!("migration runs are a rows target");
+        };
+        assert_eq!(column, "started_at");
+        let only_when = only_when.as_deref().unwrap();
+        for kept in [
+            "PREFLIGHT",
+            "APPROVED",
+            "APPLYING",
+            "VERIFYING",
+            "ERROR",
+            "DEAD_LETTER",
+        ] {
+            assert!(!only_when.contains(kept), "{kept} runs stay");
+        }
+        assert!(only_when.contains("DISTINCT ON (m.project_id)"));
+        assert!(only_when.contains(&config.migration_runs_relation()));
+        let RowGuard::ReferencedBy(relation, key) = guard else {
+            panic!("reviewed transitions keep runs");
+        };
+        assert!(relation.ends_with("\"udb_catalog_reviewed_transitions\""));
+        assert_eq!(key, "run_id");
+
+        let log = find_target(&settings.targets, &system(&config.admin_audit_log_table));
+        let TargetKind::Rows {
+            column,
+            only_when,
+            guard,
+            ..
+        } = &log.kind
+        else {
+            panic!("the admin audit log is a rows target");
+        };
+        assert_eq!(column, "created_at");
+        assert_eq!(guard, &RowGuard::AdminAuditChain);
+        assert!(only_when.is_none(), "the chain prune has its own rule");
+        assert!(log.periodic && !log.capped);
+        assert_eq!(
+            settings.retention.retention_for(log),
+            Some(Duration::from_secs(365 * 86_400))
+        );
+
+        // Both can be set or kept like any other table.
+        let set = CleanupSettings::from_values(
+            None,
+            None,
+            None,
+            None,
+            Some(&format!(
+                "{}=keep,{}=30d",
+                config.admin_audit_log_table, config.migration_runs_table
+            )),
+            false,
+        );
+        assert!(
+            set.retention_errors().is_empty(),
+            "{:?}",
+            set.retention_errors()
+        );
+        assert_eq!(set.retention.retention_for(log), None);
+        assert_eq!(
+            set.retention.retention_for(runs),
+            Some(Duration::from_secs(30 * 86_400))
+        );
+    }
+
+    /// The admin audit prune takes a contiguous oldest-first prefix that stops
+    /// before the chain's head and records the anchor in the same statement.
+    #[test]
+    fn the_admin_audit_prune_takes_the_front_of_the_chain_and_anchors_it() {
+        let sql = admin_audit_prune_sql(
+            "\"s\".\"log\"",
+            "created_at",
+            Duration::from_secs(365 * 86_400),
+            500,
+        );
+        // The head: the newest hashed row.
+        assert!(sql.contains(
+            "SELECT h.\"created_at\" AS at, h.audit_id FROM \"s\".\"log\" h \
+             WHERE h.current_hash <> '' ORDER BY h.\"created_at\" DESC, h.audit_id DESC LIMIT 1"
+        ));
+        // Oldest first, past retention, strictly before the head.
+        assert!(sql.contains("l.\"created_at\" < now() - interval '31536000 seconds'"));
+        assert!(sql.contains("(l.\"created_at\", l.audit_id) < (head.at, head.audit_id)"));
+        assert!(sql.contains("ORDER BY l.\"created_at\", l.audit_id LIMIT 500"));
+        // The anchor is the newest row deleted, written by the same statement.
+        assert!(sql.contains("ORDER BY g.at DESC, g.audit_id DESC LIMIT 1"));
+        assert!(sql.contains(&format!("INSERT INTO {EVIDENCE_STATE} AS s")));
+        assert!(sql.contains("SELECT $1, n.audit_id::text, n.at, n.current_hash"));
+        assert!(sql.contains("exported_count = s.exported_count + EXCLUDED.exported_count"));
+        assert!(sql.ends_with("SELECT count(*) FROM gone"));
+    }
+
+    #[test]
+    fn a_referenced_row_is_kept_only_when_the_referencing_table_exists() {
+        assert_eq!(unreferenced(None, None), None);
+        assert_eq!(
+            unreferenced(Some("state = 'COMPLETED'"), None).as_deref(),
+            Some("state = 'COMPLETED'")
+        );
+        assert_eq!(
+            unreferenced(Some("a OR b"), Some(("s.t", "run_id"))).as_deref(),
+            Some(
+                "(a OR b) AND \"run_id\" NOT IN (SELECT r.\"run_id\" FROM s.t r \
+                 WHERE r.\"run_id\" IS NOT NULL)"
+            )
+        );
+        assert_eq!(
+            unreferenced(None, Some(("s.t", "run_id"))).as_deref(),
+            Some(
+                "\"run_id\" NOT IN (SELECT r.\"run_id\" FROM s.t r WHERE r.\"run_id\" IS NOT NULL)"
+            )
         );
     }
 

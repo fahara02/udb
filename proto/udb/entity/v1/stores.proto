@@ -19,6 +19,10 @@ message CacheGetRequest {
   StoreResource resource = 2;
   string key = 3;
   bool touch = 4;
+  // Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+  // every tenant) instead of the caller's tenant namespace. Redis and
+  // Memcached cache backends only.
+  bool shared = 5;
 }
 
 message CacheGetResponse {
@@ -40,6 +44,11 @@ message CacheSetRequest {
   bool only_if_present = 8;
   string idempotency_key = 9;
   google.protobuf.Struct metadata = 10;
+  // Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+  // every tenant) instead of the caller's tenant namespace. Requires
+  // `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+  // (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+  bool shared = 11;
 }
 
 message CacheDeleteRequest {
@@ -47,6 +56,11 @@ message CacheDeleteRequest {
   StoreResource resource = 2;
   string key = 3;
   string idempotency_key = 4;
+  // Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+  // every tenant) instead of the caller's tenant namespace. Requires
+  // `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+  // (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+  bool shared = 5;
 }
 
 message CacheScanRequest {
@@ -55,6 +69,10 @@ message CacheScanRequest {
   string key_pattern = 3;
   int32 limit = 4;
   string page_token = 5;
+  // Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+  // every tenant) instead of the caller's tenant namespace. Redis and
+  // Memcached cache backends only.
+  bool shared = 6;
 }
 
 message CacheEntry {

@@ -29,6 +29,14 @@ func TestFakeMeetsTheTableContract(t *testing.T) {
 	})
 }
 
+// The fake answers a join-fusion Select the way the broker does.
+func TestFakeMeetsTheJoinContract(t *testing.T) {
+	fake := udbtest.New(t, &storagev1.File{}, &authzentityv1.PolicySet{}, &authzentityv1.PolicyVersion{})
+	conformance.RunJoin(t, func(t testing.TB, tenant string) *udbclient.Udb {
+		return fake.Client(t, tenant)
+	})
+}
+
 // A string written to a JSON column is JSON text, as on the broker, so every kind of value reads
 // back as what was written.
 func TestFakeHoldsAJSONColumnAsTheBrokerDoes(t *testing.T) {

@@ -196,6 +196,17 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string native_service_id = 33 [json_name = "nativeServiceId"];</code>
      */
     protected $native_service_id = '';
+    /**
+     * cross_project_shared: this physical table is deliberately shared by every
+     * project whose catalog declares it. Tables carry no project prefix, so two
+     * projects that declare the same table on the same backend instance would
+     * read and write the same rows. UDB refuses to activate such a catalog
+     * unless BOTH projects set this flag on the table (or both scope its rows
+     * with a project column, see db_table_security.project_isolation_mode).
+     *
+     * Generated from protobuf field <code>bool cross_project_shared = 34 [json_name = "crossProjectShared"];</code>
+     */
+    protected $cross_project_shared = false;
 
     /**
      * Constructor.
@@ -263,6 +274,13 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      *           Optional table-local vector projection; message-level vector_store remains supported.
      *     @type string $native_service_id
      *           native_service_id: which native service owns this internal table.
+     *     @type bool $cross_project_shared
+     *           cross_project_shared: this physical table is deliberately shared by every
+     *           project whose catalog declares it. Tables carry no project prefix, so two
+     *           projects that declare the same table on the same backend instance would
+     *           read and write the same rows. UDB refuses to activate such a catalog
+     *           unless BOTH projects set this flag on the table (or both scope its rows
+     *           with a project column, see db_table_security.project_isolation_mode).
      * }
      */
     public function __construct($data = NULL) {
@@ -1102,6 +1120,42 @@ class TableOptions extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->native_service_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * cross_project_shared: this physical table is deliberately shared by every
+     * project whose catalog declares it. Tables carry no project prefix, so two
+     * projects that declare the same table on the same backend instance would
+     * read and write the same rows. UDB refuses to activate such a catalog
+     * unless BOTH projects set this flag on the table (or both scope its rows
+     * with a project column, see db_table_security.project_isolation_mode).
+     *
+     * Generated from protobuf field <code>bool cross_project_shared = 34 [json_name = "crossProjectShared"];</code>
+     * @return bool
+     */
+    public function getCrossProjectShared()
+    {
+        return $this->cross_project_shared;
+    }
+
+    /**
+     * cross_project_shared: this physical table is deliberately shared by every
+     * project whose catalog declares it. Tables carry no project prefix, so two
+     * projects that declare the same table on the same backend instance would
+     * read and write the same rows. UDB refuses to activate such a catalog
+     * unless BOTH projects set this flag on the table (or both scope its rows
+     * with a project column, see db_table_security.project_isolation_mode).
+     *
+     * Generated from protobuf field <code>bool cross_project_shared = 34 [json_name = "crossProjectShared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setCrossProjectShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->cross_project_shared = $var;
 
         return $this;
     }

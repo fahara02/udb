@@ -23,16 +23,52 @@ use uuid::Uuid;
 use super::dialect::{SqlDialect, build_eq_where, normalize_limit_offset};
 use super::postgres::PostgresCanonicalStore;
 use super::system_store::{
-    AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow, AdminAuditStore,
-    SystemStoreError, SystemStoreResult, compute_admin_audit_hash, verify_admin_audit_chain_step,
+    ADMIN_AUDIT_CHAIN_LOCK_KEY, AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter,
+    AdminAuditPruneAnchor, AdminAuditRow, AdminAuditStore, SystemStoreError, SystemStoreResult,
+    admin_audit_prune_anchor_key, compute_admin_audit_hash, verify_admin_audit_chain_start,
+    verify_admin_audit_chain_step,
 };
 
 const DEFAULT_REL: &str = r#""udb_system"."udb_admin_audit_log""#;
 
-/// Postgres advisory-lock key dedicated to the admin audit chain.
-/// `0x7564625F6175_6469` is "udb_audi" in ASCII — encoded as the
-/// 64-bit integer the `pg_advisory_xact_lock()` builtin takes.
-const ADMIN_AUDIT_CHAIN_LOCK_KEY: i64 = 0x7564_625F_6175_6469;
+/// The prune anchor the cleanup service recorded for `relation`, if any, read
+/// on the verify run's own connection (and so its snapshot).
+async fn load_prune_anchor(
+    conn: &mut sqlx::PgConnection,
+    relation: &str,
+) -> SystemStoreResult<Option<AdminAuditPruneAnchor>> {
+    let state = crate::runtime::evidence_export::EVIDENCE_STATE_RELATION;
+    let present: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+        .bind(state)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(|e| SystemStoreError::query("postgres", "look up the prune anchor table", e))?;
+    if !present {
+        return Ok(None);
+    }
+    let sql = format!(
+        "SELECT last_event_id, last_occurred_at, chain_head FROM {state} WHERE worker = $1"
+    );
+    let row = sqlx::query(&sql)
+        .bind(admin_audit_prune_anchor_key(relation))
+        .fetch_optional(&mut *conn)
+        .await
+        .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    Ok(Some(AdminAuditPruneAnchor {
+        audit_id: row
+            .try_get("last_event_id")
+            .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?,
+        created_at: row
+            .try_get::<DateTime<Utc>, _>("last_occurred_at")
+            .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?,
+        hash: row
+            .try_get("chain_head")
+            .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?,
+    }))
+}
 
 impl PostgresCanonicalStore {
     pub fn with_admin_audit_relation(mut self, relation: impl Into<String>) -> Self {
@@ -255,6 +291,16 @@ impl AdminAuditStore for PostgresCanonicalStore {
             .execute(&mut *conn)
             .await
             .map_err(|e| SystemStoreError::query("postgres", "BEGIN SERIALIZABLE", e))?;
+        // The cleanup service prunes the chain from the front and records the
+        // newest row it removed; the chain starts there (or at the empty hash
+        // when nothing was pruned).
+        let anchor = match load_prune_anchor(&mut conn, rel).await {
+            Ok(anchor) => anchor,
+            Err(e) => {
+                let _ = sqlx::query("COMMIT").execute(&mut *conn).await;
+                return Err(e);
+            }
+        };
         let mut previous_hash = String::new();
         let mut checked: i64 = 0;
         let mut offset: i64 = 0;
@@ -292,6 +338,11 @@ impl AdminAuditStore for PostgresCanonicalStore {
                 }
             };
             if rows.is_empty() {
+                if checked == 0
+                    && let Err(report) = verify_admin_audit_chain_start(None, anchor.as_ref())
+                {
+                    break report;
+                }
                 break AdminAuditChainReport::Passed {
                     checked_count: checked,
                     last_hash: previous_hash.clone(),
@@ -307,6 +358,15 @@ impl AdminAuditStore for PostgresCanonicalStore {
                         return Err(e);
                     }
                 };
+                if checked == 0 {
+                    match verify_admin_audit_chain_start(Some(&row), anchor.as_ref()) {
+                        Ok(start) => previous_hash = start,
+                        Err(report) => {
+                            tamper = Some(report);
+                            break;
+                        }
+                    }
+                }
                 match verify_admin_audit_chain_step(&row, &previous_hash, checked) {
                     Ok(next) => {
                         previous_hash = next;

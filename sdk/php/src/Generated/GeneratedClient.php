@@ -19,10 +19,10 @@ use Grpc\BaseStub;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.6.21
+ *   UDB version ...... 0.6.22
  *   Protocol version . 1.0.0
  *   Services ......... 29
- *   RPCs ............. 427
+ *   RPCs ............. 428
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -418,6 +418,7 @@ final class GeneratedClient
         "BatchUpsert" => "mutation",
         "BeginTx" => "mutation",
         "BulkCas" => "mutation",
+        "BulkUpsert" => "mutation",
         "CacheDelete" => "mutation",
         "CacheGet" => "read_only",
         "CacheScan" => "read_only",
@@ -854,6 +855,7 @@ final class GeneratedClient
         "DataBroker/BatchUpsert" => "mutation",
         "DataBroker/BeginTx" => "mutation",
         "DataBroker/BulkCas" => "mutation",
+        "DataBroker/BulkUpsert" => "mutation",
         "DataBroker/CacheDelete" => "mutation",
         "DataBroker/CacheGet" => "read_only",
         "DataBroker/CacheScan" => "read_only",
@@ -1290,6 +1292,7 @@ final class GeneratedClient
         "DataBroker/BatchUpsert" => "batch_upsert",
         "DataBroker/BeginTx" => "begin_tx",
         "DataBroker/BulkCas" => "bulk_cas",
+        "DataBroker/BulkUpsert" => "bulk_upsert",
         "DataBroker/CacheDelete" => "cache_delete",
         "DataBroker/CacheGet" => "cache_get",
         "DataBroker/CacheScan" => "cache_scan",
@@ -1725,6 +1728,7 @@ final class GeneratedClient
         "DataBroker/BatchUpsert" => "batchUpsert",
         "DataBroker/BeginTx" => "beginTx",
         "DataBroker/BulkCas" => "bulkCas",
+        "DataBroker/BulkUpsert" => "bulkUpsert",
         "DataBroker/CacheDelete" => "cacheDelete",
         "DataBroker/CacheGet" => "cacheGet",
         "DataBroker/CacheScan" => "cacheScan",
@@ -2160,6 +2164,7 @@ final class GeneratedClient
         "DataBroker/BatchUpsert" => "",
         "DataBroker/BeginTx" => "",
         "DataBroker/BulkCas" => "",
+        "DataBroker/BulkUpsert" => "",
         "DataBroker/CacheDelete" => "",
         "DataBroker/CacheGet" => "",
         "DataBroker/CacheScan" => "",
@@ -2595,6 +2600,7 @@ final class GeneratedClient
         "DataBroker/BatchUpsert" => "",
         "DataBroker/BeginTx" => "",
         "DataBroker/BulkCas" => "",
+        "DataBroker/BulkUpsert" => "",
         "DataBroker/CacheDelete" => "",
         "DataBroker/CacheGet" => "",
         "DataBroker/CacheScan" => "",
@@ -3146,6 +3152,7 @@ final class GeneratedClient
         "batch_upsert" => "batchUpsert",
         "begin_tx" => "beginTx",
         "bulk_cas" => "bulkCas",
+        "bulk_upsert" => "bulkUpsert",
         "cache_delete" => "cacheDelete",
         "cache_get" => "cacheGet",
         "cache_scan" => "cacheScan",
@@ -10537,6 +10544,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.services.v1.DataBroker / BulkUpsert (unary), public alias bulk_upsert.
+     *
+     * Forwards to {@see stubFor()}->BulkUpsert(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/BulkUpsert
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded BulkUpsertResponse
+     */
+    public function bulkUpsert($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'BulkUpsert',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->BulkUpsert($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.services.v1.DataBroker / CacheDelete (unary), public alias cache_delete.
      *
      * Forwards to {@see stubFor()}->CacheDelete(); retries transient codes.
@@ -12503,7 +12531,7 @@ final class GeneratedClient
         return $this->stubFor('WorkflowService', 'udb.core.workflow.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.services.v1.DataBroker (84 RPC(s)).
+     * Underlying buf-generated stub for udb.services.v1.DataBroker (85 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a DataBrokerClient

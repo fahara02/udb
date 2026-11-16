@@ -105,6 +105,7 @@ const TABLE_KEYS: &[&str] = &[
     "required_scope",
     "previous_table_name",
     "allow_drop",
+    "cross_project_shared",
     "indexes",
     "foreign_keys",
     "rls_policies",
@@ -168,6 +169,7 @@ const VECTOR_KEYS: &[&str] = &[
     "payload_schema_json",
     "hnsw_m",
     "hnsw_ef_construction",
+    "projection_filter",
 ];
 const GRAPH_KEYS: &[&str] = &[
     "backend",
@@ -178,6 +180,7 @@ const GRAPH_KEYS: &[&str] = &[
     "edge_source_field",
     "edge_target_field",
     "payload_schema_json",
+    "projection_filter",
 ];
 const DOCUMENT_KEYS: &[&str] = &[
     "backend",
@@ -188,6 +191,7 @@ const DOCUMENT_KEYS: &[&str] = &[
     "tenant_field",
     "ttl_seconds",
     "payload_schema_json",
+    "projection_filter",
 ];
 const TIMESERIES_KEYS: &[&str] = &[
     "backend",
@@ -338,6 +342,7 @@ const GENERIC_STORE_KEYS: &[&str] = &[
     "edge_target_field",
     "edge_source_label",
     "edge_target_label",
+    "projection_filter",
     "<backend-specific option>",
 ];
 
@@ -918,6 +923,7 @@ pub(super) fn apply_table_values(
         "required_scope" => schema.required_scope = value.trim().to_string(),
         "previous_table_name" => schema.previous_table_name = to_snake_case(&value),
         "allow_drop" => schema.allow_drop = parse_bool(&value),
+        "cross_project_shared" => schema.cross_project_shared = parse_bool(&value),
     });
 
     for (key, list) in values {
@@ -1540,6 +1546,7 @@ pub(super) fn vector_from_values(values: &HashMap<String, Vec<OptionValue>>) -> 
         "payload_schema_json" => out.payload_schema_json = value,
         "hnsw_m" => out.hnsw_m = parse_i32(&value),
         "hnsw_ef_construction" => out.hnsw_ef_construction = parse_i32(&value),
+        "projection_filter" => out.projection_filter = value,
     });
     out
 }
@@ -1555,6 +1562,7 @@ pub(super) fn graph_from_values(values: &HashMap<String, Vec<OptionValue>>) -> G
         "edge_source_field" => out.edge_source_field = to_snake_case(&value),
         "edge_target_field" => out.edge_target_field = to_snake_case(&value),
         "payload_schema_json" => out.payload_schema_json = value,
+        "projection_filter" => out.projection_filter = value,
     });
     out
 }
@@ -1572,6 +1580,7 @@ pub(super) fn document_store_from_values(
         "tenant_field" => out.tenant_field = to_snake_case(&value),
         "ttl_seconds" => out.ttl_seconds = parse_i32(&value),
         "payload_schema_json" => out.payload_schema_json = value,
+        "projection_filter" => out.projection_filter = value,
     });
     out
 }

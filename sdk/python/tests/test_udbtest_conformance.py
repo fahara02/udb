@@ -9,6 +9,7 @@ import uuid
 
 import pytest
 
+from udb.core.authz.entity.v1 import policy_set_pb2, policy_version_pb2
 from udb.core.storage.entity.v1 import file_pb2
 from udb.core.workflow.entity.v1 import workflow_instance_pb2
 from udb.entity.v1 import types_pb2
@@ -22,6 +23,11 @@ CASES_FILE = Path(__file__).resolve().parents[2] / "conformance" / "table-cases.
 def connect():
     with udbtest.new(file_pb2.File) as fake:
         yield fake.client
+
+
+def test_join_contract() -> None:
+    with udbtest.new(file_pb2.File, policy_set_pb2.PolicySet, policy_version_pb2.PolicyVersion) as fake:
+        conformance.run_join(fake.client)
 
 
 @pytest.mark.parametrize("index", range(len(conformance._CONTRACT)), ids=[name for name, _ in conformance._CONTRACT])
@@ -177,3 +183,58 @@ def test_array_operators_never_match_null() -> None:
     assert not fake_module._json_contains([1, [1, 3]], [1, 3]), "3 is not a top-level element"
     assert fake_module._json_contains([1, [1, 3]], [[3]])
     assert not fake_module._json_contains([True], [1]), "jsonb true is not the number 1"
+
+
+def _deleted_reader(fake, tenant: str):
+    key = f"deleted-reader-{tenant}"
+    fake.add_identity_api_key(key, udbtest.Identity(
+        tenant_id=tenant, user_id="auditor",
+        scopes=("udb:read", "udb:write", "udb:admin", udbtest.DELETED_READ_SCOPE),
+    ))
+    return fake.client_for_key(key)
+
+
+def test_include_deleted_contract_for_a_caller_holding_the_scope() -> None:
+    """The shared include_deleted case on its allowed branch (the default fake client
+    lacks udb:deleted:read and runs the refusal branch)."""
+    with udbtest.new(file_pb2.File) as fake:
+        run = dict(conformance.table_contract(lambda tenant: _deleted_reader(fake, tenant)))
+        run["include_deleted needs udb:deleted:read and marks deleted rows"]()
+
+
+def test_include_deleted_stays_in_the_tenant_is_recorded_and_needs_soft_delete() -> None:
+    from udb.core.authz.entity.v1 import access_decision_audit_pb2
+    from udb_client.table import Table, table_spec_of
+
+    with udbtest.new(file_pb2.File, access_decision_audit_pb2.AccessDecisionAudit) as fake:
+        tenant = str(uuid.uuid4())
+        reader = _deleted_reader(fake, tenant)
+        foreign = Table(fake.client(str(uuid.uuid4())), table_spec_of(file_pb2.File))
+        theirs = {"file_id": str(uuid.uuid4()), "filename": "theirs.pdf", "object_key": "t/x", "status": "FILE_STATUS_PENDING"}
+        foreign.insert(theirs)
+        foreign.delete({"file_id": theirs["file_id"]})
+        files = Table(reader, table_spec_of(file_pb2.File))
+        mine = {"file_id": str(uuid.uuid4()), "filename": "mine.pdf", "object_key": "m/x", "status": "FILE_STATUS_PENDING"}
+        files.insert(mine)
+        files.delete({"file_id": mine["file_id"]})
+
+        page = files.select({}, include_deleted=True, fields=["file_id"])
+        assert [row["file_id"] for row in page.rows] == [mine["file_id"]], "only the caller's deleted row"
+        assert page.rows[0].get("deleted_at"), "the deleted row is marked even with a field list"
+        reads = fake.deleted_reads()
+        assert len(reads) == 1 and reads[0].table, reads
+        assert (reads[0].tenant_id, reads[0].actor, reads[0].message_type, reads[0].rows) == (
+            tenant, "auditor", "udb.core.storage.entity.v1.File", 1,
+        )
+
+        audits = Table(reader, table_spec_of(access_decision_audit_pb2.AccessDecisionAudit))
+        with pytest.raises(UdbRpcError) as refused:
+            audits.select({}, include_deleted=True)
+        assert inspect(refused.value).code == ErrorCode.INVALID
+        assert len(fake.deleted_reads()) == 1, "a refused read is not recorded"
+
+        plain = Table(fake.client(tenant), table_spec_of(file_pb2.File))
+        with pytest.raises(UdbRpcError) as refused:
+            plain.select({}, include_deleted=True)
+        assert inspect(refused.value).reason == "UDB_DELETED_READ_SCOPE_MISSING"
+        assert inspect(refused.value).code == ErrorCode.SCOPE_MISSING

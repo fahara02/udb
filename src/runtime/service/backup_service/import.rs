@@ -36,7 +36,11 @@ use super::errors::{
     restore_manifest_integrity_status,
 };
 use super::events::emit_event;
-use super::model::{qualified_relation, run_location_from_json, run_summary_from_json, sha256_hex};
+use super::model::{
+    BackupRunLocation, qualified_relation, run_location_from_json, run_summary_from_json,
+    sha256_hex,
+};
+use super::scope::{BackupDataScope, SHARED_SCOPE_TAG, run_scope_from_source_tenant};
 use super::store::{journal_run, journal_run_started, run_read_by_id};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -84,7 +88,7 @@ pub(crate) fn is_restore_journal_relation(schema: &str, table: &str) -> bool {
     qualified_relation(schema, table) == run_model.relation
 }
 
-fn manifest_table_by_relation<'a>(
+pub(crate) fn manifest_table_by_relation<'a>(
     manifest: &'a CatalogManifest,
     schema: &str,
     table: &str,
@@ -131,7 +135,7 @@ pub(crate) fn scope_restore_row_project(
     Ok(())
 }
 
-fn parse_scoped_restore_row(
+pub(crate) fn parse_scoped_restore_row(
     line: &str,
     schema: &str,
     table: &str,
@@ -1315,6 +1319,13 @@ pub(crate) async fn restore_tenant(
 ) -> Result<Response<backup_pb::RestoreTenantResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
+    // A shared-table restore has its own target (the shared tables, not a
+    // tenant) and its own authority (platform admin), so it branches first.
+    if BackupDataScope::from_proto(req.scope)?.is_shared() {
+        return super::restore_shared::restore_shared(svc, &metadata, req)
+            .await
+            .map(Response::new);
+    }
     let source_tenant_id = req.source_tenant_id.trim().to_string();
     let target_tenant_id = req.target_tenant_id.trim().to_string();
     let backup_id = req.backup_id.trim().to_string();
@@ -1388,64 +1399,15 @@ pub(crate) async fn restore_tenant(
     let manifest = binding.manifest.as_ref();
 
     // Resolve the source run's object prefix from the durable journal.
-    let mut source_ctx = project_scoped_native_service_context(&metadata, &source_tenant_id);
-    source_ctx.project_id = binding.project_id.clone();
-    let run_row = runtime
-        .native_entity_read_for_service(
-            "backup",
-            &source_ctx,
-            run_read_by_id(&source_tenant_id, &binding.project_id, &backup_id),
-        )
-        .await?
-        .first()
-        .cloned()
-        .ok_or_else(|| {
-            backup_not_found_status(
-                "restore_tenant",
-                "backup_run_not_found",
-                "backup run not found for source tenant",
-            )
-        })?;
-    let run = run_summary_from_json(&run_row);
-    if run.project_id != binding.project_id {
-        return Err(backup_topology_mismatch_status(
-            "restore_tenant",
-            "backup run project does not match the active restore project",
-        ));
-    }
-    let location = run_location_from_json(&run_row)
-        .ok_or_else(|| backup_run_location_missing_status("restore_tenant"))?;
-    if location.project_id != binding.project_id {
-        return Err(backup_topology_mismatch_status(
-            "restore_tenant",
-            format!(
-                "backup belongs to project '{}' but restore resolved project '{}'",
-                location.project_id, binding.project_id
-            ),
-        ));
-    }
-    if location.catalog_checksum != binding.catalog_checksum {
-        return Err(backup_topology_mismatch_status(
-            "restore_tenant",
-            format!(
-                "backup catalog checksum '{}' does not match active project catalog '{}'",
-                location.catalog_checksum, binding.catalog_checksum
-            ),
-        ));
-    }
-    if location.postgres_instance != binding.postgres_instance {
-        return Err(backup_topology_mismatch_status(
-            "restore_tenant",
-            format!(
-                "backup canonical Postgres instance '{}' does not match restore instance '{}'",
-                location.postgres_instance, binding.postgres_instance
-            ),
-        ));
-    }
-    let object_prefix = run.object_prefix.trim().to_string();
-    if object_prefix.is_empty() {
-        return Err(backup_run_missing_object_prefix_status());
-    }
+    let (run, location, object_prefix) = load_restore_run(
+        runtime,
+        &binding,
+        &metadata,
+        &source_tenant_id,
+        &backup_id,
+        BackupDataScope::Tenant,
+    )
+    .await?;
 
     // Enumerate the tenant-owned tables via the SHARED planner. The FRESH-target
     // guard (refuse to write over a live tenant) runs INSIDE the restore tx below
@@ -1466,71 +1428,9 @@ pub(crate) async fn restore_tenant(
     // Load + verify the run manifest from the immutable location persisted in
     // BackupRun before artifact writes. Legacy rows without that location fail
     // explicitly above; mutable process defaults are never used as a locator.
-    let manifest_key = location.manifest_key.clone();
-    let run_backend = location.object_backend.clone();
-    let run_bucket = location.object_bucket.clone();
-    let manifest_get = crate::runtime::core::setup_data::object_request_json(
-        "get",
-        &run_bucket,
-        &manifest_key,
-        "",
-    );
-    let manifest_bytes = runtime
-        .get_object_backend_target_for_project(
-            &run_backend,
-            None,
-            &context.project_id,
-            &manifest_get,
-        )
-        .await?;
-    // Integrity: the manifest is the anchor restore trusts before reading ANY
-    // table artifact it lists. Verify its bytes against the checksum the backup
-    // recorded in the durable journal (`run.manifest_checksum`) BEFORE trusting a
-    // single entry. An empty recorded checksum (legacy or tampered journal row)
-    // is a verification FAILURE, never a skip — fail closed.
-    let recorded_manifest_checksum = run.manifest_checksum.trim();
-    if recorded_manifest_checksum.is_empty()
-        || sha256_hex(&manifest_bytes) != recorded_manifest_checksum
-    {
-        return Err(restore_manifest_integrity_status());
-    }
-    let manifest_value: serde_json::Value =
-        serde_json::from_slice(&manifest_bytes).map_err(|err| {
-            backup_internal_status(
-                "restore_manifest_parse",
-                format!("restore manifest parse failed: {err}"),
-            )
-        })?;
-    for (field, expected) in [
-        ("project_id", binding.project_id.as_str()),
-        ("catalog_checksum", binding.catalog_checksum.as_str()),
-        ("postgres_instance", binding.postgres_instance.as_str()),
-    ] {
-        let actual = manifest_value
-            .get(field)
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or_default();
-        if actual != expected {
-            return Err(backup_topology_mismatch_status(
-                "restore_tenant",
-                format!(
-                    "backup manifest {field} '{actual}' does not match resolved value '{expected}'"
-                ),
-            ));
-        }
-    }
-    let object_backend = manifest_value
-        .get("object_backend")
-        .and_then(|v| v.as_str())
-        .filter(|v| !v.trim().is_empty())
-        .map(str::to_string)
-        .unwrap_or(run_backend);
-    let object_bucket = manifest_value
-        .get("object_bucket")
-        .and_then(|v| v.as_str())
-        .filter(|v| !v.trim().is_empty())
-        .map(str::to_string)
-        .unwrap_or(run_bucket);
+    let (manifest_value, object_backend, object_bucket) =
+        load_verified_restore_manifest(runtime, &binding, &run, &location, BackupDataScope::Tenant)
+            .await?;
     let manifest_tables = manifest_value
         .get("tables")
         .and_then(|v| v.as_array())
@@ -1575,6 +1475,8 @@ pub(crate) async fn restore_tenant(
         &binding.project_id,
         KIND_RESTORE,
         &object_prefix,
+        "",
+        "",
         &restore_metadata,
     )
     .await?;
@@ -1736,40 +1638,17 @@ pub(crate) async fn restore_tenant(
                 ),
             ));
         }
-        let get_req = crate::runtime::core::setup_data::object_request_json(
-            "get",
+        let jsonl = fetch_verified_table_jsonl(
+            runtime,
+            &context.project_id,
+            &object_backend,
             &object_bucket,
+            schema,
+            table,
             object_key,
-            "",
-        );
-        let bytes = runtime
-            .get_object_backend_target_for_project(
-                &object_backend,
-                None,
-                &context.project_id,
-                &get_req,
-            )
-            .await?;
-        // Integrity: the encrypted artifact must match the manifest checksum. An
-        // empty expected checksum is a verification FAILURE (fail closed), never a
-        // skip — a tampered manifest could blank it to bypass the check.
-        if expected_checksum.is_empty() || sha256_hex(&bytes) != expected_checksum {
-            return Err(Status::data_loss(format!(
-                "restore integrity check failed for {schema}.{table} (checksum mismatch)"
-            )));
-        }
-        let ciphertext = String::from_utf8(bytes).map_err(|err| {
-            backup_internal_status(
-                "restore_artifact_utf8",
-                format!("restore artifact is not valid UTF-8: {err}"),
-            )
-        })?;
-        let jsonl = runtime.decrypt_secret_at_rest(&ciphertext).map_err(|err| {
-            backup_internal_status(
-                "restore_decrypt_artifact",
-                format!("restore decryption failed: {err}"),
-            )
-        })?;
+            expected_checksum,
+        )
+        .await?;
         let table_has_rows = jsonl.lines().any(|line| !line.trim().is_empty());
         let restore_remap_plans = if cross_tenant_restore && table_has_rows {
             postgres_restore_remap_plans(
@@ -1952,6 +1831,237 @@ pub(crate) async fn restore_tenant(
         message: "tenant restored".to_string(),
         error: None,
     }))
+}
+
+/// Read a restore's source run from the durable journal (under the tenant whose
+/// journal holds it) and check it against the operation-start project view:
+/// same project, catalog checksum and canonical Postgres instance, an immutable
+/// object location, an object prefix, and the requested data scope. A shared
+/// backup is never restored with the tenant scope, nor a tenant backup with the
+/// shared scope: the rows and their tenant handling differ.
+pub(crate) async fn load_restore_run(
+    runtime: &crate::runtime::DataBrokerRuntime,
+    binding: &super::BackupProjectSnapshot,
+    metadata: &tonic::metadata::MetadataMap,
+    source_tenant_id: &str,
+    backup_id: &str,
+    data_scope: BackupDataScope,
+) -> Result<(backup_pb::BackupRunSummary, BackupRunLocation, String), Status> {
+    let mut source_ctx = project_scoped_native_service_context(metadata, source_tenant_id);
+    source_ctx.project_id = binding.project_id.clone();
+    let run_row = runtime
+        .native_entity_read_for_service(
+            "backup",
+            &source_ctx,
+            run_read_by_id(source_tenant_id, &binding.project_id, backup_id),
+        )
+        .await?
+        .first()
+        .cloned()
+        .ok_or_else(|| {
+            backup_not_found_status(
+                "restore_tenant",
+                "backup_run_not_found",
+                "backup run not found for source tenant",
+            )
+        })?;
+    let run = run_summary_from_json(&run_row);
+    if run.project_id != binding.project_id {
+        return Err(backup_topology_mismatch_status(
+            "restore_tenant",
+            "backup run project does not match the active restore project",
+        ));
+    }
+    ensure_run_scope_matches(
+        run_scope_from_source_tenant(&run.source_tenant_id),
+        data_scope,
+    )?;
+    let location = run_location_from_json(&run_row)
+        .ok_or_else(|| backup_run_location_missing_status("restore_tenant"))?;
+    if location.project_id != binding.project_id {
+        return Err(backup_topology_mismatch_status(
+            "restore_tenant",
+            format!(
+                "backup belongs to project '{}' but restore resolved project '{}'",
+                location.project_id, binding.project_id
+            ),
+        ));
+    }
+    if location.catalog_checksum != binding.catalog_checksum {
+        return Err(backup_topology_mismatch_status(
+            "restore_tenant",
+            format!(
+                "backup catalog checksum '{}' does not match active project catalog '{}'",
+                location.catalog_checksum, binding.catalog_checksum
+            ),
+        ));
+    }
+    if location.postgres_instance != binding.postgres_instance {
+        return Err(backup_topology_mismatch_status(
+            "restore_tenant",
+            format!(
+                "backup canonical Postgres instance '{}' does not match restore instance '{}'",
+                location.postgres_instance, binding.postgres_instance
+            ),
+        ));
+    }
+    let object_prefix = run.object_prefix.trim().to_string();
+    if object_prefix.is_empty() {
+        return Err(backup_run_missing_object_prefix_status());
+    }
+    Ok((run, location, object_prefix))
+}
+
+/// Refuse a restore whose requested scope differs from the backup's scope.
+pub(crate) fn ensure_run_scope_matches(
+    run_scope: backup_pb::BackupScope,
+    data_scope: BackupDataScope,
+) -> Result<(), Status> {
+    let run_is_shared = run_scope == backup_pb::BackupScope::Shared;
+    if run_is_shared == data_scope.is_shared() {
+        return Ok(());
+    }
+    Err(backup_topology_mismatch_status(
+        "restore_tenant",
+        if run_is_shared {
+            "backup is a shared-table backup; restore it with scope BACKUP_SCOPE_SHARED"
+        } else {
+            "backup is a tenant backup; restore it with scope BACKUP_SCOPE_TENANT"
+        },
+    ))
+}
+
+/// Load a restore's run manifest from the run's immutable location, verify its
+/// bytes against the checksum recorded in the journal, and check it against the
+/// operation-start project view and the requested scope. Returns the manifest
+/// and the object backend/bucket its artifacts live in.
+pub(crate) async fn load_verified_restore_manifest(
+    runtime: &crate::runtime::DataBrokerRuntime,
+    binding: &super::BackupProjectSnapshot,
+    run: &backup_pb::BackupRunSummary,
+    location: &BackupRunLocation,
+    data_scope: BackupDataScope,
+) -> Result<(serde_json::Value, String, String), Status> {
+    let manifest_key = location.manifest_key.clone();
+    let run_backend = location.object_backend.clone();
+    let run_bucket = location.object_bucket.clone();
+    let manifest_get = crate::runtime::core::setup_data::object_request_json(
+        "get",
+        &run_bucket,
+        &manifest_key,
+        "",
+    );
+    let manifest_bytes = runtime
+        .get_object_backend_target_for_project(
+            &run_backend,
+            None,
+            &binding.project_id,
+            &manifest_get,
+        )
+        .await?;
+    // Integrity: the manifest is the anchor restore trusts before reading ANY
+    // table artifact it lists. Verify its bytes against the checksum the backup
+    // recorded in the durable journal (`run.manifest_checksum`) BEFORE trusting a
+    // single entry. An empty recorded checksum (legacy or tampered journal row)
+    // is a verification FAILURE, never a skip — fail closed.
+    let recorded_manifest_checksum = run.manifest_checksum.trim();
+    if recorded_manifest_checksum.is_empty()
+        || sha256_hex(&manifest_bytes) != recorded_manifest_checksum
+    {
+        return Err(restore_manifest_integrity_status());
+    }
+    let manifest_value: serde_json::Value =
+        serde_json::from_slice(&manifest_bytes).map_err(|err| {
+            backup_internal_status(
+                "restore_manifest_parse",
+                format!("restore manifest parse failed: {err}"),
+            )
+        })?;
+    for (field, expected) in [
+        ("project_id", binding.project_id.as_str()),
+        ("catalog_checksum", binding.catalog_checksum.as_str()),
+        ("postgres_instance", binding.postgres_instance.as_str()),
+    ] {
+        let actual = manifest_value
+            .get(field)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default();
+        if actual != expected {
+            return Err(backup_topology_mismatch_status(
+                "restore_tenant",
+                format!(
+                    "backup manifest {field} '{actual}' does not match resolved value '{expected}'"
+                ),
+            ));
+        }
+    }
+    // The integrity-checked manifest names its own scope (manifests written
+    // before scopes existed are tenant backups).
+    let manifest_shared = manifest_value
+        .get("scope")
+        .and_then(serde_json::Value::as_str)
+        == Some(SHARED_SCOPE_TAG);
+    ensure_run_scope_matches(
+        if manifest_shared {
+            backup_pb::BackupScope::Shared
+        } else {
+            backup_pb::BackupScope::Tenant
+        },
+        data_scope,
+    )?;
+    let object_backend = manifest_value
+        .get("object_backend")
+        .and_then(|v| v.as_str())
+        .filter(|v| !v.trim().is_empty())
+        .map(str::to_string)
+        .unwrap_or(run_backend);
+    let object_bucket = manifest_value
+        .get("object_bucket")
+        .and_then(|v| v.as_str())
+        .filter(|v| !v.trim().is_empty())
+        .map(str::to_string)
+        .unwrap_or(run_bucket);
+    Ok((manifest_value, object_backend, object_bucket))
+}
+
+/// Fetch one table artifact, verify it against the manifest checksum, and
+/// decrypt it to its JSONL rows.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn fetch_verified_table_jsonl(
+    runtime: &crate::runtime::DataBrokerRuntime,
+    project_id: &str,
+    object_backend: &str,
+    object_bucket: &str,
+    schema: &str,
+    table: &str,
+    object_key: &str,
+    expected_checksum: &str,
+) -> Result<String, Status> {
+    let get_req =
+        crate::runtime::core::setup_data::object_request_json("get", object_bucket, object_key, "");
+    let bytes = runtime
+        .get_object_backend_target_for_project(object_backend, None, project_id, &get_req)
+        .await?;
+    // Integrity: the encrypted artifact must match the manifest checksum. An
+    // empty expected checksum is a verification FAILURE (fail closed), never a
+    // skip — a tampered manifest could blank it to bypass the check.
+    if expected_checksum.is_empty() || sha256_hex(&bytes) != expected_checksum {
+        return Err(Status::data_loss(format!(
+            "restore integrity check failed for {schema}.{table} (checksum mismatch)"
+        )));
+    }
+    let ciphertext = String::from_utf8(bytes).map_err(|err| {
+        backup_internal_status(
+            "restore_artifact_utf8",
+            format!("restore artifact is not valid UTF-8: {err}"),
+        )
+    })?;
+    runtime.decrypt_secret_at_rest(&ciphertext).map_err(|err| {
+        backup_internal_status(
+            "restore_decrypt_artifact",
+            format!("restore decryption failed: {err}"),
+        )
+    })
 }
 
 /// Relations the broker writes as a side effect of serving a request, rather than

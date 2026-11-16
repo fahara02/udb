@@ -48,12 +48,20 @@ pub(crate) fn redis_context_namespace(project_id: &str, tenant_id: &str) -> Stri
 /// sit under the namespace is re-anchored beneath it (so a cross-tenant pattern
 /// like `udb:other:*` becomes `udb:me:...udb:other:*` and matches nothing). With
 /// no namespace (context-free path) the pattern is returned unchanged.
+///
+/// The namespace itself is matched LITERALLY (glob metacharacters escaped):
+/// the shared namespace's tenant segment is the reserved marker `*shared*`,
+/// which unescaped would match every tenant whose id contains `shared`. The
+/// caller's suffix keeps its glob meaning inside the namespace.
 pub(crate) fn effective_scan_pattern(namespace: Option<&str>, caller_pattern: &str) -> String {
     match namespace {
         Some(ns) if !ns.is_empty() => {
             let suffix = caller_pattern.strip_prefix(ns).unwrap_or(caller_pattern);
             let suffix = if suffix.is_empty() { "*" } else { suffix };
-            format!("{ns}{suffix}")
+            format!(
+                "{}{suffix}",
+                crate::runtime::executor_utils::redis_glob_literal(ns)
+            )
         }
         _ => caller_pattern.to_string(),
     }
@@ -542,6 +550,27 @@ mod tests {
         );
         // Context-free path is unchanged.
         assert_eq!(effective_scan_pattern(None, "*"), "*");
+    }
+
+    /// The namespace is matched literally: the shared namespace's `*shared*`
+    /// tenant segment (and any glob character in a project or tenant id) is
+    /// escaped, so a shared SCAN never reaches a tenant whose id contains
+    /// `shared`.
+    #[test]
+    fn redis_scan_pattern_matches_the_namespace_literally() {
+        let shared = redis_context_namespace("p1", crate::broker::SHARED_TENANT_MARKER);
+        assert_eq!(shared, "udb:p1:*shared*:");
+        assert_eq!(
+            effective_scan_pattern(Some(&shared), "fx:*"),
+            r"udb:p1:\*shared\*:fx:*"
+        );
+        // An in-namespace caller pattern is still recognised and re-anchored.
+        assert_eq!(
+            effective_scan_pattern(Some(&shared), "udb:p1:*shared*:fx:*"),
+            r"udb:p1:\*shared\*:fx:*"
+        );
+        let odd = redis_context_namespace("p?", "t[1]");
+        assert_eq!(effective_scan_pattern(Some(&odd), "*"), r"udb:p\?:t\[1\]:*");
     }
 
     #[test]

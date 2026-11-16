@@ -53,4 +53,15 @@ public interface GetRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getKeyBytes();
+
+  /**
+   * <pre>
+   * Read the shared namespace (the reserved shared-tenant keyspace every
+   * tenant reads) instead of the caller's tenant keyspace.
+   * </pre>
+   *
+   * <code>bool shared = 4 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  boolean getShared();
 }

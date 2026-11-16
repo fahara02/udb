@@ -2323,6 +2323,79 @@ impl DataBrokerRuntime {
             .is_ok()
     }
 
+    /// The backend instances a project's declaration on `backend` (optionally
+    /// pinned to `declared_instance`) can land on under the current routing
+    /// mode and instance labels. Two projects whose sets intersect would store
+    /// a same-named relation in the same physical place. With no registered
+    /// instance for the backend, the legacy unlabeled `primary` pool is the
+    /// target whenever the routing mode lets this project use it.
+    pub(super) fn relation_claim_instances_for_project(
+        &self,
+        backend: &str,
+        declared_instance: &str,
+        project_id: &str,
+    ) -> std::collections::BTreeSet<String> {
+        let backend = backend.trim();
+        let declared_instance = declared_instance.trim();
+        let registered: Vec<&RuntimeBackendInstance> = self
+            .backend_instances
+            .iter()
+            .filter(|instance| instance.backend.eq_ignore_ascii_case(backend) && instance.enabled)
+            .collect();
+        if registered.is_empty() {
+            let mut fallback = std::collections::BTreeSet::new();
+            if (declared_instance.is_empty() || declared_instance == "primary")
+                && self
+                    .ensure_unlabeled_default_allowed_for_project(backend, project_id)
+                    .is_ok()
+            {
+                fallback.insert("primary".to_string());
+            }
+            return fallback;
+        }
+        registered
+            .into_iter()
+            .filter(|instance| declared_instance.is_empty() || instance.name == declared_instance)
+            .filter(|instance| self.instance_matches_project(instance, project_id))
+            .map(|instance| instance.name.clone())
+            .collect()
+    }
+
+    /// Backend instances that carry no project label while the routing mode is
+    /// Permissive: each one serves every project. Returned as
+    /// `(backend, instance)` pairs; the legacy unlabeled PostgreSQL primary
+    /// pool (no registered postgres instance) is reported as
+    /// `("postgres", "primary")`.
+    pub(super) fn unlabeled_permissive_backend_instances(&self) -> Vec<(String, String)> {
+        if self.project_routing_mode()
+            != crate::runtime::project_backend_router::ProjectRoutingMode::Permissive
+        {
+            return Vec::new();
+        }
+        let mut out: Vec<(String, String)> = self
+            .backend_instances
+            .iter()
+            .filter(|instance| instance.enabled)
+            .filter(|instance| {
+                crate::runtime::project_backend_router::InstanceProjectLabel::from_labels(
+                    &instance.labels,
+                ) == crate::runtime::project_backend_router::InstanceProjectLabel::Unlabeled
+            })
+            .map(|instance| (instance.backend.clone(), instance.name.clone()))
+            .collect();
+        if self.pg_pool.is_some()
+            && !self
+                .backend_instances
+                .iter()
+                .any(|instance| instance.backend == "postgres")
+        {
+            out.push(("postgres".to_string(), "primary".to_string()));
+        }
+        out.sort();
+        out.dedup();
+        out
+    }
+
     fn allow_unlabeled_fallback_instance_for_project(
         &self,
         backend: &str,

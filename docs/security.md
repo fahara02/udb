@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.21 | protocol v1.0.0                                          │
+│    crate v0.6.22 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This page explains how UDB keeps data safe: who a request is, what it's allowed
@@ -152,8 +152,13 @@ token is also logged on the `udb.audit.authn` target.
 SDK helpers: TypeScript `UdbAuthClient.exchangeTokenForJob({ subjectToken,
 purpose, jobId, ttlSeconds })`, Go `AuthClient.ExchangeTokenForJob(ctx,
 ExchangeTokenForJobRequest{...})`, Python `UdbAuthClient.exchange_token_for_job(
-subject_token, purpose=..., job_id=..., ttl_seconds=...)`. Each is called with
-the service's own bearer.
+subject_token, purpose=..., job_id=..., ttl_seconds=...)`, PHP
+`UdbAuthClient::exchangeTokenForJob($subjectToken, $purpose, $jobId, $ttlSeconds)`,
+Rust `udb_client::exchange_token_for_job(&mut authn, &meta,
+ExchangeTokenForJobRequest { .. })`, Java `UdbAuthClient.exchangeTokenForJob(
+subjectToken, purpose, jobId, ttlSeconds)`, C#
+`UdbAuthClient.ExchangeTokenForJobAsync(subjectToken, purpose, jobId, ttlSeconds)`.
+Each is called with the service's own bearer.
 
 ### Expired and revoked tokens
 
@@ -168,8 +173,11 @@ delegated ones). Both refusals stay `UNAUTHENTICATED`:
 Other bearer refusals (a bad signature, a wrong issuer or audience) keep
 `UDB_AUTHENTICATION_FAILED`. The SDKs keep classifying all three as
 `unauthenticated` and add `isTokenExpired` / `isTokenRevoked` (TypeScript),
-`IsTokenExpired` / `IsTokenRevoked` (Go) and `is_token_expired` /
-`is_token_revoked` (Python).
+`IsTokenExpired` / `IsTokenRevoked` (Go), `is_token_expired` /
+`is_token_revoked` (Python), `$e->isTokenExpired()` / `$e->isTokenRevoked()` on
+`UdbRpcException` (PHP), `UdbError::is_token_expired` / `is_token_revoked`
+(Rust), `UdbAuthClient.isTokenExpired(e)` / `isTokenRevoked(e)` (Java) and
+`UdbAuthClient.IsTokenExpired(e)` / `IsTokenRevoked(e)` (C#).
 
 ## Authorization
 
@@ -307,6 +315,44 @@ the value: without this rule, a caller that may not see a national ID could
 still learn whether a row with a guessed one exists. Blind-index equality
 lookups on an encrypted column count too. A service that looks rows up by such
 a column holds `udb:pii:read`.
+
+### Reading deleted rows
+
+On an entity with soft delete, Delete keeps the row and stamps its soft-delete
+column (usually `deleted_at`), and every ordinary read hides it. A support or
+recovery tool that needs those rows asks for them with `include_deleted` on the
+Select:
+
+```go
+page, err := files.Select(ctx, udbclient.Filter{"owner_id": owner},
+    udbclient.SelectOptions{IncludeDeleted: true})
+// TypeScript: table.select(filter, { includeDeleted: true })
+// Python:     table.select(filter, include_deleted=True)
+```
+
+Each deleted row comes back with its `deleted_at` set; live rows have it empty.
+If you name `fields`, UDB adds the soft-delete column for you, so a deleted row
+can always be told apart.
+
+What UDB enforces:
+
+- The caller needs the `udb:deleted:read` scope (or `udb:*`). Without it the
+  read is refused with `PERMISSION_DENIED` and reason
+  `UDB_DELETED_READ_SCOPE_MISSING`. `udb:admin` alone is not enough. Grant it
+  only to the services and people who restore or investigate data.
+- The read stays in the caller's tenant and project, like every other read.
+- Every such read is written to the audit log (`udb_system.auth_audit_log`,
+  event type `udb.data.deleted_read`) with the tenant, project, user or service,
+  entity, table and the number of rows returned. The record is written before
+  the rows are returned; if it cannot be written, the read fails (retryable)
+  and returns nothing.
+- An entity without soft delete has no deleted rows, so `include_deleted` on it
+  is refused with `INVALID_ARGUMENT` naming the field. A join read refuses it
+  the same way: read one entity at a time.
+- These reads never use or fill the read cache.
+
+The `udbtest` fakes in Go, TypeScript and Python behave the same way and keep
+each such read in `DeletedReads()` / `deletedReads()` / `deleted_reads()`.
 
 Here's how to handle common classes of sensitive data:
 

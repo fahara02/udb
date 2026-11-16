@@ -72,6 +72,11 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasResponse.FromString,
                 _registered_method=True)
+        self.BulkUpsert = channel.unary_unary(
+                '/udb.services.v1.DataBroker/BulkUpsert',
+                request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkUpsertRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkUpsertResponse.FromString,
+                _registered_method=True)
         self.VectorSearch = channel.unary_unary(
                 '/udb.services.v1.DataBroker/VectorSearch',
                 request_serializer=udb_dot_entity_dot_v1_dot_vector__pb2.VectorSearchRequest.SerializeToString,
@@ -527,6 +532,18 @@ class DataBrokerServicer(object):
         `idempotency_key`. Same tenant isolation, authorization (deny-by-default
         Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
         unary Update path.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def BulkUpsert(self, request, context):
+        """Audited bulk load: write one batch of whole rows to one table in ONE
+        write transaction (all rows or none), with multi-row statements, ONE
+        summarising change event, ONE audit record and a size-aware rate-limit
+        charge. Authorized per table exactly like BatchUpsert's items (the
+        `Upsert` action; shared tables need a platform admin or the global-write
+        scope). Every row is validated, scoped and encrypted like a single Upsert.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -1111,6 +1128,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     servicer.BulkCas,
                     request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasResponse.SerializeToString,
+            ),
+            'BulkUpsert': grpc.unary_unary_rpc_method_handler(
+                    servicer.BulkUpsert,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkUpsertRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkUpsertResponse.SerializeToString,
             ),
             'VectorSearch': grpc.unary_unary_rpc_method_handler(
                     servicer.VectorSearch,
@@ -1733,6 +1755,33 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/BulkCas',
             udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def BulkUpsert(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/BulkUpsert',
+            udb_dot_entity_dot_v1_dot_relational__pb2.BulkUpsertRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_relational__pb2.BulkUpsertResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -65,6 +65,15 @@ reasons! {
     UPSERT_INCOMPLETE_ROW = "UDB_UPSERT_INCOMPLETE_ROW", NotNull, InvalidArgument,
         "An Upsert inserts a full row, and the record left out a NOT NULL column that has no default.",
         "Send the whole row to Upsert, or use Update (the generated clients' Patch) to change only some columns of an existing row.";
+    BULK_BATCH_TOO_LARGE = "UDB_BULK_BATCH_TOO_LARGE", Validation, InvalidArgument,
+        "A BulkUpsert batch carried more rows than the broker's per-batch maximum (UDB_BULK_UPSERT_MAX_ROWS); nothing was written.",
+        "Send smaller batches; the SDK bulk-load helpers split an iterable of rows into batches for you.";
+    BULK_ROW_SHAPE_MISMATCH = "UDB_BULK_ROW_SHAPE_MISMATCH", Validation, InvalidArgument,
+        "A BulkUpsert row carried a different set of fields than the batch's first row; field_violations names the row. Nothing was written.",
+        "Send every row of a batch with the same fields (null for an empty value), or put rows with different fields in separate batches.";
+    BULK_DUPLICATE_KEY = "UDB_BULK_DUPLICATE_KEY", Validation, InvalidArgument,
+        "Two rows of one BulkUpsert batch carry the same conflict key, so the batch would write one row twice; nothing was written.",
+        "Keep one row per key in a batch (the one you want stored) and send the batch again.";
     FOREIGN_KEY_VIOLATION = "UDB_FOREIGN_KEY_VIOLATION", ForeignKey, FailedPrecondition,
         "The write references a row that does not exist, or deletes a row others still reference.",
         "Create the referenced row first, or remove the references before deleting.";
@@ -89,6 +98,9 @@ reasons! {
     SCOPE_MISSING = "UDB_SCOPE_MISSING", Permission, PermissionDenied,
         "The caller lacks a scope the operation needs; ErrorDetail.missing names it.",
         "Add the scope to the service account's grant and request it when connecting.";
+    DELETED_READ_SCOPE_MISSING = "UDB_DELETED_READ_SCOPE_MISSING", Permission, PermissionDenied,
+        "A Select set include_deleted, and the caller lacks the deleted-row read scope; missing names it (udb:deleted:read).",
+        "Grant udb:deleted:read to the service account or user that needs deleted rows, or leave include_deleted unset to read live rows only.";
     POLICY_DENIED = "UDB_POLICY_DENIED", Permission, PermissionDenied,
         "No policy rule allows this action for the caller; ErrorDetail.missing names the rule that would.",
         "Add the rule (`udb authz explain` shows the closest candidate and the attribute that failed).";

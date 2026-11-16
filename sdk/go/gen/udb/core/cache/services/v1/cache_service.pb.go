@@ -26,9 +26,12 @@ const (
 type GetRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Verified against the bearer/claim tenant; cross-tenant values are rejected.
-	TenantId      string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Namespace     string `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Key           string `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	TenantId  string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Namespace string `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Key       string `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	// Read the shared namespace (the reserved shared-tenant keyspace every
+	// tenant reads) instead of the caller's tenant keyspace.
+	Shared        bool `protobuf:"varint,4,opt,name=shared,proto3" json:"shared,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -82,6 +85,13 @@ func (x *GetRequest) GetKey() string {
 		return x.Key
 	}
 	return ""
+}
+
+func (x *GetRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
 }
 
 type GetResponse struct {
@@ -160,7 +170,11 @@ type SetRequest struct {
 	Key       string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
 	Value     []byte                 `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
 	// 0 = use the namespace default TTL (or no expiry if none configured).
-	TtlSeconds    int64 `protobuf:"varint,5,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
+	TtlSeconds int64 `protobuf:"varint,5,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
+	// Write the shared namespace (the reserved shared-tenant keyspace every
+	// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+	// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+	Shared        bool `protobuf:"varint,6,opt,name=shared,proto3" json:"shared,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -228,6 +242,13 @@ func (x *SetRequest) GetTtlSeconds() int64 {
 		return x.TtlSeconds
 	}
 	return 0
+}
+
+func (x *SetRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
 }
 
 type SetResponse struct {
@@ -320,7 +341,11 @@ type IncrementRequest struct {
 	TtlSecondsIfCreated int64 `protobuf:"varint,5,opt,name=ttl_seconds_if_created,json=ttlSecondsIfCreated,proto3" json:"ttl_seconds_if_created,omitempty"`
 	// Upper bound for the new value; 0 = no bound. An increment that would take
 	// the value above `max` is not applied and the response has `refused` set.
-	Max           int64 `protobuf:"varint,6,opt,name=max,proto3" json:"max,omitempty"`
+	Max int64 `protobuf:"varint,6,opt,name=max,proto3" json:"max,omitempty"`
+	// Write the shared namespace (the reserved shared-tenant keyspace every
+	// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+	// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+	Shared        bool `protobuf:"varint,7,opt,name=shared,proto3" json:"shared,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -395,6 +420,13 @@ func (x *IncrementRequest) GetMax() int64 {
 		return x.Max
 	}
 	return 0
+}
+
+func (x *IncrementRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
 }
 
 type IncrementResponse struct {
@@ -481,10 +513,14 @@ func (x *IncrementResponse) GetError() *v1.ApiError {
 }
 
 type DeleteRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Key           string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Namespace string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Key       string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	// Write the shared namespace (the reserved shared-tenant keyspace every
+	// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+	// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+	Shared        bool `protobuf:"varint,4,opt,name=shared,proto3" json:"shared,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -538,6 +574,13 @@ func (x *DeleteRequest) GetKey() string {
 		return x.Key
 	}
 	return ""
+}
+
+func (x *DeleteRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
 }
 
 type DeleteResponse struct {
@@ -618,7 +661,10 @@ type ScanRequest struct {
 	KeyPrefix string `protobuf:"bytes,3,opt,name=key_prefix,json=keyPrefix,proto3" json:"key_prefix,omitempty"`
 	Limit     int32  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
 	// Opaque Redis SCAN cursor from a prior page ("" / "0" starts a fresh scan).
-	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Read the shared namespace (the reserved shared-tenant keyspace every
+	// tenant reads) instead of the caller's tenant keyspace.
+	Shared        bool `protobuf:"varint,6,opt,name=shared,proto3" json:"shared,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -686,6 +732,13 @@ func (x *ScanRequest) GetPageToken() string {
 		return x.PageToken
 	}
 	return ""
+}
+
+func (x *ScanRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
 }
 
 type ScanResponse struct {
@@ -820,8 +873,12 @@ type CreateNamespaceRequest struct {
 	MaxBytes int64 `protobuf:"varint,3,opt,name=max_bytes,json=maxBytes,proto3" json:"max_bytes,omitempty"`
 	// Default TTL applied to a Set that does not specify one. 0 = no default.
 	DefaultTtlSeconds int64 `protobuf:"varint,4,opt,name=default_ttl_seconds,json=defaultTtlSeconds,proto3" json:"default_ttl_seconds,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Write the shared namespace (the reserved shared-tenant keyspace every
+	// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+	// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+	Shared        bool `protobuf:"varint,5,opt,name=shared,proto3" json:"shared,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateNamespaceRequest) Reset() {
@@ -880,6 +937,13 @@ func (x *CreateNamespaceRequest) GetDefaultTtlSeconds() int64 {
 		return x.DefaultTtlSeconds
 	}
 	return 0
+}
+
+func (x *CreateNamespaceRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
 }
 
 type CreateNamespaceResponse struct {
@@ -966,8 +1030,12 @@ type DeleteNamespaceRequest struct {
 	// Required explicit confirmation token; an empty token fails closed
 	// (DESTRUCTIVE namespace flush).
 	ConfirmationToken string `protobuf:"bytes,3,opt,name=confirmation_token,json=confirmationToken,proto3" json:"confirmation_token,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Write the shared namespace (the reserved shared-tenant keyspace every
+	// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+	// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+	Shared        bool `protobuf:"varint,4,opt,name=shared,proto3" json:"shared,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteNamespaceRequest) Reset() {
@@ -1019,6 +1087,13 @@ func (x *DeleteNamespaceRequest) GetConfirmationToken() string {
 		return x.ConfirmationToken
 	}
 	return ""
+}
+
+func (x *DeleteNamespaceRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
 }
 
 type DeleteNamespaceResponse struct {
@@ -1091,9 +1166,12 @@ func (x *DeleteNamespaceResponse) GetError() *v1.ApiError {
 }
 
 type GetNamespaceStatsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Namespace string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// Read the shared namespace (the reserved shared-tenant keyspace every
+	// tenant reads) instead of the caller's tenant keyspace.
+	Shared        bool `protobuf:"varint,3,opt,name=shared,proto3" json:"shared,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1140,6 +1218,13 @@ func (x *GetNamespaceStatsRequest) GetNamespace() string {
 		return x.Namespace
 	}
 	return ""
+}
+
+func (x *GetNamespaceStatsRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
 }
 
 type GetNamespaceStatsResponse struct {
@@ -1223,17 +1308,18 @@ var File_udb_core_cache_services_v1_cache_service_proto protoreflect.FileDescrip
 
 const file_udb_core_cache_services_v1_cache_service_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/cache/services/v1/cache_service.proto\x12\x1audb.core.cache.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\"w\n" +
+	".udb/core/cache/services/v1/cache_service.proto\x12\x1audb.core.cache.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\"\x8f\x01\n" +
 	"\n" +
 	"GetRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x10\n" +
-	"\x03key\x18\x03 \x01(\tR\x03key:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xbf\x01\n" +
+	"\x03key\x18\x03 \x01(\tR\x03key\x12\x16\n" +
+	"\x06shared\x18\x04 \x01(\bR\x06shared:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xbf\x01\n" +
 	"\vGetResponse\x12\x14\n" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value\x122\n" +
 	"\x15ttl_remaining_seconds\x18\x03 \x01(\x03R\x13ttlRemainingSeconds\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xae\x01\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xc6\x01\n" +
 	"\n" +
 	"SetRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
@@ -1241,37 +1327,40 @@ const file_udb_core_cache_services_v1_cache_service_proto_rawDesc = "" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x04 \x01(\fR\x05value\x12\x1f\n" +
 	"\vttl_seconds\x18\x05 \x01(\x03R\n" +
-	"ttlSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xcd\x01\n" +
+	"ttlSeconds\x12\x16\n" +
+	"\x06shared\x18\x06 \x01(\bR\x06shared:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xcd\x01\n" +
 	"\vSetResponse\x12\x16\n" +
 	"\x06stored\x18\x01 \x01(\bR\x06stored\x12\x1d\n" +
 	"\n" +
 	"used_bytes\x18\x02 \x01(\x03R\tusedBytes\x12\x1b\n" +
 	"\tmax_bytes\x18\x03 \x01(\x03R\bmaxBytes\x12\x18\n" +
 	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xda\x01\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xf2\x01\n" +
 	"\x10IncrementRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12\x14\n" +
 	"\x05delta\x18\x04 \x01(\x03R\x05delta\x123\n" +
 	"\x16ttl_seconds_if_created\x18\x05 \x01(\x03R\x13ttlSecondsIfCreated\x12\x10\n" +
-	"\x03max\x18\x06 \x01(\x03R\x03max:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05cacheP\x01\"\xe3\x01\n" +
+	"\x03max\x18\x06 \x01(\x03R\x03max\x12\x16\n" +
+	"\x06shared\x18\a \x01(\bR\x06shared:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05cacheP\x01\"\xe3\x01\n" +
 	"\x11IncrementResponse\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\x03R\x05value\x12\x18\n" +
 	"\acreated\x18\x02 \x01(\bR\acreated\x12\x18\n" +
 	"\arefused\x18\x03 \x01(\bR\arefused\x122\n" +
 	"\x15ttl_remaining_seconds\x18\x04 \x01(\x03R\x13ttlRemainingSeconds\x122\n" +
-	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05cacheP\x01\"z\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05cacheP\x01\"\x92\x01\n" +
 	"\rDeleteRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x10\n" +
-	"\x03key\x18\x03 \x01(\tR\x03key:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xb5\x01\n" +
+	"\x03key\x18\x03 \x01(\tR\x03key\x12\x16\n" +
+	"\x06shared\x18\x04 \x01(\bR\x06shared:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xb5\x01\n" +
 	"\x0eDeleteResponse\x12\x18\n" +
 	"\adeleted\x18\x01 \x01(\bR\adeleted\x12\x1d\n" +
 	"\n" +
 	"used_bytes\x18\x02 \x01(\x03R\tusedBytes\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xba\x01\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xd2\x01\n" +
 	"\vScanRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1d\n" +
@@ -1279,7 +1368,8 @@ const file_udb_core_cache_services_v1_cache_service_proto_rawDesc = "" +
 	"key_prefix\x18\x03 \x01(\tR\tkeyPrefix\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x05 \x01(\tR\tpageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xc5\x01\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken\x12\x16\n" +
+	"\x06shared\x18\x06 \x01(\bR\x06shared:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xc5\x01\n" +
 	"\fScanResponse\x12;\n" +
 	"\x05items\x18\x01 \x03(\v2%.udb.core.cache.services.v1.CacheItemR\x05items\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x122\n" +
@@ -1287,30 +1377,33 @@ const file_udb_core_cache_services_v1_cache_service_proto_rawDesc = "" +
 	"\tCacheItem\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value\x122\n" +
-	"\x15ttl_remaining_seconds\x18\x03 \x01(\x03R\x13ttlRemainingSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xbe\x01\n" +
+	"\x15ttl_remaining_seconds\x18\x03 \x01(\x03R\x13ttlRemainingSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xd6\x01\n" +
 	"\x16CreateNamespaceRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1b\n" +
 	"\tmax_bytes\x18\x03 \x01(\x03R\bmaxBytes\x12.\n" +
-	"\x13default_ttl_seconds\x18\x04 \x01(\x03R\x11defaultTtlSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xf0\x01\n" +
+	"\x13default_ttl_seconds\x18\x04 \x01(\x03R\x11defaultTtlSeconds\x12\x16\n" +
+	"\x06shared\x18\x05 \x01(\bR\x06shared:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xf0\x01\n" +
 	"\x17CreateNamespaceResponse\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x1b\n" +
 	"\tmax_bytes\x18\x02 \x01(\x03R\bmaxBytes\x12.\n" +
 	"\x13default_ttl_seconds\x18\x03 \x01(\x03R\x11defaultTtlSeconds\x12\x18\n" +
 	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xa0\x01\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xb8\x01\n" +
 	"\x16DeleteNamespaceRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12-\n" +
-	"\x12confirmation_token\x18\x03 \x01(\tR\x11confirmationToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xc6\x01\n" +
+	"\x12confirmation_token\x18\x03 \x01(\tR\x11confirmationToken\x12\x16\n" +
+	"\x06shared\x18\x04 \x01(\bR\x06shared:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xc6\x01\n" +
 	"\x17DeleteNamespaceResponse\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12!\n" +
 	"\fkeys_deleted\x18\x02 \x01(\x04R\vkeysDeleted\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"s\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\x8b\x01\n" +
 	"\x18GetNamespaceStatsRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
-	"\tnamespace\x18\x02 \x01(\tR\tnamespace:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xe6\x01\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x16\n" +
+	"\x06shared\x18\x03 \x01(\bR\x06shared:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xe6\x01\n" +
 	"\x19GetNamespaceStatsResponse\x12\x1c\n" +
 	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x1d\n" +
 	"\n" +

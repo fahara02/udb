@@ -51,6 +51,7 @@ export function errorKind(code: codes, reason: string): string {
     case "UDB_NOT_NULL_VIOLATION":
       return "ERROR_KIND_NOT_NULL";
     case "UDB_SCOPE_MISSING":
+    case "UDB_DELETED_READ_SCOPE_MISSING":
     case "UDB_TENANT_MISMATCH":
     case "UDB_PROJECT_MISMATCH":
       return "ERROR_KIND_PERMISSION";

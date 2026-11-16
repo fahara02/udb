@@ -26,6 +26,14 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string key = 3 [json_name = "key"];</code>
      */
     protected $key = '';
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 4 [json_name = "shared"];</code>
+     */
+    protected $shared = false;
 
     /**
      * Constructor.
@@ -36,6 +44,10 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
      *     @type string $tenant_id
      *     @type string $namespace
      *     @type string $key
+     *     @type bool $shared
+     *           Write the shared namespace (the reserved shared-tenant keyspace every
+     *           tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     *           admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
      * }
      */
     public function __construct($data = NULL) {
@@ -105,6 +117,36 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->key = $var;
+
+        return $this;
+    }
+
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 4 [json_name = "shared"];</code>
+     * @return bool
+     */
+    public function getShared()
+    {
+        return $this->shared;
+    }
+
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 4 [json_name = "shared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->shared = $var;
 
         return $this;
     }

@@ -1,5 +1,5 @@
 {
-  "description": "Typed-store (Table) contract shared by every SDK's conformance runner. Entity: udb.core.storage.entity.v1.File keyed by file_id. \"$id\" is replaced with a fresh UUID per case; errors use the SDKs' closed ErrorCode names.",
+  "description": "Typed-store (Table) contract shared by every SDK's conformance runner. Entity: udb.core.storage.entity.v1.File keyed by file_id. \"$id\" is replaced with a fresh UUID per case, and each \"$id<digits>\" (\"$id2\", \"$id3\") with its own fresh UUID per case, numbered ones first; errors use the SDKs' closed ErrorCode names.",
   "message_type": "udb.core.storage.entity.v1.File",
   "key": ["file_id"],
   "cases": [
@@ -42,6 +42,21 @@
         { "op": "delete", "key": { "file_id": "$id" } },
         { "op": "delete", "key": { "file_id": "$id" }, "expect": { "error": "not_found" } },
         { "op": "get", "key": { "file_id": "$id" }, "expect": { "error": "not_found" } }
+      ]
+    },
+    {
+      "name": "bulk upsert writes the whole batch or nothing",
+      "steps": [
+        { "op": "bulk_upsert", "rows": [
+          { "file_id": "$id", "filename": "a.pdf", "object_key": "conformance/$id/a", "status": "PENDING" },
+          { "file_id": "$id2", "filename": "b.pdf", "object_key": "conformance/$id/b", "status": "PENDING" }
+        ], "expect": { "affected_rows": 2 } },
+        { "op": "get", "key": { "file_id": "$id2" }, "expect": { "row": { "filename": "b.pdf" } } },
+        { "op": "bulk_upsert", "rows": [
+          { "file_id": "$id3", "filename": "c.pdf", "object_key": "conformance/$id/c", "status": "PENDING" },
+          { "file_id": "$id3", "filename": "d.pdf", "object_key": "conformance/$id/d", "status": "PENDING" }
+        ], "expect": { "error": "invalid" } },
+        { "op": "get", "key": { "file_id": "$id3" }, "expect": { "error": "not_found" } }
       ]
     }
   ]

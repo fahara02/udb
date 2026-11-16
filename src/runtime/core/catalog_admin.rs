@@ -1845,6 +1845,11 @@ impl DataBrokerRuntime {
                 }
             }
         };
+        // Refuse early, at staging, a table another project's ACTIVE catalog
+        // already declares on a shared backend. Activation re-checks under the
+        // same lock, so a claim made between stage and activate is caught too.
+        self.refuse_cross_project_relation_claims(&mut tx, "stage_catalog", &project_id, &manifest)
+            .await?;
         let validated_against_id = validated_against.as_ref().map(|row| row.0);
         let validated_against_checksum = validated_against
             .as_ref()
@@ -2411,6 +2416,20 @@ impl DataBrokerRuntime {
             &target_provenance.0,
             &target_provenance.6,
         )?;
+        // One physical relation per project: a table another project's ACTIVE
+        // catalog declares on a backend instance this project also reaches is
+        // refused unless both mark it cross_project_shared or both scope its
+        // rows by project. Covers activation and rollback; a re-activation of
+        // the already-ACTIVE catalog changes nothing and is not re-judged.
+        if !target_already_active {
+            self.refuse_cross_project_relation_claims(
+                &mut tx,
+                operation,
+                &project_id,
+                &target_manifest,
+            )
+            .await?;
+        }
 
         if review.is_none() {
             self.require_ordinary_catalog_transition(&mut tx, id)

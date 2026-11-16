@@ -22,6 +22,16 @@ namespace Udb.Core.Cache.Services.V1 {
   /// `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
   /// leader-elected CDC invalidation worker maps source-table changes to a
   /// namespace sweep and emits `udb.cache.invalidated.v1`.
+  ///
+  /// Shared namespace: every request that names a namespace carries `shared`. With
+  /// `shared` set the entry lives under the reserved shared-tenant marker
+  /// (`udb:cache:*shared*:&lt;ns>:&lt;key>`) instead of the caller's tenant, so it can
+  /// never collide with a real tenant's keys. Any authenticated caller of any
+  /// tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+  /// deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+  /// requires a platform admin or the `udb:global:write` scope and is otherwise
+  /// refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+  /// shared writes carry the shared marker as their tenant, like shared table rows.
   /// </summary>
   public static partial class CacheService
   {

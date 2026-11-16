@@ -176,6 +176,7 @@ async fn postgres_bridged_integer_string_predicates_preserve_exact_values_live()
                 descending: false,
             }],
             limit: 100,
+            include_deleted: false,
         };
         // Exercise the serving planner -> IR compiler -> production JSON binder,
         // rather than rebinding strings as native integers inside this test.
@@ -364,6 +365,7 @@ async fn postgres_bridged_integer_string_predicates_preserve_exact_values_live()
         fields: vec!["id".to_string()],
         sort: vec![],
         limit: 10,
+        include_deleted: false,
     };
     let null_refusal = build_select_logical_read(&manifest, &null_request)
         .expect_err("NULL equality is refused before it reaches the compiler");
@@ -543,6 +545,7 @@ async fn postgres_data_plane_planner_and_bridged_ir_match_live_rows() {
             descending: false,
         }],
         limit: 10,
+        include_deleted: false,
     };
     assert_eq!(
         fetch_legacy_select_rows(&pool, &legacy_manifest, &select_request).await,

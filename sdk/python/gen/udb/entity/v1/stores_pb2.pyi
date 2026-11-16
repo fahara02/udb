@@ -26,16 +26,18 @@ GRAPH_TRAVERSAL_DIRECTION_INCOMING: GraphTraversalDirection
 GRAPH_TRAVERSAL_DIRECTION_BOTH: GraphTraversalDirection
 
 class CacheGetRequest(_message.Message):
-    __slots__ = ("context", "resource", "key", "touch")
+    __slots__ = ("context", "resource", "key", "touch", "shared")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     RESOURCE_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
     TOUCH_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     resource: _operation_pb2.StoreResource
     key: str
     touch: bool
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., key: _Optional[str] = ..., touch: bool = ...) -> None: ...
+    shared: bool
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., key: _Optional[str] = ..., touch: bool = ..., shared: bool = ...) -> None: ...
 
 class CacheGetResponse(_message.Message):
     __slots__ = ("found", "value", "content_type", "ttl_seconds", "metadata")
@@ -52,7 +54,7 @@ class CacheGetResponse(_message.Message):
     def __init__(self, found: bool = ..., value: _Optional[bytes] = ..., content_type: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., metadata: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class CacheSetRequest(_message.Message):
-    __slots__ = ("context", "resource", "key", "value", "content_type", "ttl_seconds", "only_if_absent", "only_if_present", "idempotency_key", "metadata")
+    __slots__ = ("context", "resource", "key", "value", "content_type", "ttl_seconds", "only_if_absent", "only_if_present", "idempotency_key", "metadata", "shared")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     RESOURCE_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
@@ -63,6 +65,7 @@ class CacheSetRequest(_message.Message):
     ONLY_IF_PRESENT_FIELD_NUMBER: _ClassVar[int]
     IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     resource: _operation_pb2.StoreResource
     key: str
@@ -73,33 +76,38 @@ class CacheSetRequest(_message.Message):
     only_if_present: bool
     idempotency_key: str
     metadata: _struct_pb2.Struct
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., key: _Optional[str] = ..., value: _Optional[bytes] = ..., content_type: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., only_if_absent: bool = ..., only_if_present: bool = ..., idempotency_key: _Optional[str] = ..., metadata: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    shared: bool
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., key: _Optional[str] = ..., value: _Optional[bytes] = ..., content_type: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., only_if_absent: bool = ..., only_if_present: bool = ..., idempotency_key: _Optional[str] = ..., metadata: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., shared: bool = ...) -> None: ...
 
 class CacheDeleteRequest(_message.Message):
-    __slots__ = ("context", "resource", "key", "idempotency_key")
+    __slots__ = ("context", "resource", "key", "idempotency_key", "shared")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     RESOURCE_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
     IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     resource: _operation_pb2.StoreResource
     key: str
     idempotency_key: str
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., key: _Optional[str] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+    shared: bool
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., key: _Optional[str] = ..., idempotency_key: _Optional[str] = ..., shared: bool = ...) -> None: ...
 
 class CacheScanRequest(_message.Message):
-    __slots__ = ("context", "resource", "key_pattern", "limit", "page_token")
+    __slots__ = ("context", "resource", "key_pattern", "limit", "page_token", "shared")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     RESOURCE_FIELD_NUMBER: _ClassVar[int]
     KEY_PATTERN_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     resource: _operation_pb2.StoreResource
     key_pattern: str
     limit: int
     page_token: str
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., key_pattern: _Optional[str] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+    shared: bool
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., resource: _Optional[_Union[_operation_pb2.StoreResource, _Mapping]] = ..., key_pattern: _Optional[str] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ..., shared: bool = ...) -> None: ...
 
 class CacheEntry(_message.Message):
     __slots__ = ("key", "value", "content_type", "ttl_seconds", "metadata")

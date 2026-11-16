@@ -147,6 +147,23 @@ private static final long serialVersionUID = 0L;
     return touch_;
   }
 
+  public static final int SHARED_FIELD_NUMBER = 5;
+  private boolean shared_ = false;
+  /**
+   * <pre>
+   * Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+   * every tenant) instead of the caller's tenant namespace. Redis and
+   * Memcached cache backends only.
+   * </pre>
+   *
+   * <code>bool shared = 5 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  @java.lang.Override
+  public boolean getShared() {
+    return shared_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -173,6 +190,9 @@ private static final long serialVersionUID = 0L;
     if (touch_ != false) {
       output.writeBool(4, touch_);
     }
+    if (shared_ != false) {
+      output.writeBool(5, shared_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -196,6 +216,10 @@ private static final long serialVersionUID = 0L;
     if (touch_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(4, touch_);
+    }
+    if (shared_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(5, shared_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -226,6 +250,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getKey())) return false;
     if (getTouch()
         != other.getTouch()) return false;
+    if (getShared()
+        != other.getShared()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -250,6 +276,9 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + TOUCH_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getTouch());
+    hash = (37 * hash) + SHARED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getShared());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -400,6 +429,7 @@ private static final long serialVersionUID = 0L;
       }
       key_ = "";
       touch_ = false;
+      shared_ = false;
       return this;
     }
 
@@ -452,6 +482,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000008) != 0)) {
         result.touch_ = touch_;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.shared_ = shared_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -480,6 +513,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getTouch() != false) {
         setTouch(other.getTouch());
+      }
+      if (other.getShared() != false) {
+        setShared(other.getShared());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -531,6 +567,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 32
+            case 40: {
+              shared_ = input.readBool();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 40
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -890,6 +931,56 @@ private static final long serialVersionUID = 0L;
     public Builder clearTouch() {
       bitField0_ = (bitField0_ & ~0x00000008);
       touch_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean shared_ ;
+    /**
+     * <pre>
+     * Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Redis and
+     * Memcached cache backends only.
+     * </pre>
+     *
+     * <code>bool shared = 5 [json_name = "shared"];</code>
+     * @return The shared.
+     */
+    @java.lang.Override
+    public boolean getShared() {
+      return shared_;
+    }
+    /**
+     * <pre>
+     * Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Redis and
+     * Memcached cache backends only.
+     * </pre>
+     *
+     * <code>bool shared = 5 [json_name = "shared"];</code>
+     * @param value The shared to set.
+     * @return This builder for chaining.
+     */
+    public Builder setShared(boolean value) {
+
+      shared_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Redis and
+     * Memcached cache backends only.
+     * </pre>
+     *
+     * <code>bool shared = 5 [json_name = "shared"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearShared() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      shared_ = false;
       onChanged();
       return this;
     }

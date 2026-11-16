@@ -12,6 +12,12 @@
 //!     comes from the VERIFIED bearer/claim tenant (`validate_request_tenant`),
 //!     never a body-supplied value — so two tenants share a namespace safely and a
 //!     caller can never read or sweep another tenant's keyspace.
+//!   - A request with `shared` set addresses the shared namespace instead: the
+//!     tenant segment is the reserved shared-tenant marker
+//!     (`broker::SHARED_TENANT_MARKER`). Any authenticated caller reads it; only a
+//!     platform admin or a holder of `udb:global:write` writes it ([`scope`]).
+//!     SCAN patterns match the tenant and namespace segments literally
+//!     (`keys::glob_literal`), so the marker's `*` never widens a sweep.
 //!   - Each namespace carries a per-tenant `max_bytes` budget tracked with a Redis
 //!     `INCRBY` counter; a `Set` that would exceed it fails closed with
 //!     `resource_exhausted` (the pure check is [`would_exceed_budget`]).
@@ -59,6 +65,7 @@ mod handlers;
 mod keys;
 #[cfg(feature = "redis")]
 pub(super) mod redis_engine;
+pub(super) mod scope;
 #[cfg(test)]
 mod tests;
 mod worker;

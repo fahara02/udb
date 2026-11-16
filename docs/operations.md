@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.21 | protocol v1.0.0                                          │
+│    crate v0.6.22 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -442,6 +442,58 @@ Where you can, use separate credentials for runtime access, migrations, and
 short-lived native access — a leaked runtime credential shouldn't be able to
 rewrite your schema.
 
+### One physical table per project
+
+Table names carry no project prefix. A project declares `shop.orders`, and
+UDB creates exactly `shop.orders`. Under the default routing mode
+(`UDB_PROJECT_ROUTING_MODE=permissive`), a backend instance with no project
+label serves every project. So if two projects both declare `shop.orders` on
+the same PostgreSQL, they get the same table and each one reads and writes the
+other's rows.
+
+UDB refuses this when a catalog is staged or activated. That covers
+`udb catalog bootstrap`, `udb catalog stage` / `activate`, `udb up`, the
+reviewed transition and rollback. If another project's ACTIVE catalog already
+declares the table on a backend instance this project can also reach, the call
+fails with `FAILED_PRECONDITION` (`catalog_relation_claimed_by_other_project`).
+The error names the table, the other project and the shared instance.
+Re-applying a project's own catalog is never refused.
+
+A table may be declared by two projects in only two cases:
+
+- **Rows are scoped by project in both declarations.** Both give the table the
+  same project column (`db_table_security { project_isolation_mode: "column"
+  project_column: "project_id" }`, or a field marked
+  `project_column: true`). The data plane adds `project_id = <caller's
+  project>` to every statement, so each project sees only its own rows.
+- **Sharing is deliberate on both sides.** Both projects set
+  `cross_project_shared: true` on the table:
+
+  ```proto
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "currency_rates" schema_name: "reference"
+    cross_project_shared: true
+  };
+  ```
+
+  If only one project sets the flag, the call is still refused. The error says
+  which side is missing it.
+
+Any of these also resolves a refusal: rename the table (`table_name`), move it
+to another schema (`schema_name`), or give each project its own backend
+instance. To do that, label the instance `project_id=<project>` (or
+`projects=a,b`), or set `UDB_PROJECT_ROUTING_MODE=strict`.
+
+UDB's own native-service tables (`udb_*`) are in every project catalog by
+design and are not checked.
+
+At startup, and in `udb doctor`, UDB warns about two things. The first is a
+backend instance with no project label under permissive routing while more
+than one project has an ACTIVE catalog. The second is a table that ACTIVE
+catalogs of different projects already share, because they were activated
+before this check existed. Such a table is not changed automatically. Rename
+it, scope it by project, or mark it `cross_project_shared` in both projects.
+
 ## Deployment Profiles
 
 Most deployments look like one of these shapes. Find the one closest to yours
@@ -597,6 +649,8 @@ it; it is on by default.
 | `udb_system` sagas and XA ledger | every saga and two-phase commit | committed or compensated sagas, committed or rolled-back decisions: 30 days; in-doubt stays |
 | `udb_system.udb_catalog_versions` | every catalog staged | 30 days, but never the active version, a bound version, nor the newest `UDB_CLEANUP_KEEP_VERSIONS` (20) per project |
 | `udb_system.udb_catalog_reload_log` | every stage, activation, reload | 90 days, but never the activation record of an active version nor the newest row |
+| `udb_system.udb_migration_runs` (and each run's operations in `udb_migration_op_ledger`) | every migration plan and apply | completed and dry runs: 90 days from the start, but never a project's newest completed run nor a run a reviewed catalog transition names; runs in flight, awaiting approval or failed stay |
+| `udb_system.udb_admin_audit_log` | every admin operation the broker records | 365 days, oldest first and never the head of the hash chain. Each prune records an anchor (the id, time and hash of the newest row removed, and how many rows were removed) in `udb_system.evidence_export_state`, in the same statement; chain verification starts from it, and rows missing from the front without a matching anchor fail it (`pruned_without_anchor`, `anchor_mismatch`) |
 | `udb_system.udb_cdc_event_journal` | every published event | `UDB_CDC_JOURNAL_RETENTION` (above, 7 days); dead-lettered rows `UDB_CDC_JOURNAL_DLQ_RETENTION` (30 days) once the DLQ entry is resolved |
 
 `declared` is the table's proto `retention_days`. `udb cleanup show` prints the
@@ -612,8 +666,7 @@ session not yet expired, a device not revoked, a delivery still pending) is
 never deleted. Not touched: soft-deleted entity tables (users, API keys,
 tenants, ...), tables other tables reference, tables with only a creation
 time (configuration, policies), `vault_db_credential_leases` (a lease row is
-how its database login is revoked), the admin audit log (its hash chain is
-verified from the first row) and the migration ledger.
+how its database login is revoked).
 
 These tables and UDB's bookkeeping tables are swept once per
 `UDB_CLEANUP_SWEEP_INTERVAL` (daily), in one pass over each table in page
@@ -790,6 +843,46 @@ before writing. Retention stops at the first provider error, preserves the
 manifest and run journal for retry, and deletes the manifest only after every
 referenced table artifact has been removed and verified.
 
+### Backing up shared tables
+
+A tenant backup (`StartTenantBackup`) copies one tenant's rows. Shared (global)
+tables, the ones declared with tenant isolation `none`, `global`, `disabled` or
+`off` and no tenant column, belong to no tenant, so a tenant backup lists them
+under `excluded` and never copies them. Back them up separately, as a platform
+admin, with the shared scope:
+
+```json
+{ "tenant_id": "<your admin tenant>", "scope": "BACKUP_SCOPE_SHARED",
+  "object_backend": "minio", "object_bucket": "udb-backups" }
+```
+
+- **Who:** only a platform admin (`udb:platform_admin`). `udb:global:write` lets
+  a loader write shared rows, but not copy or replace all of them. Anyone else
+  gets `PERMISSION_DENIED` (`shared_backup_platform_admin_required`).
+- **What:** every row of every shared table in the project's active catalog.
+  Tenant tables are listed under `excluded`, with the reason.
+- **How:** the same pipeline as a tenant backup: one read-only snapshot,
+  encrypted files per table with checksums, a manifest, object storage under
+  `backups/shared/...`, and a run in the journal. The run is recorded under the
+  `tenant_id` you sent. `ListBackups` and `GetBackup` show it with
+  `scope: BACKUP_SCOPE_SHARED` and `source_tenant_id: "*shared*"`.
+
+To restore, call `RestoreTenant` with `scope: BACKUP_SCOPE_SHARED`,
+`source_tenant_id` set to the tenant the backup was recorded under, the
+`backup_id` and a `confirmation_token`. Leave `target_tenant_id` and
+`allow_cross_tenant` empty: shared rows go back into the shared tables, not
+into a tenant.
+
+A shared restore refuses to run while any shared table still holds rows, just
+as a tenant restore refuses a tenant that already has data. The error names the
+tables. Clear them first (or restore into a fresh database). A shared backup can
+only be restored with the shared scope, and a tenant backup only with the
+tenant scope.
+
+Retention: shared runs are journaled under the tenant you sent, so that
+tenant's backup policy also prunes them. Scheduled backups never take the
+shared scope; run shared backups from your own schedule.
+
 ## Load And Soak
 
 Load tests only mean something if they hit the real broker path — the shipped
@@ -829,7 +922,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.6.21"
+python scripts/bench_snapshot.py --label "release-0.6.22"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

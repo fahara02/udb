@@ -74,6 +74,7 @@ func RunTable(t *testing.T, connect Connect, opts ...Option) {
 	}
 	runConstraints(t, connect, newTenant)
 	runQueries(t, connect, newTenant)
+	runDeletedReads(t, connect, newTenant)
 	t.Run("get missing is ErrNotFound", func(t *testing.T) {
 		u := connect(t, newTenant())
 		files := udbclient.TableOf[*storagev1.File](u)

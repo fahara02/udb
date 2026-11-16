@@ -240,32 +240,46 @@ export async function runTable(t: TestContext, connect: Connect, opts: RunTableO
 /** Run the cross-SDK cases in the shared JSON file. */
 export async function runTableCases(t: TestContext, connect: Connect, casesPath: string = tableCasesPath()): Promise<void> {
   const contract = JSON.parse(fs.readFileSync(casesPath, "utf8"));
-  const substitute = (values: Record<string, unknown> | undefined, id: string): Record<string, unknown> =>
-    Object.fromEntries(Object.entries(values ?? {}).map(([key, value]) => [key, typeof value === "string" ? value.replaceAll("$id", id) : value]));
   for (const tc of contract.cases as { name: string; steps: any[] }[]) {
     await t.test(tc.name, async () => {
       const table = (await connect(randomUUID())).tableOf<Record<string, unknown>>(contract.message_type);
       const id = randomUUID();
+      // "$id<digits>" ($id2, $id3, ...) is a fresh UUID of its own per case, replaced
+      // before the bare "$id".
+      const numbered = new Map<string, string>();
+      const text = (value: string): string =>
+        value
+          .replace(/\$id(\d+)/g, (_, n: string) => {
+            if (!numbered.has(n)) numbered.set(n, randomUUID());
+            return numbered.get(n)!;
+          })
+          .replaceAll("$id", id);
+      const substitute = (values: Record<string, unknown> | undefined): Record<string, unknown> =>
+        Object.fromEntries(Object.entries(values ?? {}).map(([key, value]) => [key, typeof value === "string" ? text(value) : value]));
       for (const [index, step] of tc.steps.entries()) {
         let got: Record<string, unknown> | undefined;
+        let affected: number | undefined;
         let error = "";
         try {
-          const key = substitute(step.key, id);
+          const key = substitute(step.key);
           switch (step.op) {
             case "upsert":
-              await table.upsert(substitute(step.row, id));
+              await table.upsert(substitute(step.row));
               break;
             case "get":
               got = await table.get(key);
               break;
             case "patch":
-              await table.patch(key, substitute(step.changes, id));
+              await table.patch(key, substitute(step.changes));
               break;
             case "update_if":
-              await table.updateIf(key, substitute(step.expected, id), substitute(step.changes, id));
+              await table.updateIf(key, substitute(step.expected), substitute(step.changes));
               break;
             case "delete":
               await table.delete(key);
+              break;
+            case "bulk_upsert":
+              affected = (await table.bulkUpsert(((step.rows ?? []) as Record<string, unknown>[]).map((row) => substitute(row)))).affected_rows;
               break;
             default:
               assert.fail(`unknown op ${step.op}`);
@@ -274,9 +288,12 @@ export async function runTableCases(t: TestContext, connect: Connect, casesPath:
           error = codeOf(err);
         }
         assert.equal(error, step.expect?.error ?? "", `step ${index} (${step.op})`);
+        if (step.expect?.affected_rows !== undefined) {
+          assert.equal(affected, step.expect.affected_rows, `step ${index}: affected_rows`);
+        }
         if (step.expect?.row) {
           assert.ok(got, `step ${index} returned a row`);
-          for (const [field, want] of Object.entries(substitute(step.expect.row, id))) {
+          for (const [field, want] of Object.entries(substitute(step.expect.row))) {
             assert.equal(got![field], want, `step ${index}: ${field}`);
           }
         }
@@ -611,6 +628,46 @@ async function runConstraints(t: TestContext, connect: Connect, tenant: () => st
     assert.equal(got.deleted_at ?? null, null, "upsert did not revive the tombstone");
   });
 
+  // Which branch runs depends on the connected identity's scopes: a caller
+  // holding udb:deleted:read sees its deleted row marked, any other caller is
+  // refused by name. A plain read keeps hiding the deleted row either way.
+  await t.test("include_deleted needs udb:deleted:read and marks deleted rows", async () => {
+    const table = files(await connect(tenant()));
+    const live = file(randomUUID(), "kept.pdf");
+    const gone = file(randomUUID(), "gone.pdf");
+    await table.insert(live);
+    await table.insert(gone);
+    await table.delete({ file_id: gone.file_id });
+    const where = { file_id: { $in: [live.file_id, gone.file_id] } };
+    const plainReadHidesTheDeletedRow = async () => {
+      const page = await table.select(where);
+      assert.deepEqual(
+        page.rows.map((row) => row.file_id),
+        [live.file_id],
+        "a plain read must return only the live row",
+      );
+    };
+    await plainReadHidesTheDeletedRow();
+    let page;
+    try {
+      page = await table.select(where, { includeDeleted: true, includeTotal: true });
+    } catch (err) {
+      const info = inspect(err);
+      assert.equal(info.code, ErrorCode.ScopeMissing, `include_deleted without the scope: ${err}`);
+      assert.equal(info.reason, "UDB_DELETED_READ_SCOPE_MISSING");
+      assert.equal(info.missing?.scope, "udb:deleted:read");
+      await plainReadHidesTheDeletedRow();
+      return;
+    }
+    assert.equal(page.rows.length, 2, "both rows come back");
+    assert.equal(page.total, 2, "the total counts the deleted row");
+    for (const row of page.rows) {
+      const deleted = row.deleted_at !== undefined && row.deleted_at !== null;
+      assert.equal(deleted, row.file_id === gone.file_id, `only the deleted row carries deleted_at (${row.file_id})`);
+    }
+    await plainReadHidesTheDeletedRow();
+  });
+
   await t.test("default page caps at 100 and selectAll visits every row", async () => {
     const u = await connect(tenant());
     const table = files(u);
@@ -637,6 +694,66 @@ async function runConstraints(t: TestContext, connect: Connect, tenant: () => st
 }
 
 // Negating a predicate must not turn a SQL NULL into a matching row.
+/** Run the join-fusion read contract: a Select whose message_type names two entities
+ *  joined by a foreign key (here the authz PolicySet and its PolicyVersions) returns
+ *  one record per joined pair, its columns aliased `{Message}__{column}`. The target
+ *  must serve both entities and the storage File entity, and grant the caller
+ *  udb:read on the fused message type. */
+export async function runJoin(t: TestContext, connect: Connect, opts: RunTableOptions = {}): Promise<void> {
+  const [tenant, peer] = opts.tenants ?? [randomUUID(), randomUUID()];
+  await t.test("join fusion reads related rows of both tables as one aliased record", async () => {
+    const u = await connect(tenant);
+    const unary = (c: UdbProject, method: string, request: any) => c.core.unary<any>(DATABROKER, method, request);
+    const SET = "udb.core.authz.entity.v1.PolicySet";
+    const VERSION = "udb.core.authz.entity.v1.PolicyVersion";
+    const joined = `${SET},${VERSION}`;
+    const set = randomUUID();
+    const lone = randomUUID();
+    const second = randomUUID();
+    await unary(u, "Upsert", { message_type: SET, payload: { policy_set_id: set, name: `join-${set}` } });
+    await unary(u, "Upsert", { message_type: SET, payload: { policy_set_id: lone, name: `join-${lone}` } });
+    await unary(u, "Upsert", { message_type: VERSION, payload: { policy_version_id: randomUUID(), policy_set_id: set, version_number: 1 } });
+    await unary(u, "Upsert", { message_type: VERSION, payload: { policy_version_id: second, policy_set_id: set, version_number: 2 } });
+    const read = async (c: UdbProject, request: any) => {
+      const result = await unary(c, "Select", { message_type: joined, ...request });
+      return { result, records: (result.records_json ?? []).map((raw: Buffer) => JSON.parse(raw.toString())) as Record<string, unknown>[] };
+    };
+
+    let { result, records } = await read(u, { filter: { policy_set_id: set }, fields: ["PolicySet.name", "PolicyVersion.version_number"] });
+    for (const record of records) {
+      assert.deepEqual(Object.keys(record).sort(), ["PolicySet__name", "PolicyVersion__version_number"]);
+      assert.equal(record.PolicySet__name, `join-${set}`);
+    }
+    assert.deepEqual(records.map((record) => String(record.PolicyVersion__version_number)).sort(), ["1", "2"]);
+
+    ({ result, records } = await read(u, { filter: { policy_set_id: set }, limit: 1 }));
+    assert.equal(records.length, 1, "a join honours the limit");
+    assert.ok(result.has_more, "a capped join says there is more");
+
+    ({ records } = await read(u, { filter: { policy_set_id: set, "PolicyVersion.version_number": 2 } }));
+    assert.equal(records.length, 1, "the default projection filtered to one version");
+    assert.equal(records[0].PolicySet__policy_set_id, set);
+    assert.equal(records[0].PolicyVersion__policy_version_id, second);
+    for (const alias of Object.keys(records[0])) {
+      assert.ok(alias.startsWith("PolicySet__") || alias.startsWith("PolicyVersion__"), `unaliased column ${alias}`);
+    }
+
+    ({ records } = await read(u, { filter: { policy_set_id: lone } }));
+    assert.equal(records.length, 0, "an inner join drops a set without versions");
+    ({ records } = await read(await connect(peer), { filter: { policy_set_id: set } }));
+    assert.equal(records.length, 0, "another tenant joins nothing");
+
+    const invalid = (err: any) => err?.code === 3;
+    await rejectsWith(read(u, { sort: [{ field: "name" }] }), invalid, "a sorted join");
+    await rejectsWith(read(u, { filter: { policy_set_id: { $eq: set } } }), invalid, "an operator filter");
+    await rejectsWith(unary(u, "Select", { message_type: `${FILE},${SET}` }), invalid, "tables without a foreign key");
+
+    await unary(u, "Delete", { message_type: SET, filter: { policy_set_id: set } });
+    ({ records } = await read(u, { filter: { policy_set_id: set } }));
+    assert.equal(records.length, 0, "a soft-deleted set no longer joins");
+  });
+}
+
 async function runQueries(t: TestContext, connect: Connect, tenant: () => string): Promise<void> {
   await t.test("unknown columns are refused even without matching rows", async () => {
     const u = await connect(tenant());

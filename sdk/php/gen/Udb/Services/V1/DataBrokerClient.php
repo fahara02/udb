@@ -163,6 +163,26 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Audited bulk load: write one batch of whole rows to one table in ONE
+     * write transaction (all rows or none), with multi-row statements, ONE
+     * summarising change event, ONE audit record and a size-aware rate-limit
+     * charge. Authorized per table exactly like BatchUpsert's items (the
+     * `Upsert` action; shared tables need a platform admin or the global-write
+     * scope). Every row is validated, scoped and encrypted like a single Upsert.
+     * @param \Udb\Entity\V1\BulkUpsertRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\BulkUpsertResponse>
+     */
+    public function BulkUpsert(\Udb\Entity\V1\BulkUpsertRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/BulkUpsert',
+        $argument,
+        ['\Udb\Entity\V1\BulkUpsertResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── Vector ──────────────────────────────────────────────────────────────────
      * @param \Udb\Entity\V1\VectorSearchRequest $argument input argument
      * @param array $metadata metadata

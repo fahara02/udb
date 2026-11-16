@@ -293,6 +293,13 @@ class UdbAuthClient {
             requested_scopes: this.meta.scopes ?? [],
         });
     }
+    /** Close this client's AuthnService and AuthzService channels. */
+    close() {
+        for (const stub of [this.authn, this.authz]) {
+            if (typeof stub?.close === "function")
+                stub.close();
+        }
+    }
     authenticateApiKey(apiKey) {
         return this.authenticate({
             api_key: apiKey,
@@ -326,6 +333,39 @@ class UdbAuthClient {
      *  keeps such a token fresh. */
     exchangeServiceTokenForTenant(request) {
         return this.call(this.authn, "ExchangeServiceTokenForTenant", request);
+    }
+    /** Exchange a user's current access token for a delegated job token
+     *  (`AuthnService.ExchangeTokenForJob`), so a durable job acts for that user.
+     *  Call it on a connection carrying the SERVICE's own bearer (its grant must
+     *  hold `udb:token:delegate`). The token names the user as subject and the
+     *  service as actor, carries `purpose` and `jobId`, and lives at most
+     *  `ttlSeconds` (0 = the broker's maximum, 24 hours by default). It has no
+     *  refresh token and cannot be exchanged again. */
+    async exchangeTokenForJob(request) {
+        if (!request.subjectToken?.trim())
+            throw new Error("udb: exchangeTokenForJob: subjectToken is required");
+        if (!request.jobId?.trim())
+            throw new Error("udb: exchangeTokenForJob: jobId is required");
+        if (!request.purpose?.trim())
+            throw new Error("udb: exchangeTokenForJob: purpose is required");
+        const resp = await this.call(this.authn, "ExchangeTokenForJob", {
+            subject_token: request.subjectToken,
+            purpose: request.purpose,
+            job_id: request.jobId,
+            ttl_seconds: String(Math.max(0, Math.trunc(request.ttlSeconds ?? 0))),
+        });
+        return {
+            accessToken: String(resp?.access_token ?? ""),
+            jti: String(resp?.jti ?? ""),
+            expiresAtUnix: Number(resp?.expires_at_unix ?? 0),
+            subject: String(resp?.subject ?? ""),
+            actor: String(resp?.actor ?? ""),
+            purpose: String(resp?.purpose ?? ""),
+            jobId: String(resp?.job_id ?? ""),
+            scopes: Array.isArray(resp?.scopes) ? resp.scopes.map(String) : [],
+            tenantId: String(resp?.tenant_id ?? ""),
+            projectId: String(resp?.project_id ?? ""),
+        };
     }
     /** Better Auth bridge: forward a Better Auth session/JWT (already verified by
      *  the app) to UDB as an external identity. UDB maps the verified claims to a

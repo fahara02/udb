@@ -74,6 +74,14 @@ class BackupRunSummary extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string project_id = 14 [json_name = "projectId"];</code>
      */
     protected $project_id = '';
+    /**
+     * BACKUP_SCOPE_SHARED for a shared-table backup or restore (its
+     * source_tenant_id is the reserved shared marker `*shared*`), otherwise
+     * BACKUP_SCOPE_TENANT.
+     *
+     * Generated from protobuf field <code>.udb.core.backup.services.v1.BackupScope scope = 15 [json_name = "scope"];</code>
+     */
+    protected $scope = 0;
 
     /**
      * Constructor.
@@ -96,6 +104,10 @@ class BackupRunSummary extends \Google\Protobuf\Internal\Message
      *     @type int|string $completed_at_unix
      *     @type string $project_id
      *           First-class project owner of this journal row.
+     *     @type int $scope
+     *           BACKUP_SCOPE_SHARED for a shared-table backup or restore (its
+     *           source_tenant_id is the reserved shared marker `*shared*`), otherwise
+     *           BACKUP_SCOPE_TENANT.
      * }
      */
     public function __construct($data = NULL) {
@@ -411,6 +423,36 @@ class BackupRunSummary extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->project_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * BACKUP_SCOPE_SHARED for a shared-table backup or restore (its
+     * source_tenant_id is the reserved shared marker `*shared*`), otherwise
+     * BACKUP_SCOPE_TENANT.
+     *
+     * Generated from protobuf field <code>.udb.core.backup.services.v1.BackupScope scope = 15 [json_name = "scope"];</code>
+     * @return int
+     */
+    public function getScope()
+    {
+        return $this->scope;
+    }
+
+    /**
+     * BACKUP_SCOPE_SHARED for a shared-table backup or restore (its
+     * source_tenant_id is the reserved shared marker `*shared*`), otherwise
+     * BACKUP_SCOPE_TENANT.
+     *
+     * Generated from protobuf field <code>.udb.core.backup.services.v1.BackupScope scope = 15 [json_name = "scope"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setScope($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Core\Backup\Services\V1\BackupScope::class);
+        $this->scope = $var;
 
         return $this;
     }

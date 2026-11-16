@@ -82,7 +82,9 @@ pub mod proto {
 pub const FILE_DESCRIPTOR_SET: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/udb_descriptor.bin"));
 
-pub use auth::{Token, TokenManager};
+pub use auth::{
+    exchange_token_for_job, DelegatedJobToken, ExchangeTokenForJobRequest, Token, TokenManager,
+};
 pub use client::{SelectError, UdbClient};
 pub use error::{CallPolicy, UdbError};
 pub use generated_rpcs::{is_retry_safe, spec_for_path, RpcSpec};

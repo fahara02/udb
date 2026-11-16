@@ -1,4 +1,5 @@
 from ._channel import default_channel_options, merge_channel_options
+from .bulk import BulkLoadError, BulkLoadResult
 from .client import (
     Page,
     UdbAsyncClient,
@@ -135,6 +136,8 @@ except ImportError:  # pragma: no cover
 __all__ = [
     "AsyncRepo",
     "AsyncTable",
+    "BulkLoadError",
+    "BulkLoadResult",
     "Column",
     "ConsumedEvent",
     "ConsumeOptions",

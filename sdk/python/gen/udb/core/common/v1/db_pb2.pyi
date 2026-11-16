@@ -215,7 +215,7 @@ COLUMN_SECURITY_FIELD_NUMBER: _ClassVar[int]
 column_security: _descriptor.FieldDescriptor
 
 class TableOptions(_message.Message):
-    __slots__ = ("table_name", "schema_name", "migration_order", "is_table", "comment", "soft_delete", "audit_fields", "enable_rls", "partition_strategy", "partition_column", "retention_days", "rls_policies", "force_rls", "soft_delete_column", "unlogged", "tablespace", "indexes", "foreign_keys", "extensions", "materialized_views", "triggers", "previous_table_name", "allow_drop", "sql_artifacts", "partition_interval", "partition_premake", "partition_default", "partition_retention_months", "replica_hint", "cdc_topic", "required_scope", "vector_store", "native_service_id")
+    __slots__ = ("table_name", "schema_name", "migration_order", "is_table", "comment", "soft_delete", "audit_fields", "enable_rls", "partition_strategy", "partition_column", "retention_days", "rls_policies", "force_rls", "soft_delete_column", "unlogged", "tablespace", "indexes", "foreign_keys", "extensions", "materialized_views", "triggers", "previous_table_name", "allow_drop", "sql_artifacts", "partition_interval", "partition_premake", "partition_default", "partition_retention_months", "replica_hint", "cdc_topic", "required_scope", "vector_store", "native_service_id", "cross_project_shared")
     TABLE_NAME_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_NAME_FIELD_NUMBER: _ClassVar[int]
     MIGRATION_ORDER_FIELD_NUMBER: _ClassVar[int]
@@ -249,6 +249,7 @@ class TableOptions(_message.Message):
     REQUIRED_SCOPE_FIELD_NUMBER: _ClassVar[int]
     VECTOR_STORE_FIELD_NUMBER: _ClassVar[int]
     NATIVE_SERVICE_ID_FIELD_NUMBER: _ClassVar[int]
+    CROSS_PROJECT_SHARED_FIELD_NUMBER: _ClassVar[int]
     table_name: str
     schema_name: str
     migration_order: int
@@ -282,7 +283,8 @@ class TableOptions(_message.Message):
     required_scope: str
     vector_store: VectorStoreOptions
     native_service_id: str
-    def __init__(self, table_name: _Optional[str] = ..., schema_name: _Optional[str] = ..., migration_order: _Optional[int] = ..., is_table: bool = ..., comment: _Optional[str] = ..., soft_delete: bool = ..., audit_fields: bool = ..., enable_rls: bool = ..., partition_strategy: _Optional[_Union[PartitionStrategy, str]] = ..., partition_column: _Optional[str] = ..., retention_days: _Optional[int] = ..., rls_policies: _Optional[_Iterable[_Union[RlsPolicy, _Mapping]]] = ..., force_rls: bool = ..., soft_delete_column: _Optional[str] = ..., unlogged: bool = ..., tablespace: _Optional[str] = ..., indexes: _Optional[_Iterable[_Union[IndexOptions, _Mapping]]] = ..., foreign_keys: _Optional[_Iterable[_Union[TableForeignKey, _Mapping]]] = ..., extensions: _Optional[_Iterable[_Union[DbExtension, _Mapping]]] = ..., materialized_views: _Optional[_Iterable[_Union[MaterializedView, _Mapping]]] = ..., triggers: _Optional[_Iterable[_Union[DbTrigger, _Mapping]]] = ..., previous_table_name: _Optional[str] = ..., allow_drop: bool = ..., sql_artifacts: _Optional[_Iterable[_Union[SqlArtifact, _Mapping]]] = ..., partition_interval: _Optional[str] = ..., partition_premake: _Optional[int] = ..., partition_default: bool = ..., partition_retention_months: _Optional[int] = ..., replica_hint: _Optional[str] = ..., cdc_topic: _Optional[str] = ..., required_scope: _Optional[str] = ..., vector_store: _Optional[_Union[VectorStoreOptions, _Mapping]] = ..., native_service_id: _Optional[str] = ...) -> None: ...
+    cross_project_shared: bool
+    def __init__(self, table_name: _Optional[str] = ..., schema_name: _Optional[str] = ..., migration_order: _Optional[int] = ..., is_table: bool = ..., comment: _Optional[str] = ..., soft_delete: bool = ..., audit_fields: bool = ..., enable_rls: bool = ..., partition_strategy: _Optional[_Union[PartitionStrategy, str]] = ..., partition_column: _Optional[str] = ..., retention_days: _Optional[int] = ..., rls_policies: _Optional[_Iterable[_Union[RlsPolicy, _Mapping]]] = ..., force_rls: bool = ..., soft_delete_column: _Optional[str] = ..., unlogged: bool = ..., tablespace: _Optional[str] = ..., indexes: _Optional[_Iterable[_Union[IndexOptions, _Mapping]]] = ..., foreign_keys: _Optional[_Iterable[_Union[TableForeignKey, _Mapping]]] = ..., extensions: _Optional[_Iterable[_Union[DbExtension, _Mapping]]] = ..., materialized_views: _Optional[_Iterable[_Union[MaterializedView, _Mapping]]] = ..., triggers: _Optional[_Iterable[_Union[DbTrigger, _Mapping]]] = ..., previous_table_name: _Optional[str] = ..., allow_drop: bool = ..., sql_artifacts: _Optional[_Iterable[_Union[SqlArtifact, _Mapping]]] = ..., partition_interval: _Optional[str] = ..., partition_premake: _Optional[int] = ..., partition_default: bool = ..., partition_retention_months: _Optional[int] = ..., replica_hint: _Optional[str] = ..., cdc_topic: _Optional[str] = ..., required_scope: _Optional[str] = ..., vector_store: _Optional[_Union[VectorStoreOptions, _Mapping]] = ..., native_service_id: _Optional[str] = ..., cross_project_shared: bool = ...) -> None: ...
 
 class RlsPolicy(_message.Message):
     __slots__ = ("policy_name", "command", "using", "with_check", "permissive")
@@ -526,7 +528,7 @@ class StorageFieldOptions(_message.Message):
     def __init__(self, backend: _Optional[_Union[StorageBackendType, str]] = ..., bucket_env_key: _Optional[str] = ..., key_prefix: _Optional[str] = ..., presigned_read: bool = ..., presigned_write: bool = ..., presigned_ttl_seconds: _Optional[int] = ..., server_side_encryption: bool = ..., kms_key_id: _Optional[str] = ..., acl: _Optional[str] = ...) -> None: ...
 
 class VectorStoreOptions(_message.Message):
-    __slots__ = ("backend", "collection_name", "dimension", "distance", "shard_count", "replica_count", "on_disk", "payload_schema_json", "hnsw_m", "hnsw_ef_construction")
+    __slots__ = ("backend", "collection_name", "dimension", "distance", "shard_count", "replica_count", "on_disk", "payload_schema_json", "hnsw_m", "hnsw_ef_construction", "projection_filter")
     BACKEND_FIELD_NUMBER: _ClassVar[int]
     COLLECTION_NAME_FIELD_NUMBER: _ClassVar[int]
     DIMENSION_FIELD_NUMBER: _ClassVar[int]
@@ -537,6 +539,7 @@ class VectorStoreOptions(_message.Message):
     PAYLOAD_SCHEMA_JSON_FIELD_NUMBER: _ClassVar[int]
     HNSW_M_FIELD_NUMBER: _ClassVar[int]
     HNSW_EF_CONSTRUCTION_FIELD_NUMBER: _ClassVar[int]
+    PROJECTION_FILTER_FIELD_NUMBER: _ClassVar[int]
     backend: VectorBackendType
     collection_name: str
     dimension: int
@@ -547,7 +550,8 @@ class VectorStoreOptions(_message.Message):
     payload_schema_json: str
     hnsw_m: int
     hnsw_ef_construction: int
-    def __init__(self, backend: _Optional[_Union[VectorBackendType, str]] = ..., collection_name: _Optional[str] = ..., dimension: _Optional[int] = ..., distance: _Optional[_Union[VectorDistanceMetric, str]] = ..., shard_count: _Optional[int] = ..., replica_count: _Optional[int] = ..., on_disk: bool = ..., payload_schema_json: _Optional[str] = ..., hnsw_m: _Optional[int] = ..., hnsw_ef_construction: _Optional[int] = ...) -> None: ...
+    projection_filter: str
+    def __init__(self, backend: _Optional[_Union[VectorBackendType, str]] = ..., collection_name: _Optional[str] = ..., dimension: _Optional[int] = ..., distance: _Optional[_Union[VectorDistanceMetric, str]] = ..., shard_count: _Optional[int] = ..., replica_count: _Optional[int] = ..., on_disk: bool = ..., payload_schema_json: _Optional[str] = ..., hnsw_m: _Optional[int] = ..., hnsw_ef_construction: _Optional[int] = ..., projection_filter: _Optional[str] = ...) -> None: ...
 
 class CacheOptions(_message.Message):
     __slots__ = ("backend", "key_pattern", "ttl_seconds", "write_through", "read_through", "eviction_policy", "cluster_env_key", "namespace")
@@ -622,7 +626,7 @@ class ColumnSecurityOptions(_message.Message):
     def __init__(self, is_pii: bool = ..., is_encrypted: bool = ..., is_blind_index: bool = ..., mask_in_logs: bool = ..., data_class: _Optional[str] = ..., consent_required: bool = ..., retention_days: _Optional[int] = ...) -> None: ...
 
 class GraphStoreOptions(_message.Message):
-    __slots__ = ("backend", "graph_name", "node_label", "id_field", "tenant_field", "edge_source_field", "edge_target_field", "payload_schema_json")
+    __slots__ = ("backend", "graph_name", "node_label", "id_field", "tenant_field", "edge_source_field", "edge_target_field", "payload_schema_json", "projection_filter")
     BACKEND_FIELD_NUMBER: _ClassVar[int]
     GRAPH_NAME_FIELD_NUMBER: _ClassVar[int]
     NODE_LABEL_FIELD_NUMBER: _ClassVar[int]
@@ -631,6 +635,7 @@ class GraphStoreOptions(_message.Message):
     EDGE_SOURCE_FIELD_FIELD_NUMBER: _ClassVar[int]
     EDGE_TARGET_FIELD_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_SCHEMA_JSON_FIELD_NUMBER: _ClassVar[int]
+    PROJECTION_FILTER_FIELD_NUMBER: _ClassVar[int]
     backend: GraphBackendType
     graph_name: str
     node_label: str
@@ -639,10 +644,11 @@ class GraphStoreOptions(_message.Message):
     edge_source_field: str
     edge_target_field: str
     payload_schema_json: str
-    def __init__(self, backend: _Optional[_Union[GraphBackendType, str]] = ..., graph_name: _Optional[str] = ..., node_label: _Optional[str] = ..., id_field: _Optional[str] = ..., tenant_field: _Optional[str] = ..., edge_source_field: _Optional[str] = ..., edge_target_field: _Optional[str] = ..., payload_schema_json: _Optional[str] = ...) -> None: ...
+    projection_filter: str
+    def __init__(self, backend: _Optional[_Union[GraphBackendType, str]] = ..., graph_name: _Optional[str] = ..., node_label: _Optional[str] = ..., id_field: _Optional[str] = ..., tenant_field: _Optional[str] = ..., edge_source_field: _Optional[str] = ..., edge_target_field: _Optional[str] = ..., payload_schema_json: _Optional[str] = ..., projection_filter: _Optional[str] = ...) -> None: ...
 
 class DocumentStoreOptions(_message.Message):
-    __slots__ = ("backend", "database_name", "collection_name", "partition_key", "id_field", "tenant_field", "ttl_seconds", "payload_schema_json")
+    __slots__ = ("backend", "database_name", "collection_name", "partition_key", "id_field", "tenant_field", "ttl_seconds", "payload_schema_json", "projection_filter")
     BACKEND_FIELD_NUMBER: _ClassVar[int]
     DATABASE_NAME_FIELD_NUMBER: _ClassVar[int]
     COLLECTION_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -651,6 +657,7 @@ class DocumentStoreOptions(_message.Message):
     TENANT_FIELD_FIELD_NUMBER: _ClassVar[int]
     TTL_SECONDS_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_SCHEMA_JSON_FIELD_NUMBER: _ClassVar[int]
+    PROJECTION_FILTER_FIELD_NUMBER: _ClassVar[int]
     backend: NoSqlBackendType
     database_name: str
     collection_name: str
@@ -659,7 +666,8 @@ class DocumentStoreOptions(_message.Message):
     tenant_field: str
     ttl_seconds: int
     payload_schema_json: str
-    def __init__(self, backend: _Optional[_Union[NoSqlBackendType, str]] = ..., database_name: _Optional[str] = ..., collection_name: _Optional[str] = ..., partition_key: _Optional[str] = ..., id_field: _Optional[str] = ..., tenant_field: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., payload_schema_json: _Optional[str] = ...) -> None: ...
+    projection_filter: str
+    def __init__(self, backend: _Optional[_Union[NoSqlBackendType, str]] = ..., database_name: _Optional[str] = ..., collection_name: _Optional[str] = ..., partition_key: _Optional[str] = ..., id_field: _Optional[str] = ..., tenant_field: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., payload_schema_json: _Optional[str] = ..., projection_filter: _Optional[str] = ...) -> None: ...
 
 class TimeSeriesStoreOptions(_message.Message):
     __slots__ = ("backend", "database_name", "measurement_name", "time_field", "tenant_field", "tag_fields", "value_fields", "retention_days", "downsample_policy")
@@ -704,7 +712,7 @@ class ColumnStoreOptions(_message.Message):
     def __init__(self, backend: _Optional[_Union[ColumnBackendType, str]] = ..., database_name: _Optional[str] = ..., table_name: _Optional[str] = ..., partition_key: _Optional[str] = ..., sort_key: _Optional[str] = ..., compression: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., payload_schema_json: _Optional[str] = ...) -> None: ...
 
 class GenericStoreOptions(_message.Message):
-    __slots__ = ("store_kind", "backend", "logical_name", "database_name", "namespace", "resource_name", "dsn_env_key", "dsn", "payload_schema_json", "options", "payload_fields", "fts_columns", "fts_config", "edge_source_field", "edge_target_field", "edge_source_label", "edge_target_label")
+    __slots__ = ("store_kind", "backend", "logical_name", "database_name", "namespace", "resource_name", "dsn_env_key", "dsn", "payload_schema_json", "options", "payload_fields", "fts_columns", "fts_config", "edge_source_field", "edge_target_field", "edge_source_label", "edge_target_label", "projection_filter")
     class OptionsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -729,6 +737,7 @@ class GenericStoreOptions(_message.Message):
     EDGE_TARGET_FIELD_FIELD_NUMBER: _ClassVar[int]
     EDGE_SOURCE_LABEL_FIELD_NUMBER: _ClassVar[int]
     EDGE_TARGET_LABEL_FIELD_NUMBER: _ClassVar[int]
+    PROJECTION_FILTER_FIELD_NUMBER: _ClassVar[int]
     store_kind: str
     backend: str
     logical_name: str
@@ -746,4 +755,5 @@ class GenericStoreOptions(_message.Message):
     edge_target_field: str
     edge_source_label: str
     edge_target_label: str
-    def __init__(self, store_kind: _Optional[str] = ..., backend: _Optional[str] = ..., logical_name: _Optional[str] = ..., database_name: _Optional[str] = ..., namespace: _Optional[str] = ..., resource_name: _Optional[str] = ..., dsn_env_key: _Optional[str] = ..., dsn: _Optional[str] = ..., payload_schema_json: _Optional[str] = ..., options: _Optional[_Mapping[str, str]] = ..., payload_fields: _Optional[str] = ..., fts_columns: _Optional[str] = ..., fts_config: _Optional[str] = ..., edge_source_field: _Optional[str] = ..., edge_target_field: _Optional[str] = ..., edge_source_label: _Optional[str] = ..., edge_target_label: _Optional[str] = ...) -> None: ...
+    projection_filter: str
+    def __init__(self, store_kind: _Optional[str] = ..., backend: _Optional[str] = ..., logical_name: _Optional[str] = ..., database_name: _Optional[str] = ..., namespace: _Optional[str] = ..., resource_name: _Optional[str] = ..., dsn_env_key: _Optional[str] = ..., dsn: _Optional[str] = ..., payload_schema_json: _Optional[str] = ..., options: _Optional[_Mapping[str, str]] = ..., payload_fields: _Optional[str] = ..., fts_columns: _Optional[str] = ..., fts_config: _Optional[str] = ..., edge_source_field: _Optional[str] = ..., edge_target_field: _Optional[str] = ..., edge_source_label: _Optional[str] = ..., edge_target_label: _Optional[str] = ..., projection_filter: _Optional[str] = ...) -> None: ...

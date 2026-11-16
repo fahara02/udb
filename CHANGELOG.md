@@ -7,6 +7,42 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.22] - 2026-11-17
+
+### Breaking for callers
+
+- **A project can no longer activate a table another project already uses.** Two projects that
+  declared the same table (with no project column) on the same PostgreSQL shared its rows. Now
+  staging or activating the second catalog is refused unless both mark the table
+  `cross_project_shared: true`. Catalogs already active are only reported, not changed.
+  - detect: code: `FAILED_PRECONDITION` with reason `catalog_relation_claimed_by_other_project`
+  - fix: rename the table or its schema, scope rows by a project column in both catalogs, label
+    the backend instances per project, or set `cross_project_shared: true` in both
+- **A field a cache RPC cannot honour is refused.** `shared` on a data-plane cache call against a
+  backend other than Redis or Memcached is refused naming the field, never ignored.
+  - detect: code: `UNIMPLEMENTED` naming `shared` on a cache request
+  - fix: send `shared` only to a Redis or Memcached cache resource
+
+### Added
+
+- **Projections can take a row filter.** `projection_filter` on `vector_store`, `document_store`, `graph_store` and `data_store` is a small expression over the entity's own columns, such as `state = 'PUBLISHED' AND superseded_at IS NULL`. Only matching rows are projected; a row that stops matching is removed from the store, and a delete still deletes. The filter is checked when the catalog is built and shown in the catalog manifest; replay, backfill, drift scan and repair, and the hybrid-search text leg apply it too.
+- **Delegated job tokens in every SDK.** PHP, Rust, Java and C# can exchange a user's access token for a delegated job token (`AuthnService.ExchangeTokenForJob`) with the same checks and result as Go, TypeScript and Python, and their errors expose the broker's typed reason (`isTokenExpired` / `isTokenRevoked`).
+- The udbtest fakes (Go, TypeScript, Python) answer join-fusion Selects (`message_type: "A,B"`) the way the broker does, with a matching conformance case.
+- Generated TypeScript entities give integer-stored proto enums a named `<Enum>Number` const and literal type instead of plain `number`.
+- **Shared cache entries.** Cache requests take `shared`. Shared entries live under the reserved `*shared*` tenant segment and any authenticated tenant can read them; writing or deleting them needs `udb:platform_admin` or `udb:global:write` (otherwise `shared_cache_write_denied`), and their events carry `*shared*` as the tenant. The data-plane `CacheGet`/`CacheSet`/`CacheDelete`/`CacheScan` take `shared` too (Redis and Memcached; any other backend refuses the field).
+- **Backup and restore of shared tables.** `StartTenantBackup` and `RestoreTenant` take `scope: BACKUP_SCOPE_SHARED` (platform admin only): every shared (global) table of the project catalog, with the same encrypted, checksummed format, object storage and journal as tenant backups. A restore refuses while shared tables hold rows, and a shared backup can't be restored as a tenant backup or the reverse.
+- **Audited bulk load: `DataBroker.BulkUpsert`.** A batch of rows is written in one transaction (all or nothing) with multi-row statements, every row checked and encrypted like a single `Upsert`. Each batch produces one summarising change event (`bulk_upsert`), one audit record and a size-aware rate charge (`ceil(rows / UDB_BULK_UPSERT_ROWS_PER_RATE_UNIT)`, default 1000 rows per unit). Batches are capped by `UDB_BULK_UPSERT_MAX_ROWS` (default 10000) and refused with `UDB_BULK_BATCH_TOO_LARGE`, `UDB_BULK_ROW_SHAPE_MISMATCH` or `UDB_BULK_DUPLICATE_KEY`. Projections still receive every loaded row.
+- Go/TypeScript/Python `BulkLoad` helpers split large loads into resumable, idempotency-keyed batches; the udbtest fakes serve `BulkUpsert` the same way.
+- **Reading deleted rows.** A Select can include soft-deleted rows with `include_deleted`; each comes back with its `deleted_at` set, and the read never leaves the caller's tenant or project. It needs the new `udb:deleted:read` scope (otherwise `UDB_DELETED_READ_SCOPE_MISSING`), works only on entities with soft delete, and every such read is recorded in the audit log with its row count before the rows are returned. Go, TypeScript and Python expose it as `IncludeDeleted` / `includeDeleted` / `include_deleted`; the udbtest fakes behave the same.
+
+### Fixed
+
+- **Two projects can no longer share one table by accident.** Two projects that declared the same table (with no project column) on the same PostgreSQL used to share its rows silently. Staging or activating such a catalog is now refused with `catalog_relation_claimed_by_other_project`, naming the table, the other project and how to resolve it. A table can be shared on purpose with `pg_table.cross_project_shared: true` in both projects; tables scoped by project in both catalogs stay allowed.
+- Startup and `udb doctor` warn about unlabeled backends that serve several projects under permissive routing, and about tables active catalogs already share.
+- The cleanup service prunes UDB's migration runs after 90 days (`udb_migration_runs`), keeping runs in flight, awaiting approval or failed, each project's newest completed run, and runs a reviewed catalog transition names.
+- The cleanup service also prunes the admin audit log after 365 days (`udb_admin_audit_log`), oldest first, never the head of its hash chain. Each prune records an anchor (the hash of the last row removed) in the same transaction, and verification chains from it: pruning keeps verifying, while a row deleted from the front without a matching anchor, or a forged anchor, still fails verification.
+- Cache SCAN patterns match the tenant and namespace literally, so a namespace flush can no longer reach another tenant whose id contains a glob character or the word `shared`.
+
 ## [0.6.21] - 2026-11-16
 
 ### Breaking for callers

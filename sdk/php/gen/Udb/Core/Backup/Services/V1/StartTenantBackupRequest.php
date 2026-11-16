@@ -40,6 +40,14 @@ class StartTenantBackupRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string metadata_json = 5 [json_name = "metadataJson"];</code>
      */
     protected $metadata_json = '';
+    /**
+     * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+     * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+     * journaled under `tenant_id`.
+     *
+     * Generated from protobuf field <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+     */
+    protected $scope = 0;
 
     /**
      * Constructor.
@@ -55,6 +63,10 @@ class StartTenantBackupRequest extends \Google\Protobuf\Internal\Message
      *           Optional object-store overrides; fall back to the policy or service default.
      *     @type string $object_bucket
      *     @type string $metadata_json
+     *     @type int $scope
+     *           BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+     *           tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+     *           journaled under `tenant_id`.
      * }
      */
     public function __construct($data = NULL) {
@@ -180,6 +192,36 @@ class StartTenantBackupRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->metadata_json = $var;
+
+        return $this;
+    }
+
+    /**
+     * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+     * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+     * journaled under `tenant_id`.
+     *
+     * Generated from protobuf field <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+     * @return int
+     */
+    public function getScope()
+    {
+        return $this->scope;
+    }
+
+    /**
+     * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+     * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+     * journaled under `tenant_id`.
+     *
+     * Generated from protobuf field <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setScope($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Core\Backup\Services\V1\BackupScope::class);
+        $this->scope = $var;
 
         return $this;
     }

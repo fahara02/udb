@@ -680,4 +680,19 @@ public interface TableOptionsOrBuilder extends
    */
   com.google.protobuf.ByteString
       getNativeServiceIdBytes();
+
+  /**
+   * <pre>
+   * cross_project_shared: this physical table is deliberately shared by every
+   * project whose catalog declares it. Tables carry no project prefix, so two
+   * projects that declare the same table on the same backend instance would
+   * read and write the same rows. UDB refuses to activate such a catalog
+   * unless BOTH projects set this flag on the table (or both scope its rows
+   * with a project column, see db_table_security.project_isolation_mode).
+   * </pre>
+   *
+   * <code>bool cross_project_shared = 34 [json_name = "crossProjectShared"];</code>
+   * @return The crossProjectShared.
+   */
+  boolean getCrossProjectShared();
 }

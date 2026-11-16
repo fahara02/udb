@@ -26,8 +26,9 @@ use super::support::{live_env, require_live_dsn};
 use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
 use crate::proto::data_broker_server::DataBroker;
 use crate::proto::{
-    CacheDeleteRequest, CacheGetRequest, CacheGetResponse, CacheSetRequest, DocumentDeleteRequest,
-    DocumentFindRequest, DocumentUpsertRequest, GenericDispatchRequest, StoreResource,
+    CacheDeleteRequest, CacheGetRequest, CacheGetResponse, CacheScanRequest, CacheSetRequest,
+    DocumentDeleteRequest, DocumentFindRequest, DocumentUpsertRequest, GenericDispatchRequest,
+    StoreResource,
 };
 use crate::runtime::config::{BackendInstance, UdbConfig};
 use crate::runtime::executor_utils::json_to_struct;
@@ -1030,6 +1031,191 @@ async fn raw_cache_keys_are_tenant_namespaced_live() {
                 ..CacheDeleteRequest::default()
             },
             &tenant_a,
+        ))
+        .await;
+}
+
+/// [`store_ctx`] with explicit scopes (the shared cache namespace is written
+/// only with `udb:global:write` or `udb:platform_admin`).
+fn store_ctx_with_scopes<T>(message: T, tenant: &str, scopes: &str) -> Request<T> {
+    let mut req = store_ctx(message, tenant);
+    req.metadata_mut()
+        .insert("x-scopes", scopes.parse().unwrap());
+    req
+}
+
+/// E5b: the DataBroker cache RPCs' shared namespace. A `udb:global:write`
+/// holder writes a shared key under `udb:{project}:*shared*:`; another tenant
+/// reads and scans it, but its own namespace does not hold it and its shared
+/// write is refused PERMISSION_DENIED; a shared SCAN never returns a key of a
+/// tenant whose id contains `shared`.
+#[tokio::test]
+#[ignore = "requires live Postgres + Redis (UDB_REDIS_DSN); runs in the CI --ignored live step"]
+async fn raw_cache_shared_namespace_live() {
+    let (Some(pg), Some(_)) = (store_live_pg_dsn(), require_live_dsn("UDB_REDIS_DSN")) else {
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let svc = store_service(&pg, CatalogManifest::default()).await;
+    let writer = Uuid::new_v4().to_string();
+    let reader = Uuid::new_v4().to_string();
+    let decoy = format!("acme-shared-{}", Uuid::new_v4().simple());
+    let writer_scopes = format!(
+        "udb:admin,udb:read,udb:write,udb:dispatch,{}",
+        crate::broker::GLOBAL_WRITE_SCOPE
+    );
+    let prefix = format!("srs:{}:", Uuid::new_v4().simple());
+    let key = format!("{prefix}usd");
+
+    svc.cache_set(store_ctx_with_scopes(
+        CacheSetRequest {
+            resource: resource("redis", "", "sr_cache"),
+            key: key.clone(),
+            value: b"1.0842".to_vec(),
+            ttl_seconds: 300,
+            shared: true,
+            ..CacheSetRequest::default()
+        },
+        &writer,
+        &writer_scopes,
+    ))
+    .await
+    .expect("a udb:global:write holder writes the shared namespace");
+
+    let shared_get = |tenant: String, key: String| {
+        let svc = &svc;
+        async move {
+            svc.cache_get(store_ctx(
+                CacheGetRequest {
+                    resource: resource("redis", "", "sr_cache"),
+                    key,
+                    shared: true,
+                    ..CacheGetRequest::default()
+                },
+                &tenant,
+            ))
+            .await
+            .expect("served shared CacheGet")
+            .into_inner()
+        }
+    };
+    let read = shared_get(reader.clone(), key.clone()).await;
+    assert!(read.found, "another tenant reads the shared entry");
+    assert_eq!(read.value, b"1.0842".to_vec());
+    assert!(
+        !cache_get(&svc, &reader, &key).await.found,
+        "the shared entry is not in the reader's own namespace"
+    );
+    assert!(
+        !cache_get(&svc, &writer, &key).await.found,
+        "nor in the writer's own namespace"
+    );
+
+    let denied = svc
+        .cache_set(store_ctx(
+            CacheSetRequest {
+                resource: resource("redis", "", "sr_cache"),
+                key: key.clone(),
+                value: b"0".to_vec(),
+                shared: true,
+                ..CacheSetRequest::default()
+            },
+            &reader,
+        ))
+        .await
+        .expect_err("a tenant token may not write the shared namespace");
+    assert_eq!(denied.code(), Code::PermissionDenied, "{denied:?}");
+    assert!(denied.message().contains(crate::broker::GLOBAL_WRITE_SCOPE));
+    let denied = svc
+        .cache_delete(store_ctx(
+            CacheDeleteRequest {
+                resource: resource("redis", "", "sr_cache"),
+                key: key.clone(),
+                shared: true,
+                ..CacheDeleteRequest::default()
+            },
+            &reader,
+        ))
+        .await
+        .expect_err("a tenant token may not delete a shared entry");
+    assert_eq!(denied.code(), Code::PermissionDenied, "{denied:?}");
+
+    // A tenant whose id contains `shared` holds the same key in its own
+    // namespace; the shared SCAN must not return it.
+    svc.cache_set(store_ctx(
+        CacheSetRequest {
+            resource: resource("redis", "", "sr_cache"),
+            key: key.clone(),
+            value: b"decoy".to_vec(),
+            ttl_seconds: 300,
+            ..CacheSetRequest::default()
+        },
+        &decoy,
+    ))
+    .await
+    .expect("seed the decoy tenant key");
+    let shared_ns = format!("udb:{PROJECT}:{}:", crate::broker::SHARED_TENANT_MARKER);
+    let mut scanned = Vec::new();
+    let mut page_token = String::new();
+    loop {
+        let page = svc
+            .cache_scan(store_ctx(
+                CacheScanRequest {
+                    resource: resource("redis", "", "sr_cache"),
+                    key_pattern: format!("{prefix}*"),
+                    limit: 500,
+                    page_token: page_token.clone(),
+                    shared: true,
+                    ..CacheScanRequest::default()
+                },
+                &reader,
+            ))
+            .await
+            .expect("served shared CacheScan")
+            .into_inner();
+        scanned.extend(
+            page.entries
+                .into_iter()
+                .map(|entry| (entry.key, entry.value)),
+        );
+        if page.next_page_token.is_empty() {
+            break;
+        }
+        page_token = page.next_page_token;
+    }
+    assert_eq!(
+        scanned,
+        vec![(format!("{shared_ns}{key}"), b"1.0842".to_vec())],
+        "only the shared entry: never the decoy tenant's key"
+    );
+
+    svc.cache_delete(store_ctx_with_scopes(
+        CacheDeleteRequest {
+            resource: resource("redis", "", "sr_cache"),
+            key: key.clone(),
+            shared: true,
+            ..CacheDeleteRequest::default()
+        },
+        &writer,
+        &writer_scopes,
+    ))
+    .await
+    .expect("a udb:global:write holder deletes the shared entry");
+    assert!(!shared_get(reader.clone(), key.clone()).await.found);
+    let decoy_read = cache_get(&svc, &decoy, &key).await;
+    assert_eq!(
+        decoy_read.value,
+        b"decoy".to_vec(),
+        "the decoy key is untouched"
+    );
+    let _ = svc
+        .cache_delete(store_ctx(
+            CacheDeleteRequest {
+                resource: resource("redis", "", "sr_cache"),
+                key,
+                ..CacheDeleteRequest::default()
+            },
+            &decoy,
         ))
         .await;
 }

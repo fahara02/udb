@@ -1,6 +1,7 @@
 // The in-memory broker: it meets the same typed-store contract a real broker does,
 // over a real loopback listener with an unmodified UdbProject.
 
+import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -11,7 +12,7 @@ import * as grpc from "@grpc/grpc-js";
 import { UdbProject } from "./project";
 import { ProtoSchemas, protoSchemas } from "./protoSchema";
 import { ErrorCode, Table, codeOf, inspect, isNotFound, isUnique, missingScope, selectMany } from "./stores";
-import { createDescriptorFake, createFake, parsePolicies, runTable, runTableCases, start, startPair } from "./udbtest";
+import { DELETED_READ_SCOPE, createDescriptorFake, createFake, parsePolicies, runJoin, runTable, runTableCases, start, startPair } from "./udbtest";
 import { uniquePredicate } from "./udbtest/entityRules";
 import { matches } from "./udbtest/filter";
 import { decodeRecord, encodeRecord } from "./recordCodec";
@@ -27,6 +28,11 @@ const DATABROKER = "udb.services.v1.DataBroker";
 test("the fake meets the table contract", async (t) => {
   const fake = await createFake(t, [FILE]);
   await runTable(t, (tenant) => fake.client(tenant));
+});
+
+test("the fake answers a join-fusion read as the broker does", async (t) => {
+  const fake = await createFake(t, [FILE, "udb.core.authz.entity.v1.PolicySet", "udb.core.authz.entity.v1.PolicyVersion"]);
+  await runJoin(t, (tenant) => fake.client(tenant));
 });
 
 test("the fake holds a JSON column as the broker does, for every kind of value", async (t) => {
@@ -670,4 +676,130 @@ test("an embedded broker meets the table contract", {
   await runTable(t, (tenant) => (tenant === tenantOf(peer) ? peer : u), { tenants: [tenantOf(u), tenantOf(peer)] });
   await runTableCases(t, () => u);
   assert.ok(start, "start is exported alongside startPair");
+});
+
+test("the fake meets the include_deleted contract for a caller holding udb:deleted:read", async (t) => {
+  const fake = await createFake(t, [FILE]);
+  await runTable(t, (tenant) => {
+    const key = `deleted-reader-${tenant}`;
+    fake.addIdentityApiKey(key, {
+      tenantId: tenant,
+      userId: "auditor",
+      scopes: ["udb:read", "udb:write", "udb:admin", DELETED_READ_SCOPE],
+    });
+    return fake.clientForKey(key);
+  });
+});
+
+test("an include_deleted read stays in the tenant, is recorded, and is refused without soft delete", async (t) => {
+  const audit = "udb.core.authz.entity.v1.AccessDecisionAudit";
+  const fake = await createFake(t, [FILE, audit]);
+  const tenant = randomUUID();
+  fake.addIdentityApiKey("reader", { tenantId: tenant, userId: "auditor", scopes: ["udb:read", "udb:write", DELETED_READ_SCOPE] });
+  const reader = await fake.clientForKey("reader");
+  const foreign = (await fake.client(randomUUID())).tableOf<Record<string, any>>(FILE);
+  const theirs = { file_id: randomUUID(), filename: "theirs.pdf", object_key: `t/${randomUUID()}`, status: "FILE_STATUS_PENDING" };
+  await foreign.insert(theirs);
+  await foreign.delete({ file_id: theirs.file_id });
+  const files = reader.tableOf<Record<string, any>>(FILE);
+  const mine = { file_id: randomUUID(), filename: "mine.pdf", object_key: `m/${randomUUID()}`, status: "FILE_STATUS_PENDING" };
+  await files.insert(mine);
+  await files.delete({ file_id: mine.file_id });
+
+  const page = await files.select({}, { includeDeleted: true, fields: ["file_id"] });
+  assert.deepEqual(page.rows.map((row) => row.file_id), [mine.file_id], "only the caller's deleted row");
+  assert.ok(page.rows[0].deleted_at, "the deleted row is marked even with a field list");
+  const reads = fake.deletedReads();
+  assert.equal(reads.length, 1);
+  assert.deepEqual(
+    { ...reads[0], table: "" },
+    { tenantId: tenant, projectId: "", actor: "auditor", messageType: FILE, table: "", rows: 1 },
+  );
+  assert.ok(reads[0].table, "the record names the table");
+
+  await assert.rejects(
+    reader.tableOf<Record<string, any>>(audit).select({}, { includeDeleted: true }),
+    (err: unknown) => codeOf(err) === ErrorCode.Invalid,
+  );
+  assert.equal(fake.deletedReads().length, 1, "a refused read is not recorded");
+
+  const plain = await fake.client(tenant);
+  await assert.rejects(
+    plain.tableOf<Record<string, any>>(FILE).select({}, { includeDeleted: true }),
+    (err: unknown) => inspect(err).reason === "UDB_DELETED_READ_SCOPE_MISSING" && codeOf(err) === ErrorCode.ScopeMissing,
+  );
+});
+
+test("the fake loads rows in BulkUpsert batches with one change event per batch", async (t) => {
+  const fake = await createFake(t, [FILE]);
+  const u = await fake.client(TENANT);
+  const ids: string[] = [];
+  function* rows() {
+    for (let i = 0; i < 2500; i += 1) {
+      const id = randomUUID();
+      ids.push(id);
+      yield { file_id: id, filename: `bulk-${i}.pdf`, object_key: `bulk/${id}` };
+    }
+  }
+  const seen: number[] = [];
+  const result = await u.bulkLoad(FILE, rows(), { batchRows: 1000, batchIdPrefix: "load", onBatch: (index) => void seen.push(index) });
+  assert.equal(result.batches, 3);
+  assert.equal(result.rows, 2500);
+  assert.equal(result.affectedRows, 2500);
+  assert.deepEqual(seen, [0, 1, 2]);
+  assert.deepEqual(result.responses.map((r) => r.batch_id), ["load/000000", "load/000001", "load/000002"]);
+  const stored = new Set(fake.rows(FILE, TENANT).map((row: any) => row.file_id));
+  assert.equal(stored.size, 2500);
+  for (const id of ids) assert.ok(stored.has(id), `row ${id} was loaded`);
+
+  const cdc = () => fake.events().filter((event) => event.topic === "udb.storage.files.cdc");
+  const events = cdc();
+  assert.equal(events.length, 3, "one event per batch, not per row");
+  assert.deepEqual(events.map((event) => (event.envelope as any).payload.row_count), [1000, 1000, 500]);
+  for (const [index, event] of events.entries()) {
+    const envelope = event.envelope as any;
+    assert.equal(envelope.operation, "bulk_upsert");
+    assert.equal(envelope.document_id, result.responses[index].batch_id);
+    assert.equal(event.partitionKey, result.responses[index].batch_id);
+    assert.equal(envelope.event_id, result.responses[index].event_id);
+    assert.equal(envelope.payload.keys_sha256, result.responses[index].keys_sha256);
+    assert.match(envelope.payload.keys_sha256, /^[0-9a-f]{64}$/);
+  }
+  assert.equal(result.responses[0].first_key, `s:${ids[0]}`);
+  assert.equal(result.responses[2].last_key, `s:${ids[2499]}`);
+
+  const dup = randomUUID();
+  const fresh = randomUUID();
+  await assert.rejects(
+    u.bulkUpsert(FILE, [
+      { file_id: fresh, filename: "fresh.pdf", object_key: `bulk/${fresh}` },
+      { file_id: dup, filename: "a.pdf", object_key: `bulk/${dup}-a` },
+      { file_id: dup, filename: "b.pdf", object_key: `bulk/${dup}-b` },
+    ]),
+    (err) => inspect(err).reason === "UDB_BULK_DUPLICATE_KEY" && codeOf(err) === ErrorCode.Invalid,
+  );
+  assert.equal(fake.rows(FILE, TENANT).length, 2500, "a refused batch writes nothing");
+  assert.equal(cdc().length, 3, "a refused batch emits no event");
+
+  const other = randomUUID();
+  await assert.rejects(
+    u.bulkUpsert(FILE, [
+      { file_id: randomUUID(), filename: "a.pdf", object_key: `bulk/${randomUUID()}` },
+      { file_id: other, filename: "b.pdf" },
+    ]),
+    (err) => inspect(err).reason === "UDB_BULK_ROW_SHAPE_MISMATCH" && /row 1/.test((err as Error).message),
+  );
+  assert.equal(fake.rows(FILE, TENANT).length, 2500);
+
+  const keyed = randomUUID();
+  const batch = [{ file_id: keyed, filename: "keyed.pdf", object_key: `bulk/${keyed}` }];
+  const first = await u.bulkUpsert(FILE, batch, { idempotencyKey: "bulk-key-1", batchId: "keyed" });
+  const replay = await u.bulkUpsert(FILE, batch, { idempotencyKey: "bulk-key-1", batchId: "keyed" });
+  assert.equal(replay.was_duplicate, true);
+  assert.equal(replay.event_id, first.event_id);
+  assert.equal(cdc().length, 4, "a replayed batch emits nothing");
+  await assert.rejects(
+    u.bulkUpsert(FILE, [{ ...batch[0], filename: "changed.pdf" }], { idempotencyKey: "bulk-key-1", batchId: "keyed" }),
+    (err) => inspect(err).reason === "UDB_IDEMPOTENCY_REUSE",
+  );
 });

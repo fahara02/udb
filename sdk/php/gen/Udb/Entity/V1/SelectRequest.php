@@ -61,6 +61,20 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool include_total = 10 [json_name = "includeTotal"];</code>
      */
     protected $include_total = false;
+    /**
+     * Also return soft-deleted rows. Each returned row carries the entity's own
+     * soft-delete column (for example `deleted_at`), non-null on a deleted row,
+     * which the broker adds to an explicit `fields` list when it is missing.
+     * Needs scope `udb:deleted:read`; without it the read is refused with
+     * PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+     * without soft delete refuses it with INVALID_ARGUMENT naming this field.
+     * Every such read is written to the audit log (tenant, actor, entity, row
+     * count) before its rows are returned; it stays inside the caller's tenant
+     * and project, and it is never answered from or stored in the read cache.
+     *
+     * Generated from protobuf field <code>bool include_deleted = 11 [json_name = "includeDeleted"];</code>
+     */
+    protected $include_deleted = false;
 
     /**
      * Constructor.
@@ -83,6 +97,16 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      *     @type bool $include_total
      *           Also count every matching row into `RecordSet.exact_total` (one extra
      *           COUNT over the same filter and scope; the read cache is skipped).
+     *     @type bool $include_deleted
+     *           Also return soft-deleted rows. Each returned row carries the entity's own
+     *           soft-delete column (for example `deleted_at`), non-null on a deleted row,
+     *           which the broker adds to an explicit `fields` list when it is missing.
+     *           Needs scope `udb:deleted:read`; without it the read is refused with
+     *           PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+     *           without soft delete refuses it with INVALID_ARGUMENT naming this field.
+     *           Every such read is written to the audit log (tenant, actor, entity, row
+     *           count) before its rows are returned; it stays inside the caller's tenant
+     *           and project, and it is never answered from or stored in the read cache.
      * }
      */
     public function __construct($data = NULL) {
@@ -350,6 +374,48 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->include_total = $var;
+
+        return $this;
+    }
+
+    /**
+     * Also return soft-deleted rows. Each returned row carries the entity's own
+     * soft-delete column (for example `deleted_at`), non-null on a deleted row,
+     * which the broker adds to an explicit `fields` list when it is missing.
+     * Needs scope `udb:deleted:read`; without it the read is refused with
+     * PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+     * without soft delete refuses it with INVALID_ARGUMENT naming this field.
+     * Every such read is written to the audit log (tenant, actor, entity, row
+     * count) before its rows are returned; it stays inside the caller's tenant
+     * and project, and it is never answered from or stored in the read cache.
+     *
+     * Generated from protobuf field <code>bool include_deleted = 11 [json_name = "includeDeleted"];</code>
+     * @return bool
+     */
+    public function getIncludeDeleted()
+    {
+        return $this->include_deleted;
+    }
+
+    /**
+     * Also return soft-deleted rows. Each returned row carries the entity's own
+     * soft-delete column (for example `deleted_at`), non-null on a deleted row,
+     * which the broker adds to an explicit `fields` list when it is missing.
+     * Needs scope `udb:deleted:read`; without it the read is refused with
+     * PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+     * without soft delete refuses it with INVALID_ARGUMENT naming this field.
+     * Every such read is written to the audit log (tenant, actor, entity, row
+     * count) before its rows are returned; it stays inside the caller's tenant
+     * and project, and it is never answered from or stored in the read cache.
+     *
+     * Generated from protobuf field <code>bool include_deleted = 11 [json_name = "includeDeleted"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setIncludeDeleted($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->include_deleted = $var;
 
         return $this;
     }

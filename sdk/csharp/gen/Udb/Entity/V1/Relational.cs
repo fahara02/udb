@@ -40,7 +40,7 @@ namespace Udb.Entity.V1 {
             "KAlSD3JlY29yZFJldmlzaW9ucxIZCghoYXNfbW9yZRgGIAEoCFIHaGFzTW9y",
             "ZRIfCgtleGFjdF90b3RhbBgHIAEoA1IKZXhhY3RUb3RhbBInCg9yZWRhY3Rl",
             "ZF9maWVsZHMYCCADKAlSDnJlZGFjdGVkRmllbGRzSgQIBBAFUgt0b3RhbF9j",
-            "b3VudCKVAwoNU2VsZWN0UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRi",
+            "b3VudCK+AwoNU2VsZWN0UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRi",
             "LmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIhCgxtZXNzYWdl",
             "X3R5cGUYAiABKAlSC21lc3NhZ2VUeXBlEi8KBmZpbHRlchgDIAEoCzIXLmdv",
             "b2dsZS5wcm90b2J1Zi5TdHJ1Y3RSBmZpbHRlchIWCgZmaWVsZHMYBCADKAlS",
@@ -49,68 +49,83 @@ namespace Udb.Entity.V1 {
             "LlNvcnRSBHNvcnQSMQoFY2FjaGUYCCABKAsyGy51ZGIuZW50aXR5LnYxLkNh",
             "Y2hlT3B0aW9uc1IFY2FjaGUSKQoQaW5jbHVkZV9yZXZpc2lvbhgJIAEoCFIP",
             "aW5jbHVkZVJldmlzaW9uEiMKDWluY2x1ZGVfdG90YWwYCiABKAhSDGluY2x1",
-            "ZGVUb3RhbCLgAwoNVXBzZXJ0UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0u",
-            "dWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIhCgxtZXNz",
-            "YWdlX3R5cGUYAiABKAlSC21lc3NhZ2VUeXBlEh8KC3JlY29yZF9qc29uGAMg",
-            "ASgMUgpyZWNvcmRKc29uEjEKB3BheWxvYWQYBCABKAsyFy5nb29nbGUucHJv",
-            "dG9idWYuU3RydWN0UgdwYXlsb2FkEicKD2NvbmZsaWN0X2ZpZWxkcxgFIAMo",
-            "CVIOY29uZmxpY3RGaWVsZHMSIwoNcmV0dXJuX3JlY29yZBgGIAEoCFIMcmV0",
-            "dXJuUmVjb3JkEjEKBWNhY2hlGAcgASgLMhsudWRiLmVudGl0eS52MS5DYWNo",
-            "ZU9wdGlvbnNSBWNhY2hlEicKD2lkZW1wb3RlbmN5X2tleRgIIAEoCVIOaWRl",
-            "bXBvdGVuY3lLZXkSMwoIZXhwZWN0ZWQYCSABKAsyFy5nb29nbGUucHJvdG9i",
-            "dWYuU3RydWN0UghleHBlY3RlZBIbCglsb2NrX25hbWUYCiABKAlSCGxvY2tO",
-            "YW1lEiMKDWZlbmNpbmdfdG9rZW4YCyABKANSDGZlbmNpbmdUb2tlbiKUAwoN",
-            "RGVsZXRlUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52",
-            "MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIhCgxtZXNzYWdlX3R5cGUYAiAB",
-            "KAlSC21lc3NhZ2VUeXBlEi8KBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90",
-            "b2J1Zi5TdHJ1Y3RSBmZpbHRlchInCg9pZGVtcG90ZW5jeV9rZXkYBCABKAlS",
-            "DmlkZW1wb3RlbmN5S2V5EjMKCGV4cGVjdGVkGAUgASgLMhcuZ29vZ2xlLnBy",
-            "b3RvYnVmLlN0cnVjdFIIZXhwZWN0ZWQSKwoRZXhwZWN0ZWRfcmV2aXNpb24Y",
-            "BiABKAlSEGV4cGVjdGVkUmV2aXNpb24SGwoJbG9ja19uYW1lGAcgASgJUghs",
-            "b2NrTmFtZRIjCg1mZW5jaW5nX3Rva2VuGAggASgDUgxmZW5jaW5nVG9rZW4S",
-            "KQoQcmVxdWlyZV9hZmZlY3RlZBgJIAEoDVIPcmVxdWlyZUFmZmVjdGVkIu8E",
-            "Cg1VcGRhdGVSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5",
-            "LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiEKDG1lc3NhZ2VfdHlwZRgC",
-            "IAEoCVILbWVzc2FnZVR5cGUSLwoGZmlsdGVyGAMgASgLMhcuZ29vZ2xlLnBy",
-            "b3RvYnVmLlN0cnVjdFIGZmlsdGVyEjEKB2NoYW5nZXMYBCABKAsyFy5nb29n",
-            "bGUucHJvdG9idWYuU3RydWN0UgdjaGFuZ2VzEjMKCGV4cGVjdGVkGAUgASgL",
-            "MhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIIZXhwZWN0ZWQSRgoKaW5jcmVt",
-            "ZW50cxgGIAMoCzImLnVkYi5lbnRpdHkudjEuVXBkYXRlUmVxdWVzdC5JbmNy",
-            "ZW1lbnRSCmluY3JlbWVudHMSJwoPaWRlbXBvdGVuY3lfa2V5GAcgASgJUg5p",
-            "ZGVtcG90ZW5jeUtleRIjCg1yZXR1cm5fcmVjb3JkGAggASgIUgxyZXR1cm5S",
-            "ZWNvcmQSKwoRZXhwZWN0ZWRfcmV2aXNpb24YCSABKAlSEGV4cGVjdGVkUmV2",
-            "aXNpb24SGwoJbG9ja19uYW1lGAogASgJUghsb2NrTmFtZRIjCg1mZW5jaW5n",
-            "X3Rva2VuGAsgASgDUgxmZW5jaW5nVG9rZW4SKQoQcmVxdWlyZV9hZmZlY3Rl",
-            "ZBgMIAEoDVIPcmVxdWlyZUFmZmVjdGVkGjkKCUluY3JlbWVudBIWCgZjb2x1",
-            "bW4YASABKAlSBmNvbHVtbhIUCgVkZWx0YRgCIAEoAVIFZGVsdGEiwwEKDlZp",
-            "ZXdEZWZpbml0aW9uEjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYx",
-            "LlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EhYKBnNjaGVtYRgCIAEoCVIGc2No",
-            "ZW1hEhIKBG5hbWUYAyABKAlSBG5hbWUSFAoFcXVlcnkYBCABKAlSBXF1ZXJ5",
-            "EhsKCXdpdGhfZGF0YRgFIAEoCFIId2l0aERhdGESGQoIdHRsX2RheXMYBiAB",
-            "KAVSB3R0bERheXMimwIKC0J1bGtDYXNJdGVtEi8KBmZpbHRlchgBIAEoCzIX",
-            "Lmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSBmZpbHRlchIxCgdjaGFuZ2VzGAIg",
-            "ASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIHY2hhbmdlcxIrChFleHBl",
-            "Y3RlZF9yZXZpc2lvbhgDIAEoCVIQZXhwZWN0ZWRSZXZpc2lvbhIzCghleHBl",
-            "Y3RlZBgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSCGV4cGVjdGVk",
-            "EkYKCmluY3JlbWVudHMYBSADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJl",
-            "cXVlc3QuSW5jcmVtZW50UgppbmNyZW1lbnRzIuIBCg5CdWxrQ2FzUmVxdWVz",
-            "dBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29u",
-            "dGV4dFIHY29udGV4dBIhCgxtZXNzYWdlX3R5cGUYAiABKAlSC21lc3NhZ2VU",
-            "eXBlEjAKBWl0ZW1zGAMgAygLMhoudWRiLmVudGl0eS52MS5CdWxrQ2FzSXRl",
-            "bVIFaXRlbXMSJwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJUg5pZGVtcG90ZW5j",
-            "eUtleRIZCghtYXhfcm93cxgFIAEoBVIHbWF4Um93cyKDAQoRQnVsa0Nhc0l0",
-            "ZW1SZXN1bHQSGAoHbWF0Y2hlZBgBIAEoCFIHbWF0Y2hlZBIYCgdjaGFuZ2Vk",
-            "GAIgASgIUgdjaGFuZ2VkEh4KCmNvbmZsaWN0ZWQYAyABKAhSCmNvbmZsaWN0",
-            "ZWQSGgoIcmV2aXNpb24YBCABKAlSCHJldmlzaW9uIs8BCg9CdWxrQ2FzUmVz",
-            "cG9uc2USGAoHbWF0Y2hlZBgBIAEoBVIHbWF0Y2hlZBIYCgdjaGFuZ2VkGAIg",
-            "ASgFUgdjaGFuZ2VkEh4KCmNvbmZsaWN0ZWQYAyABKAVSCmNvbmZsaWN0ZWQS",
-            "LAoSd3JpdGVfcmVjZWlwdF9qc29uGAQgASgJUhB3cml0ZVJlY2VpcHRKc29u",
-            "EjoKB3Jlc3VsdHMYBSADKAsyIC51ZGIuZW50aXR5LnYxLkJ1bGtDYXNJdGVt",
-            "UmVzdWx0UgdyZXN1bHRzQrUBChFjb20udWRiLmVudGl0eS52MUIPUmVsYXRp",
-            "b25hbFByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9n",
-            "ZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHku",
-            "VjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxW",
-            "MeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z"));
+            "ZGVUb3RhbBInCg9pbmNsdWRlX2RlbGV0ZWQYCyABKAhSDmluY2x1ZGVEZWxl",
+            "dGVkIuADCg1VcHNlcnRSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIu",
+            "ZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiEKDG1lc3NhZ2Vf",
+            "dHlwZRgCIAEoCVILbWVzc2FnZVR5cGUSHwoLcmVjb3JkX2pzb24YAyABKAxS",
+            "CnJlY29yZEpzb24SMQoHcGF5bG9hZBgEIAEoCzIXLmdvb2dsZS5wcm90b2J1",
+            "Zi5TdHJ1Y3RSB3BheWxvYWQSJwoPY29uZmxpY3RfZmllbGRzGAUgAygJUg5j",
+            "b25mbGljdEZpZWxkcxIjCg1yZXR1cm5fcmVjb3JkGAYgASgIUgxyZXR1cm5S",
+            "ZWNvcmQSMQoFY2FjaGUYByABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0",
+            "aW9uc1IFY2FjaGUSJwoPaWRlbXBvdGVuY3lfa2V5GAggASgJUg5pZGVtcG90",
+            "ZW5jeUtleRIzCghleHBlY3RlZBgJIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5T",
+            "dHJ1Y3RSCGV4cGVjdGVkEhsKCWxvY2tfbmFtZRgKIAEoCVIIbG9ja05hbWUS",
+            "IwoNZmVuY2luZ190b2tlbhgLIAEoA1IMZmVuY2luZ1Rva2VuIpQDCg1EZWxl",
+            "dGVSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJl",
+            "cXVlc3RDb250ZXh0Ugdjb250ZXh0EiEKDG1lc3NhZ2VfdHlwZRgCIAEoCVIL",
+            "bWVzc2FnZVR5cGUSLwoGZmlsdGVyGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVm",
+            "LlN0cnVjdFIGZmlsdGVyEicKD2lkZW1wb3RlbmN5X2tleRgEIAEoCVIOaWRl",
+            "bXBvdGVuY3lLZXkSMwoIZXhwZWN0ZWQYBSABKAsyFy5nb29nbGUucHJvdG9i",
+            "dWYuU3RydWN0UghleHBlY3RlZBIrChFleHBlY3RlZF9yZXZpc2lvbhgGIAEo",
+            "CVIQZXhwZWN0ZWRSZXZpc2lvbhIbCglsb2NrX25hbWUYByABKAlSCGxvY2tO",
+            "YW1lEiMKDWZlbmNpbmdfdG9rZW4YCCABKANSDGZlbmNpbmdUb2tlbhIpChBy",
+            "ZXF1aXJlX2FmZmVjdGVkGAkgASgNUg9yZXF1aXJlQWZmZWN0ZWQi7wQKDVVw",
+            "ZGF0ZVJlcXVlc3QSNwoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEu",
+            "UmVxdWVzdENvbnRleHRSB2NvbnRleHQSIQoMbWVzc2FnZV90eXBlGAIgASgJ",
+            "UgttZXNzYWdlVHlwZRIvCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9i",
+            "dWYuU3RydWN0UgZmaWx0ZXISMQoHY2hhbmdlcxgEIAEoCzIXLmdvb2dsZS5w",
+            "cm90b2J1Zi5TdHJ1Y3RSB2NoYW5nZXMSMwoIZXhwZWN0ZWQYBSABKAsyFy5n",
+            "b29nbGUucHJvdG9idWYuU3RydWN0UghleHBlY3RlZBJGCgppbmNyZW1lbnRz",
+            "GAYgAygLMiYudWRiLmVudGl0eS52MS5VcGRhdGVSZXF1ZXN0LkluY3JlbWVu",
+            "dFIKaW5jcmVtZW50cxInCg9pZGVtcG90ZW5jeV9rZXkYByABKAlSDmlkZW1w",
+            "b3RlbmN5S2V5EiMKDXJldHVybl9yZWNvcmQYCCABKAhSDHJldHVyblJlY29y",
+            "ZBIrChFleHBlY3RlZF9yZXZpc2lvbhgJIAEoCVIQZXhwZWN0ZWRSZXZpc2lv",
+            "bhIbCglsb2NrX25hbWUYCiABKAlSCGxvY2tOYW1lEiMKDWZlbmNpbmdfdG9r",
+            "ZW4YCyABKANSDGZlbmNpbmdUb2tlbhIpChByZXF1aXJlX2FmZmVjdGVkGAwg",
+            "ASgNUg9yZXF1aXJlQWZmZWN0ZWQaOQoJSW5jcmVtZW50EhYKBmNvbHVtbhgB",
+            "IAEoCVIGY29sdW1uEhQKBWRlbHRhGAIgASgBUgVkZWx0YSLDAQoOVmlld0Rl",
+            "ZmluaXRpb24SNwoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVx",
+            "dWVzdENvbnRleHRSB2NvbnRleHQSFgoGc2NoZW1hGAIgASgJUgZzY2hlbWES",
+            "EgoEbmFtZRgDIAEoCVIEbmFtZRIUCgVxdWVyeRgEIAEoCVIFcXVlcnkSGwoJ",
+            "d2l0aF9kYXRhGAUgASgIUgh3aXRoRGF0YRIZCgh0dGxfZGF5cxgGIAEoBVIH",
+            "dHRsRGF5cyKbAgoLQnVsa0Nhc0l0ZW0SLwoGZmlsdGVyGAEgASgLMhcuZ29v",
+            "Z2xlLnByb3RvYnVmLlN0cnVjdFIGZmlsdGVyEjEKB2NoYW5nZXMYAiABKAsy",
+            "Fy5nb29nbGUucHJvdG9idWYuU3RydWN0UgdjaGFuZ2VzEisKEWV4cGVjdGVk",
+            "X3JldmlzaW9uGAMgASgJUhBleHBlY3RlZFJldmlzaW9uEjMKCGV4cGVjdGVk",
+            "GAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIIZXhwZWN0ZWQSRgoK",
+            "aW5jcmVtZW50cxgFIAMoCzImLnVkYi5lbnRpdHkudjEuVXBkYXRlUmVxdWVz",
+            "dC5JbmNyZW1lbnRSCmluY3JlbWVudHMi4gEKDkJ1bGtDYXNSZXF1ZXN0EjcK",
+            "B2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0",
+            "Ugdjb250ZXh0EiEKDG1lc3NhZ2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUS",
+            "MAoFaXRlbXMYAyADKAsyGi51ZGIuZW50aXR5LnYxLkJ1bGtDYXNJdGVtUgVp",
+            "dGVtcxInCg9pZGVtcG90ZW5jeV9rZXkYBCABKAlSDmlkZW1wb3RlbmN5S2V5",
+            "EhkKCG1heF9yb3dzGAUgASgFUgdtYXhSb3dzIoMBChFCdWxrQ2FzSXRlbVJl",
+            "c3VsdBIYCgdtYXRjaGVkGAEgASgIUgdtYXRjaGVkEhgKB2NoYW5nZWQYAiAB",
+            "KAhSB2NoYW5nZWQSHgoKY29uZmxpY3RlZBgDIAEoCFIKY29uZmxpY3RlZBIa",
+            "CghyZXZpc2lvbhgEIAEoCVIIcmV2aXNpb24izwEKD0J1bGtDYXNSZXNwb25z",
+            "ZRIYCgdtYXRjaGVkGAEgASgFUgdtYXRjaGVkEhgKB2NoYW5nZWQYAiABKAVS",
+            "B2NoYW5nZWQSHgoKY29uZmxpY3RlZBgDIAEoBVIKY29uZmxpY3RlZBIsChJ3",
+            "cml0ZV9yZWNlaXB0X2pzb24YBCABKAlSEHdyaXRlUmVjZWlwdEpzb24SOgoH",
+            "cmVzdWx0cxgFIAMoCzIgLnVkYi5lbnRpdHkudjEuQnVsa0Nhc0l0ZW1SZXN1",
+            "bHRSB3Jlc3VsdHMi/wEKEUJ1bGtVcHNlcnRSZXF1ZXN0EjcKB2NvbnRleHQY",
+            "ASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0",
+            "EiEKDG1lc3NhZ2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUSIQoMcmVjb3Jk",
+            "c19qc29uGAMgAygMUgtyZWNvcmRzSnNvbhInCg9jb25mbGljdF9maWVsZHMY",
+            "BCADKAlSDmNvbmZsaWN0RmllbGRzEicKD2lkZW1wb3RlbmN5X2tleRgFIAEo",
+            "CVIOaWRlbXBvdGVuY3lLZXkSGQoIYmF0Y2hfaWQYBiABKAlSB2JhdGNoSWQi",
+            "4QIKEkJ1bGtVcHNlcnRSZXNwb25zZRIZCghiYXRjaF9pZBgBIAEoCVIHYmF0",
+            "Y2hJZBIbCglyb3dfY291bnQYAiABKA1SCHJvd0NvdW50EiMKDWFmZmVjdGVk",
+            "X3Jvd3MYAyABKANSDGFmZmVjdGVkUm93cxIfCgtrZXlzX3NoYTI1NhgEIAEo",
+            "CVIKa2V5c1NoYTI1NhIbCglmaXJzdF9rZXkYBSABKAlSCGZpcnN0S2V5EhkK",
+            "CGxhc3Rfa2V5GAYgASgJUgdsYXN0S2V5EiwKEndyaXRlX3JlY2VpcHRfanNv",
+            "bhgHIAEoCVIQd3JpdGVSZWNlaXB0SnNvbhInCg9zdGF0ZW1lbnRfY291bnQY",
+            "CCABKA1SDnN0YXRlbWVudENvdW50EhkKCGV2ZW50X2lkGAkgASgJUgdldmVu",
+            "dElkEiMKDXdhc19kdXBsaWNhdGUYCiABKAhSDHdhc0R1cGxpY2F0ZUK1AQoR",
+            "Y29tLnVkYi5lbnRpdHkudjFCD1JlbGF0aW9uYWxQcm90b1ABWjlnaXRodWIu",
+            "Y29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50",
+            "aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeIC",
+            "GVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFi",
+            "BnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -118,7 +133,7 @@ namespace Udb.Entity.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CacheOptions), global::Udb.Entity.V1.CacheOptions.Parser, new[]{ "BypassRead", "BypassWrite", "TtlSeconds" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Row), global::Udb.Entity.V1.Row.Parser, new[]{ "Fields" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.RecordSet), global::Udb.Entity.V1.RecordSet.Parser, new[]{ "RecordsJson", "Rows", "NextPageToken", "RecordRevisions", "HasMore", "ExactTotal", "RedactedFields" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.SelectRequest), global::Udb.Entity.V1.SelectRequest.Parser, new[]{ "Context", "MessageType", "Filter", "Fields", "Limit", "PageToken", "Sort", "Cache", "IncludeRevision", "IncludeTotal" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.SelectRequest), global::Udb.Entity.V1.SelectRequest.Parser, new[]{ "Context", "MessageType", "Filter", "Fields", "Limit", "PageToken", "Sort", "Cache", "IncludeRevision", "IncludeTotal", "IncludeDeleted" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpsertRequest), global::Udb.Entity.V1.UpsertRequest.Parser, new[]{ "Context", "MessageType", "RecordJson", "Payload", "ConflictFields", "ReturnRecord", "Cache", "IdempotencyKey", "Expected", "LockName", "FencingToken" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DeleteRequest), global::Udb.Entity.V1.DeleteRequest.Parser, new[]{ "Context", "MessageType", "Filter", "IdempotencyKey", "Expected", "ExpectedRevision", "LockName", "FencingToken", "RequireAffected" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpdateRequest), global::Udb.Entity.V1.UpdateRequest.Parser, new[]{ "Context", "MessageType", "Filter", "Changes", "Expected", "Increments", "IdempotencyKey", "ReturnRecord", "ExpectedRevision", "LockName", "FencingToken", "RequireAffected" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpdateRequest.Types.Increment), global::Udb.Entity.V1.UpdateRequest.Types.Increment.Parser, new[]{ "Column", "Delta" }, null, null, null, null)}),
@@ -126,7 +141,9 @@ namespace Udb.Entity.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.BulkCasItem), global::Udb.Entity.V1.BulkCasItem.Parser, new[]{ "Filter", "Changes", "ExpectedRevision", "Expected", "Increments" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.BulkCasRequest), global::Udb.Entity.V1.BulkCasRequest.Parser, new[]{ "Context", "MessageType", "Items", "IdempotencyKey", "MaxRows" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.BulkCasItemResult), global::Udb.Entity.V1.BulkCasItemResult.Parser, new[]{ "Matched", "Changed", "Conflicted", "Revision" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.BulkCasResponse), global::Udb.Entity.V1.BulkCasResponse.Parser, new[]{ "Matched", "Changed", "Conflicted", "WriteReceiptJson", "Results" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.BulkCasResponse), global::Udb.Entity.V1.BulkCasResponse.Parser, new[]{ "Matched", "Changed", "Conflicted", "WriteReceiptJson", "Results" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.BulkUpsertRequest), global::Udb.Entity.V1.BulkUpsertRequest.Parser, new[]{ "Context", "MessageType", "RecordsJson", "ConflictFields", "IdempotencyKey", "BatchId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.BulkUpsertResponse), global::Udb.Entity.V1.BulkUpsertResponse.Parser, new[]{ "BatchId", "RowCount", "AffectedRows", "KeysSha256", "FirstKey", "LastKey", "WriteReceiptJson", "StatementCount", "EventId", "WasDuplicate" }, null, null, null, null)
           }));
     }
     #endregion
@@ -1313,6 +1330,7 @@ namespace Udb.Entity.V1 {
       cache_ = other.cache_ != null ? other.cache_.Clone() : null;
       includeRevision_ = other.includeRevision_;
       includeTotal_ = other.includeTotal_;
+      includeDeleted_ = other.includeDeleted_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1449,6 +1467,29 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "include_deleted" field.</summary>
+    public const int IncludeDeletedFieldNumber = 11;
+    private bool includeDeleted_;
+    /// <summary>
+    /// Also return soft-deleted rows. Each returned row carries the entity's own
+    /// soft-delete column (for example `deleted_at`), non-null on a deleted row,
+    /// which the broker adds to an explicit `fields` list when it is missing.
+    /// Needs scope `udb:deleted:read`; without it the read is refused with
+    /// PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+    /// without soft delete refuses it with INVALID_ARGUMENT naming this field.
+    /// Every such read is written to the audit log (tenant, actor, entity, row
+    /// count) before its rows are returned; it stays inside the caller's tenant
+    /// and project, and it is never answered from or stored in the read cache.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool IncludeDeleted {
+      get { return includeDeleted_; }
+      set {
+        includeDeleted_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1474,6 +1515,7 @@ namespace Udb.Entity.V1 {
       if (!object.Equals(Cache, other.Cache)) return false;
       if (IncludeRevision != other.IncludeRevision) return false;
       if (IncludeTotal != other.IncludeTotal) return false;
+      if (IncludeDeleted != other.IncludeDeleted) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1491,6 +1533,7 @@ namespace Udb.Entity.V1 {
       if (cache_ != null) hash ^= Cache.GetHashCode();
       if (IncludeRevision != false) hash ^= IncludeRevision.GetHashCode();
       if (IncludeTotal != false) hash ^= IncludeTotal.GetHashCode();
+      if (IncludeDeleted != false) hash ^= IncludeDeleted.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1543,6 +1586,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(80);
         output.WriteBool(IncludeTotal);
       }
+      if (IncludeDeleted != false) {
+        output.WriteRawTag(88);
+        output.WriteBool(IncludeDeleted);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1587,6 +1634,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(80);
         output.WriteBool(IncludeTotal);
       }
+      if (IncludeDeleted != false) {
+        output.WriteRawTag(88);
+        output.WriteBool(IncludeDeleted);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1621,6 +1672,9 @@ namespace Udb.Entity.V1 {
         size += 1 + 1;
       }
       if (IncludeTotal != false) {
+        size += 1 + 1;
+      }
+      if (IncludeDeleted != false) {
         size += 1 + 1;
       }
       if (_unknownFields != null) {
@@ -1669,6 +1723,9 @@ namespace Udb.Entity.V1 {
       }
       if (other.IncludeTotal != false) {
         IncludeTotal = other.IncludeTotal;
+      }
+      if (other.IncludeDeleted != false) {
+        IncludeDeleted = other.IncludeDeleted;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1738,6 +1795,10 @@ namespace Udb.Entity.V1 {
             IncludeTotal = input.ReadBool();
             break;
           }
+          case 88: {
+            IncludeDeleted = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -1804,6 +1865,10 @@ namespace Udb.Entity.V1 {
           }
           case 80: {
             IncludeTotal = input.ReadBool();
+            break;
+          }
+          case 88: {
+            IncludeDeleted = input.ReadBool();
             break;
           }
         }
@@ -5700,6 +5765,984 @@ namespace Udb.Entity.V1 {
           }
           case 42: {
             results_.AddEntriesFrom(ref input, _repeated_results_codec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Audited bulk load: write a batch of whole rows to ONE table in ONE write
+  /// transaction — every row is stored or none is. Built for large reference
+  /// data (millions of rows sent as many batches). Each row goes through the
+  /// same validation, tenant/project scoping, encryption and RLS context as a
+  /// single Upsert; what changes is the cost per row:
+  ///   * rows are written with multi-row INSERT … ON CONFLICT statements
+  ///     (as many rows per statement as PostgreSQL's 65535-parameter limit
+  ///     allows), not one statement per row;
+  ///   * the batch emits ONE change event (operation `bulk_upsert`) that
+  ///     summarises it, not one event per row, and ONE audit record with the
+  ///     row count;
+  ///   * projection tasks for the batch's rows are enqueued with one statement;
+  ///   * the rate limiter charges ceil(rows / UDB_BULK_UPSERT_ROWS_PER_RATE_UNIT)
+  ///     units for the batch instead of one per row.
+  /// Splitting a large load into batches is the client's job; the SDK bulk
+  /// helpers do it. See docs/integration.md "Loading large reference data".
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class BulkUpsertRequest : pb::IMessage<BulkUpsertRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<BulkUpsertRequest> _parser = new pb::MessageParser<BulkUpsertRequest>(() => new BulkUpsertRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<BulkUpsertRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Entity.V1.RelationalReflection.Descriptor.MessageTypes[13]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public BulkUpsertRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public BulkUpsertRequest(BulkUpsertRequest other) : this() {
+      context_ = other.context_ != null ? other.context_.Clone() : null;
+      messageType_ = other.messageType_;
+      recordsJson_ = other.recordsJson_.Clone();
+      conflictFields_ = other.conflictFields_.Clone();
+      idempotencyKey_ = other.idempotencyKey_;
+      batchId_ = other.batchId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public BulkUpsertRequest Clone() {
+      return new BulkUpsertRequest(this);
+    }
+
+    /// <summary>Field number for the "context" field.</summary>
+    public const int ContextFieldNumber = 1;
+    private global::Udb.Entity.V1.RequestContext context_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.RequestContext Context {
+      get { return context_; }
+      set {
+        context_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "message_type" field.</summary>
+    public const int MessageTypeFieldNumber = 2;
+    private string messageType_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string MessageType {
+      get { return messageType_; }
+      set {
+        messageType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "records_json" field.</summary>
+    public const int RecordsJsonFieldNumber = 3;
+    private static readonly pb::FieldCodec<pb::ByteString> _repeated_recordsJson_codec
+        = pb::FieldCodec.ForBytes(26);
+    private readonly pbc::RepeatedField<pb::ByteString> recordsJson_ = new pbc::RepeatedField<pb::ByteString>();
+    /// <summary>
+    /// One JSON object per row, in the exact form of UpsertRequest.record_json.
+    /// Every row of a batch must carry the same set of fields (send null for an
+    /// empty value); a row with a different set is refused with
+    /// `UDB_BULK_ROW_SHAPE_MISMATCH`. Two rows with the same conflict key are
+    /// refused with `UDB_BULK_DUPLICATE_KEY`. More rows than the broker's
+    /// `UDB_BULK_UPSERT_MAX_ROWS` (default 10000) is refused with
+    /// `UDB_BULK_BATCH_TOO_LARGE`. The whole request must also fit the gRPC
+    /// message limit (`UDB_GRPC_MAX_MESSAGE_BYTES`, default 10 MiB).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<pb::ByteString> RecordsJson {
+      get { return recordsJson_; }
+    }
+
+    /// <summary>Field number for the "conflict_fields" field.</summary>
+    public const int ConflictFieldsFieldNumber = 4;
+    private static readonly pb::FieldCodec<string> _repeated_conflictFields_codec
+        = pb::FieldCodec.ForString(34);
+    private readonly pbc::RepeatedField<string> conflictFields_ = new pbc::RepeatedField<string>();
+    /// <summary>
+    /// Conflict target, as UpsertRequest.conflict_fields (empty = primary key).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> ConflictFields {
+      get { return conflictFields_; }
+    }
+
+    /// <summary>Field number for the "idempotency_key" field.</summary>
+    public const int IdempotencyKeyFieldNumber = 5;
+    private string idempotencyKey_ = "";
+    /// <summary>
+    /// Optional whole-batch idempotency: a retry with the same key and the same
+    /// batch returns the original response with was_duplicate=true and writes
+    /// nothing; the same key with a different batch is refused with
+    /// `UDB_IDEMPOTENCY_REUSE`.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string IdempotencyKey {
+      get { return idempotencyKey_; }
+      set {
+        idempotencyKey_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "batch_id" field.</summary>
+    public const int BatchIdFieldNumber = 6;
+    private string batchId_ = "";
+    /// <summary>
+    /// Optional caller label for the batch (for example
+    /// "countries-2026-11/0007"), carried in the change event and the audit
+    /// record. Empty = the broker assigns a UUID. At most 128 characters, no
+    /// whitespace or control characters.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string BatchId {
+      get { return batchId_; }
+      set {
+        batchId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as BulkUpsertRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(BulkUpsertRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Context, other.Context)) return false;
+      if (MessageType != other.MessageType) return false;
+      if(!recordsJson_.Equals(other.recordsJson_)) return false;
+      if(!conflictFields_.Equals(other.conflictFields_)) return false;
+      if (IdempotencyKey != other.IdempotencyKey) return false;
+      if (BatchId != other.BatchId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (context_ != null) hash ^= Context.GetHashCode();
+      if (MessageType.Length != 0) hash ^= MessageType.GetHashCode();
+      hash ^= recordsJson_.GetHashCode();
+      hash ^= conflictFields_.GetHashCode();
+      if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (BatchId.Length != 0) hash ^= BatchId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (context_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Context);
+      }
+      if (MessageType.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(MessageType);
+      }
+      recordsJson_.WriteTo(output, _repeated_recordsJson_codec);
+      conflictFields_.WriteTo(output, _repeated_conflictFields_codec);
+      if (IdempotencyKey.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(IdempotencyKey);
+      }
+      if (BatchId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(BatchId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (context_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Context);
+      }
+      if (MessageType.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(MessageType);
+      }
+      recordsJson_.WriteTo(ref output, _repeated_recordsJson_codec);
+      conflictFields_.WriteTo(ref output, _repeated_conflictFields_codec);
+      if (IdempotencyKey.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(IdempotencyKey);
+      }
+      if (BatchId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(BatchId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (context_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Context);
+      }
+      if (MessageType.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(MessageType);
+      }
+      size += recordsJson_.CalculateSize(_repeated_recordsJson_codec);
+      size += conflictFields_.CalculateSize(_repeated_conflictFields_codec);
+      if (IdempotencyKey.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
+      }
+      if (BatchId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(BatchId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(BulkUpsertRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.context_ != null) {
+        if (context_ == null) {
+          Context = new global::Udb.Entity.V1.RequestContext();
+        }
+        Context.MergeFrom(other.Context);
+      }
+      if (other.MessageType.Length != 0) {
+        MessageType = other.MessageType;
+      }
+      recordsJson_.Add(other.recordsJson_);
+      conflictFields_.Add(other.conflictFields_);
+      if (other.IdempotencyKey.Length != 0) {
+        IdempotencyKey = other.IdempotencyKey;
+      }
+      if (other.BatchId.Length != 0) {
+        BatchId = other.BatchId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (context_ == null) {
+              Context = new global::Udb.Entity.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+          case 18: {
+            MessageType = input.ReadString();
+            break;
+          }
+          case 26: {
+            recordsJson_.AddEntriesFrom(input, _repeated_recordsJson_codec);
+            break;
+          }
+          case 34: {
+            conflictFields_.AddEntriesFrom(input, _repeated_conflictFields_codec);
+            break;
+          }
+          case 42: {
+            IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 50: {
+            BatchId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (context_ == null) {
+              Context = new global::Udb.Entity.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+          case 18: {
+            MessageType = input.ReadString();
+            break;
+          }
+          case 26: {
+            recordsJson_.AddEntriesFrom(ref input, _repeated_recordsJson_codec);
+            break;
+          }
+          case 34: {
+            conflictFields_.AddEntriesFrom(ref input, _repeated_conflictFields_codec);
+            break;
+          }
+          case 42: {
+            IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 50: {
+            BatchId = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class BulkUpsertResponse : pb::IMessage<BulkUpsertResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<BulkUpsertResponse> _parser = new pb::MessageParser<BulkUpsertResponse>(() => new BulkUpsertResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<BulkUpsertResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Entity.V1.RelationalReflection.Descriptor.MessageTypes[14]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public BulkUpsertResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public BulkUpsertResponse(BulkUpsertResponse other) : this() {
+      batchId_ = other.batchId_;
+      rowCount_ = other.rowCount_;
+      affectedRows_ = other.affectedRows_;
+      keysSha256_ = other.keysSha256_;
+      firstKey_ = other.firstKey_;
+      lastKey_ = other.lastKey_;
+      writeReceiptJson_ = other.writeReceiptJson_;
+      statementCount_ = other.statementCount_;
+      eventId_ = other.eventId_;
+      wasDuplicate_ = other.wasDuplicate_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public BulkUpsertResponse Clone() {
+      return new BulkUpsertResponse(this);
+    }
+
+    /// <summary>Field number for the "batch_id" field.</summary>
+    public const int BatchIdFieldNumber = 1;
+    private string batchId_ = "";
+    /// <summary>
+    /// The batch label: the request's batch_id, or the UUID the broker assigned.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string BatchId {
+      get { return batchId_; }
+      set {
+        batchId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "row_count" field.</summary>
+    public const int RowCountFieldNumber = 2;
+    private uint rowCount_;
+    /// <summary>
+    /// Rows in the request.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint RowCount {
+      get { return rowCount_; }
+      set {
+        rowCount_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "affected_rows" field.</summary>
+    public const int AffectedRowsFieldNumber = 3;
+    private long affectedRows_;
+    /// <summary>
+    /// Rows inserted or updated. Lower than row_count only when the table's
+    /// conflict action is DO NOTHING and some rows were already present.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long AffectedRows {
+      get { return affectedRows_; }
+      set {
+        affectedRows_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "keys_sha256" field.</summary>
+    public const int KeysSha256FieldNumber = 4;
+    private string keysSha256_ = "";
+    /// <summary>
+    /// SHA-256 (hex) over the batch's conflict keys in request order: the same
+    /// value the change event and the audit record carry.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string KeysSha256 {
+      get { return keysSha256_; }
+      set {
+        keysSha256_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "first_key" field.</summary>
+    public const int FirstKeyFieldNumber = 5;
+    private string firstKey_ = "";
+    /// <summary>
+    /// First and last conflict key of the batch, in request order. Empty when a
+    /// key column is PII, encrypted or masked in logs (only keys_sha256 is sent).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string FirstKey {
+      get { return firstKey_; }
+      set {
+        firstKey_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "last_key" field.</summary>
+    public const int LastKeyFieldNumber = 6;
+    private string lastKey_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string LastKey {
+      get { return lastKey_; }
+      set {
+        lastKey_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "write_receipt_json" field.</summary>
+    public const int WriteReceiptJsonFieldNumber = 7;
+    private string writeReceiptJson_ = "";
+    /// <summary>
+    /// JSON-encoded WriteReceipt for read-your-writes fencing over the batch.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string WriteReceiptJson {
+      get { return writeReceiptJson_; }
+      set {
+        writeReceiptJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "statement_count" field.</summary>
+    public const int StatementCountFieldNumber = 8;
+    private uint statementCount_;
+    /// <summary>
+    /// SQL statements the broker ran inside the batch's transaction (row
+    /// writes plus revision, projection, outbox and idempotency bookkeeping).
+    /// Grows with ceil(rows * columns / 65535), not with rows.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint StatementCount {
+      get { return statementCount_; }
+      set {
+        statementCount_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 9;
+    private string eventId_ = "";
+    /// <summary>
+    /// Id of the batch's change event; empty when the table emits no change
+    /// events (no cdc_topic, or CDC delivery disabled).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "was_duplicate" field.</summary>
+    public const int WasDuplicateFieldNumber = 10;
+    private bool wasDuplicate_;
+    /// <summary>
+    /// True when this response replays an earlier batch with the same
+    /// idempotency_key; nothing was written by this call.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool WasDuplicate {
+      get { return wasDuplicate_; }
+      set {
+        wasDuplicate_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as BulkUpsertResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(BulkUpsertResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (BatchId != other.BatchId) return false;
+      if (RowCount != other.RowCount) return false;
+      if (AffectedRows != other.AffectedRows) return false;
+      if (KeysSha256 != other.KeysSha256) return false;
+      if (FirstKey != other.FirstKey) return false;
+      if (LastKey != other.LastKey) return false;
+      if (WriteReceiptJson != other.WriteReceiptJson) return false;
+      if (StatementCount != other.StatementCount) return false;
+      if (EventId != other.EventId) return false;
+      if (WasDuplicate != other.WasDuplicate) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (BatchId.Length != 0) hash ^= BatchId.GetHashCode();
+      if (RowCount != 0) hash ^= RowCount.GetHashCode();
+      if (AffectedRows != 0L) hash ^= AffectedRows.GetHashCode();
+      if (KeysSha256.Length != 0) hash ^= KeysSha256.GetHashCode();
+      if (FirstKey.Length != 0) hash ^= FirstKey.GetHashCode();
+      if (LastKey.Length != 0) hash ^= LastKey.GetHashCode();
+      if (WriteReceiptJson.Length != 0) hash ^= WriteReceiptJson.GetHashCode();
+      if (StatementCount != 0) hash ^= StatementCount.GetHashCode();
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (WasDuplicate != false) hash ^= WasDuplicate.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (BatchId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(BatchId);
+      }
+      if (RowCount != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(RowCount);
+      }
+      if (AffectedRows != 0L) {
+        output.WriteRawTag(24);
+        output.WriteInt64(AffectedRows);
+      }
+      if (KeysSha256.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(KeysSha256);
+      }
+      if (FirstKey.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(FirstKey);
+      }
+      if (LastKey.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(LastKey);
+      }
+      if (WriteReceiptJson.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(WriteReceiptJson);
+      }
+      if (StatementCount != 0) {
+        output.WriteRawTag(64);
+        output.WriteUInt32(StatementCount);
+      }
+      if (EventId.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(EventId);
+      }
+      if (WasDuplicate != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(WasDuplicate);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (BatchId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(BatchId);
+      }
+      if (RowCount != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(RowCount);
+      }
+      if (AffectedRows != 0L) {
+        output.WriteRawTag(24);
+        output.WriteInt64(AffectedRows);
+      }
+      if (KeysSha256.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(KeysSha256);
+      }
+      if (FirstKey.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(FirstKey);
+      }
+      if (LastKey.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(LastKey);
+      }
+      if (WriteReceiptJson.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(WriteReceiptJson);
+      }
+      if (StatementCount != 0) {
+        output.WriteRawTag(64);
+        output.WriteUInt32(StatementCount);
+      }
+      if (EventId.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(EventId);
+      }
+      if (WasDuplicate != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(WasDuplicate);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (BatchId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(BatchId);
+      }
+      if (RowCount != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(RowCount);
+      }
+      if (AffectedRows != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(AffectedRows);
+      }
+      if (KeysSha256.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(KeysSha256);
+      }
+      if (FirstKey.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(FirstKey);
+      }
+      if (LastKey.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(LastKey);
+      }
+      if (WriteReceiptJson.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(WriteReceiptJson);
+      }
+      if (StatementCount != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(StatementCount);
+      }
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (WasDuplicate != false) {
+        size += 1 + 1;
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(BulkUpsertResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.BatchId.Length != 0) {
+        BatchId = other.BatchId;
+      }
+      if (other.RowCount != 0) {
+        RowCount = other.RowCount;
+      }
+      if (other.AffectedRows != 0L) {
+        AffectedRows = other.AffectedRows;
+      }
+      if (other.KeysSha256.Length != 0) {
+        KeysSha256 = other.KeysSha256;
+      }
+      if (other.FirstKey.Length != 0) {
+        FirstKey = other.FirstKey;
+      }
+      if (other.LastKey.Length != 0) {
+        LastKey = other.LastKey;
+      }
+      if (other.WriteReceiptJson.Length != 0) {
+        WriteReceiptJson = other.WriteReceiptJson;
+      }
+      if (other.StatementCount != 0) {
+        StatementCount = other.StatementCount;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.WasDuplicate != false) {
+        WasDuplicate = other.WasDuplicate;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            BatchId = input.ReadString();
+            break;
+          }
+          case 16: {
+            RowCount = input.ReadUInt32();
+            break;
+          }
+          case 24: {
+            AffectedRows = input.ReadInt64();
+            break;
+          }
+          case 34: {
+            KeysSha256 = input.ReadString();
+            break;
+          }
+          case 42: {
+            FirstKey = input.ReadString();
+            break;
+          }
+          case 50: {
+            LastKey = input.ReadString();
+            break;
+          }
+          case 58: {
+            WriteReceiptJson = input.ReadString();
+            break;
+          }
+          case 64: {
+            StatementCount = input.ReadUInt32();
+            break;
+          }
+          case 74: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 80: {
+            WasDuplicate = input.ReadBool();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            BatchId = input.ReadString();
+            break;
+          }
+          case 16: {
+            RowCount = input.ReadUInt32();
+            break;
+          }
+          case 24: {
+            AffectedRows = input.ReadInt64();
+            break;
+          }
+          case 34: {
+            KeysSha256 = input.ReadString();
+            break;
+          }
+          case 42: {
+            FirstKey = input.ReadString();
+            break;
+          }
+          case 50: {
+            LastKey = input.ReadString();
+            break;
+          }
+          case 58: {
+            WriteReceiptJson = input.ReadString();
+            break;
+          }
+          case 64: {
+            StatementCount = input.ReadUInt32();
+            break;
+          }
+          case 74: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 80: {
+            WasDuplicate = input.ReadBool();
             break;
           }
         }

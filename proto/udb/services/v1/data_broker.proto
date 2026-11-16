@@ -119,6 +119,17 @@ service DataBroker {
     option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "bulk_cas" rest_operation_id: "bulkCas" };
   }
 
+  // Audited bulk load: write one batch of whole rows to one table in ONE
+  // write transaction (all rows or none), with multi-row statements, ONE
+  // summarising change event, ONE audit record and a size-aware rate-limit
+  // charge. Authorized per table exactly like BatchUpsert's items (the
+  // `Upsert` action; shared tables need a platform admin or the global-write
+  // scope). Every row is validated, scoped and encrypted like a single Upsert.
+  rpc BulkUpsert(udb.entity.v1.BulkUpsertRequest) returns (udb.entity.v1.BulkUpsertResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "bulk_upsert" rest_operation_id: "bulkUpsert" };
+  }
+
   // ── Vector ──────────────────────────────────────────────────────────────────
   rpc VectorSearch(udb.entity.v1.VectorSearchRequest) returns (udb.entity.v1.VectorSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;

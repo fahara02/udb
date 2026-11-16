@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.21 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.22 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,7 +18,7 @@ metadata.
 ## Install
 
 ```powershell
-dotnet add package Udb.Client --version 0.6.21
+dotnet add package Udb.Client --version 0.6.22
 ```
 
 Runtime: .NET 8
@@ -26,7 +26,7 @@ Runtime: .NET 8
 The companion CLI tool is `Udb.Cli`:
 
 ```powershell
-dotnet tool install --global Udb.Cli --version 0.6.21
+dotnet tool install --global Udb.Cli --version 0.6.22
 ```
 
 The tool exposes `udb` and resolves the version-matched UDB binary.
@@ -94,6 +94,39 @@ await using var project = UdbProject.Open(new UdbProjectConfig
     TlsClientCertificate = UdbChannel.LoadClientCertificate("/etc/udb/client.pem", "/etc/udb/client.key"),
 });
 ```
+
+## A Job That Acts For A User: Delegated Job Tokens
+
+A durable job (an export, a report, a nightly sync) that must act for the user
+who started it, after that user's short-lived token expired, exchanges the
+user's token for a delegated job token. Call it on a client carrying the
+SERVICE's own bearer (a service account whose grant holds `udb:token:delegate`,
+in the user's tenant):
+
+```csharp
+using Grpc.Core;
+using Udb.Client;
+
+await using var auth = new UdbAuthClient("http://localhost:50051", serviceMeta);
+try
+{
+    // ttlSeconds 0 = the broker's maximum (24 hours by default).
+    DelegatedJobToken job = await auth.ExchangeTokenForJobAsync(
+        userAccessToken, purpose: "export", jobId: "export-42");
+    // Run the job's calls with job.AccessToken; job.Subject is the user,
+    // job.Actor the service.
+}
+catch (RpcException e) when (UdbAuthClient.IsTokenRevoked(e))
+{
+    // UDB_TOKEN_REVOKED: the user, the token or the service's grant was revoked: stop.
+}
+```
+
+The token has no refresh token and cannot be exchanged again. A job call refused
+with `UdbAuthClient.IsTokenExpired(e)` (`UDB_TOKEN_EXPIRED`) needs a fresh user
+token; `IsTokenRevoked(e)` (`UDB_TOKEN_REVOKED`) means stop. Both read the
+broker's typed reason (from an `RpcException` or a generated client's
+`UdbRpcException`), never the message text.
 
 ## Consistency, Idempotency Replay, And Platform Services
 

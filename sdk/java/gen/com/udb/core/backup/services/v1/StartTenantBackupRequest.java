@@ -33,6 +33,7 @@ private static final long serialVersionUID = 0L;
     objectBackend_ = "";
     objectBucket_ = "";
     metadataJson_ = "";
+    scope_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -267,6 +268,36 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SCOPE_FIELD_NUMBER = 6;
+  private int scope_ = 0;
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+   * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+   * journaled under `tenant_id`.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+   * @return The enum numeric value on the wire for scope.
+   */
+  @java.lang.Override public int getScopeValue() {
+    return scope_;
+  }
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+   * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+   * journaled under `tenant_id`.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+   * @return The scope.
+   */
+  @java.lang.Override public com.udb.core.backup.services.v1.BackupScope getScope() {
+    com.udb.core.backup.services.v1.BackupScope result = com.udb.core.backup.services.v1.BackupScope.forNumber(scope_);
+    return result == null ? com.udb.core.backup.services.v1.BackupScope.UNRECOGNIZED : result;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -296,6 +327,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 5, metadataJson_);
     }
+    if (scope_ != com.udb.core.backup.services.v1.BackupScope.BACKUP_SCOPE_UNSPECIFIED.getNumber()) {
+      output.writeEnum(6, scope_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -319,6 +353,10 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(5, metadataJson_);
+    }
+    if (scope_ != com.udb.core.backup.services.v1.BackupScope.BACKUP_SCOPE_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(6, scope_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -345,6 +383,7 @@ private static final long serialVersionUID = 0L;
         .equals(other.getObjectBucket())) return false;
     if (!getMetadataJson()
         .equals(other.getMetadataJson())) return false;
+    if (scope_ != other.scope_) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -366,6 +405,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getObjectBucket().hashCode();
     hash = (37 * hash) + METADATA_JSON_FIELD_NUMBER;
     hash = (53 * hash) + getMetadataJson().hashCode();
+    hash = (37 * hash) + SCOPE_FIELD_NUMBER;
+    hash = (53 * hash) + scope_;
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -502,6 +543,7 @@ private static final long serialVersionUID = 0L;
       objectBackend_ = "";
       objectBucket_ = "";
       metadataJson_ = "";
+      scope_ = 0;
       return this;
     }
 
@@ -550,6 +592,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000010) != 0)) {
         result.metadataJson_ = metadataJson_;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.scope_ = scope_;
+      }
     }
 
     @java.lang.Override
@@ -588,6 +633,9 @@ private static final long serialVersionUID = 0L;
         metadataJson_ = other.metadataJson_;
         bitField0_ |= 0x00000010;
         onChanged();
+      }
+      if (other.scope_ != 0) {
+        setScopeValue(other.getScopeValue());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -640,6 +688,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 42
+            case 48: {
+              scope_ = input.readEnum();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 48
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1073,6 +1126,87 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       metadataJson_ = value;
       bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private int scope_ = 0;
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+     * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+     * journaled under `tenant_id`.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+     * @return The enum numeric value on the wire for scope.
+     */
+    @java.lang.Override public int getScopeValue() {
+      return scope_;
+    }
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+     * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+     * journaled under `tenant_id`.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+     * @param value The enum numeric value on the wire for scope to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScopeValue(int value) {
+      scope_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+     * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+     * journaled under `tenant_id`.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+     * @return The scope.
+     */
+    @java.lang.Override
+    public com.udb.core.backup.services.v1.BackupScope getScope() {
+      com.udb.core.backup.services.v1.BackupScope result = com.udb.core.backup.services.v1.BackupScope.forNumber(scope_);
+      return result == null ? com.udb.core.backup.services.v1.BackupScope.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+     * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+     * journaled under `tenant_id`.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+     * @param value The scope to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScope(com.udb.core.backup.services.v1.BackupScope value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00000020;
+      scope_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+     * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+     * journaled under `tenant_id`.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearScope() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      scope_ = 0;
       onChanged();
       return this;
     }

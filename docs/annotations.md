@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.21 | protocol v1.0.0                                          │
+│    crate v0.6.22 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This guide is for developers defining the data model their app stores in UDB.
@@ -105,6 +105,77 @@ Use field and table security annotations to describe sensitive fields, tenant
 ownership, output behavior, audit expectations, and retention metadata. The
 same descriptor metadata feeds runtime checks, generated manifests, SDK output
 views, and documentation.
+
+## Projecting Only Some Rows
+
+A secondary store (a `vector_store`, `document_store`, `graph_store` or
+`data_store`) normally receives every row of the table. Often you want only
+some of them. A terminology table, for example, keeps every version of every
+concept, but semantic search should only see the ones that are published and
+current. Set `projection_filter` on the store:
+
+```proto
+message Concept {
+  option (udb.core.common.v1.table) = {
+    schema_name: "terms" table_name: "concepts" is_table: true
+  };
+  option (udb.core.common.v1.vector_store) = {
+    backend: VECTOR_BACKEND_QDRANT
+    collection_name: "concepts"
+    dimension: 768
+    projection_filter: "state = 'PUBLISHED' AND superseded_at IS NULL"
+  };
+  // ... id, state, superseded_at, embedding ...
+}
+```
+
+On a `data_store`, `projection_filter` is a typed field too (or the
+`projection_filter` key of its `options` map, but not both).
+
+What UDB then does with each write:
+
+- A row that matches is projected as usual.
+- A row that does not match is not written to the store. If the store already
+  holds it (the row was PUBLISHED and is now RETIRED, or `superseded_at` was
+  just set), it is removed.
+- A delete still deletes.
+- Backfill, replay and `udb projection status|backfill` use the same filter:
+  a row outside the filter that is missing from the store is in sync, and one
+  the store still holds is reported as `present_outside_filter` and removed by
+  the repair.
+- Hybrid search over a filtered Qdrant collection (`fts_columns`) applies the
+  filter to its Postgres full-text leg as well.
+
+The filter is a small expression over the entity's own columns, compared with
+literals:
+
+| You can write | Example |
+|---|---|
+| comparisons `=`, `<>` (or `!=`), `<`, `<=`, `>`, `>=` | `priority >= 3` |
+| `IS NULL`, `IS NOT NULL` | `superseded_at IS NULL` |
+| `IN (...)`, `NOT IN (...)` | `state IN ('PUBLISHED', 'REVIEWED')` |
+| `AND`, `OR`, `NOT`, parentheses | `NOT (archived = TRUE OR priority < 1)` |
+| literals: `'text'` (`''` for a quote), numbers, `TRUE`, `FALSE` | `title <> 'it''s'` |
+
+Columns can be named by proto field or column name. Nothing else is accepted:
+no functions, no arithmetic, no comparing two columns, and no `= NULL` (write
+`IS NULL`). Text, uuid, number and boolean columns can be compared; date/time,
+JSON, array, bytes and vector columns support only `IS [NOT] NULL`; encrypted
+columns cannot be used at all, because the projection worker sees only their
+ciphertext. A NULL column never matches a comparison (SQL rules: `state <>
+'DRAFT'` is not true when `state` is NULL).
+
+UDB checks the filter when it builds the catalog. An unknown column, a literal
+of the wrong type (`priority = 'high'` on an integer column, a value outside a
+column's `enum_values`), a syntax error, or a filter on a ClickHouse projection
+(append-only, so it cannot remove a row that leaves the filter) is a catalog
+error naming the entity, the store and the problem. The catalog manifest
+(`GetCatalogManifest`) shows each projection's filter in its options, rewritten
+with physical column names.
+
+At runtime, a projected row that lacks a filter column or holds a value of
+another type fails its projection task (visible in the task's error and the
+projection metrics) instead of being projected or dropped by guesswork.
 
 ## Formatting
 

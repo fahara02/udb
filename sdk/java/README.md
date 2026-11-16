@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.21 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.22 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -15,9 +15,9 @@
 gRPC client, attaches UDB metadata, and includes generated request/response
 types for the broker and native control-plane services.
 
-Current manifest version: `0.6.21-SNAPSHOT`
+Current manifest version: `0.6.22-SNAPSHOT`
 
-Release target: `0.6.21`
+Release target: `0.6.22`
 
 Runtime: Java 17+
 
@@ -94,6 +94,35 @@ try (var auth = new UdbAuthClient("localhost:50051", meta)) {
         "");
 }
 ```
+
+## A Job That Acts For A User: Delegated Job Tokens
+
+A durable job (an export, a report, a nightly sync) that must act for the user
+who started it, after that user's short-lived token expired, exchanges the
+user's token for a delegated job token. Call it on a client carrying the
+SERVICE's own bearer (a service account whose grant holds `udb:token:delegate`,
+in the user's tenant):
+
+```java
+import dev.udb.client.DelegatedJobToken;
+import dev.udb.client.UdbAuthClient;
+
+try (var auth = new UdbAuthClient("localhost:50051", serviceMeta)) {
+  // ttlSeconds 0 = the broker's maximum (24 hours by default).
+  DelegatedJobToken job = auth.exchangeTokenForJob(userAccessToken, "export", "export-42", 0);
+  // Run the job's calls with job.accessToken(); job.subject() is the user,
+  // job.actor() the service.
+} catch (io.grpc.StatusRuntimeException e) {
+  if (UdbAuthClient.isTokenRevoked(e)) {
+    // UDB_TOKEN_REVOKED: the user, the token or the service's grant was revoked: stop.
+  }
+}
+```
+
+The token has no refresh token and cannot be exchanged again. A job call refused
+with `UdbAuthClient.isTokenExpired(e)` (`UDB_TOKEN_EXPIRED`) needs a fresh user
+token; `isTokenRevoked(e)` (`UDB_TOKEN_REVOKED`) means stop. Both read the
+broker's typed reason, never the message text.
 
 ## Consistency, Idempotency Replay, And Platform Services
 

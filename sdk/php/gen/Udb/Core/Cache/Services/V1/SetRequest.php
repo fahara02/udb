@@ -36,6 +36,14 @@ class SetRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int64 ttl_seconds = 5 [json_name = "ttlSeconds"];</code>
      */
     protected $ttl_seconds = 0;
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 6 [json_name = "shared"];</code>
+     */
+    protected $shared = false;
 
     /**
      * Constructor.
@@ -49,6 +57,10 @@ class SetRequest extends \Google\Protobuf\Internal\Message
      *     @type string $value
      *     @type int|string $ttl_seconds
      *           0 = use the namespace default TTL (or no expiry if none configured).
+     *     @type bool $shared
+     *           Write the shared namespace (the reserved shared-tenant keyspace every
+     *           tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     *           admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
      * }
      */
     public function __construct($data = NULL) {
@@ -166,6 +178,36 @@ class SetRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt64($var);
         $this->ttl_seconds = $var;
+
+        return $this;
+    }
+
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 6 [json_name = "shared"];</code>
+     * @return bool
+     */
+    public function getShared()
+    {
+        return $this->shared;
+    }
+
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 6 [json_name = "shared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->shared = $var;
 
         return $this;
     }

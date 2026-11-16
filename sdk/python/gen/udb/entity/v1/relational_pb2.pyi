@@ -58,7 +58,7 @@ class RecordSet(_message.Message):
     def __init__(self, records_json: _Optional[_Iterable[bytes]] = ..., rows: _Optional[_Iterable[_Union[Row, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., record_revisions: _Optional[_Iterable[str]] = ..., has_more: bool = ..., exact_total: _Optional[int] = ..., redacted_fields: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SelectRequest(_message.Message):
-    __slots__ = ("context", "message_type", "filter", "fields", "limit", "page_token", "sort", "cache", "include_revision", "include_total")
+    __slots__ = ("context", "message_type", "filter", "fields", "limit", "page_token", "sort", "cache", "include_revision", "include_total", "include_deleted")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
     FILTER_FIELD_NUMBER: _ClassVar[int]
@@ -69,6 +69,7 @@ class SelectRequest(_message.Message):
     CACHE_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_REVISION_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_TOTAL_FIELD_NUMBER: _ClassVar[int]
+    INCLUDE_DELETED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     message_type: str
     filter: _struct_pb2.Struct
@@ -79,7 +80,8 @@ class SelectRequest(_message.Message):
     cache: CacheOptions
     include_revision: bool
     include_total: bool
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., fields: _Optional[_Iterable[str]] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ..., sort: _Optional[_Iterable[_Union[Sort, _Mapping]]] = ..., cache: _Optional[_Union[CacheOptions, _Mapping]] = ..., include_revision: bool = ..., include_total: bool = ...) -> None: ...
+    include_deleted: bool
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., fields: _Optional[_Iterable[str]] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ..., sort: _Optional[_Iterable[_Union[Sort, _Mapping]]] = ..., cache: _Optional[_Union[CacheOptions, _Mapping]] = ..., include_revision: bool = ..., include_total: bool = ..., include_deleted: bool = ...) -> None: ...
 
 class UpsertRequest(_message.Message):
     __slots__ = ("context", "message_type", "record_json", "payload", "conflict_fields", "return_record", "cache", "idempotency_key", "expected", "lock_name", "fencing_token")
@@ -233,3 +235,43 @@ class BulkCasResponse(_message.Message):
     write_receipt_json: str
     results: _containers.RepeatedCompositeFieldContainer[BulkCasItemResult]
     def __init__(self, matched: _Optional[int] = ..., changed: _Optional[int] = ..., conflicted: _Optional[int] = ..., write_receipt_json: _Optional[str] = ..., results: _Optional[_Iterable[_Union[BulkCasItemResult, _Mapping]]] = ...) -> None: ...
+
+class BulkUpsertRequest(_message.Message):
+    __slots__ = ("context", "message_type", "records_json", "conflict_fields", "idempotency_key", "batch_id")
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    RECORDS_JSON_FIELD_NUMBER: _ClassVar[int]
+    CONFLICT_FIELDS_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    BATCH_ID_FIELD_NUMBER: _ClassVar[int]
+    context: _context_pb2.RequestContext
+    message_type: str
+    records_json: _containers.RepeatedScalarFieldContainer[bytes]
+    conflict_fields: _containers.RepeatedScalarFieldContainer[str]
+    idempotency_key: str
+    batch_id: str
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., records_json: _Optional[_Iterable[bytes]] = ..., conflict_fields: _Optional[_Iterable[str]] = ..., idempotency_key: _Optional[str] = ..., batch_id: _Optional[str] = ...) -> None: ...
+
+class BulkUpsertResponse(_message.Message):
+    __slots__ = ("batch_id", "row_count", "affected_rows", "keys_sha256", "first_key", "last_key", "write_receipt_json", "statement_count", "event_id", "was_duplicate")
+    BATCH_ID_FIELD_NUMBER: _ClassVar[int]
+    ROW_COUNT_FIELD_NUMBER: _ClassVar[int]
+    AFFECTED_ROWS_FIELD_NUMBER: _ClassVar[int]
+    KEYS_SHA256_FIELD_NUMBER: _ClassVar[int]
+    FIRST_KEY_FIELD_NUMBER: _ClassVar[int]
+    LAST_KEY_FIELD_NUMBER: _ClassVar[int]
+    WRITE_RECEIPT_JSON_FIELD_NUMBER: _ClassVar[int]
+    STATEMENT_COUNT_FIELD_NUMBER: _ClassVar[int]
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    WAS_DUPLICATE_FIELD_NUMBER: _ClassVar[int]
+    batch_id: str
+    row_count: int
+    affected_rows: int
+    keys_sha256: str
+    first_key: str
+    last_key: str
+    write_receipt_json: str
+    statement_count: int
+    event_id: str
+    was_duplicate: bool
+    def __init__(self, batch_id: _Optional[str] = ..., row_count: _Optional[int] = ..., affected_rows: _Optional[int] = ..., keys_sha256: _Optional[str] = ..., first_key: _Optional[str] = ..., last_key: _Optional[str] = ..., write_receipt_json: _Optional[str] = ..., statement_count: _Optional[int] = ..., event_id: _Optional[str] = ..., was_duplicate: bool = ...) -> None: ...

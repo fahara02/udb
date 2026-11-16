@@ -29,6 +29,14 @@ class DeleteNamespaceRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string confirmation_token = 3 [json_name = "confirmationToken"];</code>
      */
     protected $confirmation_token = '';
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 4 [json_name = "shared"];</code>
+     */
+    protected $shared = false;
 
     /**
      * Constructor.
@@ -41,6 +49,10 @@ class DeleteNamespaceRequest extends \Google\Protobuf\Internal\Message
      *     @type string $confirmation_token
      *           Required explicit confirmation token; an empty token fails closed
      *           (DESTRUCTIVE namespace flush).
+     *     @type bool $shared
+     *           Write the shared namespace (the reserved shared-tenant keyspace every
+     *           tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     *           admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
      * }
      */
     public function __construct($data = NULL) {
@@ -116,6 +128,36 @@ class DeleteNamespaceRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->confirmation_token = $var;
+
+        return $this;
+    }
+
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 4 [json_name = "shared"];</code>
+     * @return bool
+     */
+    public function getShared()
+    {
+        return $this->shared;
+    }
+
+    /**
+     * Write the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+     * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+     *
+     * Generated from protobuf field <code>bool shared = 4 [json_name = "shared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->shared = $var;
 
         return $this;
     }

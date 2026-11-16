@@ -68,6 +68,10 @@ namespace Udb.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.BulkCasResponse> __Marshaller_udb_entity_v1_BulkCasResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.BulkCasResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.BulkUpsertRequest> __Marshaller_udb_entity_v1_BulkUpsertRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.BulkUpsertRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.BulkUpsertResponse> __Marshaller_udb_entity_v1_BulkUpsertResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.BulkUpsertResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.VectorSearchRequest> __Marshaller_udb_entity_v1_VectorSearchRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.VectorSearchRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.VectorSet> __Marshaller_udb_entity_v1_VectorSet = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.VectorSet.Parser));
@@ -341,6 +345,14 @@ namespace Udb.Services.V1 {
         "BulkCas",
         __Marshaller_udb_entity_v1_BulkCasRequest,
         __Marshaller_udb_entity_v1_BulkCasResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.BulkUpsertRequest, global::Udb.Entity.V1.BulkUpsertResponse> __Method_BulkUpsert = new grpc::Method<global::Udb.Entity.V1.BulkUpsertRequest, global::Udb.Entity.V1.BulkUpsertResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "BulkUpsert",
+        __Marshaller_udb_entity_v1_BulkUpsertRequest,
+        __Marshaller_udb_entity_v1_BulkUpsertResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.VectorSearchRequest, global::Udb.Entity.V1.VectorSet> __Method_VectorSearch = new grpc::Method<global::Udb.Entity.V1.VectorSearchRequest, global::Udb.Entity.V1.VectorSet>(
@@ -1057,6 +1069,23 @@ namespace Udb.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.BulkCasResponse> BulkCas(global::Udb.Entity.V1.BulkCasRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Audited bulk load: write one batch of whole rows to one table in ONE
+      /// write transaction (all rows or none), with multi-row statements, ONE
+      /// summarising change event, ONE audit record and a size-aware rate-limit
+      /// charge. Authorized per table exactly like BatchUpsert's items (the
+      /// `Upsert` action; shared tables need a platform admin or the global-write
+      /// scope). Every row is validated, scoped and encrypted like a single Upsert.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.BulkUpsertResponse> BulkUpsert(global::Udb.Entity.V1.BulkUpsertRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -2179,6 +2208,74 @@ namespace Udb.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.BulkCasResponse> BulkCasAsync(global::Udb.Entity.V1.BulkCasRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_BulkCas, null, options, request);
+      }
+      /// <summary>
+      /// Audited bulk load: write one batch of whole rows to one table in ONE
+      /// write transaction (all rows or none), with multi-row statements, ONE
+      /// summarising change event, ONE audit record and a size-aware rate-limit
+      /// charge. Authorized per table exactly like BatchUpsert's items (the
+      /// `Upsert` action; shared tables need a platform admin or the global-write
+      /// scope). Every row is validated, scoped and encrypted like a single Upsert.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.BulkUpsertResponse BulkUpsert(global::Udb.Entity.V1.BulkUpsertRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BulkUpsert(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Audited bulk load: write one batch of whole rows to one table in ONE
+      /// write transaction (all rows or none), with multi-row statements, ONE
+      /// summarising change event, ONE audit record and a size-aware rate-limit
+      /// charge. Authorized per table exactly like BatchUpsert's items (the
+      /// `Upsert` action; shared tables need a platform admin or the global-write
+      /// scope). Every row is validated, scoped and encrypted like a single Upsert.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.BulkUpsertResponse BulkUpsert(global::Udb.Entity.V1.BulkUpsertRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_BulkUpsert, null, options, request);
+      }
+      /// <summary>
+      /// Audited bulk load: write one batch of whole rows to one table in ONE
+      /// write transaction (all rows or none), with multi-row statements, ONE
+      /// summarising change event, ONE audit record and a size-aware rate-limit
+      /// charge. Authorized per table exactly like BatchUpsert's items (the
+      /// `Upsert` action; shared tables need a platform admin or the global-write
+      /// scope). Every row is validated, scoped and encrypted like a single Upsert.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.BulkUpsertResponse> BulkUpsertAsync(global::Udb.Entity.V1.BulkUpsertRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BulkUpsertAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Audited bulk load: write one batch of whole rows to one table in ONE
+      /// write transaction (all rows or none), with multi-row statements, ONE
+      /// summarising change event, ONE audit record and a size-aware rate-limit
+      /// charge. Authorized per table exactly like BatchUpsert's items (the
+      /// `Upsert` action; shared tables need a platform admin or the global-write
+      /// scope). Every row is validated, scoped and encrypted like a single Upsert.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.BulkUpsertResponse> BulkUpsertAsync(global::Udb.Entity.V1.BulkUpsertRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_BulkUpsert, null, options, request);
       }
       /// <summary>
       /// ── Vector ──────────────────────────────────────────────────────────────────
@@ -4837,6 +4934,7 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_Delete, serviceImpl.Delete)
           .AddMethod(__Method_Update, serviceImpl.Update)
           .AddMethod(__Method_BulkCas, serviceImpl.BulkCas)
+          .AddMethod(__Method_BulkUpsert, serviceImpl.BulkUpsert)
           .AddMethod(__Method_VectorSearch, serviceImpl.VectorSearch)
           .AddMethod(__Method_VectorHybridSearch, serviceImpl.VectorHybridSearch)
           .AddMethod(__Method_VectorUpsert, serviceImpl.VectorUpsert)
@@ -4930,6 +5028,7 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_Delete, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.DeleteRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.Delete));
       serviceBinder.AddMethod(__Method_Update, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.UpdateRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.Update));
       serviceBinder.AddMethod(__Method_BulkCas, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.BulkCasRequest, global::Udb.Entity.V1.BulkCasResponse>(serviceImpl.BulkCas));
+      serviceBinder.AddMethod(__Method_BulkUpsert, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.BulkUpsertRequest, global::Udb.Entity.V1.BulkUpsertResponse>(serviceImpl.BulkUpsert));
       serviceBinder.AddMethod(__Method_VectorSearch, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.VectorSearchRequest, global::Udb.Entity.V1.VectorSet>(serviceImpl.VectorSearch));
       serviceBinder.AddMethod(__Method_VectorHybridSearch, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.VectorHybridSearchRequest, global::Udb.Entity.V1.VectorSet>(serviceImpl.VectorHybridSearch));
       serviceBinder.AddMethod(__Method_VectorUpsert, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.VectorUpsertRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.VectorUpsert));

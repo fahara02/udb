@@ -2209,6 +2209,18 @@
   },
   {
     "file": "data_broker.md",
+    "rpc": "BulkUpsert",
+    "service": "DataBroker",
+    "wire_rpc": "DataBroker/BulkUpsert",
+    "api_alias": "bulk_upsert",
+    "operation_id": "bulkUpsert",
+    "op_kind": "MUTATION",
+    "request_msg": "BulkUpsertRequest",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"message_type\": \"<seed:message_type>\", \"records_json\": [ \"eyJyZWNvcmRfaWQiOiJtYW5pZmVzdC1idWxrIiwibG9va3VwX2tleSI6Im1hbmlmZXN0LWJ1bGstbGsiLCJwYXlsb2FkIjoicGVyZiJ9\" ] }`",
+    "notes": "One batch in ONE write tx (all rows or none), one change event and one audit record per batch. `records_json` = base64 JSON rows (here `{\"record_id\":\"manifest-bulk\",\"lookup_key\":\"manifest-bulk-lk\",\"payload\":\"perf\"}`; tenant/project autofilled from the context). `conflict_fields`, `idempotency_key`, `batch_id` optional; capped by `UDB_BULK_UPSERT_MAX_ROWS`."
+  },
+  {
+    "file": "data_broker.md",
     "rpc": "CacheDelete",
     "service": "DataBroker",
     "wire_rpc": "DataBroker/CacheDelete",

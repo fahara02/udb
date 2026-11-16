@@ -24,7 +24,9 @@ import { ProtoSchemas, protoSchemas } from "../protoSchema";
 import { parseExactJson, recordToJson } from "../recordCodec";
 import { structToObject } from "../wkt";
 import { EntityRules, Identity, columnRefusal, copyValue, uniqueRefusal } from "./entityRules";
+import { batchIdOf, batchKeys, checkBatchSize, checkRowShapes, conflictColumns, keysSha256 } from "./bulk";
 import { Row, compare, equal, holds, matches } from "./filter";
+import { JoinEdge as JoinEdgeShape, columnName, joinEdges, joinField, joinMessageTypes, joinRefusal } from "./join";
 import { Policy, loadPolicies } from "./policy";
 import { Refusal, errorKind, refuse, statusOf } from "./refusal";
 
@@ -48,6 +50,20 @@ export interface Fault {
 }
 
 export type { Policy } from "./policy";
+
+/** The scope a Select needs to set `include_deleted`. */
+export const DELETED_READ_SCOPE = "udb:deleted:read";
+
+/** The audit record of one Select that included soft-deleted rows, as the broker
+ *  writes it to its audit log. */
+export interface DeletedRead {
+  tenantId: string;
+  projectId: string;
+  actor: string;
+  messageType: string;
+  table: string;
+  rows: number;
+}
 
 /** One outbox event a committed transaction emitted. */
 export interface FakeEvent {
@@ -141,6 +157,13 @@ function sameDomain(a: Identity, b: Identity): boolean {
   return a.tenantId === b.tenantId && (a.projectId ?? "") === (b.projectId ?? "");
 }
 
+function includeDeletedInvalid(message: string, description: string): Refusal {
+  return refuse(codes.INVALID_ARGUMENT, "", message, {
+    kind: "ERROR_KIND_VALIDATION",
+    field_violations: [{ field: "include_deleted", description }],
+  });
+}
+
 function missingScopeRefusal(scope: string): Refusal {
   return refuse(codes.PERMISSION_DENIED, "UDB_SCOPE_MISSING", `verified identity lacks ${scope}`, {
     reason: "UDB_SCOPE_MISSING",
@@ -230,6 +253,7 @@ export class Fake {
   private server?: grpc.Server;
   private readonly clients: UdbProject[] = [];
   private emitted = 0;
+  private readonly deletedReadLog: DeletedRead[] = [];
   private address = "";
 
   /** Use {@link createFake} or {@link createDescriptorFake}. */
@@ -301,6 +325,11 @@ export class Fake {
   rows(messageType: string, tenant: string): Row[] {
     const table = this.rowsByType.get(messageType)?.get(tenant);
     return [...(table?.values() ?? [])].map((row) => copyValue(row)).sort((a, b) => (recordToJson(a) < recordToJson(b) ? -1 : 1));
+  }
+
+  /** The audit record of every include_deleted read served so far, in order. */
+  deletedReads(): DeletedRead[] {
+    return this.deletedReadLog.map((read) => ({ ...read }));
   }
 
   /** The outbox events committed so far, in commit order. */
@@ -383,6 +412,7 @@ export class Fake {
       Insert: unary("Insert", (ctx, r) => this.keyedWrite(ctx, "insert", r, () => this.write(ctx.identity, r, true))),
       Update: unary("Update", (ctx, r) => this.keyedWrite(ctx, "update", r, () => this.update(ctx.identity, r))),
       Delete: unary("Delete", (ctx, r) => this.keyedWrite(ctx, "delete", r, () => this.remove(ctx.identity, r))),
+      BulkUpsert: unary("BulkUpsert", (ctx, r) => this.keyedWrite(ctx, "bulk_upsert", r, () => this.bulkUpsert(ctx, r))),
       AckCdcEvents: unary("AckCdcEvents", (ctx, r) => this.settle(ctx, r)),
       NackCdcEvents: unary("NackCdcEvents", (ctx, r) => this.nack(ctx, r)),
       ListDlqEvents: unary("ListDlqEvents", (ctx, r) => this.listDlq(ctx, r)),
@@ -454,7 +484,8 @@ export class Fake {
         throw missingScopeRefusal("udb:admin");
       }
       if (typeof request.message_type === "string") {
-        this.authorize(ctx, request.message_type, method === "Insert" ? "Upsert" : method);
+        // Insert and BulkUpsert are authorized as the Upsert they are made of.
+        this.authorize(ctx, request.message_type, method === "Insert" || method === "BulkUpsert" ? "Upsert" : method);
       }
     }
     this.admit(method, identity, request);
@@ -616,16 +647,177 @@ export class Fake {
     return selected;
   }
 
+  /** Select for a fused message_type ("A,B"): the broker's join-fusion read. */
+  private selectJoin(ctx: Ctx, req: any): Row {
+    if ((req.sort ?? []).length > 0 || String(req.page_token ?? "").trim() || req.include_total) {
+      throw joinRefusal("a join read has no sort, page token or total; read one table to use them");
+    }
+    const identity = ctx.identity;
+    const names = joinMessageTypes(req.message_type);
+    const entities = names.map((name) => this.entity(name));
+    const shortNames = entities.map((entity) => entity.schema.type.name);
+    const fields: string[] = req.fields ?? [];
+    // The served export-control gate: a named PII or encrypted column needs
+    // udb:pii:read (or an export purpose), as on a single-table read.
+    entities.forEach((entity, index) => {
+      const nested: string[] = [];
+      for (const field of fields) {
+        try {
+          const [table, column] = joinField(field, shortNames);
+          const name = entity.aliases.get(column);
+          if (table === index && name) nested.push(name);
+        } catch {
+          // An unknown prefix is refused with the projection below.
+        }
+      }
+      if (nested.length > 0) this.readColumns(entity, ctx, nested);
+    });
+    if (!hasScope(identity, "udb:read")) throw joinRefusal("scope udb:read is required for join fusion");
+    const outputs: { table: number; column: string; alias: string }[] = [];
+    if (fields.length === 0) {
+      entities.forEach((entity, index) => {
+        for (const [name, field] of [...entity.columns].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+          if (field.pii || field.encrypted || field.column?.encrypted) continue;
+          outputs.push({ table: index, column: name, alias: `${shortNames[index]}__${columnName(entity, name)}` });
+        }
+      });
+    } else {
+      for (const field of fields) {
+        const [index, column] = joinField(field, shortNames);
+        const name = entities[index].aliases.get(column);
+        if (!name) throw joinRefusal(`unknown join selected field ${field}`);
+        const schema = entities[index].columns.get(name)!;
+        if (schema.encrypted || schema.column?.encrypted) {
+          throw joinRefusal(`join selected encrypted field ${field}: a join cannot read an encrypted column; read it from its own table`);
+        }
+        outputs.push({ table: index, column: name, alias: field.split(".").join("__") });
+      }
+    }
+    const edges = joinEdges(entities, names);
+    for (const entity of entities) {
+      const required = (entity.schema.table.required_scope ?? "").trim();
+      if (required && !hasScope(identity, required)) throw joinRefusal(`scope ${required} is required for this table`);
+    }
+    // Simple equality only; a NULL never equals anything, as in SQL.
+    const filters: Row[] = entities.map(() => ({}));
+    let never = false;
+    for (const [field, value] of Object.entries(struct(req.filter))) {
+      if (field.startsWith("$") || (value !== null && typeof value === "object")) {
+        throw joinRefusal("join fusion supports only simple equality filters");
+      }
+      const [index, column] = joinField(field, names);
+      const name = entities[index].aliases.get(column);
+      if (!name) throw joinRefusal(`unknown join filter field ${field}`);
+      if (value === null || value === undefined) never = true;
+      else filters[index][name] = value;
+    }
+    const candidates = entities.map((entity, index) => {
+      const filter = entity.queryFilter(filters[index]);
+      const rows: Row[] = [];
+      for (const row of this.rowsByType.get(entity.messageType)?.get(identity.tenantId)?.values() ?? []) {
+        if (entity.live(row) && entity.visibleTo(row, identity) && matches(row, filter)) rows.push(row);
+      }
+      // The broker's join has no ORDER BY; the fake answers in primary-key order so
+      // its own runs repeat.
+      return rows.sort((a, b) => {
+        for (const pk of entity.primaryKey) {
+          const c = compare(a[pk] ?? null, b[pk] ?? null);
+          if (c !== 0) return c;
+        }
+        return 0;
+      });
+    });
+    const resolve = (entity: EntityRules, column: string) => entity.aliases.get(column) ?? column;
+    const joins = (combo: Row[], edge: JoinEdgeShape) =>
+      edge.leftColumns.every((left, k) => {
+        if (k >= edge.rightColumns.length) return true;
+        const a = combo[edge.left][resolve(entities[edge.left], left)];
+        const b = combo[edge.right][resolve(entities[edge.right], edge.rightColumns[k])];
+        return a !== null && a !== undefined && b !== null && b !== undefined && equal(a, b);
+      });
+    const matched: Row[][] = [];
+    const walk = (combo: Row[]) => {
+      if (combo.length === entities.length) {
+        matched.push(combo);
+        return;
+      }
+      for (const row of candidates[combo.length]) {
+        const next = [...combo, row];
+        if (next.length > 1 && !joins(next, edges[next.length - 2])) continue;
+        walk(next);
+      }
+    };
+    if (!never) walk([]);
+    const limit = req.limit > 0 ? req.limit : 100;
+    const hasMore = matched.length > limit;
+    const canRead = hasScope(identity, "udb:pii:read");
+    const redacted = new Set<string>();
+    const records = matched.slice(0, limit).map((combo) => {
+      const view: Row = {};
+      for (const output of outputs) {
+        const entity = entities[output.table];
+        const row = combo[output.table];
+        if (!(output.column in row)) continue;
+        if (entity.columns.get(output.column)!.masked && !canRead) {
+          view[output.alias] = "***MASKED***";
+          redacted.add(output.alias);
+          continue;
+        }
+        view[output.alias] = entity.wireValue(output.column, copyValue(row[output.column]));
+      }
+      return Buffer.from(recordToJson(view), "utf8");
+    });
+    return {
+      records_json: records,
+      rows: records.map(() => ({})),
+      record_revisions: [],
+      redacted_fields: [...redacted].sort(),
+      has_more: hasMore,
+      next_page_token: "",
+      exact_total: 0,
+    };
+  }
+
+  /** Refuse an include_deleted read the broker refuses: the caller lacks
+   *  `udb:deleted:read`, or the entity has no soft delete. */
+  private admitIncludeDeleted(entity: EntityRules, identity: Identity): void {
+    if (!hasScope(identity, DELETED_READ_SCOPE)) {
+      throw refuse(codes.PERMISSION_DENIED, "UDB_DELETED_READ_SCOPE_MISSING", `include_deleted needs scope ${DELETED_READ_SCOPE}`, {
+        reason: "UDB_DELETED_READ_SCOPE_MISSING",
+        kind: "ERROR_KIND_PERMISSION",
+        missing: { scope: DELETED_READ_SCOPE },
+      });
+    }
+    if (!entity.softDelete) {
+      throw includeDeletedInvalid(
+        `include_deleted: ${entity.messageType} has no soft delete, so it has no deleted rows to include`,
+        "the entity has no usable soft-delete column, so there are no deleted rows to include",
+      );
+    }
+  }
+
   private select(ctx: Ctx, req: any): Row {
+    const includeDeleted = Boolean(req.include_deleted);
+    if (joinMessageTypes(req.message_type).length > 1) {
+      if (includeDeleted) {
+        throw includeDeletedInvalid(
+          "a join read cannot include deleted rows; read one table to include them",
+          "a join read cannot include deleted rows",
+        );
+      }
+      return this.selectJoin(ctx, req);
+    }
     const entity = this.entity(req.message_type);
     const identity = ctx.identity;
+    if (includeDeleted) this.admitIncludeDeleted(entity, identity);
     const filter = entity.queryFilter(struct(req.filter));
     entity.checkTenant(filter, identity.tenantId);
     const selected = this.readColumns(entity, ctx, req.fields ?? []);
     if (req.include_revision) for (const column of entity.primaryKey) selected.add(column);
+    if (includeDeleted) selected.add(entity.softDelete);
     const found: Row[] = [];
     for (const row of this.rowsByType.get(entity.messageType)?.get(identity.tenantId)?.values() ?? []) {
-      if (entity.live(row) && entity.visibleTo(row, identity) && matches(row, filter)) found.push(row);
+      if ((includeDeleted || entity.live(row)) && entity.visibleTo(row, identity) && matches(row, filter)) found.push(row);
     }
     const order: { field: string; descending: boolean }[] = [];
     for (const requested of req.sort ?? []) {
@@ -671,6 +863,16 @@ export class Fake {
       if (req.include_revision) revisions.push(this.revision(identity, entity, entity.keyOf(row)));
     }
     const hasMore = records.length >= limit;
+    if (includeDeleted) {
+      this.deletedReadLog.push({
+        tenantId: identity.tenantId,
+        projectId: identity.projectId ?? "",
+        actor: identity.userId || identity.serviceIdentity || "",
+        messageType: entity.messageType,
+        table: entity.tableName,
+        rows: records.length,
+      });
+    }
     return {
       records_json: records,
       rows: records.map(() => ({})),
@@ -848,6 +1050,85 @@ export class Fake {
     return { affected_rows: keys.length };
   }
 
+  /** The broker's BulkUpsert: the batch is checked whole (size, batch id, one row
+   *  shape, one row per key) before anything is written, then every row is upserted
+   *  as Upsert would in ONE transaction, rolled back whole on any refusal. The batch
+   *  emits one change event, and only when the entity declares a CDC topic and a row
+   *  changed. */
+  private bulkUpsert(ctx: Ctx, req: any): Row {
+    const identity = ctx.identity;
+    const entity = this.entity(req.message_type);
+    const raw: unknown[] = req.records_json ?? [];
+    checkBatchSize(raw.length);
+    const batchId = batchIdOf(req.batch_id);
+    const fields: string[] = req.conflict_fields ?? [];
+    entity.conflictFields(fields);
+    const columns = conflictColumns(entity, fields);
+    const rows = raw.map((item) => decodeObject(item));
+    checkRowShapes(entity, rows);
+    const tuples = batchKeys(entity, columns, rows);
+    const snapshot = this.snapshot();
+    const revisions = new Map(this.revisions);
+    const events = this.eventLog.length;
+    let affected = 0;
+    let eventId = "";
+    try {
+      for (const record of raw) {
+        const response = this.write(identity, { message_type: req.message_type, record_json: record, conflict_fields: fields }, false);
+        affected += Number(response.affected_rows ?? 0);
+      }
+      const topic = String(entity.schema.table.cdc_topic ?? "").trim();
+      if (topic && affected > 0) {
+        this.emitted += 1;
+        eventId = `0190f1b2-0000-4000-8000-${this.emitted.toString(16).padStart(12, "0")}`;
+        const correlation = ctx.metadata.get("x-correlation-id");
+        this.eventLog.push({
+          topic,
+          partitionKey: batchId,
+          envelope: {
+            event_id: eventId,
+            event_type: topic,
+            topic,
+            tenant_id: identity.tenantId,
+            project_id: identity.projectId ?? "",
+            operation: "bulk_upsert",
+            message_type: entity.messageType,
+            document_id: batchId,
+            correlation_id: correlation.length ? String(correlation[0]) : eventId,
+            envelope_version: 2,
+            payload: {
+              batch_id: batchId,
+              message_type: entity.messageType,
+              row_count: raw.length,
+              affected_rows: affected,
+              keys_sha256: keysSha256(tuples),
+              first_key: tuples[0],
+              last_key: tuples[tuples.length - 1],
+              conflict_columns: [...columns],
+            },
+          },
+        });
+      }
+    } catch (err) {
+      this.rowsByType = snapshot;
+      this.revisions = revisions;
+      this.eventLog.length = events;
+      throw err;
+    }
+    return {
+      batch_id: batchId,
+      row_count: raw.length,
+      affected_rows: affected,
+      keys_sha256: keysSha256(tuples),
+      first_key: tuples[0],
+      last_key: tuples[tuples.length - 1],
+      write_receipt_json: "",
+      statement_count: 1,
+      event_id: eventId,
+      was_duplicate: false,
+    };
+  }
+
   // ── Revisions and idempotency ─────────────────────────────────────────────
 
   private revisionKey(identity: Identity, entity: EntityRules, key: string): string {
@@ -944,6 +1225,16 @@ export class Fake {
 
   private mutationInputs(entity: EntityRules, identity: Identity, operation: string, req: any): Row {
     const inputs: Row = { expected: hasFields(req.expected) ? struct(req.expected) : null };
+    if (operation === "bulk_upsert") {
+      inputs.records = (req.records_json ?? []).map((raw: unknown) => {
+        const record = entity.normalize(decodeObject(raw));
+        entity.bindRecordScope(record, identity);
+        return record;
+      });
+      inputs.conflict_fields = req.conflict_fields ?? [];
+      inputs.batch_id = req.batch_id ?? "";
+      return inputs;
+    }
     if (operation === "upsert" || operation === "insert") {
       const record = entity.normalize(req.payload ? struct(req.payload) : decodeObject(req.record_json));
       entity.bindRecordScope(record, identity);

@@ -3,6 +3,8 @@ package dev.udb.client;
 import com.udb.core.authn.services.v1.AuthnRequest;
 import com.udb.core.authn.services.v1.AuthnResponse;
 import com.udb.core.authn.services.v1.AuthnServiceGrpc;
+import com.udb.core.authn.services.v1.ExchangeTokenForJobRequest;
+import com.udb.core.authn.services.v1.ExchangeTokenForJobResponse;
 import com.udb.core.authn.services.v1.LoginRequest;
 import com.udb.core.authn.services.v1.LoginResponse;
 import com.udb.core.authz.services.v1.AuthzRequest;
@@ -20,8 +22,11 @@ import com.udb.core.authz.services.v1.PolicyBundleRequest;
 import com.udb.core.authz.services.v1.Principal;
 import com.udb.core.authz.services.v1.ResourceRef;
 import com.udb.core.authz.services.v1.SignedPolicyBundle;
+import com.udb.entity.v1.ErrorDetail;
+import dev.udb.client.generated.GeneratedClientSupport;
 import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.MetadataUtils;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -127,6 +132,131 @@ public class UdbAuthClient implements AutoCloseable {
         .setTenantHint(current.tenantId())
         .setProjectHint(current.projectId())
         .build());
+  }
+
+  // ── Delegated job tokens ────────────────────────────────────────────────────
+  /**
+   * Exchange a user's current access token for a delegated job token
+   * ({@code AuthnService.ExchangeTokenForJob}), so a durable job (an export, a
+   * report, a nightly sync) acts for that user after the user's own short-lived
+   * token expired. Call it on a client carrying the SERVICE's own bearer (a
+   * service account whose grant holds {@code udb:token:delegate}, in the user's
+   * tenant); the broker refuses any other caller, and any subject token that is
+   * not a valid user access token of that tenant, with {@code PERMISSION_DENIED}.
+   *
+   * <p>The token names the user as subject and the service as actor, carries
+   * {@code purpose} and {@code jobId}, and lives at most {@code ttlSeconds} (0 =
+   * the broker's maximum, {@code UDB_DELEGATED_TOKEN_MAX_TTL}, 24 hours by
+   * default). It has no refresh token, cannot be exchanged again, and stops
+   * working as soon as the user, the token or the service's grant is revoked:
+   * see {@link #isTokenExpired} and {@link #isTokenRevoked}.
+   *
+   * @param subjectToken the user's current access token ({@code "Bearer "} prefix optional)
+   * @param purpose why the job acts for the user, e.g. {@code "export"}; signed into the token
+   * @param jobId the job the token is for; at most 200 bytes
+   * @param ttlSeconds the requested lifetime; 0 asks for the broker's maximum
+   * @throws IllegalArgumentException when a required argument is blank or ttlSeconds is negative
+   * @throws StatusRuntimeException when the broker refuses the exchange
+   */
+  public DelegatedJobToken exchangeTokenForJob(
+      String subjectToken, String purpose, String jobId, long ttlSeconds) {
+    ExchangeTokenForJobRequest request = jobTokenRequest(subjectToken, purpose, jobId, ttlSeconds);
+    return delegatedJobToken(authn().exchangeTokenForJob(request), jobId);
+  }
+
+  /** {@link #exchangeTokenForJob(String, String, String, long)} with the broker's maximum lifetime. */
+  public DelegatedJobToken exchangeTokenForJob(String subjectToken, String purpose, String jobId) {
+    return exchangeTokenForJob(subjectToken, purpose, jobId, 0L);
+  }
+
+  static ExchangeTokenForJobRequest jobTokenRequest(
+      String subjectToken, String purpose, String jobId, long ttlSeconds) {
+    if (subjectToken == null || subjectToken.isBlank()) {
+      throw new IllegalArgumentException("udb: exchangeTokenForJob: subjectToken is required");
+    }
+    if (jobId == null || jobId.isBlank()) {
+      throw new IllegalArgumentException("udb: exchangeTokenForJob: jobId is required");
+    }
+    if (purpose == null || purpose.isBlank()) {
+      throw new IllegalArgumentException("udb: exchangeTokenForJob: purpose is required");
+    }
+    if (ttlSeconds < 0) {
+      throw new IllegalArgumentException("udb: exchangeTokenForJob: ttlSeconds must not be negative");
+    }
+    return ExchangeTokenForJobRequest.newBuilder()
+        .setSubjectToken(subjectToken)
+        .setPurpose(purpose)
+        .setJobId(jobId)
+        .setTtlSeconds(ttlSeconds)
+        .build();
+  }
+
+  static DelegatedJobToken delegatedJobToken(ExchangeTokenForJobResponse response, String jobId) {
+    if (response.getAccessToken().isEmpty()) {
+      throw new IllegalStateException(
+          "udb: exchange the user's token for job " + jobId + ": the broker returned no token");
+    }
+    return new DelegatedJobToken(
+        response.getAccessToken(),
+        response.getJti(),
+        response.getExpiresAtUnix(),
+        response.getSubject(),
+        response.getActor(),
+        response.getPurpose(),
+        response.getJobId(),
+        response.getScopesList(),
+        response.getTenantId(),
+        response.getProjectId());
+  }
+
+  /**
+   * The broker's typed refusal reason ({@code ErrorDetail.reason}, e.g.
+   * {@code UDB_TOKEN_EXPIRED}) carried by a failed call, or {@code ""} when the
+   * error carries none. Reads a raw {@link StatusRuntimeException}'s
+   * {@code udb-error-detail-bin} trailer and a generated client's
+   * {@link GeneratedClientSupport.UdbRpcException}, including either one found
+   * as a cause. The message text is never matched.
+   */
+  public static String errorReason(Throwable error) {
+    for (Throwable t = error; t != null; t = t.getCause()) {
+      if (t instanceof GeneratedClientSupport.UdbRpcException rpc) {
+        ErrorDetail detail = rpc.decodedErrorDetail();
+        return detail == null ? "" : detail.getReason();
+      }
+      if (t instanceof StatusRuntimeException sre) {
+        Metadata trailers = sre.getTrailers();
+        byte[] raw = trailers == null ? null : trailers.get(GeneratedClientSupport.ERROR_DETAIL_KEY);
+        if (raw == null || raw.length == 0) {
+          return "";
+        }
+        try {
+          return ErrorDetail.parseFrom(raw).getReason();
+        } catch (com.google.protobuf.InvalidProtocolBufferException malformed) {
+          return "";
+        }
+      }
+      if (t.getCause() == t) {
+        break;
+      }
+    }
+    return "";
+  }
+
+  /**
+   * The broker refused the bearer because it expired ({@code UDB_TOKEN_EXPIRED}):
+   * refresh it or sign in again. A delegated job token cannot be refreshed: the
+   * job exchanges a fresh user token or stops.
+   */
+  public static boolean isTokenExpired(Throwable error) {
+    return "UDB_TOKEN_EXPIRED".equals(errorReason(error));
+  }
+
+  /**
+   * The broker refused the bearer because it was revoked or is no longer backed
+   * by live state ({@code UDB_TOKEN_REVOKED}): do not retry with it.
+   */
+  public static boolean isTokenRevoked(Throwable error) {
+    return "UDB_TOKEN_REVOKED".equals(errorReason(error));
   }
 
   // ── Authorization ───────────────────────────────────────────────────────────

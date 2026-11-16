@@ -156,4 +156,22 @@ public interface SelectRequestOrBuilder extends
    * @return The includeTotal.
    */
   boolean getIncludeTotal();
+
+  /**
+   * <pre>
+   * Also return soft-deleted rows. Each returned row carries the entity's own
+   * soft-delete column (for example `deleted_at`), non-null on a deleted row,
+   * which the broker adds to an explicit `fields` list when it is missing.
+   * Needs scope `udb:deleted:read`; without it the read is refused with
+   * PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+   * without soft delete refuses it with INVALID_ARGUMENT naming this field.
+   * Every such read is written to the audit log (tenant, actor, entity, row
+   * count) before its rows are returned; it stays inside the caller's tenant
+   * and project, and it is never answered from or stored in the read cache.
+   * </pre>
+   *
+   * <code>bool include_deleted = 11 [json_name = "includeDeleted"];</code>
+   * @return The includeDeleted.
+   */
+  boolean getIncludeDeleted();
 }

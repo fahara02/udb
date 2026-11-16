@@ -465,6 +465,7 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
             confirmation_token: "confirm-cross-tenant-restore".to_string(),
             allow_cross_tenant: true,
             metadata_json: "{}".to_string(),
+            ..Default::default()
         },
         &target_tenant,
         &project_id,
@@ -661,6 +662,7 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
                 confirmation_token: "confirm-cross-tenant-restore".to_string(),
                 allow_cross_tenant: true,
                 metadata_json: "{}".to_string(),
+                ..Default::default()
             },
             &denied_target,
             &project_id,
@@ -692,4 +694,261 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
     .execute(&pool)
     .await
     .expect("drop live expression-key restore probe");
+}
+
+/// Every row of each listed table, as sorted `row_to_json` text: the exact
+/// content a shared backup must reproduce.
+async fn shared_table_rows(
+    pool: &sqlx::PgPool,
+    tables: &[(String, String)],
+) -> Vec<(String, Vec<String>)> {
+    let mut out = Vec::new();
+    for (schema, table) in tables {
+        let relation = format!(
+            "{}.{}",
+            crate::runtime::executor_utils::qi_runtime(schema),
+            crate::runtime::executor_utils::qi_runtime(table)
+        );
+        let rows: Vec<String> = sqlx::query_scalar(&format!(
+            "SELECT row_to_json(t)::text FROM {relation} t ORDER BY 1"
+        ))
+        .fetch_all(pool)
+        .await
+        .unwrap_or_else(|err| panic!("read shared table {relation}: {err}"));
+        out.push((relation, rows));
+    }
+    out
+}
+
+/// Platform backup of the shared (global) tables: export shared → wipe →
+/// restore → the rows are equal. Also proves the gates around it: a restore
+/// over live shared rows is refused, a shared backup cannot be restored with
+/// the tenant scope, and the journal reports the run as shared.
+#[tokio::test]
+#[ignore = "requires live Postgres+MinIO; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_shared_tables_backup_round_trip -- --ignored --nocapture"]
+async fn live_postgres_shared_tables_backup_round_trip() {
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    reset_native_outbox(&pool).await;
+
+    let admin_tenant = Uuid::new_v4().to_string();
+    let project_id = Uuid::new_v4().to_string();
+    let admin = || {
+        test_claim_context(
+            "backup-platform-admin",
+            &admin_tenant,
+            "",
+            &["udb:platform_admin"],
+            &["platform_admin"],
+        )
+    };
+
+    // A row of a real shared table of the native catalog, so the round trip
+    // carries data whatever else the shared tables hold.
+    let node_state = native_model(
+        "udb.core.control.entity.v1.ControlPlaneNodeState",
+        &["node_state_id", "node_id", "resource_type"],
+    );
+    let seeded_node = format!("shared-backup-{}", Uuid::new_v4().simple());
+    sqlx::query(&format!(
+        "INSERT INTO {} ({}, {}, {}) VALUES ($1::uuid, $2, 'RESOURCE_TYPE_ROUTING_POLICY')",
+        node_state.relation,
+        node_state.q("node_state_id"),
+        node_state.q("node_id"),
+        node_state.q("resource_type"),
+    ))
+    .bind(Uuid::new_v4().to_string())
+    .bind(&seeded_node)
+    .execute(&pool)
+    .await
+    .expect("seed a shared control-plane row");
+
+    let svc = backup_service_for_projects(&[&project_id]).await;
+
+    // A tenant token may not back up shared tables.
+    let tenant_token = test_claim_context(
+        "tenant-user",
+        &admin_tenant,
+        "",
+        &["udb:backup:start-tenant-backup"],
+        &[],
+    );
+    let denied = scope_claim_context_for_test(
+        tenant_token,
+        svc.start_tenant_backup(backup_request(
+            backup_pb::StartTenantBackupRequest {
+                tenant_id: admin_tenant.clone(),
+                object_backend: "minio".to_string(),
+                object_bucket: "udb-storage".to_string(),
+                scope: backup_pb::BackupScope::Shared as i32,
+                ..Default::default()
+            },
+            &admin_tenant,
+            &project_id,
+        )),
+    )
+    .await
+    .expect_err("a tenant token may not back up shared tables");
+    assert_eq!(denied.code(), Code::PermissionDenied, "{denied}");
+
+    let backup = scope_claim_context_for_test(
+        admin(),
+        svc.start_tenant_backup(backup_request(
+            backup_pb::StartTenantBackupRequest {
+                tenant_id: admin_tenant.clone(),
+                object_backend: "minio".to_string(),
+                object_bucket: "udb-storage".to_string(),
+                scope: backup_pb::BackupScope::Shared as i32,
+                ..Default::default()
+            },
+            &admin_tenant,
+            &project_id,
+        )),
+    )
+    .await
+    .expect("a platform admin backs up the shared tables")
+    .into_inner();
+    assert!(
+        backup.object_prefix.starts_with("backups/shared/"),
+        "{}",
+        backup.object_prefix
+    );
+    assert!(
+        backup
+            .tables
+            .iter()
+            .all(|t| t.tenant_column.is_empty() && !t.checksum_sha256.is_empty())
+    );
+    let tables: Vec<(String, String)> = backup
+        .tables
+        .iter()
+        .map(|t| (t.schema.clone(), t.table.clone()))
+        .collect();
+    assert!(
+        tables.contains(&(
+            "udb_control".to_string(),
+            "control_plane_node_states".to_string()
+        )),
+        "the shared control-plane table is backed up: {tables:?}"
+    );
+    assert!(
+        backup
+            .excluded
+            .iter()
+            .any(|e| e.reason.contains("per-tenant backup")),
+        "tenant-owned tables are reported, not backed up"
+    );
+    let before = shared_table_rows(&pool, &tables).await;
+    let backed_up: i64 = before.iter().map(|(_, rows)| rows.len() as i64).sum();
+    assert_eq!(backup.total_rows, backed_up);
+    assert!(backed_up >= 1);
+
+    // The journal shows the run, as shared, under the admin's tenant.
+    let run = scope_claim_context_for_test(
+        admin(),
+        svc.get_backup(backup_request(
+            backup_pb::GetBackupRequest {
+                tenant_id: admin_tenant.clone(),
+                backup_id: backup.backup_id.clone(),
+            },
+            &admin_tenant,
+            &project_id,
+        )),
+    )
+    .await
+    .expect("get the shared backup run")
+    .into_inner();
+    let summary = run.backup.expect("run summary");
+    assert_eq!(summary.scope, backup_pb::BackupScope::Shared as i32);
+    assert_eq!(
+        summary.source_tenant_id,
+        crate::broker::SHARED_TENANT_MARKER
+    );
+    assert_eq!(run.tables.len(), tables.len());
+
+    let shared_restore = || backup_pb::RestoreTenantRequest {
+        source_tenant_id: admin_tenant.clone(),
+        backup_id: backup.backup_id.clone(),
+        confirmation_token: "confirm-shared-restore".to_string(),
+        scope: backup_pb::BackupScope::Shared as i32,
+        ..Default::default()
+    };
+
+    // Restoring over live shared rows is refused, like a live target tenant.
+    let live = scope_claim_context_for_test(
+        admin(),
+        svc.restore_tenant(backup_request(shared_restore(), &admin_tenant, &project_id)),
+    )
+    .await
+    .expect_err("restore over live shared rows is refused");
+    assert_eq!(live.code(), Code::FailedPrecondition, "{live}");
+    assert!(
+        live.message().contains("control_plane_node_states"),
+        "{live}"
+    );
+
+    // A shared backup never restores through the tenant scope.
+    let wrong_scope = scope_claim_context_for_test(
+        admin(),
+        svc.restore_tenant(backup_request(
+            backup_pb::RestoreTenantRequest {
+                source_tenant_id: admin_tenant.clone(),
+                target_tenant_id: admin_tenant.clone(),
+                backup_id: backup.backup_id.clone(),
+                confirmation_token: "confirm".to_string(),
+                ..Default::default()
+            },
+            &admin_tenant,
+            &project_id,
+        )),
+    )
+    .await
+    .expect_err("a shared backup is not a tenant backup");
+    assert_eq!(wrong_scope.code(), Code::FailedPrecondition);
+    assert!(wrong_scope.message().contains("BACKUP_SCOPE_SHARED"));
+
+    // Wipe the shared tables (children first, the backup's own order), then
+    // restore and compare.
+    for (schema, table) in &tables {
+        sqlx::query(&format!(
+            "DELETE FROM {}.{}",
+            crate::runtime::executor_utils::qi_runtime(schema),
+            crate::runtime::executor_utils::qi_runtime(table)
+        ))
+        .execute(&pool)
+        .await
+        .unwrap_or_else(|err| panic!("wipe shared table {schema}.{table}: {err}"));
+    }
+    assert!(
+        shared_table_rows(&pool, &tables)
+            .await
+            .iter()
+            .all(|(_, rows)| rows.is_empty())
+    );
+
+    let restored = scope_claim_context_for_test(
+        admin(),
+        svc.restore_tenant(backup_request(shared_restore(), &admin_tenant, &project_id)),
+    )
+    .await
+    .expect("a platform admin restores the shared tables")
+    .into_inner();
+    assert_eq!(restored.restored_rows, backed_up);
+    assert_eq!(restored.restored_table_count as usize, tables.len());
+    assert_eq!(
+        shared_table_rows(&pool, &tables).await,
+        before,
+        "restored shared rows must equal the backed-up rows"
+    );
+
+    sqlx::query(&format!(
+        "DELETE FROM {} WHERE {} = $1",
+        node_state.relation,
+        node_state.q("node_id"),
+    ))
+    .bind(&seeded_node)
+    .execute(&pool)
+    .await
+    .expect("remove the seeded shared row");
 }

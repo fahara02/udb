@@ -83,7 +83,9 @@ fn json_unix_ts(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> 
 
 pub(crate) fn run_summary_from_json(row: &serde_json::Value) -> backup_pb::BackupRunSummary {
     let m = row_object(row);
+    let source_tenant_id = json_str(m, "source_tenant_id");
     backup_pb::BackupRunSummary {
+        scope: super::scope::run_scope_from_source_tenant(&source_tenant_id) as i32,
         backup_id: json_str(m, "backup_id"),
         tenant_id: json_str(m, "tenant_id"),
         project_id: json_str(m, "project_id"),
@@ -94,7 +96,7 @@ pub(crate) fn run_summary_from_json(row: &serde_json::Value) -> backup_pb::Backu
         table_count: json_i64(m, "table_count") as i32,
         total_rows: json_i64(m, "total_rows"),
         excluded_count: json_i64(m, "excluded_count") as i32,
-        source_tenant_id: json_str(m, "source_tenant_id"),
+        source_tenant_id,
         target_tenant_id: json_str(m, "target_tenant_id"),
         created_at_unix: json_unix_ts(m, "created_at"),
         completed_at_unix: json_unix_ts(m, "completed_at"),

@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
 	storagev1 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1"
+	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"github.com/fahara02/udb/sdk/go/udbclient"
 	"google.golang.org/protobuf/proto"
 )
@@ -25,23 +27,52 @@ type tableCase struct {
 }
 
 type caseStep struct {
-	Op       string         `json:"op"`
-	Key      map[string]any `json:"key"`
-	Row      map[string]any `json:"row"`
-	Changes  map[string]any `json:"changes"`
-	Expected map[string]any `json:"expected"`
+	Op       string           `json:"op"`
+	Key      map[string]any   `json:"key"`
+	Row      map[string]any   `json:"row"`
+	Rows     []map[string]any `json:"rows"`
+	Changes  map[string]any   `json:"changes"`
+	Expected map[string]any   `json:"expected"`
 	Expect   struct {
-		Error string         `json:"error"`
-		Row   map[string]any `json:"row"`
+		Error        string         `json:"error"`
+		Row          map[string]any `json:"row"`
+		AffectedRows *int64         `json:"affected_rows"`
 	} `json:"expect"`
 }
 
-// substitute replaces "$id" in every string value.
-func substitute(values map[string]any, id string) map[string]any {
+// numberedID matches the "$id<digits>" placeholders ("$id2", "$id3", ...).
+var numberedID = regexp.MustCompile(`\$id[0-9]+`)
+
+// placeholders resolves a case's ids: "$id" is one fresh UUID per case and
+// each "$id<digits>" its own fresh UUID per case (the numbered ones are
+// replaced first, so "$id2" never becomes "<uuid>2").
+type placeholders struct {
+	id       string
+	numbered map[string]string
+}
+
+func newPlaceholders() *placeholders {
+	return &placeholders{id: NewID(), numbered: map[string]string{}}
+}
+
+func (p *placeholders) replace(s string) string {
+	s = numberedID.ReplaceAllStringFunc(s, func(name string) string {
+		id, ok := p.numbered[name]
+		if !ok {
+			id = NewID()
+			p.numbered[name] = id
+		}
+		return id
+	})
+	return strings.ReplaceAll(s, "$id", p.id)
+}
+
+// substitute replaces the id placeholders in every string value.
+func substitute(values map[string]any, ids *placeholders) map[string]any {
 	out := make(map[string]any, len(values))
 	for k, v := range values {
 		if s, ok := v.(string); ok {
-			v = strings.ReplaceAll(s, "$id", id)
+			v = ids.replace(s)
 		}
 		out[k] = v
 	}
@@ -71,7 +102,7 @@ func RunTableCases(t *testing.T, connect Connect, path string) {
 			ctx := context.Background()
 			u := connect(t, newTenant())
 			files := udbclient.TableOf[*storagev1.File](u)
-			id := NewID()
+			id := newPlaceholders()
 			for index, step := range tc.Steps {
 				key := udbclient.RowKey(substitute(step.Key, id))
 				var got *storagev1.File
@@ -100,6 +131,22 @@ func RunTableCases(t *testing.T, connect Connect, path string) {
 					}
 				case "delete":
 					err = files.Delete(ctx, key)
+				case "bulk_upsert":
+					rows := make([]*storagev1.File, 0, len(step.Rows))
+					for _, values := range step.Rows {
+						row := &storagev1.File{}
+						if err = udbclient.DecodeRecord(udbclient.Record(substitute(values, id)), row); err != nil {
+							break
+						}
+						rows = append(rows, row)
+					}
+					if err == nil {
+						var res *entityv1.BulkUpsertResponse
+						if res, err = files.BulkUpsert(ctx, rows, udbclient.BulkUpsertBatchOptions{}); err == nil &&
+							step.Expect.AffectedRows != nil && res.GetAffectedRows() != *step.Expect.AffectedRows {
+							t.Fatalf("step %d (%s): affected_rows %d, want %d", index, step.Op, res.GetAffectedRows(), *step.Expect.AffectedRows)
+						}
+					}
 				default:
 					t.Fatalf("step %d: unknown op %q", index, step.Op)
 				}

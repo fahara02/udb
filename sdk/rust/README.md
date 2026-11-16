@@ -211,6 +211,41 @@ moments ago that is refused again fails `Unauthenticated`, and a credential the
 broker no longer accepts is refused locally with a backoff, never one sign-in per
 call. `login` retries a broker that is unreachable or restarting (3 attempts).
 
+## A job that acts for a user: delegated job tokens
+
+A durable job (an export, a report, a nightly sync) that must act for the user
+who started it, after that user's short-lived token expired, exchanges the
+user's token for a delegated job token. Call it with the SERVICE's own bearer (a
+service account whose grant holds `udb:token:delegate`, in the user's tenant):
+
+```rust,no_run
+# use udb_client::proto::udb::core::authn::services::v1::authn_service_client::AuthnServiceClient;
+# use udb_client::{exchange_token_for_job, ExchangeTokenForJobRequest, Metadata};
+# async fn f(channel: tonic::transport::Channel, user_token: String) -> Result<(), Box<dyn std::error::Error>> {
+let service = Metadata::new("tenant-1").with_bearer_token(std::env::var("UDB_SERVICE_TOKEN")?);
+let mut authn = AuthnServiceClient::new(channel);
+let job = exchange_token_for_job(
+    &mut authn,
+    &service,
+    ExchangeTokenForJobRequest {
+        subject_token: user_token,
+        purpose: "export".into(),
+        job_id: "export-42".into(),
+        ttl_seconds: 0, // 0 = the broker's maximum (24 hours by default)
+    },
+)
+.await?;
+// Run the job's calls with `job.access_token`; `job.subject` is the user,
+// `job.actor` the service.
+# Ok(())
+# }
+```
+
+The token has no refresh token and cannot be exchanged again. When the broker
+refuses it, `UdbError::is_token_expired()` (`UDB_TOKEN_EXPIRED`) means exchange
+a fresh user token; `UdbError::is_token_revoked()` (`UDB_TOKEN_REVOKED`) means
+the user, the token or the service's grant was revoked: stop.
+
 ## Typed errors, and retries that will not double-charge you
 
 Failures decode the broker's `udb-error-detail-bin` trailer into `UdbError`, so

@@ -2144,6 +2144,22 @@ pub(crate) fn cache_message_identity(
         .unwrap_or_else(|_| message_type.to_string())
 }
 
+/// Escape the Redis glob metacharacters (`\ * ? [ ]`) in a key segment so it
+/// matches LITERALLY inside a SCAN `MATCH` pattern. Every pattern built from a
+/// tenant or project id must go through this: the reserved shared-tenant marker
+/// `*shared*` is itself a glob, and unescaped it would match every tenant whose
+/// id contains `shared`.
+pub(crate) fn redis_glob_literal(segment: &str) -> String {
+    let mut escaped = String::with_capacity(segment.len());
+    for ch in segment.chars() {
+        if matches!(ch, '\\' | '*' | '?' | '[' | ']') {
+            escaped.push('\\');
+        }
+        escaped.push(ch);
+    }
+    escaped
+}
+
 pub(crate) fn cache_invalidation_pattern(kind: &str, message_type: &str) -> String {
     format!("udb:{}:*:*:*:{}:*", kind, message_type)
 }

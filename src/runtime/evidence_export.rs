@@ -57,7 +57,10 @@ const EVIDENCE_MANIFEST_KIND: &str = "udb.compliance.evidence.manifest";
 const AUTH_AUDIT_LOG_RELATION: &str = "udb_system.auth_audit_log";
 /// One-row-per-worker durable high-water mark + carried chain head. Lazily
 /// self-created (no migration ordering), mirroring the sink's lazy-DDL pattern.
-const EVIDENCE_STATE_RELATION: &str = "udb_system.evidence_export_state";
+/// The cleanup service also keeps each admin audit table's prune anchor here
+/// (`udb:admin-audit:prune-anchor:<table>`), so it is created by whichever
+/// writes first.
+pub(crate) const EVIDENCE_STATE_RELATION: &str = "udb_system.evidence_export_state";
 /// Content type for the line-delimited-JSON evidence bundle.
 const EVIDENCE_BUNDLE_CONTENT_TYPE: &str = "application/x-ndjson";
 /// Default object-key prefix inside the compliance-evidence bucket.
@@ -443,7 +446,7 @@ fn render_evidence_manifest(
 
 /// Lazily self-create the durable export-state relation (no migration ordering),
 /// mirroring `PostgresAuditLogSink::ensure_table`, serialized per relation.
-async fn ensure_state_table(pool: &PgPool) -> Result<(), String> {
+pub(crate) async fn ensure_state_table(pool: &PgPool) -> Result<(), String> {
     let sql = format!(
         "CREATE TABLE IF NOT EXISTS {rel} ( \
              worker VARCHAR(160) PRIMARY KEY, \

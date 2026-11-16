@@ -28,6 +28,13 @@ class GetRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string key = 3 [json_name = "key"];</code>
      */
     protected $key = '';
+    /**
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     *
+     * Generated from protobuf field <code>bool shared = 4 [json_name = "shared"];</code>
+     */
+    protected $shared = false;
 
     /**
      * Constructor.
@@ -39,6 +46,9 @@ class GetRequest extends \Google\Protobuf\Internal\Message
      *           Verified against the bearer/claim tenant; cross-tenant values are rejected.
      *     @type string $namespace
      *     @type string $key
+     *     @type bool $shared
+     *           Read the shared namespace (the reserved shared-tenant keyspace every
+     *           tenant reads) instead of the caller's tenant keyspace.
      * }
      */
     public function __construct($data = NULL) {
@@ -112,6 +122,34 @@ class GetRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->key = $var;
+
+        return $this;
+    }
+
+    /**
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     *
+     * Generated from protobuf field <code>bool shared = 4 [json_name = "shared"];</code>
+     * @return bool
+     */
+    public function getShared()
+    {
+        return $this->shared;
+    }
+
+    /**
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     *
+     * Generated from protobuf field <code>bool shared = 4 [json_name = "shared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->shared = $var;
 
         return $this;
     }

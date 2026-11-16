@@ -2139,3 +2139,279 @@ async fn live_projection_permanent_payload_survives_restart_replay_and_corrected
         std::panic::resume_unwind(panic);
     }
 }
+
+// ── projection_filter: only matching rows live in the target ─────────────────
+
+/// A Qdrant projection with `projection_filter` holds only the rows the filter
+/// matches, through the SERVED write path: a DRAFT row is never projected, an
+/// upsert that moves a PUBLISHED row to RETIRED removes its point, a row that
+/// becomes PUBLISHED appears, a partial upsert that supersedes a row removes
+/// it, and a served delete still deletes.
+#[tokio::test]
+#[ignore = "requires live Postgres+Qdrant (UDB_INTEGRATION_PG_DSN + UDB_QDRANT_URL); runs in the CI --ignored live lane"]
+async fn live_projection_filter_keeps_only_matching_rows_in_qdrant() {
+    use futures::FutureExt;
+
+    let _guard = crate::runtime::service::live_tests::support::live_native_service_db_lock()
+        .lock()
+        .await;
+    let qdrant = qdrant_url();
+    let pool = ledger_pool().await;
+    let store = ledger_store(&pool).await;
+
+    let schema = format!("udb_proj_{}", Uuid::new_v4().simple());
+    let collection = format!("udb_projection_filter_{}", Uuid::new_v4().simple());
+    const MSG: &str = "acme.proj.v1.FilteredConcept";
+    create_source_table(
+        &pool,
+        &schema,
+        "filtered_concepts",
+        ", vector JSONB, state TEXT, to_seq BIGINT",
+    )
+    .await;
+    create_qdrant_collection(&qdrant, &collection).await;
+
+    let mut vector = text_col("vector", false);
+    vector.sql_type = "JSONB".to_string();
+    vector.is_jsonb = true;
+    let mut to_seq = text_col("to_seq", false);
+    to_seq.sql_type = "BIGINT".to_string();
+    to_seq.proto_type = "int64".to_string();
+    let svc = served_service(served_manifest(
+        &schema,
+        "filtered_concepts",
+        "FilteredConcept",
+        vec![vector, text_col("state", false), to_seq],
+        vec![projection(
+            "FilteredConcept",
+            "vector",
+            "qdrant",
+            &collection,
+            vec![
+                opt("vector_field", "vector"),
+                opt(
+                    "projection_filter",
+                    "state = 'PUBLISHED' AND to_seq IS NULL",
+                ),
+            ],
+        )],
+        vec![ManifestStore {
+            store_kind: "vector".to_string(),
+            backend: "qdrant".to_string(),
+            resource_name: collection.clone(),
+            options: vec![opt("dimension", "4")],
+            ..ManifestStore::default()
+        }],
+    ))
+    .await;
+    let worker = worker(store, svc.runtime_snapshot(), svc.catalog.clone());
+    let tenant = Uuid::new_v4().to_string();
+    let ids = |points: Vec<serde_json::Value>| {
+        let mut ids = points
+            .iter()
+            .filter_map(|point| point["id"].as_str().map(str::to_string))
+            .collect::<Vec<_>>();
+        ids.sort();
+        ids
+    };
+    let row = |id: &str, state: &str| json!({"id": id, "tenant_id": tenant, "state": state, "vector": [0.1, 0.2, 0.3, 0.4]});
+
+    let outcome = std::panic::AssertUnwindSafe(async {
+        served_upsert(&svc, &tenant, MSG, row("c-1", "PUBLISHED")).await;
+        served_upsert(&svc, &tenant, MSG, row("c-2", "DRAFT")).await;
+        worker.run_once().await;
+        assert_eq!(
+            ids(served_vector_payloads(&svc, &tenant, &collection).await),
+            vec!["c-1".to_string()],
+            "only the PUBLISHED row is projected"
+        );
+
+        // c-1 leaves the filter (PUBLISHED -> RETIRED): its point is removed.
+        // c-2 enters it (DRAFT -> PUBLISHED): its point appears.
+        served_upsert(&svc, &tenant, MSG, row("c-1", "RETIRED")).await;
+        served_upsert(&svc, &tenant, MSG, row("c-2", "PUBLISHED")).await;
+        worker.run_once().await;
+        assert_eq!(
+            ids(served_vector_payloads(&svc, &tenant, &collection).await),
+            vec!["c-2".to_string()],
+            "a row that leaves the filter is removed, one that enters it is projected"
+        );
+
+        // A partial upsert that sets to_seq (the row is superseded) moves the
+        // row out of the filter too: the worker judges the whole stored row.
+        served_upsert(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": "c-2", "tenant_id": tenant, "to_seq": 7}),
+        )
+        .await;
+        worker.run_once().await;
+        assert!(
+            served_vector_payloads(&svc, &tenant, &collection)
+                .await
+                .is_empty(),
+            "a superseded row (to_seq set) is removed"
+        );
+
+        // Inside the filter again, then a served delete still deletes.
+        served_upsert(&svc, &tenant, MSG, row("c-3", "PUBLISHED")).await;
+        worker.run_once().await;
+        assert_eq!(
+            ids(served_vector_payloads(&svc, &tenant, &collection).await),
+            vec!["c-3".to_string()]
+        );
+        served_delete(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": "c-3", "tenant_id": tenant}),
+        )
+        .await;
+        worker.run_once().await;
+        assert!(
+            served_vector_payloads(&svc, &tenant, &collection)
+                .await
+                .is_empty(),
+            "a delete still deletes"
+        );
+        let rel = SystemCatalogConfig::current().projection_tasks_relation();
+        let unfinished: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {rel} WHERE resource_name = $1 AND status <> 'COMPLETED'"
+        ))
+        .bind(&collection)
+        .fetch_one(&pool)
+        .await
+        .expect("count unfinished projection tasks");
+        assert_eq!(unfinished, 0, "every filtered task completes");
+    })
+    .catch_unwind()
+    .await;
+    delete_tasks_for_resource(&pool, &collection).await;
+    drop_qdrant_collection(&qdrant, &collection).await;
+    drop_schema(&pool, &schema).await;
+    if let Err(panic) = outcome {
+        std::panic::resume_unwind(panic);
+    }
+}
+
+/// A MongoDB projection deletes by FILTER, so a row leaving the filter must be
+/// removed by its identity, not by its new (non-matching) values; a row the
+/// filter cannot judge fails its task instead of being projected.
+#[tokio::test]
+#[ignore = "requires live Postgres+MongoDB (UDB_MONGODB_DSN); runs in the CI --ignored live lane"]
+async fn live_projection_filter_removes_a_document_that_leaves_the_filter() {
+    use mongodb_driver::bson::{Document, doc};
+
+    let Some(dsn) = require_backend_dsn(&["UDB_MONGODB_DSN", "UDB_NOSQL_DSN"]) else {
+        eprintln!("UDB_MONGODB_DSN unset — skipping the projection_filter MongoDB seam");
+        return;
+    };
+    // SAFETY: test-only env mutation (single-threaded live lane): the runtime
+    // resolves its MongoDB instance from UDB_NOSQL_DSN.
+    unsafe {
+        std::env::set_var("UDB_NOSQL_DSN", &dsn);
+        std::env::set_var("UDB_ALLOW_DEGRADED_BACKENDS", "true");
+    }
+    let pool = ledger_pool().await;
+    let store = ledger_store(&pool).await;
+    let runtime = runtime_from_env().await;
+    let collection = format!("udb_projection_filter_{}", Uuid::new_v4().simple());
+    let manifest = ledger_manifest(
+        &collection,
+        vec![projection(
+            "SeamDocument",
+            "document",
+            "mongodb",
+            &collection,
+            vec![opt("projection_filter", "state = 'PUBLISHED'")],
+        )],
+    );
+    let plans = ProjectionPlan::from_manifest(&manifest);
+    let worker = worker(
+        store,
+        runtime.clone(),
+        Arc::new(CatalogManager::new(manifest.clone())),
+    );
+    let client = mongodb_driver::Client::with_uri_str(&dsn)
+        .await
+        .expect("connect live MongoDB");
+    let database = crate::runtime::executors::mongodb::MongoDbConfig::db_from_dsn(&dsn)
+        .unwrap_or_else(|| "udb".to_string());
+    let docs = client
+        .database(&database)
+        .collection::<Document>(&collection);
+    let tenant = Uuid::new_v4().to_string();
+    let count = |id: &'static str| {
+        let docs = docs.clone();
+        let tenant = tenant.clone();
+        async move {
+            docs.count_documents(doc! {"id": id, "_tenant_id": tenant.as_str()})
+                .await
+                .expect("count projected documents")
+        }
+    };
+
+    let mut keys = enqueue(
+        &pool,
+        &plans,
+        "upsert",
+        &json!({"id": "doc-1", "tenant_id": tenant, "state": "PUBLISHED", "title": "v1"}),
+    )
+    .await;
+    keys.extend(
+        enqueue(
+            &pool,
+            &plans,
+            "upsert",
+            &json!({"id": "doc-2", "tenant_id": tenant, "state": "DRAFT", "title": "v1"}),
+        )
+        .await,
+    );
+    worker.run_once().await;
+    assert_eq!(count("doc-1").await, 1, "the PUBLISHED row is projected");
+    assert_eq!(count("doc-2").await, 0, "the DRAFT row is not");
+
+    // doc-1 leaves the filter with another value changed too: the stored
+    // document still says PUBLISHED / v1, and it must go.
+    keys.extend(
+        enqueue(
+            &pool,
+            &plans,
+            "upsert",
+            &json!({"id": "doc-1", "tenant_id": tenant, "state": "RETIRED", "title": "v2"}),
+        )
+        .await,
+    );
+    worker.run_once().await;
+    assert_eq!(
+        count("doc-1").await,
+        0,
+        "a row that leaves the filter is removed"
+    );
+    let statuses = task_statuses(&pool, &keys).await;
+    assert!(
+        statuses.iter().all(|status| status == "COMPLETED"),
+        "{statuses:?}"
+    );
+
+    // A row the filter cannot judge (no `state`) fails loudly and is not projected.
+    let unjudged = enqueue(
+        &pool,
+        &plans,
+        "upsert",
+        &json!({"id": "doc-3", "tenant_id": tenant, "title": "v1"}),
+    )
+    .await;
+    worker.run_once().await;
+    assert_eq!(count("doc-3").await, 0);
+    assert_ne!(
+        task_statuses(&pool, &unjudged).await,
+        vec!["COMPLETED".to_string()]
+    );
+    let error = task_field(&pool, &unjudged[0], "last_error").await;
+    assert!(error.contains("has no column 'state'"), "{error}");
+
+    let _ = docs.drop().await;
+    delete_tasks_for_resource(&pool, &collection).await;
+}

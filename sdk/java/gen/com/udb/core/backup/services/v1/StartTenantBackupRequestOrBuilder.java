@@ -93,4 +93,27 @@ public interface StartTenantBackupRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getMetadataJsonBytes();
+
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+   * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+   * journaled under `tenant_id`.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+   * @return The enum numeric value on the wire for scope.
+   */
+  int getScopeValue();
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+   * tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+   * journaled under `tenant_id`.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 6 [json_name = "scope"];</code>
+   * @return The scope.
+   */
+  com.udb.core.backup.services.v1.BackupScope getScope();
 }

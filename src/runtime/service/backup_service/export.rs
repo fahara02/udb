@@ -3,7 +3,8 @@
 //! per-table JSONL read, encrypt-at-rest, checksummed manifest, object IO,
 //! journal + outbox) plus the object-target resolver it uses. Extracted verbatim
 //! from the former god file — the SQL, crypto, and object-store contracts are
-//! byte-for-byte identical; `svc` replaces `&self`.
+//! byte-for-byte identical; `svc` replaces `&self`. The same routine exports the
+//! project's shared tables for a platform admin (`BACKUP_SCOPE_SHARED`).
 
 use chrono::Utc;
 use tonic::{Request, Response, Status};
@@ -11,7 +12,6 @@ use uuid::Uuid;
 
 use crate::proto::udb::core::backup::services::v1 as backup_pb;
 use crate::runtime::channels::OperationChannel;
-use crate::runtime::core::tenant_purge::plan_tenant_purge;
 use crate::runtime::executor_utils::qi_runtime;
 use crate::runtime::tenant_movement::{
     TenantMovementOperation, TenantMovementRequest, tenant_movement_policy_status,
@@ -29,6 +29,9 @@ use super::config::{
 use super::errors::{backup_internal_status, backup_not_found_status};
 use super::events::emit_event;
 use super::model::{policy_view_from_json, qualified_relation, sha256_hex};
+use super::scope::{
+    BackupDataScope, SHARED_OBJECT_SEGMENT, shared_scope_privilege, shared_table_select_sql,
+};
 use super::store::{journal_run, journal_run_started, policy_read_by_name};
 
 /// Resolve the object-store target for a run: an explicit request override
@@ -97,11 +100,19 @@ pub(crate) async fn start_tenant_backup(
             [("tenant_id", "must be a non-empty tenant id")],
         ));
     }
+    // A shared-table backup is platform-admin only; the refusal comes before
+    // any policy read or data access.
+    let data_scope = BackupDataScope::from_proto(req.scope)?;
+    let privileged = if data_scope.is_shared() {
+        shared_scope_privilege("start_tenant_backup")?
+    } else {
+        false
+    };
     // The verified-tenant context carries project/correlation from request
     // metadata. A named policy supplies the fallback object destination promised
     // by the public request contract; explicit request fields still win.
     let mut context = project_scoped_native_service_context(&metadata, &tenant_id);
-    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    let binding = svc.resolve_project_snapshot_for(&context.project_id, data_scope)?;
     context.project_id = binding.project_id.clone();
     let mut object_backend = req.object_backend.trim().to_string();
     let mut object_bucket = req.object_bucket.trim().to_string();
@@ -133,8 +144,16 @@ pub(crate) async fn start_tenant_backup(
     }
     // The actual export mechanics live in the shared internal routine so a
     // background driver can fire the SAME backup without an inbound request.
-    let response =
-        run_tenant_backup(svc, &tenant_id, &object_backend, &object_bucket, context).await?;
+    let response = run_backup(
+        svc,
+        data_scope,
+        privileged,
+        &tenant_id,
+        &object_backend,
+        &object_bucket,
+        context,
+    )
+    .await?;
     Ok(Response::new(response))
 }
 
@@ -158,6 +177,34 @@ pub(crate) async fn run_tenant_backup(
     req_object_bucket: &str,
     context: crate::RequestContext,
 ) -> Result<backup_pb::StartTenantBackupResponse, Status> {
+    run_backup(
+        svc,
+        BackupDataScope::Tenant,
+        false,
+        tenant_id,
+        req_object_backend,
+        req_object_bucket,
+        context,
+    )
+    .await
+}
+
+/// [`run_tenant_backup`] for an explicit data scope. With
+/// [`BackupDataScope::Shared`] it exports every row of the project's shared
+/// tables instead of `tenant_id`'s rows: `tenant_id` is then only the journal
+/// owner (the verified request tenant), the manifest and event carry the
+/// shared marker, and `privileged` must be the caller's platform authority
+/// ([`shared_scope_privilege`]) — the movement validator refuses an unscoped
+/// export without it.
+pub(crate) async fn run_backup(
+    svc: &BackupServiceImpl,
+    data_scope: BackupDataScope,
+    privileged: bool,
+    tenant_id: &str,
+    req_object_backend: &str,
+    req_object_bucket: &str,
+    context: crate::RequestContext,
+) -> Result<backup_pb::StartTenantBackupResponse, Status> {
     let tenant_id = tenant_id.trim().to_string();
     if tenant_id.is_empty() {
         return Err(crate::runtime::executor_utils::invalid_argument_fields(
@@ -165,17 +212,27 @@ pub(crate) async fn run_tenant_backup(
             [("tenant_id", "must be a non-empty tenant id")],
         ));
     }
+    let shared = data_scope.is_shared();
+    // The tenant the exported rows belong to: the verified tenant, or the
+    // reserved shared marker for shared rows (as on shared table rows in
+    // derived stores).
+    let data_tenant_id = if shared {
+        crate::broker::SHARED_TENANT_MARKER.to_string()
+    } else {
+        tenant_id.clone()
+    };
 
     // SHARED fail-closed movement validator — never a bespoke scope check. A
-    // backup always filters by the verified tenant (tenant_filter_present),
+    // tenant backup always filters by the verified tenant (tenant_filter_present),
     // and is single-tenant (no target), so this fails closed on an unscoped
-    // export exactly as the broker startup gate does.
+    // export exactly as the broker startup gate does. A shared backup has no
+    // tenant filter, so it passes ONLY with platform privilege.
     let movement = TenantMovementRequest {
         operation: TenantMovementOperation::BackupExport,
-        tenant_id: &tenant_id,
+        tenant_id: &data_tenant_id,
         target_tenant_id: None,
-        tenant_filter_present: true,
-        privileged_cross_tenant: false,
+        tenant_filter_present: !shared,
+        privileged_cross_tenant: shared && privileged,
     };
     validate_tenant_movement_scope(&movement)
         .map_err(|err| tenant_movement_policy_status(movement.operation, err))?;
@@ -190,7 +247,7 @@ pub(crate) async fn run_tenant_backup(
     )
     .await?;
     let runtime = svc.require_runtime()?;
-    let binding = svc.resolve_project_snapshot(&context.project_id)?;
+    let binding = svc.resolve_project_snapshot_for(&context.project_id, data_scope)?;
     let mut context = context;
     context.project_id = binding.project_id.clone();
     // Canonical tenant id (and a value that matches the `::text` filter).
@@ -199,15 +256,20 @@ pub(crate) async fn run_tenant_backup(
         resolve_object_target(svc, req_object_backend, req_object_bucket);
 
     // SHARED enumeration: the same planner PurgeTenant uses. Tenant-owned
-    // tables are `targets`; tenant-less tables are REPORTED in `excluded`.
-    let plan = plan_tenant_purge(&binding.manifest);
+    // tables are `targets`; tenant-less tables are REPORTED in `excluded`. A
+    // shared backup targets the shared tables and reports every other table.
+    let plan = data_scope.plan(&binding.manifest);
     let excluded_count = plan.excluded.len() as i64;
 
     let backup_id = Uuid::new_v4().to_string();
     let started = Utc::now();
     let object_prefix = format!(
         "backups/{}/{}-{}/",
-        tenant_id,
+        if shared {
+            SHARED_OBJECT_SEGMENT
+        } else {
+            tenant_id.as_str()
+        },
         started.format("%Y%m%dT%H%M%SZ"),
         &backup_id[..8.min(backup_id.len())]
     );
@@ -259,6 +321,7 @@ pub(crate) async fn run_tenant_backup(
         "postgres_snapshot": postgres_snapshot,
         "snapshot_wal_lsn": snapshot_wal_lsn,
         "snapshot_started_at": started.to_rfc3339(),
+        "scope": data_scope.tag(),
     });
     journal_run_started(
         runtime,
@@ -268,6 +331,8 @@ pub(crate) async fn run_tenant_backup(
         &binding.project_id,
         KIND_BACKUP,
         &object_prefix,
+        data_scope.journal_source_tenant(),
+        "",
         &started_metadata,
     )
     .await?;
@@ -295,16 +360,20 @@ pub(crate) async fn run_tenant_backup(
         // tenant column both match the bound tenant id (no text-cast trap). A
         // project-isolated table also gets the manifest-derived project
         // predicate; tenant-only tables retain their declared tenant-wide scope.
-        let select_sql = backup_table_select_sql(&rel, &target.tenant_column, project_column);
-        let query = sqlx::query_scalar(&select_sql).bind(&tenant_id);
-        let rows: Vec<String> = if project_column.is_some() {
-            query.bind(&binding.project_id)
+        // A shared table has no tenant column: every row, project-narrowed.
+        let select_sql = if shared {
+            shared_table_select_sql(&rel, project_column)
         } else {
-            query
+            backup_table_select_sql(&rel, &target.tenant_column, project_column)
+        };
+        let mut query = sqlx::query_scalar(&select_sql);
+        if !shared {
+            query = query.bind(&tenant_id);
         }
-        .fetch_all(&mut *snapshot_tx)
-        .await
-        .map_err(|err| {
+        if project_column.is_some() {
+            query = query.bind(&binding.project_id);
+        }
+        let rows: Vec<String> = query.fetch_all(&mut *snapshot_tx).await.map_err(|err| {
             backup_internal_status(
                 "start_backup_read_table",
                 format!(
@@ -382,7 +451,8 @@ pub(crate) async fn run_tenant_backup(
     // skip.
     let manifest_value = serde_json::json!({
         "backup_id": backup_id,
-        "tenant_id": tenant_id,
+        "tenant_id": data_tenant_id,
+        "scope": data_scope.tag(),
         "created_at": started.to_rfc3339(),
         "object_prefix": object_prefix,
         "object_backend": object_backend,
@@ -456,6 +526,7 @@ pub(crate) async fn run_tenant_backup(
         "snapshot_wal_lsn": snapshot_wal_lsn,
         "snapshot_started_at": started.to_rfc3339(),
         "snapshot_read_completed_at": snapshot_read_completed.to_rfc3339(),
+        "scope": data_scope.tag(),
     });
     journal_run(
         runtime,
@@ -469,22 +540,26 @@ pub(crate) async fn run_tenant_backup(
         table_count,
         total_rows,
         excluded_count,
-        "",
+        data_scope.journal_source_tenant(),
         "",
         &completed_metadata,
     )
     .await?;
 
+    // A shared backup's event carries the shared marker as its tenant, like
+    // shared table rows; the journal owner is named alongside.
     emit_event(
         svc,
         TOPIC_BACKUP_COMPLETED,
-        &tenant_id,
-        &tenant_id,
+        &data_tenant_id,
+        &data_tenant_id,
         &context.project_id,
         &backup_id,
         serde_json::json!({
             "backup_id": backup_id,
-            "tenant_id": tenant_id,
+            "tenant_id": data_tenant_id,
+            "journal_tenant_id": tenant_id,
+            "scope": data_scope.tag(),
             "project_id": binding.project_id,
             "object_prefix": object_prefix,
             "manifest_checksum": manifest_checksum,
@@ -504,7 +579,11 @@ pub(crate) async fn run_tenant_backup(
         excluded_count: excluded_count as i32,
         tables: table_entries,
         excluded,
-        message: "tenant backup completed".to_string(),
+        message: if shared {
+            "shared tables backup completed".to_string()
+        } else {
+            "tenant backup completed".to_string()
+        },
         error: None,
     })
 }

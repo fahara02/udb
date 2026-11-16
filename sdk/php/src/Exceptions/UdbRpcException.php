@@ -105,6 +105,40 @@ final class UdbRpcException extends UdbException
     }
 
     /**
+     * The broker's typed refusal reason (`ErrorDetail.reason`, e.g.
+     * "UDB_TOKEN_EXPIRED"), or '' when no detail was decoded. Branch on this,
+     * never on {@see $details}.
+     */
+    public function reason(): string
+    {
+        $ed = $this->errorDetail;
+        if ($ed === null || ! method_exists($ed, 'getReason')) {
+            return '';
+        }
+
+        return (string) $ed->getReason();
+    }
+
+    /**
+     * The broker refused the bearer because it expired (UDB_TOKEN_EXPIRED):
+     * refresh it or sign in again. A delegated job token cannot be refreshed:
+     * the job exchanges a fresh user token or stops.
+     */
+    public function isTokenExpired(): bool
+    {
+        return $this->reason() === 'UDB_TOKEN_EXPIRED';
+    }
+
+    /**
+     * The broker refused the bearer because it was revoked or is no longer
+     * backed by live state (UDB_TOKEN_REVOKED): do not retry with it.
+     */
+    public function isTokenRevoked(): bool
+    {
+        return $this->reason() === 'UDB_TOKEN_REVOKED';
+    }
+
+    /**
      * Structured validation failures from the decoded ErrorDetail trailer.
      *
      * @return array<int, array{field: string, description: string}>

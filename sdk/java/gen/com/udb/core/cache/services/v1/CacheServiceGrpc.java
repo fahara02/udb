@@ -16,6 +16,15 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  * `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
  * leader-elected CDC invalidation worker maps source-table changes to a
  * namespace sweep and emits `udb.cache.invalidated.v1`.
+ * Shared namespace: every request that names a namespace carries `shared`. With
+ * `shared` set the entry lives under the reserved shared-tenant marker
+ * (`udb:cache:*shared*:&lt;ns&gt;:&lt;key&gt;`) instead of the caller's tenant, so it can
+ * never collide with a real tenant's keys. Any authenticated caller of any
+ * tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+ * deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+ * requires a platform admin or the `udb:global:write` scope and is otherwise
+ * refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+ * shared writes carry the shared marker as their tenant, like shared table rows.
  * </pre>
  */
 @io.grpc.stub.annotations.GrpcGenerated
@@ -347,6 +356,15 @@ public final class CacheServiceGrpc {
    * `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
    * leader-elected CDC invalidation worker maps source-table changes to a
    * namespace sweep and emits `udb.cache.invalidated.v1`.
+   * Shared namespace: every request that names a namespace carries `shared`. With
+   * `shared` set the entry lives under the reserved shared-tenant marker
+   * (`udb:cache:*shared*:&lt;ns&gt;:&lt;key&gt;`) instead of the caller's tenant, so it can
+   * never collide with a real tenant's keys. Any authenticated caller of any
+   * tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+   * deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+   * requires a platform admin or the `udb:global:write` scope and is otherwise
+   * refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+   * shared writes carry the shared marker as their tenant, like shared table rows.
    * </pre>
    */
   public interface AsyncService {
@@ -460,6 +478,15 @@ public final class CacheServiceGrpc {
    * `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
    * leader-elected CDC invalidation worker maps source-table changes to a
    * namespace sweep and emits `udb.cache.invalidated.v1`.
+   * Shared namespace: every request that names a namespace carries `shared`. With
+   * `shared` set the entry lives under the reserved shared-tenant marker
+   * (`udb:cache:*shared*:&lt;ns&gt;:&lt;key&gt;`) instead of the caller's tenant, so it can
+   * never collide with a real tenant's keys. Any authenticated caller of any
+   * tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+   * deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+   * requires a platform admin or the `udb:global:write` scope and is otherwise
+   * refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+   * shared writes carry the shared marker as their tenant, like shared table rows.
    * </pre>
    */
   public static abstract class CacheServiceImplBase
@@ -485,6 +512,15 @@ public final class CacheServiceGrpc {
    * `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
    * leader-elected CDC invalidation worker maps source-table changes to a
    * namespace sweep and emits `udb.cache.invalidated.v1`.
+   * Shared namespace: every request that names a namespace carries `shared`. With
+   * `shared` set the entry lives under the reserved shared-tenant marker
+   * (`udb:cache:*shared*:&lt;ns&gt;:&lt;key&gt;`) instead of the caller's tenant, so it can
+   * never collide with a real tenant's keys. Any authenticated caller of any
+   * tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+   * deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+   * requires a platform admin or the `udb:global:write` scope and is otherwise
+   * refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+   * shared writes carry the shared marker as their tenant, like shared table rows.
    * </pre>
    */
   public static final class CacheServiceStub
@@ -617,6 +653,15 @@ public final class CacheServiceGrpc {
    * `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
    * leader-elected CDC invalidation worker maps source-table changes to a
    * namespace sweep and emits `udb.cache.invalidated.v1`.
+   * Shared namespace: every request that names a namespace carries `shared`. With
+   * `shared` set the entry lives under the reserved shared-tenant marker
+   * (`udb:cache:*shared*:&lt;ns&gt;:&lt;key&gt;`) instead of the caller's tenant, so it can
+   * never collide with a real tenant's keys. Any authenticated caller of any
+   * tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+   * deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+   * requires a platform admin or the `udb:global:write` scope and is otherwise
+   * refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+   * shared writes carry the shared marker as their tenant, like shared table rows.
    * </pre>
    */
   public static final class CacheServiceBlockingV2Stub
@@ -741,6 +786,15 @@ public final class CacheServiceGrpc {
    * `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
    * leader-elected CDC invalidation worker maps source-table changes to a
    * namespace sweep and emits `udb.cache.invalidated.v1`.
+   * Shared namespace: every request that names a namespace carries `shared`. With
+   * `shared` set the entry lives under the reserved shared-tenant marker
+   * (`udb:cache:*shared*:&lt;ns&gt;:&lt;key&gt;`) instead of the caller's tenant, so it can
+   * never collide with a real tenant's keys. Any authenticated caller of any
+   * tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+   * deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+   * requires a platform admin or the `udb:global:write` scope and is otherwise
+   * refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+   * shared writes carry the shared marker as their tenant, like shared table rows.
    * </pre>
    */
   public static final class CacheServiceBlockingStub
@@ -865,6 +919,15 @@ public final class CacheServiceGrpc {
    * `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
    * leader-elected CDC invalidation worker maps source-table changes to a
    * namespace sweep and emits `udb.cache.invalidated.v1`.
+   * Shared namespace: every request that names a namespace carries `shared`. With
+   * `shared` set the entry lives under the reserved shared-tenant marker
+   * (`udb:cache:*shared*:&lt;ns&gt;:&lt;key&gt;`) instead of the caller's tenant, so it can
+   * never collide with a real tenant's keys. Any authenticated caller of any
+   * tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+   * deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+   * requires a platform admin or the `udb:global:write` scope and is otherwise
+   * refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+   * shared writes carry the shared marker as their tenant, like shared table rows.
    * </pre>
    */
   public static final class CacheServiceFutureStub

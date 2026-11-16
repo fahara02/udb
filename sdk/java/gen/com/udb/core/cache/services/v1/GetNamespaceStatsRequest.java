@@ -123,6 +123,22 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SHARED_FIELD_NUMBER = 3;
+  private boolean shared_ = false;
+  /**
+   * <pre>
+   * Read the shared namespace (the reserved shared-tenant keyspace every
+   * tenant reads) instead of the caller's tenant keyspace.
+   * </pre>
+   *
+   * <code>bool shared = 3 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  @java.lang.Override
+  public boolean getShared() {
+    return shared_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -143,6 +159,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(namespace_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 2, namespace_);
     }
+    if (shared_ != false) {
+      output.writeBool(3, shared_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -157,6 +176,10 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(namespace_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(2, namespace_);
+    }
+    if (shared_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(3, shared_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -177,6 +200,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getTenantId())) return false;
     if (!getNamespace()
         .equals(other.getNamespace())) return false;
+    if (getShared()
+        != other.getShared()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -192,6 +217,9 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getTenantId().hashCode();
     hash = (37 * hash) + NAMESPACE_FIELD_NUMBER;
     hash = (53 * hash) + getNamespace().hashCode();
+    hash = (37 * hash) + SHARED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getShared());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -325,6 +353,7 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       tenantId_ = "";
       namespace_ = "";
+      shared_ = false;
       return this;
     }
 
@@ -364,6 +393,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.namespace_ = namespace_;
       }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.shared_ = shared_;
+      }
     }
 
     @java.lang.Override
@@ -387,6 +419,9 @@ private static final long serialVersionUID = 0L;
         namespace_ = other.namespace_;
         bitField0_ |= 0x00000002;
         onChanged();
+      }
+      if (other.getShared() != false) {
+        setShared(other.getShared());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -424,6 +459,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 18
+            case 24: {
+              shared_ = input.readBool();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 24
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -581,6 +621,53 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       namespace_ = value;
       bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+
+    private boolean shared_ ;
+    /**
+     * <pre>
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     * </pre>
+     *
+     * <code>bool shared = 3 [json_name = "shared"];</code>
+     * @return The shared.
+     */
+    @java.lang.Override
+    public boolean getShared() {
+      return shared_;
+    }
+    /**
+     * <pre>
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     * </pre>
+     *
+     * <code>bool shared = 3 [json_name = "shared"];</code>
+     * @param value The shared to set.
+     * @return This builder for chaining.
+     */
+    public Builder setShared(boolean value) {
+
+      shared_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     * </pre>
+     *
+     * <code>bool shared = 3 [json_name = "shared"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearShared() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      shared_ = false;
       onChanged();
       return this;
     }

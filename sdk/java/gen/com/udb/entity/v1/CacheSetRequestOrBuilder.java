@@ -114,4 +114,17 @@ public interface CacheSetRequestOrBuilder extends
    * <code>.google.protobuf.Struct metadata = 10 [json_name = "metadata"];</code>
    */
   com.google.protobuf.StructOrBuilder getMetadataOrBuilder();
+
+  /**
+   * <pre>
+   * Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+   * every tenant) instead of the caller's tenant namespace. Requires
+   * `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+   * (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+   * </pre>
+   *
+   * <code>bool shared = 11 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  boolean getShared();
 }

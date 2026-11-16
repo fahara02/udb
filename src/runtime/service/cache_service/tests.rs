@@ -336,6 +336,7 @@ async fn get_rejects_cross_tenant_body() {
         tenant_id: "tenant-b".to_string(),
         namespace: "sessions".to_string(),
         key: "u1".to_string(),
+        ..Default::default()
     });
     request
         .metadata_mut()
@@ -345,4 +346,285 @@ async fn get_rejects_cross_tenant_body() {
         .await
         .expect_err("cross-tenant body must be rejected");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+// ── Shared cache namespace ──────────────────────────────────────────────────
+
+/// Minimal Redis `MATCH` glob for the tests below: `*`, `?` and `\` escapes
+/// (the only metacharacters the key builders emit), anchored at both ends.
+fn redis_glob_matches(pattern: &str, key: &str) -> bool {
+    fn go(p: &[char], k: &[char]) -> bool {
+        match p.first() {
+            None => k.is_empty(),
+            Some('*') => (0..=k.len()).any(|i| go(&p[1..], &k[i..])),
+            Some('?') => !k.is_empty() && go(&p[1..], &k[1..]),
+            Some('\\') if p.len() > 1 => k.first() == Some(&p[1]) && go(&p[2..], &k[1..]),
+            Some(c) => k.first() == Some(c) && go(&p[1..], &k[1..]),
+        }
+    }
+    let p: Vec<char> = pattern.chars().collect();
+    let k: Vec<char> = key.chars().collect();
+    go(&p, &k)
+}
+
+/// Shared entries live under the reserved marker in the tenant segment, so a
+/// shared key can never equal a tenant key, and the shared sweep/scan patterns
+/// match the marker LITERALLY: unescaped, `*shared*` would match every tenant
+/// whose id contains `shared` and a shared flush would delete their keys.
+#[test]
+fn shared_keys_use_the_marker_and_never_reach_tenant_keys() {
+    let marker = crate::broker::SHARED_TENANT_MARKER;
+    let shared = data_key(marker, "fx", "usd");
+    assert_eq!(shared, "udb:cache:*shared*:fx:k:usd");
+    assert_ne!(shared, data_key("tenant-a", "fx", "usd"));
+
+    assert_eq!(super::keys::glob_literal("*shared*"), "\\*shared\\*");
+    assert_eq!(super::keys::glob_literal("a?b[c]\\"), "a\\?b\\[c\\]\\\\");
+    assert_eq!(super::keys::glob_literal("tenant-a"), "tenant-a");
+
+    let flush = namespace_match_all(marker, "fx");
+    let scan = data_match(marker, "fx", "");
+    assert_eq!(flush, "udb:cache:\\*shared\\*:fx:*");
+    for pattern in [&flush, &scan] {
+        assert!(redis_glob_matches(pattern, &shared), "{pattern}");
+    }
+    assert!(redis_glob_matches(&flush, &bytes_counter_key(marker, "fx")));
+    assert!(redis_glob_matches(&flush, &meta_key(marker, "fx")));
+    // Tenants whose id merely contains `shared`, and tenant keys that embed
+    // the marker text, are out of reach of every shared pattern.
+    for victim in [
+        data_key("acme-shared-eu", "fx", "usd"),
+        data_key("shared", "fx", "usd"),
+        data_key("tenant-a", "fx", "*shared*:fx:k:usd"),
+        meta_key("xsharedx", "fx"),
+    ] {
+        assert!(!redis_glob_matches(&flush, &victim), "{victim}");
+        assert!(!redis_glob_matches(&scan, &victim), "{victim}");
+    }
+    // A tenant's own sweep still never reaches the shared keyspace.
+    assert!(!redis_glob_matches(
+        &namespace_match_all("tenant-a", "fx"),
+        &shared
+    ));
+    // Namespace discovery attributes shared keys to the marker, and the meta
+    // key round-trips for byte-counter reconciliation.
+    assert_eq!(
+        parse_meta_key(&meta_key(marker, "fx")),
+        Some((marker.to_string(), "fx".to_string()))
+    );
+    let tenants = super::worker::namespace_key_tenants(&[shared.clone()], "fx");
+    assert!(tenants.contains(marker));
+}
+
+/// Scope resolution: a tenant request keys under the caller; a shared read
+/// keys under the marker without any write check; a shared write runs the
+/// write check and stops on its refusal; the marker is never a caller.
+#[test]
+fn shared_scope_resolution() {
+    use super::scope::{CacheAccess, scope_for_caller};
+
+    let tenant = scope_for_caller("tenant-a".into(), false, CacheAccess::Write, "op", || {
+        panic!("a tenant-scoped write never needs shared-write authority")
+    })
+    .expect("tenant scope");
+    assert_eq!(
+        (tenant.key_tenant.as_str(), tenant.shared),
+        ("tenant-a", false)
+    );
+
+    let read = scope_for_caller("tenant-a".into(), true, CacheAccess::Read, "op", || {
+        panic!("any authenticated caller may read the shared namespace")
+    })
+    .expect("shared read");
+    assert_eq!(read.key_tenant, crate::broker::SHARED_TENANT_MARKER);
+    assert_eq!(
+        read.caller_tenant, "tenant-a",
+        "admission is charged to the caller"
+    );
+
+    let mut checked = false;
+    let write = scope_for_caller("tenant-a".into(), true, CacheAccess::Write, "op", || {
+        checked = true;
+        Ok(())
+    })
+    .expect("authorised shared write");
+    assert!(checked, "a shared write must run the authority check");
+    assert_eq!(write.key_tenant, crate::broker::SHARED_TENANT_MARKER);
+
+    let denied = scope_for_caller("tenant-a".into(), true, CacheAccess::Write, "op", || {
+        Err(super::scope::shared_cache_write_denied_status("op"))
+    })
+    .expect_err("an unauthorised shared write is refused");
+    assert_eq!(denied.code(), tonic::Code::PermissionDenied);
+
+    for shared in [false, true] {
+        let err = scope_for_caller(
+            crate::broker::SHARED_TENANT_MARKER.into(),
+            shared,
+            CacheAccess::Read,
+            "cache_get",
+            || Ok(()),
+        )
+        .expect_err("the shared marker is not a caller identity");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.policy_decision_id, "shared_tenant_marker_reserved");
+    }
+}
+
+/// Shared writes need a platform admin or `udb:global:write`; a plain tenant
+/// token, an unauthenticated context and a marker-tenant claim are refused
+/// with a typed, named reason.
+#[test]
+fn shared_write_needs_platform_admin_or_global_write_scope() {
+    use super::scope::shared_write_authority_from_claim;
+    use crate::runtime::service::method_security::test_claim_context;
+
+    for (scopes, roles) in [
+        (&[crate::broker::GLOBAL_WRITE_SCOPE][..], &[][..]),
+        (&["udb:platform_admin"][..], &[][..]),
+        (&[][..], &["platform_admin"][..]),
+    ] {
+        let claim = test_claim_context("svc", "tenant-a", "default", scopes, roles);
+        shared_write_authority_from_claim(&claim, "cache_set")
+            .unwrap_or_else(|err| panic!("{scopes:?}/{roles:?} must write shared: {err}"));
+    }
+
+    let plain = test_claim_context("u", "tenant-a", "default", &["udb:cache:set"], &[]);
+    let err = shared_write_authority_from_claim(&plain, "cache_set")
+        .expect_err("a plain tenant token may not write the shared namespace");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert!(err.message().contains(crate::broker::GLOBAL_WRITE_SCOPE));
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.operation, "cache_set");
+    assert_eq!(detail.policy_decision_id, "shared_cache_write_denied");
+
+    let mut unauthenticated = test_claim_context(
+        "u",
+        "tenant-a",
+        "default",
+        &[crate::broker::GLOBAL_WRITE_SCOPE],
+        &[],
+    );
+    unauthenticated.authenticated = false;
+    assert!(shared_write_authority_from_claim(&unauthenticated, "cache_set").is_err());
+
+    let marker = test_claim_context(
+        "u",
+        crate::broker::SHARED_TENANT_MARKER,
+        "default",
+        &[crate::broker::GLOBAL_WRITE_SCOPE],
+        &[],
+    );
+    assert!(shared_write_authority_from_claim(&marker, "cache_set").is_err());
+}
+
+/// Shared write events carry the marker as tenant, plus the acting tenant;
+/// tenant events keep the caller tenant.
+#[test]
+fn shared_event_payload_carries_the_marker() {
+    use super::scope::{CacheAccess, scope_for_caller};
+    let shared = scope_for_caller("tenant-a".into(), true, CacheAccess::Write, "op", || Ok(()))
+        .expect("shared scope");
+    let payload = shared.event_payload(serde_json::json!({"namespace": "fx", "key": "usd"}));
+    assert_eq!(payload["tenant_id"], crate::broker::SHARED_TENANT_MARKER);
+    assert_eq!(payload["shared"], true);
+    assert_eq!(payload["actor_tenant_id"], "tenant-a");
+    assert_eq!(payload["key"], "usd");
+
+    let tenant = scope_for_caller(
+        "tenant-a".into(),
+        false,
+        CacheAccess::Write,
+        "op",
+        || Ok(()),
+    )
+    .expect("tenant scope");
+    let payload = tenant.event_payload(serde_json::json!({"namespace": "fx"}));
+    assert_eq!(payload["tenant_id"], "tenant-a");
+    assert_eq!(payload["shared"], false);
+    assert!(payload.get("actor_tenant_id").is_none());
+}
+
+/// Over the served path: a plain tenant token's shared Set / Delete /
+/// DeleteNamespace is refused with PERMISSION_DENIED before any Redis access,
+/// while its shared Get passes the scope gate (and only then stops on the
+/// missing Redis backend).
+#[tokio::test]
+async fn shared_writes_are_refused_for_a_plain_tenant_token_on_the_served_path() {
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+    let svc = CacheServiceImpl::new();
+    let claim = || test_claim_context("u", "tenant-a", "", &["udb:cache:set"], &[]);
+    fn with_tenant<T>(message: T) -> Request<T> {
+        let mut request = Request::new(message);
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        request
+    }
+
+    let set = scope_claim_context_for_test(
+        claim(),
+        svc.set(with_tenant(cache_pb::SetRequest {
+            tenant_id: "tenant-a".to_string(),
+            namespace: "fx".to_string(),
+            key: "usd".to_string(),
+            value: b"1.0".to_vec(),
+            shared: true,
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect_err("shared Set needs shared-write authority");
+    assert_eq!(set.code(), tonic::Code::PermissionDenied);
+    assert_eq!(
+        decode_detail(&set).policy_decision_id,
+        "shared_cache_write_denied"
+    );
+
+    let delete = scope_claim_context_for_test(
+        claim(),
+        svc.delete(with_tenant(cache_pb::DeleteRequest {
+            tenant_id: "tenant-a".to_string(),
+            namespace: "fx".to_string(),
+            key: "usd".to_string(),
+            shared: true,
+        })),
+    )
+    .await
+    .expect_err("shared Delete needs shared-write authority");
+    assert_eq!(delete.code(), tonic::Code::PermissionDenied);
+
+    let flush = scope_claim_context_for_test(
+        claim(),
+        svc.delete_namespace(with_tenant(cache_pb::DeleteNamespaceRequest {
+            tenant_id: "tenant-a".to_string(),
+            namespace: "fx".to_string(),
+            confirmation_token: "yes".to_string(),
+            shared: true,
+        })),
+    )
+    .await
+    .expect_err("shared DeleteNamespace needs shared-write authority");
+    assert_eq!(flush.code(), tonic::Code::PermissionDenied);
+
+    let read = scope_claim_context_for_test(
+        claim(),
+        svc.get(with_tenant(cache_pb::GetRequest {
+            tenant_id: "tenant-a".to_string(),
+            namespace: "fx".to_string(),
+            key: "usd".to_string(),
+            shared: true,
+        })),
+    )
+    .await
+    .expect_err("no Redis is configured in this unit test");
+    assert_eq!(
+        read.code(),
+        tonic::Code::FailedPrecondition,
+        "a shared read passes the scope gate and reaches the backend: {read}"
+    );
 }

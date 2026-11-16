@@ -433,6 +433,163 @@ impl TokenManager {
 }
 
 /// The `RefreshToken` request for the stored credential.
+// ── Delegated job tokens ─────────────────────────────────────────────────────
+//
+// A durable async job (an export, a report, a nightly sync) often has to act for
+// the user who started it, long after that user's own short-lived access token
+// expired. `AuthnService.ExchangeTokenForJob` mints a delegated job token for
+// that: the service presents the user's current access token, and the broker
+// returns a token whose subject is the user, whose RFC 8693 actor is the
+// service, which carries the job's purpose and id, and whose scopes are those
+// both the user and the service's grant allow. It has no refresh token, cannot
+// be exchanged again, lives at most the broker's `UDB_DELEGATED_TOKEN_MAX_TTL`
+// (24 hours by default), and stops working as soon as the user, the token or
+// the service's `udb:token:delegate` grant is revoked
+// ([`crate::UdbError::is_token_expired`], [`crate::UdbError::is_token_revoked`]).
+
+/// What [`exchange_token_for_job`] asks for.
+#[derive(Clone, Default)]
+pub struct ExchangeTokenForJobRequest {
+    /// The user's current access token (`Bearer ` prefix optional).
+    pub subject_token: String,
+    /// Why the job acts for the user, e.g. `"export"`; signed into the token.
+    pub purpose: String,
+    /// The job the token is for; at most 200 bytes.
+    pub job_id: String,
+    /// The requested lifetime in seconds; 0 asks for the broker's maximum.
+    pub ttl_seconds: i64,
+}
+
+/// Hand-written rather than derived: a derived `Debug` would print the user's
+/// access token.
+impl std::fmt::Debug for ExchangeTokenForJobRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExchangeTokenForJobRequest")
+            .field("subject_token", &"<redacted>")
+            .field("purpose", &self.purpose)
+            .field("job_id", &self.job_id)
+            .field("ttl_seconds", &self.ttl_seconds)
+            .finish()
+    }
+}
+
+/// A token a job uses to act for `subject` (the user) as `actor` (the service).
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct DelegatedJobToken {
+    pub access_token: String,
+    /// The token's id; revoking it stops the token.
+    pub jti: String,
+    pub expires_at_unix: i64,
+    /// The user the token acts for.
+    pub subject: String,
+    /// The acting service's identity (the RFC 8693 `act` claim).
+    pub actor: String,
+    pub purpose: String,
+    pub job_id: String,
+    /// The scopes both the user's token and the service's grant allow.
+    pub scopes: Vec<String>,
+    pub tenant_id: String,
+    pub project_id: String,
+}
+
+/// Hand-written rather than derived: a derived `Debug` would print the token.
+impl std::fmt::Debug for DelegatedJobToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DelegatedJobToken")
+            .field("access_token", &"<redacted>")
+            .field("jti", &self.jti)
+            .field("expires_at_unix", &self.expires_at_unix)
+            .field("subject", &self.subject)
+            .field("actor", &self.actor)
+            .field("purpose", &self.purpose)
+            .field("job_id", &self.job_id)
+            .field("scopes", &self.scopes)
+            .field("tenant_id", &self.tenant_id)
+            .field("project_id", &self.project_id)
+            .finish()
+    }
+}
+
+/// Exchange a user's access token for a delegated job token.
+///
+/// `meta` must carry the SERVICE's own bearer (a service account whose grant
+/// holds `udb:token:delegate`, in the user's tenant); the broker refuses any
+/// other caller, and any subject token that is not a valid user access token of
+/// that tenant, with `PERMISSION_DENIED`. A blank subject token, purpose or job
+/// id, or a negative ttl, is refused locally with `INVALID_ARGUMENT` before any
+/// call. A refusal keeps the broker's code and typed reason
+/// ([`crate::UdbError::reason`]).
+pub async fn exchange_token_for_job(
+    client: &mut AuthnServiceClient<Channel>,
+    meta: &Metadata,
+    request: ExchangeTokenForJobRequest,
+) -> Result<DelegatedJobToken, crate::UdbError> {
+    let job_id = request.job_id.clone();
+    let mut req = tonic::Request::new(job_token_request(request)?);
+    meta.apply(&mut req)?;
+    let resp = client
+        .exchange_token_for_job(req)
+        .await
+        .map_err(crate::UdbError::from_status)?
+        .into_inner();
+    delegated_job_token(resp, &job_id)
+}
+
+fn job_token_request(
+    request: ExchangeTokenForJobRequest,
+) -> Result<authn::ExchangeTokenForJobRequest, Status> {
+    if request.subject_token.trim().is_empty() {
+        return Err(Status::invalid_argument(
+            "udb: exchange_token_for_job: subject_token is required",
+        ));
+    }
+    if request.job_id.trim().is_empty() {
+        return Err(Status::invalid_argument(
+            "udb: exchange_token_for_job: job_id is required",
+        ));
+    }
+    if request.purpose.trim().is_empty() {
+        return Err(Status::invalid_argument(
+            "udb: exchange_token_for_job: purpose is required",
+        ));
+    }
+    if request.ttl_seconds < 0 {
+        return Err(Status::invalid_argument(
+            "udb: exchange_token_for_job: ttl_seconds must not be negative",
+        ));
+    }
+    Ok(authn::ExchangeTokenForJobRequest {
+        subject_token: request.subject_token,
+        purpose: request.purpose,
+        job_id: request.job_id,
+        ttl_seconds: request.ttl_seconds,
+    })
+}
+
+fn delegated_job_token(
+    resp: authn::ExchangeTokenForJobResponse,
+    job_id: &str,
+) -> Result<DelegatedJobToken, crate::UdbError> {
+    if resp.access_token.is_empty() {
+        return Err(Status::internal(format!(
+            "udb: exchange the user's token for job {job_id}: the broker returned no token"
+        ))
+        .into());
+    }
+    Ok(DelegatedJobToken {
+        access_token: resp.access_token,
+        jti: resp.jti,
+        expires_at_unix: resp.expires_at_unix,
+        subject: resp.subject,
+        actor: resp.actor,
+        purpose: resp.purpose,
+        job_id: resp.job_id,
+        scopes: resp.scopes,
+        tenant_id: resp.tenant_id,
+        project_id: resp.project_id,
+    })
+}
+
 fn refresh_request(stored: &Token) -> authn::RefreshTokenRequest {
     authn::RefreshTokenRequest {
         refresh_token: stored.refresh_token.clone(),
@@ -690,6 +847,89 @@ mod tests {
             let capped = jittered_backoff(30, RENEW_BACKOFF_BASE, RENEW_BACKOFF_CAP);
             assert!(capped >= RENEW_BACKOFF_CAP / 2 && capped <= RENEW_BACKOFF_CAP);
         }
+    }
+
+    #[test]
+    fn job_token_request_carries_the_fields_and_refuses_blanks_locally() {
+        let ok = job_token_request(ExchangeTokenForJobRequest {
+            subject_token: "user.jwt".into(),
+            purpose: "export".into(),
+            job_id: "export-42".into(),
+            ttl_seconds: 600,
+        })
+        .expect("valid request");
+        assert_eq!(ok.subject_token, "user.jwt");
+        assert_eq!(ok.purpose, "export");
+        assert_eq!(ok.job_id, "export-42");
+        assert_eq!(ok.ttl_seconds, 600);
+
+        let valid = || ExchangeTokenForJobRequest {
+            subject_token: "t".into(),
+            purpose: "export".into(),
+            job_id: "j".into(),
+            ttl_seconds: 0,
+        };
+        for bad in [
+            ExchangeTokenForJobRequest {
+                subject_token: " ".into(),
+                ..valid()
+            },
+            ExchangeTokenForJobRequest {
+                purpose: String::new(),
+                ..valid()
+            },
+            ExchangeTokenForJobRequest {
+                job_id: String::new(),
+                ..valid()
+            },
+            ExchangeTokenForJobRequest {
+                ttl_seconds: -1,
+                ..valid()
+            },
+        ] {
+            let err = job_token_request(bad).expect_err("refused locally");
+            assert_eq!(err.code(), Code::InvalidArgument);
+        }
+    }
+
+    #[test]
+    fn delegated_job_token_maps_the_response_and_refuses_an_empty_token() {
+        let token = delegated_job_token(
+            authn::ExchangeTokenForJobResponse {
+                access_token: "delegated.jwt".into(),
+                jti: "dlg_1".into(),
+                expires_at_unix: 1_900_000_000,
+                subject: "user-1".into(),
+                actor: "spiffe://acme/exporter".into(),
+                purpose: "export".into(),
+                job_id: "export-42".into(),
+                scopes: vec!["udb:read".into()],
+                tenant_id: "tenant-1".into(),
+                project_id: "billing".into(),
+                ..Default::default()
+            },
+            "export-42",
+        )
+        .expect("token");
+        assert_eq!(
+            token,
+            DelegatedJobToken {
+                access_token: "delegated.jwt".into(),
+                jti: "dlg_1".into(),
+                expires_at_unix: 1_900_000_000,
+                subject: "user-1".into(),
+                actor: "spiffe://acme/exporter".into(),
+                purpose: "export".into(),
+                job_id: "export-42".into(),
+                scopes: vec!["udb:read".into()],
+                tenant_id: "tenant-1".into(),
+                project_id: "billing".into(),
+            }
+        );
+        assert!(!format!("{token:?}").contains("delegated.jwt"));
+        let err = delegated_job_token(authn::ExchangeTokenForJobResponse::default(), "export-42")
+            .expect_err("no token");
+        assert_eq!(err.code(), Code::Internal);
     }
 
     #[test]

@@ -10,8 +10,9 @@ use Google\Protobuf\Internal\GPBUtil;
 use Google\Protobuf\RepeatedField;
 
 /**
- * A table excluded from the backup because it has no resolvable tenant column.
- * Reported, never silently skipped.
+ * A table excluded from the backup: in a tenant backup one with no resolvable
+ * tenant column, in a shared backup one that is not a shared table. Reported,
+ * never silently skipped.
  *
  * Generated from protobuf message <code>udb.core.backup.services.v1.BackupExcludedTable</code>
  */

@@ -25,6 +25,16 @@ option php_namespace = "Udb\\Core\\Cache\\Services\\V1";
 // `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
 // leader-elected CDC invalidation worker maps source-table changes to a
 // namespace sweep and emits `udb.cache.invalidated.v1`.
+//
+// Shared namespace: every request that names a namespace carries `shared`. With
+// `shared` set the entry lives under the reserved shared-tenant marker
+// (`udb:cache:*shared*:<ns>:<key>`) instead of the caller's tenant, so it can
+// never collide with a real tenant's keys. Any authenticated caller of any
+// tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+// deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+// requires a platform admin or the `udb:global:write` scope and is otherwise
+// refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+// shared writes carry the shared marker as their tenant, like shared table rows.
 service CacheService {
   option (udb.core.common.v1.native_service) = {
     service_id: "cache"
@@ -430,6 +440,9 @@ message GetRequest {
   string tenant_id = 1;
   string namespace = 2;
   string key = 3;
+  // Read the shared namespace (the reserved shared-tenant keyspace every
+  // tenant reads) instead of the caller's tenant keyspace.
+  bool shared = 4;
 }
 
 message GetResponse {
@@ -465,6 +478,10 @@ message SetRequest {
   bytes value = 4;
   // 0 = use the namespace default TTL (or no expiry if none configured).
   int64 ttl_seconds = 5;
+  // Write the shared namespace (the reserved shared-tenant keyspace every
+  // tenant reads) instead of the caller's tenant keyspace. Requires a platform
+  // admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+  bool shared = 6;
 }
 
 message SetResponse {
@@ -507,6 +524,10 @@ message IncrementRequest {
   // Upper bound for the new value; 0 = no bound. An increment that would take
   // the value above `max` is not applied and the response has `refused` set.
   int64 max = 6;
+  // Write the shared namespace (the reserved shared-tenant keyspace every
+  // tenant reads) instead of the caller's tenant keyspace. Requires a platform
+  // admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+  bool shared = 7;
 }
 
 message IncrementResponse {
@@ -546,6 +567,10 @@ message DeleteRequest {
   string tenant_id = 1;
   string namespace = 2;
   string key = 3;
+  // Write the shared namespace (the reserved shared-tenant keyspace every
+  // tenant reads) instead of the caller's tenant keyspace. Requires a platform
+  // admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+  bool shared = 4;
 }
 
 message DeleteResponse {
@@ -583,6 +608,9 @@ message ScanRequest {
   int32 limit = 4;
   // Opaque Redis SCAN cursor from a prior page ("" / "0" starts a fresh scan).
   string page_token = 5;
+  // Read the shared namespace (the reserved shared-tenant keyspace every
+  // tenant reads) instead of the caller's tenant keyspace.
+  bool shared = 6;
 }
 
 message ScanResponse {
@@ -635,6 +663,10 @@ message CreateNamespaceRequest {
   int64 max_bytes = 3;
   // Default TTL applied to a Set that does not specify one. 0 = no default.
   int64 default_ttl_seconds = 4;
+  // Write the shared namespace (the reserved shared-tenant keyspace every
+  // tenant reads) instead of the caller's tenant keyspace. Requires a platform
+  // admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+  bool shared = 5;
 }
 
 message CreateNamespaceResponse {
@@ -670,6 +702,10 @@ message DeleteNamespaceRequest {
   // Required explicit confirmation token; an empty token fails closed
   // (DESTRUCTIVE namespace flush).
   string confirmation_token = 3;
+  // Write the shared namespace (the reserved shared-tenant keyspace every
+  // tenant reads) instead of the caller's tenant keyspace. Requires a platform
+  // admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+  bool shared = 4;
 }
 
 message DeleteNamespaceResponse {
@@ -701,6 +737,9 @@ message GetNamespaceStatsRequest {
   };
   string tenant_id = 1;
   string namespace = 2;
+  // Read the shared namespace (the reserved shared-tenant keyspace every
+  // tenant reads) instead of the caller's tenant keyspace.
+  bool shared = 3;
 }
 
 message GetNamespaceStatsResponse {

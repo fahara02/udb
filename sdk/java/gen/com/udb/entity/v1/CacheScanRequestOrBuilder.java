@@ -69,4 +69,16 @@ public interface CacheScanRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getPageTokenBytes();
+
+  /**
+   * <pre>
+   * Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+   * every tenant) instead of the caller's tenant namespace. Redis and
+   * Memcached cache backends only.
+   * </pre>
+   *
+   * <code>bool shared = 6 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  boolean getShared();
 }

@@ -40,6 +40,7 @@ func (e *entity) descriptorRules(desc protoreflect.MessageDescriptor) {
 	if e.tableName == "" {
 		e.tableName = string(desc.Name())
 	}
+	e.shortName = string(desc.Name())
 	for name, fd := range e.columns {
 		column := protoschema.Column(fd)
 		if column == nil {
@@ -79,6 +80,7 @@ func (e *entity) descriptorRules(desc protoreflect.MessageDescriptor) {
 			e.schemaError = "soft_delete_column is not a declared column"
 		}
 	}
+	e.joinRules(table)
 }
 
 func (e *entity) addUnique(index *commonv1.IndexOptions, fallback string) {

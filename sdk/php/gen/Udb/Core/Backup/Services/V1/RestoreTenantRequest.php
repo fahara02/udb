@@ -50,6 +50,17 @@ class RestoreTenantRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string metadata_json = 6 [json_name = "metadataJson"];</code>
      */
     protected $metadata_json = '';
+    /**
+     * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+     * tables. Platform admin only. `source_tenant_id` names the tenant whose
+     * journal holds the run (the `tenant_id` the shared backup was started with);
+     * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+     * rows belong to no tenant. A shared backup is never restored with the
+     * tenant scope, nor a tenant backup with the shared scope.
+     *
+     * Generated from protobuf field <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+     */
+    protected $scope = 0;
 
     /**
      * Constructor.
@@ -70,6 +81,13 @@ class RestoreTenantRequest extends \Google\Protobuf\Internal\Message
      *           When the target differs from the source this must be set: a cross-tenant
      *           restore needs explicit privileged approval (fail closed otherwise).
      *     @type string $metadata_json
+     *     @type int $scope
+     *           BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+     *           tables. Platform admin only. `source_tenant_id` names the tenant whose
+     *           journal holds the run (the `tenant_id` the shared backup was started with);
+     *           `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+     *           rows belong to no tenant. A shared backup is never restored with the
+     *           tenant scope, nor a tenant backup with the shared scope.
      * }
      */
     public function __construct($data = NULL) {
@@ -229,6 +247,42 @@ class RestoreTenantRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->metadata_json = $var;
+
+        return $this;
+    }
+
+    /**
+     * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+     * tables. Platform admin only. `source_tenant_id` names the tenant whose
+     * journal holds the run (the `tenant_id` the shared backup was started with);
+     * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+     * rows belong to no tenant. A shared backup is never restored with the
+     * tenant scope, nor a tenant backup with the shared scope.
+     *
+     * Generated from protobuf field <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+     * @return int
+     */
+    public function getScope()
+    {
+        return $this->scope;
+    }
+
+    /**
+     * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+     * tables. Platform admin only. `source_tenant_id` names the tenant whose
+     * journal holds the run (the `tenant_id` the shared backup was started with);
+     * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+     * rows belong to no tenant. A shared backup is never restored with the
+     * tenant scope, nor a tenant backup with the shared scope.
+     *
+     * Generated from protobuf field <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setScope($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Core\Backup\Services\V1\BackupScope::class);
+        $this->scope = $var;
 
         return $this;
     }

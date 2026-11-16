@@ -30,6 +30,7 @@ const (
 	DataBroker_Delete_FullMethodName                  = "/udb.services.v1.DataBroker/Delete"
 	DataBroker_Update_FullMethodName                  = "/udb.services.v1.DataBroker/Update"
 	DataBroker_BulkCas_FullMethodName                 = "/udb.services.v1.DataBroker/BulkCas"
+	DataBroker_BulkUpsert_FullMethodName              = "/udb.services.v1.DataBroker/BulkUpsert"
 	DataBroker_VectorSearch_FullMethodName            = "/udb.services.v1.DataBroker/VectorSearch"
 	DataBroker_VectorHybridSearch_FullMethodName      = "/udb.services.v1.DataBroker/VectorHybridSearch"
 	DataBroker_VectorUpsert_FullMethodName            = "/udb.services.v1.DataBroker/VectorUpsert"
@@ -219,6 +220,21 @@ type DataBrokerClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	BulkCas(ctx context.Context, in *v1.BulkCasRequest, opts ...grpc.CallOption) (*v1.BulkCasResponse, error)
+	// Audited bulk load: write one batch of whole rows to one table in ONE
+	// write transaction (all rows or none), with multi-row statements, ONE
+	// summarising change event, ONE audit record and a size-aware rate-limit
+	// charge. Authorized per table exactly like BatchUpsert's items (the
+	// `Upsert` action; shared tables need a platform admin or the global-write
+	// scope). Every row is validated, scoped and encrypted like a single Upsert.
+	// UDB contract: /udb.services.v1.DataBroker/BulkUpsert
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	BulkUpsert(ctx context.Context, in *v1.BulkUpsertRequest, opts ...grpc.CallOption) (*v1.BulkUpsertResponse, error)
 	// ── Vector ──────────────────────────────────────────────────────────────────
 	// UDB contract: /udb.services.v1.DataBroker/VectorSearch
 	// Listener: data plane.
@@ -1093,6 +1109,16 @@ func (c *dataBrokerClient) BulkCas(ctx context.Context, in *v1.BulkCasRequest, o
 	return out, nil
 }
 
+func (c *dataBrokerClient) BulkUpsert(ctx context.Context, in *v1.BulkUpsertRequest, opts ...grpc.CallOption) (*v1.BulkUpsertResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.BulkUpsertResponse)
+	err := c.cc.Invoke(ctx, DataBroker_BulkUpsert_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dataBrokerClient) VectorSearch(ctx context.Context, in *v1.VectorSearchRequest, opts ...grpc.CallOption) (*v1.VectorSet, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.VectorSet)
@@ -1910,6 +1936,13 @@ type DataBrokerServer interface {
 	// Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
 	// unary Update path.
 	BulkCas(context.Context, *v1.BulkCasRequest) (*v1.BulkCasResponse, error)
+	// Audited bulk load: write one batch of whole rows to one table in ONE
+	// write transaction (all rows or none), with multi-row statements, ONE
+	// summarising change event, ONE audit record and a size-aware rate-limit
+	// charge. Authorized per table exactly like BatchUpsert's items (the
+	// `Upsert` action; shared tables need a platform admin or the global-write
+	// scope). Every row is validated, scoped and encrypted like a single Upsert.
+	BulkUpsert(context.Context, *v1.BulkUpsertRequest) (*v1.BulkUpsertResponse, error)
 	// ── Vector ──────────────────────────────────────────────────────────────────
 	VectorSearch(context.Context, *v1.VectorSearchRequest) (*v1.VectorSet, error)
 	VectorHybridSearch(context.Context, *v1.VectorHybridSearchRequest) (*v1.VectorSet, error)
@@ -2102,6 +2135,9 @@ func (UnimplementedDataBrokerServer) Update(context.Context, *v1.UpdateRequest) 
 }
 func (UnimplementedDataBrokerServer) BulkCas(context.Context, *v1.BulkCasRequest) (*v1.BulkCasResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BulkCas not implemented")
+}
+func (UnimplementedDataBrokerServer) BulkUpsert(context.Context, *v1.BulkUpsertRequest) (*v1.BulkUpsertResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkUpsert not implemented")
 }
 func (UnimplementedDataBrokerServer) VectorSearch(context.Context, *v1.VectorSearchRequest) (*v1.VectorSet, error) {
 	return nil, status.Error(codes.Unimplemented, "method VectorSearch not implemented")
@@ -2477,6 +2513,24 @@ func _DataBroker_BulkCas_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataBrokerServer).BulkCas(ctx, req.(*v1.BulkCasRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_BulkUpsert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.BulkUpsertRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).BulkUpsert(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_BulkUpsert_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).BulkUpsert(ctx, req.(*v1.BulkUpsertRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3814,6 +3868,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BulkCas",
 			Handler:    _DataBroker_BulkCas_Handler,
+		},
+		{
+			MethodName: "BulkUpsert",
+			Handler:    _DataBroker_BulkUpsert_Handler,
 		},
 		{
 			MethodName: "VectorSearch",

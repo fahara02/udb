@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.21 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.22 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -33,7 +33,7 @@ That means the Laravel app does not need to know whether the data is in Postgres
 
 This package makes UDB feel natural inside Laravel:
 
-- `composer require fahara02/udb-laravel:^0.6.21`
+- `composer require fahara02/udb-laravel:^0.6.22`
 - set `UDB_ENDPOINT` in `.env`
 - call `Udb::select()`, `Udb::upsert()`, or `Udb::delete()`
 - use typed generated PHP classes for requests and responses
@@ -54,7 +54,7 @@ This package makes UDB feel natural inside Laravel:
 ## Installation
 
 ```bash
-composer require fahara02/udb-laravel:^0.6.21
+composer require fahara02/udb-laravel:^0.6.22
 ```
 
 The service provider is auto-discovered by Laravel. The `Udb` facade is registered automatically. By default, the package also adds middleware to the `web` and `api` route groups so each request can carry tenant and user context into UDB.
@@ -346,6 +346,35 @@ $stub = $gen->VaultServiceStub();
 
 The per-RPC retry class and idempotency contract are listed in
 [docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
+
+### A job that acts for a user: delegated job tokens
+
+A queued job (an export, a report, a nightly sync) that must act for the user
+who started it, after that user's short-lived token expired, exchanges the
+user's token for a delegated job token. Call it with the SERVICE's own bearer on
+the metadata (a service account whose grant holds `udb:token:delegate`, in the
+user's tenant):
+
+```php
+use Fahara02\UdbLaravel\Exceptions\UdbRpcException;
+
+try {
+    // ttlSeconds 0 = the broker's maximum (24 hours by default).
+    $job = $project->auth()->exchangeTokenForJob($userAccessToken, 'export', 'export-42', 0, $serviceMetadata);
+    // Run the job's calls with $job->accessToken; $job->subject is the user,
+    // $job->actor the service.
+} catch (UdbRpcException $e) {
+    if ($e->isTokenRevoked()) {
+        // UDB_TOKEN_REVOKED: the user, the token or the service's grant was revoked: stop.
+    }
+    throw $e;
+}
+```
+
+The token has no refresh token and cannot be exchanged again. A job call refused
+with `$e->isTokenExpired()` (`UDB_TOKEN_EXPIRED`) needs a fresh user token;
+`$e->isTokenRevoked()` (`UDB_TOKEN_REVOKED`) means stop. Both read the broker's
+typed reason (`$e->reason()`), never the message text.
 
 ### Error handling
 

@@ -208,7 +208,8 @@ func (f *Fake) beforeRPC(ctx context.Context, fullMethod string, request any) (c
 		}
 		if typed, ok := request.(interface{ GetMessageType() string }); ok {
 			action := method
-			if action == "Insert" {
+			// Insert and BulkUpsert are authorized as Upsert of the table, as on the broker.
+			if action == "Insert" || action == "BulkUpsert" {
 				action = "Upsert"
 			}
 			if err := f.authorize(ctx, typed.GetMessageType(), action); err != nil {

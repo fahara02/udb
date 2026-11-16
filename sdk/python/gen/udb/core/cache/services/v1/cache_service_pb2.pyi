@@ -10,14 +10,16 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class GetRequest(_message.Message):
-    __slots__ = ("tenant_id", "namespace", "key")
+    __slots__ = ("tenant_id", "namespace", "key", "shared")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     NAMESPACE_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     namespace: str
     key: str
-    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key: _Optional[str] = ...) -> None: ...
+    shared: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key: _Optional[str] = ..., shared: bool = ...) -> None: ...
 
 class GetResponse(_message.Message):
     __slots__ = ("found", "value", "ttl_remaining_seconds", "error")
@@ -32,18 +34,20 @@ class GetResponse(_message.Message):
     def __init__(self, found: bool = ..., value: _Optional[bytes] = ..., ttl_remaining_seconds: _Optional[int] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class SetRequest(_message.Message):
-    __slots__ = ("tenant_id", "namespace", "key", "value", "ttl_seconds")
+    __slots__ = ("tenant_id", "namespace", "key", "value", "ttl_seconds", "shared")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     NAMESPACE_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
     TTL_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     namespace: str
     key: str
     value: bytes
     ttl_seconds: int
-    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key: _Optional[str] = ..., value: _Optional[bytes] = ..., ttl_seconds: _Optional[int] = ...) -> None: ...
+    shared: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key: _Optional[str] = ..., value: _Optional[bytes] = ..., ttl_seconds: _Optional[int] = ..., shared: bool = ...) -> None: ...
 
 class SetResponse(_message.Message):
     __slots__ = ("stored", "used_bytes", "max_bytes", "message", "error")
@@ -60,20 +64,22 @@ class SetResponse(_message.Message):
     def __init__(self, stored: bool = ..., used_bytes: _Optional[int] = ..., max_bytes: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class IncrementRequest(_message.Message):
-    __slots__ = ("tenant_id", "namespace", "key", "delta", "ttl_seconds_if_created", "max")
+    __slots__ = ("tenant_id", "namespace", "key", "delta", "ttl_seconds_if_created", "max", "shared")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     NAMESPACE_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
     DELTA_FIELD_NUMBER: _ClassVar[int]
     TTL_SECONDS_IF_CREATED_FIELD_NUMBER: _ClassVar[int]
     MAX_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     namespace: str
     key: str
     delta: int
     ttl_seconds_if_created: int
     max: int
-    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key: _Optional[str] = ..., delta: _Optional[int] = ..., ttl_seconds_if_created: _Optional[int] = ..., max: _Optional[int] = ...) -> None: ...
+    shared: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key: _Optional[str] = ..., delta: _Optional[int] = ..., ttl_seconds_if_created: _Optional[int] = ..., max: _Optional[int] = ..., shared: bool = ...) -> None: ...
 
 class IncrementResponse(_message.Message):
     __slots__ = ("value", "created", "refused", "ttl_remaining_seconds", "error")
@@ -90,14 +96,16 @@ class IncrementResponse(_message.Message):
     def __init__(self, value: _Optional[int] = ..., created: bool = ..., refused: bool = ..., ttl_remaining_seconds: _Optional[int] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class DeleteRequest(_message.Message):
-    __slots__ = ("tenant_id", "namespace", "key")
+    __slots__ = ("tenant_id", "namespace", "key", "shared")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     NAMESPACE_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     namespace: str
     key: str
-    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key: _Optional[str] = ...) -> None: ...
+    shared: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key: _Optional[str] = ..., shared: bool = ...) -> None: ...
 
 class DeleteResponse(_message.Message):
     __slots__ = ("deleted", "used_bytes", "message", "error")
@@ -112,18 +120,20 @@ class DeleteResponse(_message.Message):
     def __init__(self, deleted: bool = ..., used_bytes: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class ScanRequest(_message.Message):
-    __slots__ = ("tenant_id", "namespace", "key_prefix", "limit", "page_token")
+    __slots__ = ("tenant_id", "namespace", "key_prefix", "limit", "page_token", "shared")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     NAMESPACE_FIELD_NUMBER: _ClassVar[int]
     KEY_PREFIX_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     namespace: str
     key_prefix: str
     limit: int
     page_token: str
-    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key_prefix: _Optional[str] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+    shared: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key_prefix: _Optional[str] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ..., shared: bool = ...) -> None: ...
 
 class ScanResponse(_message.Message):
     __slots__ = ("items", "next_page_token", "error")
@@ -146,16 +156,18 @@ class CacheItem(_message.Message):
     def __init__(self, key: _Optional[str] = ..., value: _Optional[bytes] = ..., ttl_remaining_seconds: _Optional[int] = ...) -> None: ...
 
 class CreateNamespaceRequest(_message.Message):
-    __slots__ = ("tenant_id", "namespace", "max_bytes", "default_ttl_seconds")
+    __slots__ = ("tenant_id", "namespace", "max_bytes", "default_ttl_seconds", "shared")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     NAMESPACE_FIELD_NUMBER: _ClassVar[int]
     MAX_BYTES_FIELD_NUMBER: _ClassVar[int]
     DEFAULT_TTL_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     namespace: str
     max_bytes: int
     default_ttl_seconds: int
-    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., max_bytes: _Optional[int] = ..., default_ttl_seconds: _Optional[int] = ...) -> None: ...
+    shared: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., max_bytes: _Optional[int] = ..., default_ttl_seconds: _Optional[int] = ..., shared: bool = ...) -> None: ...
 
 class CreateNamespaceResponse(_message.Message):
     __slots__ = ("namespace", "max_bytes", "default_ttl_seconds", "message", "error")
@@ -172,14 +184,16 @@ class CreateNamespaceResponse(_message.Message):
     def __init__(self, namespace: _Optional[str] = ..., max_bytes: _Optional[int] = ..., default_ttl_seconds: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class DeleteNamespaceRequest(_message.Message):
-    __slots__ = ("tenant_id", "namespace", "confirmation_token")
+    __slots__ = ("tenant_id", "namespace", "confirmation_token", "shared")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     NAMESPACE_FIELD_NUMBER: _ClassVar[int]
     CONFIRMATION_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     namespace: str
     confirmation_token: str
-    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., confirmation_token: _Optional[str] = ...) -> None: ...
+    shared: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., confirmation_token: _Optional[str] = ..., shared: bool = ...) -> None: ...
 
 class DeleteNamespaceResponse(_message.Message):
     __slots__ = ("namespace", "keys_deleted", "message", "error")
@@ -194,12 +208,14 @@ class DeleteNamespaceResponse(_message.Message):
     def __init__(self, namespace: _Optional[str] = ..., keys_deleted: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class GetNamespaceStatsRequest(_message.Message):
-    __slots__ = ("tenant_id", "namespace")
+    __slots__ = ("tenant_id", "namespace", "shared")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     NAMESPACE_FIELD_NUMBER: _ClassVar[int]
+    SHARED_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     namespace: str
-    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ...) -> None: ...
+    shared: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., shared: bool = ...) -> None: ...
 
 class GetNamespaceStatsResponse(_message.Message):
     __slots__ = ("namespace", "used_bytes", "max_bytes", "item_count", "error")

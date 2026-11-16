@@ -12,6 +12,14 @@ namespace Udb\Core\Backup\Services\V1;
  * skipped. A restore validates the cross-tenant movement scope, refuses to write
  * over a live (non-empty) target tenant, and rewrites the tenant column to the
  * target on insert.
+ *
+ * Shared (global) tables have no tenant column, so a tenant backup reports them
+ * as excluded. A platform admin backs them up and restores them with
+ * `scope: BACKUP_SCOPE_SHARED` on the same two RPCs: the same encrypted JSONL
+ * artifacts, checksummed manifest, object storage and journal, carrying every
+ * row of the active project catalog's shared tables instead of one tenant's
+ * rows. A shared restore refuses to write into shared tables that already hold
+ * rows, exactly as a tenant restore refuses a live target tenant.
  */
 class BackupServiceClient extends \Grpc\BaseStub {
 
@@ -27,7 +35,9 @@ class BackupServiceClient extends \Grpc\BaseStub {
     /**
      * Start a logical backup of the calling tenant. Enumerates tenant-owned tables
      * via the shared resolver, encrypts each table's rows to object storage, and
-     * journals the run. Tenant-less tables are reported as excluded.
+     * journals the run. Tenant-less tables are reported as excluded. With
+     * `scope: BACKUP_SCOPE_SHARED` (platform admin only) it backs up the rows of
+     * the project's shared tables instead.
      * @param \Udb\Core\Backup\Services\V1\StartTenantBackupRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
@@ -45,6 +55,8 @@ class BackupServiceClient extends \Grpc\BaseStub {
      * Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires
      * an explicit confirmation token, the cross-tenant movement scope check, and a
      * target tenant that holds no rows (restoring over a live tenant is refused).
+     * With `scope: BACKUP_SCOPE_SHARED` (platform admin only) it restores a shared
+     * backup into the project's shared tables, which must hold no rows.
      * @param \Udb\Core\Backup\Services\V1\RestoreTenantRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

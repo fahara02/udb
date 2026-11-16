@@ -31,6 +31,19 @@ export interface ColumnOptions {
   /** The values the generated CHECK constraint allows; empty when the column declares none. */
   enum_values?: string[];
   index?: IndexOptions;
+  /** A column-level foreign key (`udb.core.common.v1.ForeignKey`). */
+  foreign_key?: { references_table?: string; references_column?: string; references_schema?: string; constraint_name?: string };
+  /** A foreign key written as `schema.table(column)`; used when `foreign_key` is absent. */
+  references?: string;
+}
+
+/** A table-level foreign key (`udb.core.common.v1.TableForeignKey`). */
+export interface TableForeignKey {
+  columns: string[];
+  references_table?: string;
+  references_column: string[];
+  references_schema?: string;
+  constraint_name?: string;
 }
 
 /** An index annotation (`udb.core.common.v1.IndexOptions`). */
@@ -49,6 +62,11 @@ export interface TableOptions {
   soft_delete?: boolean;
   soft_delete_column?: string;
   indexes?: IndexOptions[];
+  schema_name?: string;
+  required_scope?: string;
+  foreign_keys?: TableForeignKey[];
+  /** The topic the entity's change events go to; empty when it emits none. */
+  cdc_topic?: string;
 }
 
 /** An event annotation (`udb.core.common.v1.EventContractOptions`). */
@@ -187,7 +205,15 @@ export class MessageSchema {
     this.fields = type.fieldsArray.map(fieldSchema);
     const notes = annotations(type);
     const table = notes.table ?? notes.pg_table ?? {};
-    this.table = { ...table, indexes: asArray<any>(table.indexes).map(normalizeIndex) };
+    this.table = {
+      ...table,
+      indexes: asArray<any>(table.indexes).map(normalizeIndex),
+      foreign_keys: asArray<any>(table.foreign_keys).map((fk) => ({
+        ...fk,
+        columns: asArray<string>(fk.columns),
+        references_column: asArray<string>(fk.references_column),
+      })),
+    };
     this.event = notes.message_event_contract ?? {};
     this.security = notes.db_table_security ?? {};
     for (const field of this.fields) {

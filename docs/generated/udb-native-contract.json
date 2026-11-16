@@ -1,8 +1,8 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "76db5cc168cf45b78984b99f9ee196e90a5abb4985980d719ebafc437f2eb38f",
+  "descriptor_sha256": "750c7d67f8f2b7605f2d9cf1e77fba7fd18b11cf8940a5d8dd07187ba7b9dbb0",
   "contract_version": "9.0.0",
-  "udb_version": "0.6.21",
+  "udb_version": "0.6.22",
   "protocol_version": "1.0.0",
   "service_count": 29,
   "services": [
@@ -33508,7 +33508,7 @@
       "sdk_surface": null,
       "cli_scaffold": null,
       "dependency_contract": null,
-      "rpc_count": 84,
+      "rpc_count": 85,
       "rpcs": [
         {
           "method": "AbortMultipartUpload",
@@ -33931,6 +33931,47 @@
             "include_in_facade": true,
             "method_alias": "bulk_cas",
             "rest_operation_id": "bulkCas",
+            "required_credential_provider": "",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 0,
+            "default_max_attempts": 0,
+            "browser_safe": false,
+            "server_only": false,
+            "boilerplate_recipe_tags": [],
+            "generate_minimal_example": false
+          },
+          "dependency_contract": null,
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": null
+        },
+        {
+          "method": "BulkUpsert",
+          "method_alias": "bulk_upsert",
+          "rest_operation_id": "bulkUpsert",
+          "path": "/udb.services.v1.DataBroker/BulkUpsert",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.entity.v1.BulkUpsertRequest",
+          "output": ".udb.entity.v1.BulkUpsertResponse",
+          "auth_mode": "unspecified",
+          "scopes": [],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": false,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": null,
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "bulk_upsert",
+            "rest_operation_id": "bulkUpsert",
             "required_credential_provider": "",
             "streaming_helper_type": "",
             "default_deadline_ms": 0,
@@ -37016,7 +37057,7 @@
       ]
     }
   ],
-  "message_count": 1156,
+  "message_count": 1158,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -90317,7 +90358,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 14,
+      "field_count": 15,
       "fields": [
         {
           "name": "backup_id",
@@ -90570,6 +90611,25 @@
           "name": "project_id",
           "number": 14,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "scope",
+          "number": 15,
+          "type": ".udb.core.backup.services.v1.BackupScope",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -91793,7 +91853,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 6,
+      "field_count": 7,
       "fields": [
         {
           "name": "source_tenant_id",
@@ -91894,6 +91954,25 @@
           "name": "metadata_json",
           "number": 6,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "scope",
+          "number": 7,
+          "type": ".udb.core.backup.services.v1.BackupScope",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -92071,7 +92150,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 5,
+      "field_count": 6,
       "fields": [
         {
           "name": "tenant_id",
@@ -92153,6 +92232,25 @@
           "name": "metadata_json",
           "number": 5,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "scope",
+          "number": 6,
+          "type": ".udb.core.backup.services.v1.BackupScope",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -92488,7 +92586,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 4,
+      "field_count": 5,
       "fields": [
         {
           "name": "tenant_id",
@@ -92551,6 +92649,25 @@
           "name": "default_ttl_seconds",
           "number": 4,
           "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 5,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -92709,7 +92826,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 3,
+      "field_count": 4,
       "fields": [
         {
           "name": "tenant_id",
@@ -92753,6 +92870,25 @@
           "name": "confirmation_token",
           "number": 3,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 4,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -92892,7 +93028,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 3,
+      "field_count": 4,
       "fields": [
         {
           "name": "tenant_id",
@@ -92936,6 +93072,25 @@
           "name": "key",
           "number": 3,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 4,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -93075,7 +93230,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 2,
+      "field_count": 3,
       "fields": [
         {
           "name": "tenant_id",
@@ -93100,6 +93255,25 @@
           "name": "namespace",
           "number": 2,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 3,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -93258,7 +93432,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 3,
+      "field_count": 4,
       "fields": [
         {
           "name": "tenant_id",
@@ -93302,6 +93476,25 @@
           "name": "key",
           "number": 3,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 4,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -93441,7 +93634,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 6,
+      "field_count": 7,
       "fields": [
         {
           "name": "tenant_id",
@@ -93542,6 +93735,25 @@
           "name": "max",
           "number": 6,
           "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 7,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -93700,7 +93912,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 5,
+      "field_count": 6,
       "fields": [
         {
           "name": "tenant_id",
@@ -93782,6 +93994,25 @@
           "name": "page_token",
           "number": 5,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 6,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -93902,7 +94133,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 5,
+      "field_count": 6,
       "fields": [
         {
           "name": "tenant_id",
@@ -93984,6 +94215,25 @@
           "name": "ttl_seconds",
           "number": 5,
           "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 6,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -97380,7 +97630,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 8,
+      "field_count": 9,
       "fields": [
         {
           "name": "backend",
@@ -97518,6 +97768,25 @@
         {
           "name": "payload_schema_json",
           "number": 8,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "projection_filter",
+          "number": 9,
           "type": "9",
           "column_security": null,
           "scalar_security": {
@@ -98815,7 +99084,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 17,
+      "field_count": 18,
       "fields": [
         {
           "name": "store_kind",
@@ -99139,6 +99408,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "projection_filter",
+          "number": 18,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -99247,7 +99535,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 8,
+      "field_count": 9,
       "fields": [
         {
           "name": "backend",
@@ -99385,6 +99673,25 @@
         {
           "name": "payload_schema_json",
           "number": 8,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "projection_filter",
+          "number": 9,
           "type": "9",
           "column_security": null,
           "scalar_security": {
@@ -103070,7 +103377,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 33,
+      "field_count": 34,
       "fields": [
         {
           "name": "table_name",
@@ -103698,6 +104005,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "cross_project_shared",
+          "number": 34,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -104200,7 +104526,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 10,
+      "field_count": 11,
       "fields": [
         {
           "name": "backend",
@@ -104377,6 +104703,25 @@
           "name": "hnsw_ef_construction",
           "number": 10,
           "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "projection_filter",
+          "number": 11,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -163440,6 +163785,332 @@
       ]
     },
     {
+      "message": "udb.entity.v1.BulkUpsertRequest",
+      "file": "udb/entity/v1/relational.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 6,
+      "fields": [
+        {
+          "name": "context",
+          "number": 1,
+          "type": ".udb.entity.v1.RequestContext",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message_type",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "records_json",
+          "number": 3,
+          "type": "12",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "conflict_fields",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "batch_id",
+          "number": 6,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.BulkUpsertResponse",
+      "file": "udb/entity/v1/relational.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 10,
+      "fields": [
+        {
+          "name": "batch_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "row_count",
+          "number": 2,
+          "type": "13",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "affected_rows",
+          "number": 3,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "keys_sha256",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "first_key",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "last_key",
+          "number": 6,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "write_receipt_json",
+          "number": 7,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "statement_count",
+          "number": 8,
+          "type": "13",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "event_id",
+          "number": 9,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "was_duplicate",
+          "number": 10,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.entity.v1.CDCSubscriptionRequest",
       "file": "udb/entity/v1/cdc.proto",
       "sdk_surface": null,
@@ -163571,7 +164242,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 4,
+      "field_count": 5,
       "fields": [
         {
           "name": "context",
@@ -163634,6 +164305,25 @@
           "name": "idempotency_key",
           "number": 4,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 5,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -163764,7 +164454,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 4,
+      "field_count": 5,
       "fields": [
         {
           "name": "context",
@@ -163826,6 +164516,25 @@
         {
           "name": "touch",
           "number": 4,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 5,
           "type": "8",
           "column_security": null,
           "scalar_security": {
@@ -164025,7 +164734,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 5,
+      "field_count": 6,
       "fields": [
         {
           "name": "context",
@@ -164121,6 +164830,25 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "shared",
+          "number": 6,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -164199,7 +164927,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 10,
+      "field_count": 11,
       "fields": [
         {
           "name": "context",
@@ -164376,6 +165104,25 @@
           "name": "metadata",
           "number": 10,
           "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "shared",
+          "number": 11,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -176713,7 +177460,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 10,
+      "field_count": 11,
       "fields": [
         {
           "name": "context",
@@ -176889,6 +177636,25 @@
         {
           "name": "include_total",
           "number": 10,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "include_deleted",
+          "number": 11,
           "type": "8",
           "column_security": null,
           "scalar_security": {

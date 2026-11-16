@@ -366,6 +366,16 @@ pub struct ServiceSettings {
     /// every item still takes its own admission permit, quota charge and
     /// authorization.
     pub batch_select_concurrency: usize,
+    /// Most rows one `BulkUpsert` batch may carry (`UDB_BULK_UPSERT_MAX_ROWS`,
+    /// default 10000, 1..=100000). A larger batch is refused with
+    /// `UDB_BULK_BATCH_TOO_LARGE` before any work; the whole request must also
+    /// fit `grpc_max_message_bytes`.
+    pub bulk_upsert_max_rows: usize,
+    /// Rows one rate-limit unit covers for `BulkUpsert`
+    /// (`UDB_BULK_UPSERT_ROWS_PER_RATE_UNIT`, default 1000, at least 1). A
+    /// batch costs ceil(rows / this) units of the tenant's `BulkUpsert` budget,
+    /// at least one.
+    pub bulk_upsert_rows_per_rate_unit: u32,
     pub allow_degraded_backends: bool,
     pub catalog_compat_warn_only: bool,
     pub catalog_compatibility_level: String,
@@ -414,6 +424,8 @@ impl Default for ServiceSettings {
             // 10 MB: comfortably above real manifests, still a bound.
             grpc_max_message_bytes: 10 * 1024 * 1024,
             batch_select_concurrency: 8,
+            bulk_upsert_max_rows: 10_000,
+            bulk_upsert_rows_per_rate_unit: 1_000,
             allow_degraded_backends: false,
             catalog_compat_warn_only: false,
             catalog_compatibility_level: "backward".to_string(),
@@ -516,6 +528,12 @@ impl ServiceSettings {
         }
         if let Some(value) = env_u32("UDB_BATCH_SELECT_CONCURRENCY") {
             self.batch_select_concurrency = (value as usize).clamp(1, 64);
+        }
+        if let Some(value) = env_u32("UDB_BULK_UPSERT_MAX_ROWS") {
+            self.bulk_upsert_max_rows = (value as usize).clamp(1, 100_000);
+        }
+        if let Some(value) = env_u32("UDB_BULK_UPSERT_ROWS_PER_RATE_UNIT") {
+            self.bulk_upsert_rows_per_rate_unit = value.max(1);
         }
         if let Some(value) = bool_env("UDB_ALLOW_DEGRADED_BACKENDS") {
             self.allow_degraded_backends = value;

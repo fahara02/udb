@@ -839,3 +839,297 @@ async fn live_backup_scheduled_and_retention_passes() {
     let backups = remaining.backups.len();
     assert_eq!(backups, 1, "exactly the newest backup run is retained");
 }
+
+// ── Shared-table (platform) backup scope ────────────────────────────────────
+
+fn shared_table(schema: &str, name: &str, columns: Vec<ManifestColumn>) -> ManifestTable {
+    let mut table = table(schema, name, columns);
+    table.table_security.tenant_isolation_mode = "global".to_string();
+    table
+}
+
+/// The shared plan targets exactly the shared tables (isolation declared
+/// off, no tenant column), parents last so a restore inserts them first, with
+/// no tenant column; every other table is REPORTED with its reason.
+#[test]
+fn shared_backup_plan_selects_only_shared_tables() {
+    use crate::runtime::core::tenant_purge::plan_shared_tables;
+
+    let currency = shared_table("ref", "currency", vec![column("code"), column("name")]);
+    let mut rate = shared_table("ref", "fx_rate", vec![column("id"), column("code")]);
+    rate.foreign_keys
+        .push(crate::generation::ManifestForeignKey {
+            name: "fx_rate_currency_fk".to_string(),
+            columns: vec!["code".to_string()],
+            ref_schema: "ref".to_string(),
+            ref_table: "currency".to_string(),
+            ref_columns: vec!["code".to_string()],
+            ..crate::generation::ManifestForeignKey::default()
+        });
+    let mut owned = table("app", "invoice", vec![column("id"), column("tenant_id")]);
+    owned.table_security.tenant_column = "tenant_id".to_string();
+    // Tenant-less but isolation NOT declared off: not a shared table.
+    let undeclared = table("app", "scratch", vec![column("id")]);
+    // Declared global but still carries a tenant column: not shared either.
+    let mut global_with_tenant =
+        shared_table("app", "mixed", vec![column("id"), column("tenant_id")]);
+    global_with_tenant.table_security.tenant_column = "tenant_id".to_string();
+
+    let manifest = CatalogManifest {
+        tables: vec![currency, rate, owned, undeclared, global_with_tenant],
+        ..CatalogManifest::default()
+    };
+    let plan = plan_shared_tables(&manifest);
+    let order: Vec<&str> = plan.targets.iter().map(|t| t.table.as_str()).collect();
+    assert_eq!(order, vec!["fx_rate", "currency"], "children first");
+    assert!(plan.fk_ordered);
+    assert!(
+        plan.targets.iter().all(|t| t.tenant_column.is_empty()),
+        "shared rows carry no tenant column"
+    );
+    let excluded: std::collections::HashMap<&str, &str> = plan
+        .excluded
+        .iter()
+        .map(|e| (e.table.as_str(), e.reason.as_str()))
+        .collect();
+    assert_eq!(excluded.len(), 3, "every non-shared table is reported");
+    assert!(excluded["invoice"].contains("per-tenant backup"));
+    assert!(excluded["scratch"].contains("not a shared table"));
+    assert!(excluded.contains_key("mixed"));
+
+    // The tenant plan is unchanged: shared tables stay excluded from it.
+    let tenant_plan = super::scope::BackupDataScope::Tenant.plan(&manifest);
+    assert!(
+        tenant_plan
+            .targets
+            .iter()
+            .all(|t| t.table != "currency" && t.table != "fx_rate")
+    );
+    assert_eq!(
+        super::scope::BackupDataScope::Shared
+            .plan(&manifest)
+            .targets,
+        plan.targets
+    );
+}
+
+#[test]
+fn backup_scope_decodes_and_refuses_unknown_values() {
+    use super::scope::BackupDataScope;
+    for (value, expected) in [
+        (
+            backup_pb::BackupScope::Unspecified as i32,
+            BackupDataScope::Tenant,
+        ),
+        (
+            backup_pb::BackupScope::Tenant as i32,
+            BackupDataScope::Tenant,
+        ),
+        (
+            backup_pb::BackupScope::Shared as i32,
+            BackupDataScope::Shared,
+        ),
+    ] {
+        assert_eq!(BackupDataScope::from_proto(value).expect("known"), expected);
+    }
+    let err = BackupDataScope::from_proto(99).expect_err("unknown scope is refused");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(decode_detail(&err).field_violations[0].field, "scope");
+
+    assert_eq!(BackupDataScope::Tenant.journal_source_tenant(), "");
+    assert_eq!(
+        BackupDataScope::Shared.journal_source_tenant(),
+        crate::broker::SHARED_TENANT_MARKER
+    );
+    assert_eq!(
+        super::scope::run_scope_from_source_tenant(crate::broker::SHARED_TENANT_MARKER),
+        backup_pb::BackupScope::Shared
+    );
+    for source in ["", "11111111-1111-1111-1111-111111111111"] {
+        assert_eq!(
+            super::scope::run_scope_from_source_tenant(source),
+            backup_pb::BackupScope::Tenant
+        );
+    }
+}
+
+/// Shared backup/restore is platform-admin only; `udb:global:write` (enough to
+/// write shared rows through the data plane) is not enough to move them all.
+#[test]
+fn shared_backup_needs_a_platform_admin() {
+    use super::scope::shared_scope_privilege_from_claim;
+    for (scopes, roles) in [
+        (&["udb:platform_admin"][..], &[][..]),
+        (&[][..], &["platform_admin"][..]),
+    ] {
+        let claim = method_security::test_claim_context("admin", "", "", scopes, roles);
+        assert!(shared_scope_privilege_from_claim(&claim, "start_tenant_backup").expect("admin"));
+    }
+    for scopes in [
+        &[crate::broker::GLOBAL_WRITE_SCOPE][..],
+        &["udb:backup:start-tenant-backup"][..],
+    ] {
+        let claim = method_security::test_claim_context(
+            "user",
+            "11111111-1111-1111-1111-111111111111",
+            "",
+            scopes,
+            &[],
+        );
+        let err = shared_scope_privilege_from_claim(&claim, "start_tenant_backup")
+            .expect_err("not a platform admin");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_policy_detail(
+            &err,
+            "start_tenant_backup",
+            "shared_backup_platform_admin_required",
+        );
+    }
+}
+
+#[test]
+fn shared_table_sql_has_no_tenant_predicate() {
+    use super::scope::{shared_table_freshness_sql, shared_table_select_sql};
+    let all = shared_table_select_sql("\"ref\".\"currency\"", None);
+    assert_eq!(
+        all,
+        "SELECT row_to_json(t)::text FROM \"ref\".\"currency\" t"
+    );
+    let scoped = shared_table_select_sql("\"ref\".\"currency\"", Some("project_id"));
+    assert!(scoped.ends_with("WHERE \"project_id\"::text = $1"));
+    assert!(!scoped.contains("$2"));
+    assert_eq!(
+        shared_table_freshness_sql("\"ref\".\"currency\"", None),
+        "SELECT 1 FROM \"ref\".\"currency\" LIMIT 1"
+    );
+    assert!(
+        shared_table_freshness_sql("\"ref\".\"currency\"", Some("project_id"))
+            .contains("\"project_id\"::text = $1")
+    );
+}
+
+/// A shared backup restores only with the shared scope and a tenant backup
+/// only with the tenant scope, judged from the journal and the manifest.
+#[test]
+fn restore_scope_must_match_the_backup_scope() {
+    use super::import::ensure_run_scope_matches;
+    use super::scope::BackupDataScope;
+    ensure_run_scope_matches(backup_pb::BackupScope::Shared, BackupDataScope::Shared)
+        .expect("shared into shared");
+    ensure_run_scope_matches(backup_pb::BackupScope::Tenant, BackupDataScope::Tenant)
+        .expect("tenant into tenant");
+    for (run, requested, hint) in [
+        (
+            backup_pb::BackupScope::Shared,
+            BackupDataScope::Tenant,
+            "BACKUP_SCOPE_SHARED",
+        ),
+        (
+            backup_pb::BackupScope::Tenant,
+            BackupDataScope::Shared,
+            "BACKUP_SCOPE_TENANT",
+        ),
+    ] {
+        let err = ensure_run_scope_matches(run, requested).expect_err("scope mismatch");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains(hint), "{}", err.message());
+        assert_policy_detail(&err, "restore_tenant", "backup_topology_mismatch");
+    }
+}
+
+/// A shared restore refuses the tenant-only fields instead of ignoring them,
+/// and its freshness refusal names the occupied shared tables.
+#[test]
+fn shared_restore_refuses_tenant_fields_and_live_shared_tables() {
+    use super::restore_shared::{
+        shared_restore_target_not_fresh_status, shared_restore_unused_fields,
+    };
+    let clean = backup_pb::RestoreTenantRequest {
+        source_tenant_id: "11111111-1111-1111-1111-111111111111".to_string(),
+        backup_id: "33333333-3333-3333-3333-333333333333".to_string(),
+        confirmation_token: "yes".to_string(),
+        scope: backup_pb::BackupScope::Shared as i32,
+        ..Default::default()
+    };
+    assert!(shared_restore_unused_fields(&clean).is_empty());
+    let dirty = backup_pb::RestoreTenantRequest {
+        target_tenant_id: "22222222-2222-2222-2222-222222222222".to_string(),
+        allow_cross_tenant: true,
+        ..clean
+    };
+    let fields: Vec<&str> = shared_restore_unused_fields(&dirty)
+        .into_iter()
+        .map(|(field, _)| field)
+        .collect();
+    assert_eq!(fields, vec!["target_tenant_id", "allow_cross_tenant"]);
+
+    let err = shared_restore_target_not_fresh_status(&["\"ref\".\"currency\"".to_string()]);
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert!(err.message().contains("\"ref\".\"currency\""));
+    assert_policy_detail(&err, "restore_tenant", "restore_target_not_fresh");
+}
+
+/// Over the served path: a tenant token asking for a shared backup or a
+/// shared restore is refused PERMISSION_DENIED before any store access; a
+/// platform admin passes the gate and a shared restore that names a target
+/// tenant is refused naming that field.
+#[tokio::test]
+async fn shared_backup_and_restore_are_refused_for_a_tenant_token() {
+    let tenant = "11111111-1111-1111-1111-111111111111";
+    let user = || method_security::test_claim_context("user", tenant, "", &["udb:admin"], &[]);
+    let svc = BackupServiceImpl::new();
+    let mut backup = Request::new(backup_pb::StartTenantBackupRequest {
+        tenant_id: tenant.to_string(),
+        scope: backup_pb::BackupScope::Shared as i32,
+        ..Default::default()
+    });
+    backup
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static(tenant));
+    let err =
+        method_security::scope_claim_context_for_test(user(), svc.start_tenant_backup(backup))
+            .await
+            .expect_err("a tenant token may not back up shared tables");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_policy_detail(
+        &err,
+        "start_tenant_backup",
+        "shared_backup_platform_admin_required",
+    );
+
+    let restore = || backup_pb::RestoreTenantRequest {
+        source_tenant_id: tenant.to_string(),
+        backup_id: "33333333-3333-3333-3333-333333333333".to_string(),
+        confirmation_token: "yes".to_string(),
+        scope: backup_pb::BackupScope::Shared as i32,
+        ..Default::default()
+    };
+    let err = method_security::scope_claim_context_for_test(
+        user(),
+        svc.restore_tenant(Request::new(restore())),
+    )
+    .await
+    .expect_err("a tenant token may not restore shared tables");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_policy_detail(
+        &err,
+        "restore_tenant",
+        "shared_backup_platform_admin_required",
+    );
+
+    let admin = method_security::test_claim_context("admin", "", "", &["udb:platform_admin"], &[]);
+    let err = method_security::scope_claim_context_for_test(
+        admin,
+        svc.restore_tenant(Request::new(backup_pb::RestoreTenantRequest {
+            target_tenant_id: "22222222-2222-2222-2222-222222222222".to_string(),
+            ..restore()
+        })),
+    )
+    .await
+    .expect_err("a shared restore has no target tenant");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        decode_detail(&err).field_violations[0].field,
+        "target_tenant_id"
+    );
+}

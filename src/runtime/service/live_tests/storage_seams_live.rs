@@ -767,6 +767,7 @@ async fn f6_cache_byte_budget_admits_exactly_budget_under_concurrent_sets() {
                     key: format!("k{i}"),
                     value: vec![b'v'; 100],
                     ttl_seconds: 0,
+                    ..Default::default()
                 },
                 &tenant_id,
             ))
@@ -791,6 +792,7 @@ async fn f6_cache_byte_budget_admits_exactly_budget_under_concurrent_sets() {
             cache_pb::GetNamespaceStatsRequest {
                 tenant_id: tenant_id.clone(),
                 namespace: namespace.clone(),
+                ..Default::default()
             },
             &tenant_id,
         ))
@@ -843,6 +845,7 @@ async fn f6b_cache_increment_is_atomic_bounded_and_keeps_ttl() {
             delta,
             ttl_seconds_if_created: ttl,
             max,
+            ..Default::default()
         };
         async move { svc.increment(tenant_request(request, &tenant_id)).await }
     };
@@ -900,6 +903,7 @@ async fn f6b_cache_increment_is_atomic_bounded_and_keeps_ttl() {
             key: "text".to_string(),
             value: b"not-a-number".to_vec(),
             ttl_seconds: 0,
+            ..Default::default()
         },
         &tenant_id,
     ))
@@ -917,6 +921,289 @@ async fn f6b_cache_increment_is_atomic_bounded_and_keeps_ttl() {
         .await
         .expect_err("overflow is refused");
     assert_eq!(overflow.code(), Code::OutOfRange);
+}
+
+/// F6c: the shared cache namespace. A `udb:global:write` holder writes a
+/// shared entry; another tenant's plain token reads it (Get, Scan, stats) but
+/// is refused PERMISSION_DENIED on a shared write; the entry lives under the
+/// shared marker key in Redis and is independent of the same key in a tenant
+/// keyspace; and a shared namespace flush never sweeps a tenant whose id
+/// contains `shared`.
+#[cfg(feature = "redis")]
+#[tokio::test]
+#[ignore = "requires live Redis; run with UDB_INTEGRATION_REDIS_URL=redis://127.0.0.1:56379 ... -- --ignored --test-threads=1"]
+async fn f6c_cache_shared_namespace_is_readable_by_all_and_writable_by_global_writers() {
+    use crate::proto::udb::core::cache::services::v1 as cache_pb;
+    use crate::proto::udb::core::cache::services::v1::cache_service_server::CacheService;
+    use crate::runtime::service::cache_service::CacheServiceImpl;
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+
+    let redis_url = super::support::live_env("UDB_INTEGRATION_REDIS_URL")
+        .or_else(|| super::support::live_env("UDB_REDIS_DSN"))
+        .unwrap_or_else(|| "redis://127.0.0.1:56379".to_string());
+    let client = redis::Client::open(redis_url.as_str()).expect("create live redis client");
+    let svc = CacheServiceImpl::new().with_redis(Some(client.clone()));
+    let writer_tenant = Uuid::new_v4().to_string();
+    let reader_tenant = Uuid::new_v4().to_string();
+    let decoy_tenant = format!("decoy-shared-{}", Uuid::new_v4().simple());
+    let namespace = format!("f6c-{}", Uuid::new_v4().simple());
+    let writer = || {
+        test_claim_context(
+            "platform-loader",
+            &writer_tenant,
+            "",
+            &["udb:cache:set", crate::broker::GLOBAL_WRITE_SCOPE],
+            &[],
+        )
+    };
+    let reader = || test_claim_context("reader", &reader_tenant, "", &["udb:cache:get"], &[]);
+
+    scope_claim_context_for_test(
+        writer(),
+        svc.set(tenant_request(
+            cache_pb::SetRequest {
+                tenant_id: writer_tenant.clone(),
+                namespace: namespace.clone(),
+                key: "usd".to_string(),
+                value: b"1.0842".to_vec(),
+                shared: true,
+                ..Default::default()
+            },
+            &writer_tenant,
+        )),
+    )
+    .await
+    .expect("a udb:global:write holder writes the shared namespace");
+
+    // The entry sits under the shared marker in the tenant segment.
+    let mut conn = crate::runtime::redis_shared::connection(&client)
+        .await
+        .expect("raw redis connection");
+    let raw: Option<Vec<u8>> = redis::cmd("GET")
+        .arg(format!("udb:cache:*shared*:{namespace}:k:usd"))
+        .query_async(&mut conn)
+        .await
+        .expect("raw GET");
+    assert_eq!(raw.as_deref(), Some(&b"1.0842"[..]));
+
+    // Another tenant reads it through the shared namespace...
+    let shared_get = scope_claim_context_for_test(
+        reader(),
+        svc.get(tenant_request(
+            cache_pb::GetRequest {
+                tenant_id: reader_tenant.clone(),
+                namespace: namespace.clone(),
+                key: "usd".to_string(),
+                shared: true,
+            },
+            &reader_tenant,
+        )),
+    )
+    .await
+    .expect("any authenticated tenant reads the shared namespace")
+    .into_inner();
+    assert!(shared_get.found);
+    assert_eq!(shared_get.value, b"1.0842");
+
+    // ...but the same key in its own keyspace is a different entry.
+    let own_get = scope_claim_context_for_test(
+        reader(),
+        svc.get(tenant_request(
+            cache_pb::GetRequest {
+                tenant_id: reader_tenant.clone(),
+                namespace: namespace.clone(),
+                key: "usd".to_string(),
+                shared: false,
+            },
+            &reader_tenant,
+        )),
+    )
+    .await
+    .expect("tenant get")
+    .into_inner();
+    assert!(
+        !own_get.found,
+        "shared entries never leak into a tenant keyspace"
+    );
+
+    // SCAN pages through the whole keyspace; follow the cursor to the end.
+    let mut scanned = Vec::new();
+    let mut page_token = String::new();
+    loop {
+        let page = scope_claim_context_for_test(
+            reader(),
+            svc.scan(tenant_request(
+                cache_pb::ScanRequest {
+                    tenant_id: reader_tenant.clone(),
+                    namespace: namespace.clone(),
+                    page_token: page_token.clone(),
+                    shared: true,
+                    ..Default::default()
+                },
+                &reader_tenant,
+            )),
+        )
+        .await
+        .expect("shared scan")
+        .into_inner();
+        scanned.extend(page.items.into_iter().map(|item| item.key));
+        if page.next_page_token.is_empty() {
+            break;
+        }
+        page_token = page.next_page_token;
+    }
+    assert_eq!(scanned, vec!["usd".to_string()]);
+
+    let stats = scope_claim_context_for_test(
+        reader(),
+        svc.get_namespace_stats(tenant_request(
+            cache_pb::GetNamespaceStatsRequest {
+                tenant_id: reader_tenant.clone(),
+                namespace: namespace.clone(),
+                shared: true,
+            },
+            &reader_tenant,
+        )),
+    )
+    .await
+    .expect("shared stats")
+    .into_inner();
+    assert_eq!((stats.item_count, stats.used_bytes), (1, 6));
+
+    // A plain tenant token may not write, count up or delete shared entries.
+    let denied_set = scope_claim_context_for_test(
+        reader(),
+        svc.set(tenant_request(
+            cache_pb::SetRequest {
+                tenant_id: reader_tenant.clone(),
+                namespace: namespace.clone(),
+                key: "usd".to_string(),
+                value: b"0".to_vec(),
+                shared: true,
+                ..Default::default()
+            },
+            &reader_tenant,
+        )),
+    )
+    .await
+    .expect_err("a plain tenant token may not write the shared namespace");
+    assert_eq!(denied_set.code(), Code::PermissionDenied, "{denied_set}");
+    assert!(
+        denied_set
+            .message()
+            .contains(crate::broker::GLOBAL_WRITE_SCOPE)
+    );
+    let denied_increment = scope_claim_context_for_test(
+        reader(),
+        svc.increment(tenant_request(
+            cache_pb::IncrementRequest {
+                tenant_id: reader_tenant.clone(),
+                namespace: namespace.clone(),
+                key: "hits".to_string(),
+                delta: 1,
+                shared: true,
+                ..Default::default()
+            },
+            &reader_tenant,
+        )),
+    )
+    .await
+    .expect_err("a plain tenant token may not count up a shared key");
+    assert_eq!(denied_increment.code(), Code::PermissionDenied);
+    let denied_delete = scope_claim_context_for_test(
+        reader(),
+        svc.delete(tenant_request(
+            cache_pb::DeleteRequest {
+                tenant_id: reader_tenant.clone(),
+                namespace: namespace.clone(),
+                key: "usd".to_string(),
+                shared: true,
+            },
+            &reader_tenant,
+        )),
+    )
+    .await
+    .expect_err("a plain tenant token may not delete a shared entry");
+    assert_eq!(denied_delete.code(), Code::PermissionDenied);
+
+    // A tenant whose id contains `shared` keeps its keys through a shared flush.
+    svc.set(tenant_request(
+        cache_pb::SetRequest {
+            tenant_id: decoy_tenant.clone(),
+            namespace: namespace.clone(),
+            key: "usd".to_string(),
+            value: b"decoy".to_vec(),
+            ..Default::default()
+        },
+        &decoy_tenant,
+    ))
+    .await
+    .expect("seed the decoy tenant entry");
+    let flushed = scope_claim_context_for_test(
+        writer(),
+        svc.delete_namespace(tenant_request(
+            cache_pb::DeleteNamespaceRequest {
+                tenant_id: writer_tenant.clone(),
+                namespace: namespace.clone(),
+                confirmation_token: "flush-shared".to_string(),
+                shared: true,
+            },
+            &writer_tenant,
+        )),
+    )
+    .await
+    .expect("a udb:global:write holder flushes the shared namespace")
+    .into_inner();
+    assert_eq!(flushed.keys_deleted, 1, "only the shared entry is swept");
+    let decoy = svc
+        .get(tenant_request(
+            cache_pb::GetRequest {
+                tenant_id: decoy_tenant.clone(),
+                namespace: namespace.clone(),
+                key: "usd".to_string(),
+                shared: false,
+            },
+            &decoy_tenant,
+        ))
+        .await
+        .expect("decoy get")
+        .into_inner();
+    assert!(
+        decoy.found,
+        "a shared flush must not reach a tenant keyspace"
+    );
+    assert_eq!(decoy.value, b"decoy");
+    let gone = scope_claim_context_for_test(
+        reader(),
+        svc.get(tenant_request(
+            cache_pb::GetRequest {
+                tenant_id: reader_tenant.clone(),
+                namespace: namespace.clone(),
+                key: "usd".to_string(),
+                shared: true,
+            },
+            &reader_tenant,
+        )),
+    )
+    .await
+    .expect("shared get after flush")
+    .into_inner();
+    assert!(!gone.found);
+
+    // Clean the decoy keyspace.
+    svc.delete_namespace(tenant_request(
+        cache_pb::DeleteNamespaceRequest {
+            tenant_id: decoy_tenant.clone(),
+            namespace: namespace.clone(),
+            confirmation_token: "cleanup".to_string(),
+            shared: false,
+        },
+        &decoy_tenant,
+    ))
+    .await
+    .expect("clean decoy namespace");
 }
 
 /// F7: presign and HEAD are S3/MinIO-only; dispatching either at Azure Blob or

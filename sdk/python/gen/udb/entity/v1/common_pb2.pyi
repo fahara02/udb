@@ -18,5 +18,7 @@ from udb.entity.v1.relational_pb2 import BulkCasItem as BulkCasItem
 from udb.entity.v1.relational_pb2 import BulkCasRequest as BulkCasRequest
 from udb.entity.v1.relational_pb2 import BulkCasItemResult as BulkCasItemResult
 from udb.entity.v1.relational_pb2 import BulkCasResponse as BulkCasResponse
+from udb.entity.v1.relational_pb2 import BulkUpsertRequest as BulkUpsertRequest
+from udb.entity.v1.relational_pb2 import BulkUpsertResponse as BulkUpsertResponse
 
 DESCRIPTOR: _descriptor.FileDescriptor

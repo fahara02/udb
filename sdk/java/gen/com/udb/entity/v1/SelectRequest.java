@@ -327,6 +327,29 @@ private static final long serialVersionUID = 0L;
     return includeTotal_;
   }
 
+  public static final int INCLUDE_DELETED_FIELD_NUMBER = 11;
+  private boolean includeDeleted_ = false;
+  /**
+   * <pre>
+   * Also return soft-deleted rows. Each returned row carries the entity's own
+   * soft-delete column (for example `deleted_at`), non-null on a deleted row,
+   * which the broker adds to an explicit `fields` list when it is missing.
+   * Needs scope `udb:deleted:read`; without it the read is refused with
+   * PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+   * without soft delete refuses it with INVALID_ARGUMENT naming this field.
+   * Every such read is written to the audit log (tenant, actor, entity, row
+   * count) before its rows are returned; it stays inside the caller's tenant
+   * and project, and it is never answered from or stored in the read cache.
+   * </pre>
+   *
+   * <code>bool include_deleted = 11 [json_name = "includeDeleted"];</code>
+   * @return The includeDeleted.
+   */
+  @java.lang.Override
+  public boolean getIncludeDeleted() {
+    return includeDeleted_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -370,6 +393,9 @@ private static final long serialVersionUID = 0L;
     }
     if (includeTotal_ != false) {
       output.writeBool(10, includeTotal_);
+    }
+    if (includeDeleted_ != false) {
+      output.writeBool(11, includeDeleted_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -422,6 +448,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(10, includeTotal_);
     }
+    if (includeDeleted_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(11, includeDeleted_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -466,6 +496,8 @@ private static final long serialVersionUID = 0L;
         != other.getIncludeRevision()) return false;
     if (getIncludeTotal()
         != other.getIncludeTotal()) return false;
+    if (getIncludeDeleted()
+        != other.getIncludeDeleted()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -509,6 +541,9 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + INCLUDE_TOTAL_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getIncludeTotal());
+    hash = (37 * hash) + INCLUDE_DELETED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIncludeDeleted());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -678,6 +713,7 @@ private static final long serialVersionUID = 0L;
       }
       includeRevision_ = false;
       includeTotal_ = false;
+      includeDeleted_ = false;
       return this;
     }
 
@@ -762,6 +798,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000200) != 0)) {
         result.includeTotal_ = includeTotal_;
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.includeDeleted_ = includeDeleted_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -840,6 +879,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getIncludeTotal() != false) {
         setIncludeTotal(other.getIncludeTotal());
+      }
+      if (other.getIncludeDeleted() != false) {
+        setIncludeDeleted(other.getIncludeDeleted());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -932,6 +974,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 80
+            case 88: {
+              includeDeleted_ = input.readBool();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 88
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1932,6 +1979,74 @@ private static final long serialVersionUID = 0L;
     public Builder clearIncludeTotal() {
       bitField0_ = (bitField0_ & ~0x00000200);
       includeTotal_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean includeDeleted_ ;
+    /**
+     * <pre>
+     * Also return soft-deleted rows. Each returned row carries the entity's own
+     * soft-delete column (for example `deleted_at`), non-null on a deleted row,
+     * which the broker adds to an explicit `fields` list when it is missing.
+     * Needs scope `udb:deleted:read`; without it the read is refused with
+     * PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+     * without soft delete refuses it with INVALID_ARGUMENT naming this field.
+     * Every such read is written to the audit log (tenant, actor, entity, row
+     * count) before its rows are returned; it stays inside the caller's tenant
+     * and project, and it is never answered from or stored in the read cache.
+     * </pre>
+     *
+     * <code>bool include_deleted = 11 [json_name = "includeDeleted"];</code>
+     * @return The includeDeleted.
+     */
+    @java.lang.Override
+    public boolean getIncludeDeleted() {
+      return includeDeleted_;
+    }
+    /**
+     * <pre>
+     * Also return soft-deleted rows. Each returned row carries the entity's own
+     * soft-delete column (for example `deleted_at`), non-null on a deleted row,
+     * which the broker adds to an explicit `fields` list when it is missing.
+     * Needs scope `udb:deleted:read`; without it the read is refused with
+     * PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+     * without soft delete refuses it with INVALID_ARGUMENT naming this field.
+     * Every such read is written to the audit log (tenant, actor, entity, row
+     * count) before its rows are returned; it stays inside the caller's tenant
+     * and project, and it is never answered from or stored in the read cache.
+     * </pre>
+     *
+     * <code>bool include_deleted = 11 [json_name = "includeDeleted"];</code>
+     * @param value The includeDeleted to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIncludeDeleted(boolean value) {
+
+      includeDeleted_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Also return soft-deleted rows. Each returned row carries the entity's own
+     * soft-delete column (for example `deleted_at`), non-null on a deleted row,
+     * which the broker adds to an explicit `fields` list when it is missing.
+     * Needs scope `udb:deleted:read`; without it the read is refused with
+     * PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+     * without soft delete refuses it with INVALID_ARGUMENT naming this field.
+     * Every such read is written to the audit log (tenant, actor, entity, row
+     * count) before its rows are returned; it stays inside the caller's tenant
+     * and project, and it is never answered from or stored in the read cache.
+     * </pre>
+     *
+     * <code>bool include_deleted = 11 [json_name = "includeDeleted"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIncludeDeleted() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      includeDeleted_ = false;
       onChanged();
       return this;
     }

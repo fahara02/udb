@@ -37,7 +37,7 @@
 <main>
   <div class="hero">
     <div class="wrap">
-      <span class="pill reveal"><span class="dot"></span> <b>v0.6.21</b> · 18 backends · <span data-udb-count="total_rpcs">427</span> RPCs · seven SDKs</span>
+      <span class="pill reveal"><span class="dot"></span> <b>v0.6.22</b> · 18 backends · <span data-udb-count="total_rpcs">428</span> RPCs · seven SDKs</span>
       <div class="reveal d1"><img class="logo" src="./assets/udb_logo.svg" alt="Universal Data Broker logo"></div>
       <h1 class="reveal d1">UDB is the typed control point for <span class="g">app data</span></h1>
       <p class="tagline reveal d2"><b>Declare once</b> · <b>enforce centrally</b> · <b>call from any SDK</b></p>
@@ -58,7 +58,7 @@
         <div class="proof-node"><span>04</span><b>SDKs</b><small>consistent facades, metadata, credentials, retries</small></div>
       </div>
       <div class="badges reveal d5">
-        <span class="badge">DataBroker <b><span data-udb-count="data_rpcs">84</span> RPCs</b></span>
+        <span class="badge">DataBroker <b><span data-udb-count="data_rpcs">85</span> RPCs</b></span>
         <span class="badge">Native services <b><span data-udb-count="native_rpcs">343</span> RPCs</b></span>
         <span class="badge">Contract <b>8.0.0</b></span>
         <span class="badge">Protocol <b>1.0.0</b></span>
@@ -71,7 +71,7 @@
     <div class="wrap">
       <div class="stats">
         <div class="stat reveal"><div class="n"><span data-count="18">18</span></div><div class="l">Backend kinds</div></div>
-        <div class="stat reveal d1"><div class="n"><span data-count="84" data-udb-count="data_rpcs">84</span></div><div class="l">DataBroker RPCs</div></div>
+        <div class="stat reveal d1"><div class="n"><span data-count="85" data-udb-count="data_rpcs">85</span></div><div class="l">DataBroker RPCs</div></div>
         <div class="stat reveal d2"><div class="n"><span data-count="343" data-udb-count="native_rpcs">343</span></div><div class="l">Control-plane RPCs</div></div>
         <div class="stat reveal d3"><div class="n"><span data-count="7">7</span></div><div class="l">SDK languages</div></div>
       </div>
@@ -101,7 +101,7 @@
       <h2 class="reveal">UDB is more than CRUD over gRPC</h2>
       <div class="surface-grid mt28">
         <article class="surface reveal">
-          <span>Data plane</span><h3><span data-udb-count="data_rpcs">84</span> broker RPCs</h3>
+          <span>Data plane</span><h3><span data-udb-count="data_rpcs">85</span> broker RPCs</h3>
           <p>Select, upsert, delete, batch, vector search, object operations, graph traversal, cache, CDC, migrations, transaction control, and backend health through one serving contract.</p>
           <a href="./data-plane.html">Inspect the data plane</a>
         </article>
@@ -265,7 +265,7 @@ $ udb native manifest | jq <span class="s">'.service_count'</span></pre></div>
       <h2 class="reveal">Dive into the <span class="accent">platform</span></h2>
       <div class="grid c3 mt28">
         <a class="card reveal" href="./architecture.html"><div class="ic">🧭</div><h3>Architecture</h3><p>Proto → catalog manifest → per-request runtime pipeline; the descriptor is the single source of truth.</p><span class="more">How it works</span></a>
-        <a class="card warm reveal d1" href="./data-plane.html"><div class="ic">🗄️</div><h3>Data plane</h3><p><span data-udb-count="data_rpcs">84</span> RPCs across every backend, plus 2PC/XA, sagas, CDC→Kafka, and migrations.</p><span class="more">Explore</span></a>
+        <a class="card warm reveal d1" href="./data-plane.html"><div class="ic">🗄️</div><h3>Data plane</h3><p><span data-udb-count="data_rpcs">85</span> RPCs across every backend, plus 2PC/XA, sagas, CDC→Kafka, and migrations.</p><span class="more">Explore</span></a>
         <a class="card reveal d2" href="./control-plane.html"><div class="ic">🔐</div><h3>Control plane</h3><p><span data-udb-count="native_services">28</span> native services, <span data-udb-count="native_rpcs">343</span> RPCs — auth, identity, tenancy, and policy distribution.</p><span class="more">See services</span></a>
         <a class="card warm reveal" href="./security.html"><div class="ic">🛡️</div><h3>Security</h3><p>RLS, encryption, mTLS, fail-closed posture, and compliance profiles.</p><span class="more">Security model</span></a>
         <a class="card reveal d1" href="./enterprise.html"><div class="ic">⚙️</div><h3>Enterprise &amp; HA</h3><p>Leader election, recovery, observability, SLOs, and runbooks.</p><span class="more">Operate at scale</span></a>
@@ -289,7 +289,7 @@ $ udb native manifest | jq <span class="s">'.service_count'</span></pre></div>
       <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT</a>
     </nav>
   </div>
-  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.6.21 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.6.22 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
 </footer>
 
 <script defer src="./app.js"></script>

@@ -119,6 +119,7 @@ def _error_kind(code: grpc.StatusCode, reason: str) -> int:
         "UDB_UNIQUE_VIOLATION": error_pb2.ERROR_KIND_UNIQUE,
         "UDB_NOT_NULL_VIOLATION": error_pb2.ERROR_KIND_NOT_NULL,
         "UDB_SCOPE_MISSING": error_pb2.ERROR_KIND_PERMISSION,
+        "UDB_DELETED_READ_SCOPE_MISSING": error_pb2.ERROR_KIND_PERMISSION,
         "UDB_TENANT_MISMATCH": error_pb2.ERROR_KIND_PERMISSION,
         "UDB_PROJECT_MISMATCH": error_pb2.ERROR_KIND_PERMISSION,
         "UDB_POLICY_DENIED": error_pb2.ERROR_KIND_POLICY,
@@ -158,6 +159,24 @@ def _missing_scope(scope: str) -> _Refusal:
     return _Refusal(
         grpc.StatusCode.PERMISSION_DENIED, reason, f"verified identity lacks {scope}",
         error_pb2.ErrorDetail(reason=reason, kind=error_pb2.ERROR_KIND_PERMISSION, missing={"scope": scope}),
+    )
+
+
+#: The scope a Select needs to set ``include_deleted``.
+DELETED_READ_SCOPE = "udb:deleted:read"
+
+
+def _deleted_read_scope_missing() -> _Refusal:
+    reason = "UDB_DELETED_READ_SCOPE_MISSING"
+    return _Refusal(
+        grpc.StatusCode.PERMISSION_DENIED, reason, f"include_deleted needs scope {DELETED_READ_SCOPE}",
+        error_pb2.ErrorDetail(reason=reason, kind=error_pb2.ERROR_KIND_PERMISSION, missing={"scope": DELETED_READ_SCOPE}),
+    )
+
+
+def _include_deleted_invalid(message: str, description: str) -> _Refusal:
+    return _violation(
+        grpc.StatusCode.INVALID_ARGUMENT, "", message, error_pb2.ERROR_KIND_VALIDATION, "include_deleted", description,
     )
 
 
@@ -606,6 +625,104 @@ def _json_column_document(name: str, text: str) -> Any:
     return document
 
 
+# A Select whose message_type names two or more entities ("A,B" or "A+B") is the
+# broker's join-fusion read: one inner join of the tables along their foreign keys,
+# each output column aliased ``{Message}__{column}`` (the short message name), or the
+# requested field with its dots turned into ``__``. It takes simple equality filters
+# only, has no sort, page token or total, and leaves PII and encrypted columns out of
+# the default projection.
+
+
+@dataclass(frozen=True)
+class _ForeignKey:
+    name: str
+    columns: tuple[str, ...]
+    ref_schema: str
+    ref_table: str
+    ref_columns: tuple[str, ...]
+
+    def key(self) -> str:
+        return (
+            f"{self.name.lower()}|{','.join(self.columns)}|"
+            f"{self.ref_schema}.{self.ref_table}({','.join(self.ref_columns)})"
+        )
+
+
+def _ident_or(value: str, fallback: str) -> str:
+    return value.strip().lower() or fallback
+
+
+def _join_message_types(message_type_: str) -> list[str]:
+    """Split a message_type as the broker does: on ',' or '+', trimmed, empties dropped."""
+    return [part.strip() for part in re.split(r"[,+]", message_type_ or "") if part.strip()]
+
+
+def _foreign_keys(table: Any, options: Mapping[str, Any]) -> list[_ForeignKey]:
+    """Every foreign key, table-level and per column (a ``foreign_key`` block, else a
+    ``references: "schema.table(col)"``), in the manifest's order, so the first edge
+    found is the broker's."""
+    out: list[_ForeignKey] = []
+
+    def lower(values: Iterable[str]) -> tuple[str, ...]:
+        return tuple(v.strip().lower() for v in values if v.strip())
+
+    def add(name: str, columns: Iterable[str], schema: str, table_: str, ref_columns: Iterable[str]) -> None:
+        local = lower(columns)
+        remote = lower(ref_columns)
+        out.append(_ForeignKey(name.strip(), local, _ident_or(schema, "public"), table_.strip().lower(), remote or local))
+
+    if table is not None:
+        for fk in table.foreign_keys:
+            add(fk.constraint_name, fk.columns, fk.references_schema, fk.references_table, fk.references_column)
+    for name, column in options.items():
+        local = column.column_name or name
+        if column.HasField("foreign_key"):
+            fk = column.foreign_key
+            add(fk.constraint_name, [local], fk.references_schema, fk.references_table,
+                [fk.references_column] if fk.references_column else [])
+            continue
+        reference = column.references.strip()
+        if not reference:
+            continue
+        target, ref_column = reference, ""
+        start = reference.find("(")
+        if start >= 0:
+            target = reference[:start]
+            rest = reference[start + 1:]
+            end = rest.find(")")
+            ref_column = (rest[:end] if end >= 0 else rest).strip()
+        parts = [part.strip() for part in target.split(".") if part.strip()]
+        ref_column = ref_column or local
+        if len(parts) == 1:
+            add("", [local], "", parts[0], [ref_column])
+        elif len(parts) == 2:
+            add("", [local], parts[0], parts[1], [ref_column])
+    return sorted(out, key=_ForeignKey.key)
+
+
+def _join_field(field_name: str, names: Sequence[str]) -> tuple[int, str]:
+    """A fused field's table and column, as the broker's planner reads it:
+    ``Prefix.column`` where the prefix is one of ``names`` (or its short form), the
+    longest match winning; an unqualified field belongs to the first table."""
+    if "." not in field_name:
+        return 0, field_name.lower()
+    best, best_length, column = -1, 0, ""
+    for index, candidate in enumerate(names):
+        prefixes = [candidate]
+        if "." in candidate:
+            prefixes.append(candidate.rsplit(".", 1)[1])
+        for prefix in prefixes:
+            if not prefix or len(field_name) <= len(prefix) or field_name[len(prefix)] != ".":
+                continue
+            if field_name[: len(prefix)].lower() != prefix.lower():
+                continue
+            if len(prefix) > best_length:
+                best, best_length, column = index, len(prefix), field_name[len(prefix) + 1:]
+    if best < 0:
+        raise _invalid(f"unknown join field prefix {field_name.split('.', 1)[0]}")
+    return best, column.lower()
+
+
 class _Entity:
     def __init__(self, message: Any):
         self.message_class = message if isinstance(message, type) else type(message)
@@ -625,6 +742,12 @@ class _Entity:
         self.schema_error = ""
         table = table_options(descriptor)
         self.table_name = (table.table_name if table is not None else "") or descriptor.name
+        # The join-fusion read's view of the table: its short message name (the fused
+        # column prefix), schema, required scope and foreign keys.
+        self.short_name = descriptor.name
+        self.schema_name = _ident_or(table.schema_name if table is not None else "", "public")
+        self.required_scope = (table.required_scope if table is not None else "").strip()
+        self.foreign_keys: list[_ForeignKey] = []
         for fd in descriptor.fields:
             column = column_options(fd)
             if column is None:
@@ -653,6 +776,19 @@ class _Entity:
                 if resolved is None:
                     self.schema_error = "soft_delete_column is not a declared column"
                 self.soft_delete = resolved or column_name
+        self.foreign_keys = _foreign_keys(table, self.options)
+
+    def references(self, other: "_Entity") -> "_ForeignKey | None":
+        for fk in self.foreign_keys:
+            if fk.ref_schema == other.schema_name and fk.ref_table == other.table_name.lower():
+                return fk
+        return None
+
+    def column_name(self, name: str) -> str:
+        return self.options[name].column_name or name
+
+    def encrypted_column(self, name: str) -> bool:
+        return is_encrypted(self.columns[name]) or bool(self.options[name].encrypted)
 
     def _add_unique(self, index: Any, fallback: str) -> None:
         columns = list(index.columns) or list(index.composite_fields)
@@ -1179,6 +1315,19 @@ class Event:
     envelope: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class DeletedRead:
+    """The audit record of one Select that included soft-deleted rows, as the
+    broker writes it to its audit log."""
+
+    tenant_id: str
+    project_id: str
+    actor: str
+    message_type: str
+    table: str
+    rows: int
+
+
 def _has_scope(identity: Identity, scope: str) -> bool:
     if not scope.strip():
         return True
@@ -1267,6 +1416,7 @@ class Fake:
         self._token_lifetime = 3600.0
         self._faults: list[Fault] = []
         self._events: list[Event] = []
+        self._deleted_reads: list[DeletedRead] = []
         self._cursors: dict[str, dict[str, Any]] = {}
         self._dlq: dict[str, dict[str, Any]] = {}
         self._receipts: dict[tuple[str, ...], tuple[str, types_pb2.MutationResponse]] = {}
@@ -1291,6 +1441,7 @@ class Fake:
             "Select": unary("Select", self._select, t.SelectRequest, t.RecordSet),
             "Upsert": unary("Upsert", self._upsert, t.UpsertRequest, t.MutationResponse),
             "Insert": unary("Insert", self._insert, t.UpsertRequest, t.MutationResponse),
+            "BulkUpsert": unary("BulkUpsert", self._bulk_upsert, t.BulkUpsertRequest, t.BulkUpsertResponse),
             "Update": unary("Update", self._update, t.UpdateRequest, t.MutationResponse),
             "Delete": unary("Delete", self._delete, t.DeleteRequest, t.MutationResponse),
             "AckCdcEvents": unary("AckCdcEvents", self._ack, t.AckCdcEventsRequest, t.AckCdcEventsResponse),
@@ -1418,6 +1569,11 @@ class Fake:
             rows = [copy.deepcopy(row) for row in self._rows.get(message_type_, {}).get(tenant, {}).values()]
         return sorted(rows, key=_json_text)
 
+    def deleted_reads(self) -> list[DeletedRead]:
+        """The audit record of every ``include_deleted`` read served so far, in order."""
+        with self._lock:
+            return list(self._deleted_reads)
+
     def events(self) -> list[Event]:
         """The outbox events committed so far, in commit order."""
         with self._lock:
@@ -1528,7 +1684,7 @@ class Fake:
             if method in _DLQ_METHODS and not _has_scope(identity, "udb:admin"):
                 raise _missing_scope("udb:admin")
             if request is not None and hasattr(request, "message_type"):
-                self._authorize(call, request.message_type, "Upsert" if method == "Insert" else method)
+                self._authorize(call, request.message_type, "Upsert" if method in ("Insert", "BulkUpsert") else method)
         self._admit(call, method, request)
 
     def _bind_body(self, call: _Call, body: types_pb2.RequestContext) -> None:
@@ -1687,19 +1843,179 @@ class Fake:
 
     # Data verbs
 
+    def _select_join(self, call: _Call, request: types_pb2.SelectRequest) -> types_pb2.RecordSet:
+        """Select for a fused message_type ("A,B"): the broker's join-fusion read.
+        The lock is held."""
+        if request.sort or request.page_token.strip() or request.include_total:
+            raise _invalid("a join read has no sort, page token or total; read one table to use them")
+        identity = call.identity
+        names = _join_message_types(request.message_type)
+        entities = [self._entity(name) for name in names]
+        short_names = [entity.short_name for entity in entities]
+        fields = list(request.fields)
+        # The served export-control gate: a named PII or encrypted column needs
+        # udb:pii:read (or an export purpose), as on a single-table read.
+        for index, entity in enumerate(entities):
+            nested: list[str] = []
+            for field_name in fields:
+                try:
+                    table, column = _join_field(field_name, short_names)
+                except _Refusal:
+                    continue  # An unknown prefix is refused with the projection below.
+                name = entity.aliases.get(column)
+                if table == index and name is not None:
+                    nested.append(name)
+            if nested:
+                entity.read_columns(call, nested)
+        if not _has_scope(identity, "udb:read"):
+            raise _invalid("scope udb:read is required for join fusion")
+        outputs: list[tuple[int, str, str]] = []
+        if not fields:
+            for index, entity in enumerate(entities):
+                for name in sorted(entity.columns):
+                    if not entity.pii_scope[name]:
+                        outputs.append((index, name, f"{entity.short_name}__{entity.column_name(name)}"))
+        else:
+            for field_name in fields:
+                index, column = _join_field(field_name, short_names)
+                name = entities[index].aliases.get(column)
+                if name is None:
+                    raise _invalid(f"unknown join selected field {field_name}")
+                if entities[index].encrypted_column(name):
+                    raise _invalid(
+                        f"join selected encrypted field {field_name}: a join cannot read an "
+                        "encrypted column; read it from its own table"
+                    )
+                outputs.append((index, name, field_name.replace(".", "__")))
+        edges: list[tuple[int, int, tuple[str, ...], tuple[str, ...]]] = []
+        for following in range(1, len(entities)):
+            edge = None
+            for prior in range(following):
+                fk = entities[prior].references(entities[following])
+                if fk is not None:
+                    edge = (prior, following, fk.columns, fk.ref_columns)
+                    break
+                fk = entities[following].references(entities[prior])
+                if fk is not None:
+                    edge = (following, prior, fk.columns, fk.ref_columns)
+                    break
+            if edge is None:
+                raise _invalid(f"no foreign key path found for join fusion target {names[following]}")
+            edges.append(edge)
+        for entity in entities:
+            if entity.required_scope and not _has_scope(identity, entity.required_scope):
+                raise _invalid(f"scope {entity.required_scope} is required for this table")
+        # Simple equality only; a NULL never equals anything, as in SQL.
+        filters: list[dict[str, Any]] = [{} for _ in entities]
+        never = False
+        for field_name, value in _struct_map(request.filter).items():
+            if field_name.startswith("$") or isinstance(value, (dict, list)):
+                raise _invalid("join fusion supports only simple equality filters")
+            index, column = _join_field(field_name, names)
+            name = entities[index].aliases.get(column)
+            if name is None:
+                raise _invalid(f"unknown join filter field {field_name}")
+            if value is None:
+                never = True
+            else:
+                filters[index][name] = value
+        candidates: list[list[Mapping[str, Any]]] = []
+        for index, entity in enumerate(entities):
+            filter_ = entity.query_filter(filters[index])
+            rows = [
+                row
+                for row in self._rows.get(entity.message_type, {}).get(identity.tenant_id, {}).values()
+                if entity.live(row) and entity.visible_to(row, identity) and _matches(row, filter_)
+            ]
+
+            # The broker's join has no ORDER BY; the fake answers in primary-key
+            # order so its own runs repeat.
+            def by_key(a: Mapping[str, Any], b: Mapping[str, Any], entity: _Entity = entity) -> int:
+                for column in entity.primary_key:
+                    result = _compare(a.get(column), b.get(column))
+                    if result:
+                        return result
+                return 0
+
+            candidates.append(sorted(rows, key=cmp_to_key(by_key)))
+
+        def joins(combo: Sequence[Mapping[str, Any]], edge: tuple[int, int, tuple[str, ...], tuple[str, ...]]) -> bool:
+            left, right, left_columns, right_columns = edge
+            for left_column, right_column in zip(left_columns, right_columns):
+                a = combo[left].get(entities[left].aliases.get(left_column, left_column))
+                b = combo[right].get(entities[right].aliases.get(right_column, right_column))
+                if a is None or b is None or not _equal(a, b):
+                    return False
+            return True
+
+        matched: list[list[Mapping[str, Any]]] = []
+
+        def walk(combo: list[Mapping[str, Any]]) -> None:
+            if len(combo) == len(entities):
+                matched.append(combo)
+                return
+            for row in candidates[len(combo)]:
+                following = combo + [row]
+                if len(following) > 1 and not joins(following, edges[len(following) - 2]):
+                    continue
+                walk(following)
+
+        if not never:
+            walk([])
+        limit = request.limit if request.limit > 0 else 100
+        out = types_pb2.RecordSet(has_more=len(matched) > limit)
+        can_read_masked = _has_scope(identity, "udb:pii:read")
+        redacted: set[str] = set()
+        for combo in matched[:limit]:
+            view: dict[str, Any] = {}
+            for index, name, alias in outputs:
+                entity = entities[index]
+                if name not in combo[index]:
+                    continue
+                if entity.masked[name] and not can_read_masked:
+                    view[alias] = _MASK
+                    redacted.add(alias)
+                    continue
+                view[alias] = entity.wire_value(name, copy.deepcopy(combo[index][name]))
+            out.records_json.append(json.dumps(view).encode("utf-8"))
+            wire = out.rows.add()
+            for key, value in to_struct(_protobuf_json(view)).fields.items():
+                wire.fields[key].CopyFrom(value)
+        out.redacted_fields.extend(sorted(redacted))
+        return out
+
     def _select(self, call: _Call, request: types_pb2.SelectRequest) -> types_pb2.RecordSet:
         with self._lock:
+            include_deleted = request.include_deleted
+            if len(_join_message_types(request.message_type)) > 1:
+                if include_deleted:
+                    raise _include_deleted_invalid(
+                        "a join read cannot include deleted rows; read one table to include them",
+                        "a join read cannot include deleted rows",
+                    )
+                return self._select_join(call, request)
             entity = self._entity(request.message_type)
             identity = call.identity
+            if include_deleted:
+                # The broker's admission: the scope first, then an entity with soft delete.
+                if not _has_scope(identity, DELETED_READ_SCOPE):
+                    raise _deleted_read_scope_missing()
+                if not entity.soft_delete:
+                    raise _include_deleted_invalid(
+                        f"include_deleted: {entity.message_type} has no soft delete, so it has no deleted rows to include",
+                        "the entity has no usable soft-delete column, so there are no deleted rows to include",
+                    )
             filter_ = entity.query_filter(_struct_map(request.filter))
             entity.check_tenant(filter_, identity.tenant_id)
             selected = entity.read_columns(call, list(request.fields))
             if request.include_revision:
                 selected.update(entity.primary_key)
+            if include_deleted:
+                selected.add(entity.soft_delete)
             matched = [
                 row
                 for row in self._rows.get(entity.message_type, {}).get(identity.tenant_id, {}).values()
-                if entity.live(row) and entity.visible_to(row, identity) and _matches(row, filter_)
+                if (include_deleted or entity.live(row)) and entity.visible_to(row, identity) and _matches(row, filter_)
             ]
             order: list[tuple[str, bool]] = []
             for requested in request.sort:
@@ -1754,6 +2070,15 @@ class Fake:
             out.has_more = len(out.records_json) >= limit
             if out.has_more and end < len(matched):
                 out.next_page_token = base64.urlsafe_b64encode(str(end).encode()).rstrip(b"=").decode("ascii")
+            if include_deleted:
+                self._deleted_reads.append(DeletedRead(
+                    tenant_id=identity.tenant_id,
+                    project_id=identity.project_id,
+                    actor=identity.user_id or identity.service_identity,
+                    message_type=entity.message_type,
+                    table=entity.table_name,
+                    rows=len(out.records_json),
+                ))
             return out
 
     def _keyed_write(self, call: _Call, operation: str, request: Any, write: Callable[[], types_pb2.MutationResponse]) -> types_pb2.MutationResponse:
@@ -1798,6 +2123,12 @@ class Fake:
     def _insert(self, call: _Call, request: types_pb2.UpsertRequest) -> types_pb2.MutationResponse:
         with self._lock:
             return self._keyed_write(call, "insert", request, lambda: self._write(call.identity, request, True))
+
+    def _bulk_upsert(self, call: _Call, request: Any) -> Any:
+        # Imported here: the bulk module builds on this one's helpers.
+        from .bulk import bulk_upsert
+
+        return bulk_upsert(self, call, request)
 
     def _write(self, identity: Identity, request: types_pb2.UpsertRequest, insert_only: bool) -> types_pb2.MutationResponse:
         tenant = identity.tenant_id

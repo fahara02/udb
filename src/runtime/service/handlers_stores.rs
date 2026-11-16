@@ -33,6 +33,9 @@
 //! gates: refused in production unless the per-backend opt-out is set, and
 //! counted + warned in development.
 
+use super::cache_service::scope::{
+    CacheAccess, scope_for_caller, shared_cache_write_denied_status,
+};
 use super::*;
 use crate::ir::{
     ComparisonOp, ConflictStrategy, LogicalDelete, LogicalFilter, LogicalPagination,
@@ -378,12 +381,29 @@ impl DataBrokerService {
         method: &str,
         spec: serde_json::Value,
     ) -> Result<String, Status> {
+        self.run_store_op_keyed(security, None, resource, write, method, spec)
+            .await
+    }
+
+    /// [`Self::run_store_op`] with the key tenant set apart from the caller
+    /// (the shared cache namespace); see
+    /// [`DataBrokerService::execute_backend_operation_keyed`].
+    async fn run_store_op_keyed(
+        &self,
+        security: &SecurityContext,
+        key_tenant: Option<&str>,
+        resource: Option<&crate::proto::StoreResource>,
+        write: bool,
+        method: &str,
+        spec: serde_json::Value,
+    ) -> Result<String, Status> {
         let backend = require_resource_backend(resource)?;
         let resource_name = resource
             .map(|r| r.resource_name.clone())
             .unwrap_or_default();
-        self.execute_backend_operation(
+        self.execute_backend_operation_keyed(
             &security.request_context(),
+            key_tenant,
             &backend,
             write,
             method.to_string(),
@@ -391,6 +411,32 @@ impl DataBrokerService {
             spec.to_string(),
         )
         .await
+    }
+
+    /// The key tenant of a typed cache RPC: `None` keys under the caller's own
+    /// `udb:{project}:{tenant}:` namespace; a `shared` request keys under the
+    /// reserved shared-tenant marker (`udb:{project}:*shared*:`). Any caller
+    /// may read the shared namespace; writing it takes the shared-table write
+    /// authority (`udb:platform_admin` or `udb:global:write`), else
+    /// PERMISSION_DENIED `shared_cache_write_denied`. A caller whose tenant is
+    /// the marker itself is refused either way. Only the Redis and Memcached
+    /// cache backends key by tenant, so `shared` is refused on any other.
+    fn cache_key_tenant(
+        &self,
+        security: &SecurityContext,
+        resource: &Option<crate::proto::StoreResource>,
+        shared: bool,
+        access: CacheAccess,
+        operation: &'static str,
+    ) -> Result<Option<String>, Status> {
+        let key_tenant =
+            shared_cache_key_tenant(&security.request_context(), shared, access, operation)?;
+        if key_tenant.is_none() {
+            return Ok(None);
+        }
+        let backend = self.store_backend_kind(security, resource);
+        shared_cache_backend_supported(backend)?;
+        Ok(key_tenant)
     }
 
     /// Resolve the executed target (see [`resolve_store_target`]) against the
@@ -472,9 +518,26 @@ impl DataBrokerService {
         if let Err(e) = cache_get_unsupported(&req) {
             return self.record_grpc("CacheGet", started, Err(e));
         }
+        let key_tenant = match self.cache_key_tenant(
+            &security,
+            &req.resource,
+            req.shared,
+            CacheAccess::Read,
+            "cache.get",
+        ) {
+            Ok(key_tenant) => key_tenant,
+            Err(e) => return self.record_grpc("CacheGet", started, Err(e)),
+        };
         let spec = serde_json::json!({ "operation": "get", "key": req.key });
         let out = self
-            .run_store_op(&security, req.resource.as_ref(), false, "query", spec)
+            .run_store_op_keyed(
+                &security,
+                key_tenant.as_deref(),
+                req.resource.as_ref(),
+                false,
+                "query",
+                spec,
+            )
             .await
             .map(|json| {
                 let v = parse_json(&json);
@@ -520,6 +583,16 @@ impl DataBrokerService {
         if let Err(e) = cache_set_unsupported(&req) {
             return self.record_grpc("CacheSet", started, Err(e));
         }
+        let key_tenant = match self.cache_key_tenant(
+            &security,
+            &req.resource,
+            req.shared,
+            CacheAccess::Write,
+            "cache.set",
+        ) {
+            Ok(key_tenant) => key_tenant,
+            Err(e) => return self.record_grpc("CacheSet", started, Err(e)),
+        };
         // The cache stores text: a value that is not UTF-8 would come back
         // changed, so it is refused rather than silently altered.
         let value = match String::from_utf8(req.value.clone()) {
@@ -550,7 +623,14 @@ impl DataBrokerService {
             spec["xx"] = serde_json::json!(true);
         }
         let out = self
-            .run_store_op(&security, req.resource.as_ref(), true, "mutate", spec)
+            .run_store_op_keyed(
+                &security,
+                key_tenant.as_deref(),
+                req.resource.as_ref(),
+                true,
+                "mutate",
+                spec,
+            )
             .await
             .map(|json| Response::new(mutation_from_json(&json)));
         self.record_grpc("CacheSet", started, out)
@@ -587,9 +667,26 @@ impl DataBrokerService {
         ) {
             return self.record_grpc("CacheDelete", started, Err(e));
         }
+        let key_tenant = match self.cache_key_tenant(
+            &security,
+            &req.resource,
+            req.shared,
+            CacheAccess::Write,
+            "cache.delete",
+        ) {
+            Ok(key_tenant) => key_tenant,
+            Err(e) => return self.record_grpc("CacheDelete", started, Err(e)),
+        };
         let spec = serde_json::json!({ "operation": "delete", "key": req.key });
         let out = self
-            .run_store_op(&security, req.resource.as_ref(), true, "mutate", spec)
+            .run_store_op_keyed(
+                &security,
+                key_tenant.as_deref(),
+                req.resource.as_ref(),
+                true,
+                "mutate",
+                spec,
+            )
             .await
             .map(|json| Response::new(mutation_from_json(&json)));
         self.record_grpc("CacheDelete", started, out)
@@ -616,6 +713,16 @@ impl DataBrokerService {
         {
             return self.record_grpc("CacheScan", started, Err(e));
         }
+        let key_tenant = match self.cache_key_tenant(
+            &security,
+            &req.resource,
+            req.shared,
+            CacheAccess::Read,
+            "cache.scan",
+        ) {
+            Ok(key_tenant) => key_tenant,
+            Err(e) => return self.record_grpc("CacheScan", started, Err(e)),
+        };
         let spec = serde_json::json!({
             "operation": "scan",
             "pattern": req.key_pattern,
@@ -623,7 +730,14 @@ impl DataBrokerService {
             "cursor": req.page_token,
         });
         let out = self
-            .run_store_op(&security, req.resource.as_ref(), false, "query", spec)
+            .run_store_op_keyed(
+                &security,
+                key_tenant.as_deref(),
+                req.resource.as_ref(),
+                false,
+                "query",
+                spec,
+            )
             .await
             .map(|json| {
                 let v = parse_json(&json);
@@ -1519,6 +1633,51 @@ fn unsupported_store_field(rpc: &str, field: &str, why: &str) -> Status {
 }
 
 /// Refuses the first `(field, is_set, why)` entry whose field the caller set.
+/// The pure shared-namespace decision of a typed cache RPC (see
+/// `DataBrokerService::cache_key_tenant`): `None` keys under the caller's own
+/// namespace, `Some(marker)` under the shared one. Shared reads are open to any
+/// caller; shared writes need `udb:platform_admin` or `udb:global:write`
+/// (`broker::may_write_global_table`, the shared-table write rule). The
+/// reserved marker is never a caller tenant.
+fn shared_cache_key_tenant(
+    context: &crate::RequestContext,
+    shared: bool,
+    access: CacheAccess,
+    operation: &'static str,
+) -> Result<Option<String>, Status> {
+    let scope = scope_for_caller(
+        context.tenant_id.trim().to_string(),
+        shared,
+        access,
+        operation,
+        || {
+            if crate::broker::may_write_global_table(context) {
+                Ok(())
+            } else {
+                Err(shared_cache_write_denied_status(operation))
+            }
+        },
+    )?;
+    Ok(scope.shared.then_some(scope.key_tenant))
+}
+
+/// Only the Redis and Memcached cache backends key by tenant, so `shared` is
+/// refused naming the field on any other backend.
+fn shared_cache_backend_supported(
+    backend: Option<crate::backend::BackendKind>,
+) -> Result<(), Status> {
+    match backend {
+        Some(crate::backend::BackendKind::Redis | crate::backend::BackendKind::Memcached) => Ok(()),
+        _ => Err(store_rpc_invalid_fields(
+            "the shared cache namespace is served by the Redis and Memcached cache backends",
+            [(
+                "shared",
+                "is supported only when resource.backend is a Redis or Memcached cache",
+            )],
+        )),
+    }
+}
+
 fn refuse_unsupported_fields(rpc: &str, fields: &[(&str, bool, &str)]) -> Result<(), Status> {
     for (field, is_set, why) in fields {
         if *is_set {
@@ -2321,6 +2480,77 @@ mod store_field_honesty_tests {
             cache_get_unsupported(&touch).unwrap_err().code(),
             Code::Unimplemented
         );
+    }
+
+    /// The DataBroker cache RPCs' shared namespace: reads open to any caller,
+    /// writes only with `udb:platform_admin` or `udb:global:write`, the marker
+    /// never a caller, and only Redis/Memcached serve it.
+    #[test]
+    fn shared_cache_key_tenant_follows_the_shared_namespace_rules() {
+        use super::super::cache_service::scope::CacheAccess;
+        let ctx = |tenant: &str, scopes: &[&str]| crate::RequestContext {
+            tenant_id: tenant.to_string(),
+            project_id: "default".to_string(),
+            scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
+            ..crate::RequestContext::default()
+        };
+        let reader = ctx("tenant-a", &["udb:read", "udb:write", "udb:admin"]);
+        let marker = crate::broker::SHARED_TENANT_MARKER.to_string();
+
+        for access in [CacheAccess::Read, CacheAccess::Write] {
+            assert_eq!(
+                shared_cache_key_tenant(&reader, false, access, "cache.set").unwrap(),
+                None,
+                "a tenant request keys under the caller"
+            );
+        }
+        assert_eq!(
+            shared_cache_key_tenant(&reader, true, CacheAccess::Read, "cache.get").unwrap(),
+            Some(marker.clone())
+        );
+        let denied = shared_cache_key_tenant(&reader, true, CacheAccess::Write, "cache.set")
+            .expect_err("a tenant token may not write the shared namespace");
+        assert_eq!(denied.code(), Code::PermissionDenied);
+        assert!(denied.message().contains(crate::broker::GLOBAL_WRITE_SCOPE));
+
+        for scopes in [
+            &[crate::broker::GLOBAL_WRITE_SCOPE][..],
+            &["udb:platform_admin"][..],
+        ] {
+            assert_eq!(
+                shared_cache_key_tenant(
+                    &ctx("tenant-a", scopes),
+                    true,
+                    CacheAccess::Write,
+                    "cache.delete"
+                )
+                .unwrap(),
+                Some(marker.clone()),
+                "{scopes:?}"
+            );
+        }
+        for shared in [false, true] {
+            let err = shared_cache_key_tenant(
+                &ctx(&marker, &[crate::broker::GLOBAL_WRITE_SCOPE]),
+                shared,
+                CacheAccess::Read,
+                "cache.get",
+            )
+            .expect_err("the marker is not a caller tenant");
+            assert_eq!(err.code(), Code::PermissionDenied);
+        }
+
+        for backend in [
+            crate::backend::BackendKind::Redis,
+            crate::backend::BackendKind::Memcached,
+        ] {
+            shared_cache_backend_supported(Some(backend)).expect("cache backend");
+        }
+        for backend in [Some(crate::backend::BackendKind::Postgres), None] {
+            let err =
+                shared_cache_backend_supported(backend).expect_err("not a tenant-keyed cache");
+            assert_eq!(err.code(), Code::InvalidArgument);
+        }
     }
 
     #[test]

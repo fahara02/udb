@@ -112,6 +112,10 @@ pub enum DivergenceKind {
     MissingOnTarget,
     /// Source and target both have rows but checksums differ.
     ChecksumMismatch,
+    /// The target still holds a row the projection's `projection_filter`
+    /// excludes (e.g. a row that left the filter while the worker was down).
+    /// Repair re-projects it, and the worker removes it.
+    PresentOutsideFilter,
 }
 
 /// One projection target's drift report.
@@ -565,19 +569,37 @@ impl DriftScanner {
         probe: &dyn TargetChecksumProbe,
     ) -> Result<DriftReport, String> {
         let limited = self.limit_samples(samples);
+        // A filtered projection holds only the rows its filter matches: a row
+        // outside it is in sync when the target has no record for it.
+        let row_filter = crate::runtime::projection::target_row_filter(&target.options)?;
         let mut divergent = Vec::new();
         // Dedup by (kind, row_key): the same key can be sampled more than once,
         // and without this the report (and the rows_to_repair cost estimate) is
         // inflated by duplicates even though repair dedups via idempotency_key.
         let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
         for sample in &limited {
+            let belongs = match &row_filter {
+                None => true,
+                Some(filter) => {
+                    crate::generation::manifest::projection_filter::projection_filter_matches(
+                        filter,
+                        &sample.source_payload,
+                    )
+                    .map_err(|err| format!("projection_filter: {err}"))?
+                }
+            };
             let observation = probe.observe(target, &sample.row_key).await?;
-            let (target_checksum, kind) = match &observation.target_checksum {
-                None => (None, DivergenceKind::MissingOnTarget),
-                Some(target_sum) if target_sum != &sample.source_checksum => {
+            let (target_checksum, kind) = match (&observation.target_checksum, belongs) {
+                (None, false) => continue,
+                (Some(target_sum), false) => (
+                    Some(target_sum.clone()),
+                    DivergenceKind::PresentOutsideFilter,
+                ),
+                (None, true) => (None, DivergenceKind::MissingOnTarget),
+                (Some(target_sum), true) if target_sum != &sample.source_checksum => {
                     (Some(target_sum.clone()), DivergenceKind::ChecksumMismatch)
                 }
-                Some(_) => continue,
+                (Some(_), true) => continue,
             };
             if !seen.insert(format!("{kind:?}|{:?}", sample.row_key)) {
                 continue;
@@ -803,6 +825,60 @@ mod tests {
             DivergenceKind::ChecksumMismatch
         );
         assert_eq!(report.estimated_repair_cost.rows_to_repair, 1);
+    }
+
+    /// A filtered projection is in sync when it holds exactly the rows its
+    /// filter matches: an excluded row the target lacks is fine, an excluded
+    /// row the target still holds is drift, a matching row it lacks is drift.
+    #[tokio::test]
+    async fn filtered_projection_expects_only_matching_rows() {
+        let mut filtered = target("mongodb");
+        filtered.options = vec![crate::generation::ManifestStoreOption {
+            key: "projection_filter".to_string(),
+            value: "state = 'PUBLISHED'".to_string(),
+        }];
+        let source = vec![
+            sample("kept", json!({ "id": "kept", "state": "PUBLISHED" })),
+            sample("missing", json!({ "id": "missing", "state": "PUBLISHED" })),
+            sample("excluded", json!({ "id": "excluded", "state": "DRAFT" })),
+            sample("stale", json!({ "id": "stale", "state": "RETIRED" })),
+        ];
+        let mut observations = BTreeMap::new();
+        observations.insert("kept".to_string(), Some(source[0].source_checksum.clone()));
+        observations.insert("missing".to_string(), None);
+        observations.insert("excluded".to_string(), None);
+        observations.insert("stale".to_string(), Some("old".to_string()));
+        let report = DriftScanner::new(ScanMode::Full)
+            .scan(&filtered, &source, &StubProbe { observations })
+            .await
+            .unwrap();
+        let mut kinds = report
+            .divergent_rows
+            .iter()
+            .map(|row| (row.row_key["id"].as_str().unwrap().to_string(), row.kind))
+            .collect::<Vec<_>>();
+        kinds.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(
+            kinds,
+            vec![
+                ("missing".to_string(), DivergenceKind::MissingOnTarget),
+                ("stale".to_string(), DivergenceKind::PresentOutsideFilter),
+            ]
+        );
+
+        // A source row the filter cannot judge fails the scan, never a guess.
+        let unjudgeable = vec![sample("x", json!({ "id": "x" }))];
+        let error = DriftScanner::new(ScanMode::Full)
+            .scan(
+                &filtered,
+                &unjudgeable,
+                &StubProbe {
+                    observations: BTreeMap::new(),
+                },
+            )
+            .await
+            .unwrap_err();
+        assert!(error.contains("has no column 'state'"), "{error}");
     }
 
     #[tokio::test]

@@ -28,6 +28,10 @@
 //!     the shared validator.
 //!   * Every mutation appends a durable journal row and emits a versioned
 //!     dot-topic outbox event.
+//!   * Shared (global) tables are covered by a platform-admin-only shared scope
+//!     on the same two RPCs ([`scope`]): the SAME export/restore pipeline over
+//!     the shared table set ([`crate::runtime::core::tenant_purge::plan_shared_tables`])
+//!     instead of one tenant's rows.
 //!
 //! Retention pruning is implemented here in [`retention::prune_tenant_backups`]:
 //! a bounded, fail-safe routine that enforces a `BackupPolicy`'s `retention_days`
@@ -81,7 +85,9 @@ mod export;
 mod handlers;
 mod import;
 mod model;
+mod restore_shared;
 pub(crate) mod retention;
+mod scope;
 mod store;
 #[cfg(test)]
 mod tests;
@@ -214,6 +220,17 @@ impl BackupServiceImpl {
         &self,
         requested_project_id: &str,
     ) -> Result<BackupProjectSnapshot, Status> {
+        self.resolve_project_snapshot_for(requested_project_id, scope::BackupDataScope::Tenant)
+    }
+
+    /// [`Self::resolve_project_snapshot`] for an explicit data scope: the
+    /// single-canonical-Postgres-owner topology check runs over the tables that
+    /// scope moves (the tenant-owned tables, or the shared tables).
+    pub(crate) fn resolve_project_snapshot_for(
+        &self,
+        requested_project_id: &str,
+        data_scope: scope::BackupDataScope,
+    ) -> Result<BackupProjectSnapshot, Status> {
         let runtime = self.require_runtime()?;
         let catalog = self.catalog.as_deref().ok_or_else(|| {
             errors::backup_capability_status(
@@ -226,7 +243,7 @@ impl BackupServiceImpl {
         let state = catalog
             .active_exact_for(&project_id)
             .expect("require_active_project established exact catalog authority");
-        let plan = crate::runtime::core::tenant_purge::plan_tenant_purge(&state.manifest);
+        let plan = data_scope.plan(&state.manifest);
         let default_instance = runtime
             .choose_instance_name_for_project("postgres", true, &project_id)
             .map(str::to_string);

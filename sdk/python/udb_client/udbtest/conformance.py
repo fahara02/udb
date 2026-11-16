@@ -3,7 +3,8 @@ in-memory fake, an embedded broker and a live broker. A fake that drifts from th
 broker fails the same test the broker passes, so a service's unit tests stay honest.
 
 :func:`run_table` runs the contract, and :func:`table_contract` yields it case by case
-for ``pytest.mark.parametrize``. :func:`run_table_cases` runs the cross-SDK file
+for ``pytest.mark.parametrize``; :func:`run_join` and :func:`join_contract` do the same
+for the join-fusion read. :func:`run_table_cases` runs the cross-SDK file
 ``sdk/conformance/table-cases.json``, the same cases the Go and TypeScript runners read.
 """
 
@@ -12,6 +13,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
+import re
 from typing import Any, Callable, Iterator, Mapping, Sequence
 import uuid
 
@@ -443,6 +445,38 @@ def _case_soft_delete(connect: Connect, tenant: Callable[[], str], _: Any) -> No
     assert got["filename"] == "revived.pdf" and "deleted_at" not in got, "upsert did not revive tombstone"
 
 
+def _case_include_deleted(connect: Connect, tenant: Callable[[], str], _: Any) -> None:
+    # Which branch runs depends on the connected identity's scopes: a caller holding
+    # udb:deleted:read sees its deleted row marked, any other caller is refused by
+    # name. A plain read keeps hiding the deleted row either way.
+    files = _files(connect(tenant()))
+    live, gone = _row(new_id(), "kept.pdf"), _row(new_id(), "gone.pdf")
+    files.insert(live)
+    files.insert(gone)
+    files.delete({"file_id": gone["file_id"]})
+    where = {"file_id": {"$in": [live["file_id"], gone["file_id"]]}}
+
+    def plain_read_hides_the_deleted_row() -> None:
+        ids = [row["file_id"] for row in files.select(where).rows]
+        assert ids == [live["file_id"]], f"a plain read must return only the live row: {ids}"
+
+    plain_read_hides_the_deleted_row()
+    try:
+        page = files.select(where, include_deleted=True, include_total=True)
+    except Exception as error:  # noqa: BLE001 - the contract inspects what was raised.
+        info = inspect(error)
+        assert info.code == ErrorCode.SCOPE_MISSING, f"include_deleted without the scope: {error!r}"
+        assert info.reason == "UDB_DELETED_READ_SCOPE_MISSING", info
+        assert info.missing.get("scope") == "udb:deleted:read", info
+        plain_read_hides_the_deleted_row()
+        return
+    assert len(page.rows) == 2 and page.total == 2, page
+    for row in page.rows:
+        deleted = row.get("deleted_at") is not None
+        assert deleted == (row["file_id"] == gone["file_id"]), f"only the deleted row carries deleted_at: {row}"
+    plain_read_hides_the_deleted_row()
+
+
 def _case_default_page(connect: Connect, tenant: Callable[[], str], _: Any) -> None:
     u = connect(tenant())
     files = _files(u)
@@ -653,6 +687,7 @@ _CONTRACT: tuple[tuple[str, Callable[[Connect, Callable[[], str], Any], None]], 
     ("NOT NULL refusal names the column", _case_not_null),
     ("int64 stays exact through storage and an atomic increment", _case_exact_int64),
     ("soft delete retains unique keys and upsert revives the row", _case_soft_delete),
+    ("include_deleted needs udb:deleted:read and marks deleted rows", _case_include_deleted),
     ("default page caps at 100 and select_all visits every row", _case_default_page),
     ("unknown columns are refused even without matching rows", _case_unknown_columns),
     ("nullable predicates preserve SQL three-valued logic", _case_three_valued_logic),
@@ -700,9 +735,113 @@ def run_table(connect: Connect, tenants: Sequence[str] | None = None) -> None:
             raise AssertionError(f"conformance case {name!r}: {error!r}") from error
 
 
-def _substitute(values: Mapping[str, Any] | None, file_id: str) -> dict[str, Any]:
+# ── join fusion ──────────────────────────────────────────────────────────────
+
+_POLICY_SET = "udb.core.authz.entity.v1.PolicySet"
+_POLICY_VERSION = "udb.core.authz.entity.v1.PolicyVersion"
+
+
+def _case_join(connect: Connect, tenant: Callable[[], str], peer: str) -> None:
+    u = connect(tenant())
+    joined = f"{_POLICY_SET},{_POLICY_VERSION}"
+    policy_set, lone, second = new_id(), new_id(), new_id()
+
+    def write(message_type_: str, record: dict[str, Any]) -> None:
+        u.data.upsert(types_pb2.UpsertRequest(message_type=message_type_, payload=to_struct(record)))
+
+    write(_POLICY_SET, {"policy_set_id": policy_set, "name": f"join-{policy_set}"})
+    write(_POLICY_SET, {"policy_set_id": lone, "name": f"join-{lone}"})
+    write(_POLICY_VERSION, {"policy_version_id": new_id(), "policy_set_id": policy_set, "version_number": 1})
+    write(_POLICY_VERSION, {"policy_version_id": second, "policy_set_id": policy_set, "version_number": 2})
+
+    def read(project: Any, filter_: Mapping[str, Any], **request: Any) -> tuple[Any, list[dict[str, Any]]]:
+        result = project.data.select(
+            types_pb2.SelectRequest(message_type=joined, filter=to_struct(dict(filter_)), **request)
+        )
+        return result, [json.loads(raw) for raw in result.records_json]
+
+    _, records = read(u, {"policy_set_id": policy_set}, fields=["PolicySet.name", "PolicyVersion.version_number"])
+    for record in records:
+        assert sorted(record) == ["PolicySet__name", "PolicyVersion__version_number"], record
+        assert record["PolicySet__name"] == f"join-{policy_set}", record
+    assert sorted(str(record["PolicyVersion__version_number"]) for record in records) == ["1", "2"], records
+
+    page, records = read(u, {"policy_set_id": policy_set}, limit=1)
+    assert len(records) == 1 and page.has_more, f"limit 1 = {records}, has_more {page.has_more}"
+
+    _, records = read(u, {"policy_set_id": policy_set, "PolicyVersion.version_number": 2})
+    assert len(records) == 1, records
+    assert records[0]["PolicySet__policy_set_id"] == policy_set, records[0]
+    assert records[0]["PolicyVersion__policy_version_id"] == second, records[0]
+    for alias in records[0]:
+        assert alias.startswith(("PolicySet__", "PolicyVersion__")), f"unaliased column {alias}"
+
+    assert read(u, {"policy_set_id": lone})[1] == [], "an inner join drops a set without versions"
+    assert read(connect(peer or new_id()), {"policy_set_id": policy_set})[1] == [], "another tenant joined"
+
+    def invalid(fn: Callable[[], Any], what: str) -> None:
+        error = _raises(fn)
+        assert isinstance(error, UdbRpcError) and error.code == grpc.StatusCode.INVALID_ARGUMENT, f"{what}: {error!r}"
+
+    invalid(lambda: read(u, {}, sort=[types_pb2.Sort(field="name")]), "a sorted join")
+    invalid(lambda: read(u, {"policy_set_id": {"$eq": policy_set}}), "an operator filter")
+    invalid(
+        lambda: u.data.select(types_pb2.SelectRequest(message_type=f"{_FILE_TYPE},{_POLICY_SET}")),
+        "tables without a foreign key",
+    )
+
+    u.data.delete(types_pb2.DeleteRequest(message_type=_POLICY_SET, filter=to_struct({"policy_set_id": policy_set})))
+    assert read(u, {"policy_set_id": policy_set})[1] == [], "a soft-deleted set still joined"
+
+
+_JOIN_CONTRACT: tuple[tuple[str, Callable[[Connect, Callable[[], str], Any], None]], ...] = (
+    ("join fusion reads related rows of both tables as one aliased record", _case_join),
+)
+
+
+def join_contract(
+    connect: Connect, tenants: Sequence[str] | None = None
+) -> Iterator[tuple[str, Callable[[], None]]]:
+    """The join-fusion read contract, case by case: a Select whose message_type names
+    two entities joined by a foreign key (the authz PolicySet and its PolicyVersions)
+    returns one record per joined pair, its columns aliased ``{Message}__{column}``.
+    The target must serve both entities and the storage File entity, and grant the
+    caller udb:read on the fused message type."""
+    tenant, peer = _tenant_source(tenants)
+    for name, case in _JOIN_CONTRACT:
+        yield name, (lambda case=case: case(connect, tenant, peer))
+
+
+def run_join(connect: Connect, tenants: Sequence[str] | None = None) -> None:
+    """Run the join-fusion read contract."""
+    for name, run in join_contract(connect, tenants):
+        try:
+            run()
+        except Exception as error:
+            raise AssertionError(f"conformance case {name!r}: {error!r}") from error
+
+
+_NUMBERED_ID = re.compile(r"\$id(\d+)")
+
+
+class _CaseIds:
+    """A case's placeholders: each ``$id<digits>`` (``$id2``) is its own fresh UUID,
+    replaced before the bare ``$id``, which is the case's row id."""
+
+    def __init__(self) -> None:
+        self.file_id = new_id()
+        self._numbered: dict[str, str] = {}
+
+    def _numbered_id(self, match: "re.Match[str]") -> str:
+        return self._numbered.setdefault(match.group(1), new_id())
+
+    def text(self, value: str) -> str:
+        return _NUMBERED_ID.sub(self._numbered_id, value).replace("$id", self.file_id)
+
+
+def _substitute(values: Mapping[str, Any] | None, ids: _CaseIds) -> dict[str, Any]:
     return {
-        key: value.replace("$id", file_id) if isinstance(value, str) else value
+        key: ids.text(value) if isinstance(value, str) else value
         for key, value in (values or {}).items()
     }
 
@@ -719,23 +858,26 @@ def load_table_cases(path: str | Path) -> list[dict[str, Any]]:
 def run_table_case(connect: Connect, case: Mapping[str, Any], tenant: str = "") -> None:
     """Run one case of the shared file against ``connect``."""
     files = _files(connect(tenant or new_id()))
-    file_id = new_id()
+    ids = _CaseIds()
     for index, step in enumerate(case["steps"]):
         op = step["op"]
-        key = _substitute(step.get("key"), file_id)
+        key = _substitute(step.get("key"), ids)
         got: dict[str, Any] | None = None
+        bulk: Any = None
         error: BaseException | None = None
         try:
             if op == "upsert":
-                files.upsert(_substitute(step.get("row"), file_id))
+                files.upsert(_substitute(step.get("row"), ids))
+            elif op == "bulk_upsert":
+                bulk = files.bulk_upsert([_substitute(row, ids) for row in step.get("rows", [])])
             elif op == "get":
                 got = files.get(key)
             elif op == "patch":
-                files.patch(key, _substitute(step.get("changes"), file_id))
+                files.patch(key, _substitute(step.get("changes"), ids))
             elif op == "update_if":
                 current = dict(files.get(key))
-                current.update(_substitute(step.get("changes"), file_id))
-                files.update_if(current, _substitute(step.get("expected"), file_id))
+                current.update(_substitute(step.get("changes"), ids))
+                files.update_if(current, _substitute(step.get("expected"), ids))
             elif op == "delete":
                 files.delete(key)
             else:
@@ -748,9 +890,13 @@ def run_table_case(connect: Connect, case: Mapping[str, Any], tenant: str = "") 
         name = _error_name(error)
         want = expect.get("error", "")
         assert name == want, f"{case['name']} step {index} ({op}): error {name!r} ({error!r}), want {want!r}"
+        if bulk is not None and "affected_rows" in expect:
+            assert bulk.affected_rows == expect["affected_rows"], (
+                f"{case['name']} step {index}: affected_rows = {bulk.affected_rows}, want {expect['affected_rows']}"
+            )
         if got is not None and expect.get("row") is not None:
             record = _SPEC.to_fields(got)
-            for column, value in _substitute(expect["row"], file_id).items():
+            for column, value in _substitute(expect["row"], ids).items():
                 assert record.get(column) == value, f"{case['name']} step {index}: {column} = {record.get(column)!r}, want {value!r}"
 
 

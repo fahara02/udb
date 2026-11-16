@@ -30,6 +30,14 @@ class CacheGetRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool touch = 4 [json_name = "touch"];</code>
      */
     protected $touch = false;
+    /**
+     * Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Redis and
+     * Memcached cache backends only.
+     *
+     * Generated from protobuf field <code>bool shared = 5 [json_name = "shared"];</code>
+     */
+    protected $shared = false;
 
     /**
      * Constructor.
@@ -41,6 +49,10 @@ class CacheGetRequest extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\StoreResource $resource
      *     @type string $key
      *     @type bool $touch
+     *     @type bool $shared
+     *           Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     *           every tenant) instead of the caller's tenant namespace. Redis and
+     *           Memcached cache backends only.
      * }
      */
     public function __construct($data = NULL) {
@@ -152,6 +164,36 @@ class CacheGetRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->touch = $var;
+
+        return $this;
+    }
+
+    /**
+     * Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Redis and
+     * Memcached cache backends only.
+     *
+     * Generated from protobuf field <code>bool shared = 5 [json_name = "shared"];</code>
+     * @return bool
+     */
+    public function getShared()
+    {
+        return $this->shared;
+    }
+
+    /**
+     * Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Redis and
+     * Memcached cache backends only.
+     *
+     * Generated from protobuf field <code>bool shared = 5 [json_name = "shared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->shared = $var;
 
         return $this;
     }

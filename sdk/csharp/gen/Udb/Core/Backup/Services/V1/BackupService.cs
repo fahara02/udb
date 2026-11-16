@@ -34,7 +34,7 @@ namespace Udb.Core.Backup.Services.V1 {
             "d19jb3VudBgFIAEoA1IIcm93Q291bnQSJwoPY2hlY2tzdW1fc2hhMjU2GAYg",
             "ASgJUg5jaGVja3N1bVNoYTI1NiJbChNCYWNrdXBFeGNsdWRlZFRhYmxlEhYK",
             "BnNjaGVtYRgBIAEoCVIGc2NoZW1hEhQKBXRhYmxlGAIgASgJUgV0YWJsZRIW",
-            "CgZyZWFzb24YAyABKAlSBnJlYXNvbiL4AwoQQmFja3VwUnVuU3VtbWFyeRIb",
+            "CgZyZWFzb24YAyABKAlSBnJlYXNvbiK4BAoQQmFja3VwUnVuU3VtbWFyeRIb",
             "CgliYWNrdXBfaWQYASABKAlSCGJhY2t1cElkEhsKCXRlbmFudF9pZBgCIAEo",
             "CVIIdGVuYW50SWQSEgoEa2luZBgDIAEoCVIEa2luZBIWCgZzdGF0dXMYBCAB",
             "KAlSBnN0YXR1cxIjCg1vYmplY3RfcHJlZml4GAUgASgJUgxvYmplY3RQcmVm",
@@ -45,199 +45,205 @@ namespace Udb.Core.Backup.Services.V1 {
             "dXJjZVRlbmFudElkEigKEHRhcmdldF90ZW5hbnRfaWQYCyABKAlSDnRhcmdl",
             "dFRlbmFudElkEiYKD2NyZWF0ZWRfYXRfdW5peBgMIAEoA1INY3JlYXRlZEF0",
             "VW5peBIqChFjb21wbGV0ZWRfYXRfdW5peBgNIAEoA1IPY29tcGxldGVkQXRV",
-            "bml4Eh0KCnByb2plY3RfaWQYDiABKAlSCXByb2plY3RJZCLAAwoQQmFja3Vw",
-            "UG9saWN5VmlldxIbCglwb2xpY3lfaWQYASABKAlSCHBvbGljeUlkEhsKCXRl",
-            "bmFudF9pZBgCIAEoCVIIdGVuYW50SWQSHwoLcG9saWN5X25hbWUYAyABKAlS",
-            "CnBvbGljeU5hbWUSIwoNc2NoZWR1bGVfY3JvbhgEIAEoCVIMc2NoZWR1bGVD",
-            "cm9uEiUKDnJldGVudGlvbl9kYXlzGAUgASgFUg1yZXRlbnRpb25EYXlzEjAK",
-            "FG1heF9yZXRhaW5lZF9iYWNrdXBzGAYgASgFUhJtYXhSZXRhaW5lZEJhY2t1",
-            "cHMSGAoHZW5hYmxlZBgHIAEoCFIHZW5hYmxlZBIlCg5vYmplY3RfYmFja2Vu",
-            "ZBgIIAEoCVINb2JqZWN0QmFja2VuZBIjCg1vYmplY3RfYnVja2V0GAkgASgJ",
-            "UgxvYmplY3RCdWNrZXQSJgoPY3JlYXRlZF9hdF91bml4GAogASgDUg1jcmVh",
-            "dGVkQXRVbml4EiYKD3VwZGF0ZWRfYXRfdW5peBgLIAEoA1INdXBkYXRlZEF0",
-            "VW5peBIdCgpwcm9qZWN0X2lkGAwgASgJUglwcm9qZWN0SWQi6AEKGFN0YXJ0",
-            "VGVuYW50QmFja3VwUmVxdWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFu",
-            "dElkEh8KC3BvbGljeV9uYW1lGAIgASgJUgpwb2xpY3lOYW1lEiUKDm9iamVj",
-            "dF9iYWNrZW5kGAMgASgJUg1vYmplY3RCYWNrZW5kEiMKDW9iamVjdF9idWNr",
-            "ZXQYBCABKAlSDG9iamVjdEJ1Y2tldBIjCg1tZXRhZGF0YV9qc29uGAUgASgJ",
-            "UgxtZXRhZGF0YUpzb246HZqyGRkIARoDdWRiKLDqATADQAFKBmJhY2t1cFAB",
-            "IvMDChlTdGFydFRlbmFudEJhY2t1cFJlc3BvbnNlEhsKCWJhY2t1cF9pZBgB",
-            "IAEoCVIIYmFja3VwSWQSIwoNb2JqZWN0X3ByZWZpeBgCIAEoCVIMb2JqZWN0",
-            "UHJlZml4EisKEW1hbmlmZXN0X2NoZWNrc3VtGAMgASgJUhBtYW5pZmVzdENo",
-            "ZWNrc3VtEh8KC3RhYmxlX2NvdW50GAQgASgFUgp0YWJsZUNvdW50Eh0KCnRv",
-            "dGFsX3Jvd3MYBSABKANSCXRvdGFsUm93cxIlCg5leGNsdWRlZF9jb3VudBgG",
-            "IAEoBVINZXhjbHVkZWRDb3VudBJFCgZ0YWJsZXMYByADKAsyLS51ZGIuY29y",
-            "ZS5iYWNrdXAuc2VydmljZXMudjEuQmFja3VwVGFibGVFbnRyeVIGdGFibGVz",
-            "EkwKCGV4Y2x1ZGVkGAggAygLMjAudWRiLmNvcmUuYmFja3VwLnNlcnZpY2Vz",
-            "LnYxLkJhY2t1cEV4Y2x1ZGVkVGFibGVSCGV4Y2x1ZGVkEhgKB21lc3NhZ2UY",
-            "CSABKAlSB21lc3NhZ2USMgoFZXJyb3IYCiABKAsyHC51ZGIuY29yZS5jb21t",
+            "bml4Eh0KCnByb2plY3RfaWQYDiABKAlSCXByb2plY3RJZBI+CgVzY29wZRgP",
+            "IAEoDjIoLnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5CYWNrdXBTY29w",
+            "ZVIFc2NvcGUiwAMKEEJhY2t1cFBvbGljeVZpZXcSGwoJcG9saWN5X2lkGAEg",
+            "ASgJUghwb2xpY3lJZBIbCgl0ZW5hbnRfaWQYAiABKAlSCHRlbmFudElkEh8K",
+            "C3BvbGljeV9uYW1lGAMgASgJUgpwb2xpY3lOYW1lEiMKDXNjaGVkdWxlX2Ny",
+            "b24YBCABKAlSDHNjaGVkdWxlQ3JvbhIlCg5yZXRlbnRpb25fZGF5cxgFIAEo",
+            "BVINcmV0ZW50aW9uRGF5cxIwChRtYXhfcmV0YWluZWRfYmFja3VwcxgGIAEo",
+            "BVISbWF4UmV0YWluZWRCYWNrdXBzEhgKB2VuYWJsZWQYByABKAhSB2VuYWJs",
+            "ZWQSJQoOb2JqZWN0X2JhY2tlbmQYCCABKAlSDW9iamVjdEJhY2tlbmQSIwoN",
+            "b2JqZWN0X2J1Y2tldBgJIAEoCVIMb2JqZWN0QnVja2V0EiYKD2NyZWF0ZWRf",
+            "YXRfdW5peBgKIAEoA1INY3JlYXRlZEF0VW5peBImCg91cGRhdGVkX2F0X3Vu",
+            "aXgYCyABKANSDXVwZGF0ZWRBdFVuaXgSHQoKcHJvamVjdF9pZBgMIAEoCVIJ",
+            "cHJvamVjdElkIqgCChhTdGFydFRlbmFudEJhY2t1cFJlcXVlc3QSGwoJdGVu",
+            "YW50X2lkGAEgASgJUgh0ZW5hbnRJZBIfCgtwb2xpY3lfbmFtZRgCIAEoCVIK",
+            "cG9saWN5TmFtZRIlCg5vYmplY3RfYmFja2VuZBgDIAEoCVINb2JqZWN0QmFj",
+            "a2VuZBIjCg1vYmplY3RfYnVja2V0GAQgASgJUgxvYmplY3RCdWNrZXQSIwoN",
+            "bWV0YWRhdGFfanNvbhgFIAEoCVIMbWV0YWRhdGFKc29uEj4KBXNjb3BlGAYg",
+            "ASgOMigudWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLkJhY2t1cFNjb3Bl",
+            "UgVzY29wZTodmrIZGQgBGgN1ZGIosOoBMANAAUoGYmFja3VwUAEi8wMKGVN0",
+            "YXJ0VGVuYW50QmFja3VwUmVzcG9uc2USGwoJYmFja3VwX2lkGAEgASgJUghi",
+            "YWNrdXBJZBIjCg1vYmplY3RfcHJlZml4GAIgASgJUgxvYmplY3RQcmVmaXgS",
+            "KwoRbWFuaWZlc3RfY2hlY2tzdW0YAyABKAlSEG1hbmlmZXN0Q2hlY2tzdW0S",
+            "HwoLdGFibGVfY291bnQYBCABKAVSCnRhYmxlQ291bnQSHQoKdG90YWxfcm93",
+            "cxgFIAEoA1IJdG90YWxSb3dzEiUKDmV4Y2x1ZGVkX2NvdW50GAYgASgFUg1l",
+            "eGNsdWRlZENvdW50EkUKBnRhYmxlcxgHIAMoCzItLnVkYi5jb3JlLmJhY2t1",
+            "cC5zZXJ2aWNlcy52MS5CYWNrdXBUYWJsZUVudHJ5UgZ0YWJsZXMSTAoIZXhj",
+            "bHVkZWQYCCADKAsyMC51ZGIuY29yZS5iYWNrdXAuc2VydmljZXMudjEuQmFj",
+            "a3VwRXhjbHVkZWRUYWJsZVIIZXhjbHVkZWQSGAoHbWVzc2FnZRgJIAEoCVIH",
+            "bWVzc2FnZRIyCgVlcnJvchgKIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5B",
+            "cGlFcnJvclIFZXJyb3I6HZqyGRkIARoDdWRiKLDqATADQAFKBmJhY2t1cFAB",
+            "IugCChRSZXN0b3JlVGVuYW50UmVxdWVzdBIoChBzb3VyY2VfdGVuYW50X2lk",
+            "GAEgASgJUg5zb3VyY2VUZW5hbnRJZBIoChB0YXJnZXRfdGVuYW50X2lkGAIg",
+            "ASgJUg50YXJnZXRUZW5hbnRJZBIbCgliYWNrdXBfaWQYAyABKAlSCGJhY2t1",
+            "cElkEi0KEmNvbmZpcm1hdGlvbl90b2tlbhgEIAEoCVIRY29uZmlybWF0aW9u",
+            "VG9rZW4SLAoSYWxsb3dfY3Jvc3NfdGVuYW50GAUgASgIUhBhbGxvd0Nyb3Nz",
+            "VGVuYW50EiMKDW1ldGFkYXRhX2pzb24YBiABKAlSDG1ldGFkYXRhSnNvbhI+",
+            "CgVzY29wZRgHIAEoDjIoLnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5C",
+            "YWNrdXBTY29wZVIFc2NvcGU6HZqyGRkIARoDdWRiKLDqATADQAFKBmJhY2t1",
+            "cFABIqoCChVSZXN0b3JlVGVuYW50UmVzcG9uc2USGwoJYmFja3VwX2lkGAEg",
+            "ASgJUghiYWNrdXBJZBIwChRzb3VyY2Vfb2JqZWN0X3ByZWZpeBgCIAEoCVIS",
+            "c291cmNlT2JqZWN0UHJlZml4EjAKFHJlc3RvcmVkX3RhYmxlX2NvdW50GAMg",
+            "ASgFUhJyZXN0b3JlZFRhYmxlQ291bnQSIwoNcmVzdG9yZWRfcm93cxgEIAEo",
+            "A1IMcmVzdG9yZWRSb3dzEhgKB21lc3NhZ2UYBSABKAlSB21lc3NhZ2USMgoF",
+            "ZXJyb3IYBiABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JSBWVy",
+            "cm9yOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZiYWNrdXBQASKgAQoSTGlzdEJh",
+            "Y2t1cHNSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50SWQSGwoJ",
+            "cGFnZV9zaXplGAIgASgFUghwYWdlU2l6ZRIdCgpwYWdlX3Rva2VuGAMgASgJ",
+            "UglwYWdlVG9rZW4SEgoEa2luZBgEIAEoCVIEa2luZDodmrIZGQgBGgN1ZGIo",
+            "sOoBMANAAUoGYmFja3VwUAEi2QEKE0xpc3RCYWNrdXBzUmVzcG9uc2USRwoH",
+            "YmFja3VwcxgBIAMoCzItLnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5C",
+            "YWNrdXBSdW5TdW1tYXJ5UgdiYWNrdXBzEiYKD25leHRfcGFnZV90b2tlbhgC",
+            "IAEoCVINbmV4dFBhZ2VUb2tlbhIyCgVlcnJvchgDIAEoCzIcLnVkYi5jb3Jl",
+            "LmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HZqyGRkIARoDdWRiKLDqATAD",
+            "QAFKBmJhY2t1cFABImsKEEdldEJhY2t1cFJlcXVlc3QSGwoJdGVuYW50X2lk",
+            "GAEgASgJUgh0ZW5hbnRJZBIbCgliYWNrdXBfaWQYAiABKAlSCGJhY2t1cElk",
+            "Oh2ashkZCAEaA3VkYiiw6gEwA0ABSgZiYWNrdXBQASLCAgoRR2V0QmFja3Vw",
+            "UmVzcG9uc2USRQoGYmFja3VwGAEgASgLMi0udWRiLmNvcmUuYmFja3VwLnNl",
+            "cnZpY2VzLnYxLkJhY2t1cFJ1blN1bW1hcnlSBmJhY2t1cBJFCgZ0YWJsZXMY",
+            "AiADKAsyLS51ZGIuY29yZS5iYWNrdXAuc2VydmljZXMudjEuQmFja3VwVGFi",
+            "bGVFbnRyeVIGdGFibGVzEkwKCGV4Y2x1ZGVkGAMgAygLMjAudWRiLmNvcmUu",
+            "YmFja3VwLnNlcnZpY2VzLnYxLkJhY2t1cEV4Y2x1ZGVkVGFibGVSCGV4Y2x1",
+            "ZGVkEjIKBWVycm9yGAQgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVy",
+            "cm9yUgVlcnJvcjodmrIZGQgBGgN1ZGIosOoBMANAAUoGYmFja3VwUAEi/gIK",
+            "FlB1dEJhY2t1cFBvbGljeVJlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJUgh0",
+            "ZW5hbnRJZBIfCgtwb2xpY3lfbmFtZRgCIAEoCVIKcG9saWN5TmFtZRIjCg1z",
+            "Y2hlZHVsZV9jcm9uGAMgASgJUgxzY2hlZHVsZUNyb24SJQoOcmV0ZW50aW9u",
+            "X2RheXMYBCABKAVSDXJldGVudGlvbkRheXMSMAoUbWF4X3JldGFpbmVkX2Jh",
+            "Y2t1cHMYBSABKAVSEm1heFJldGFpbmVkQmFja3VwcxIYCgdlbmFibGVkGAYg",
+            "ASgIUgdlbmFibGVkEiUKDm9iamVjdF9iYWNrZW5kGAcgASgJUg1vYmplY3RC",
+            "YWNrZW5kEiMKDW9iamVjdF9idWNrZXQYCCABKAlSDG9iamVjdEJ1Y2tldBIj",
+            "Cg1tZXRhZGF0YV9qc29uGAkgASgJUgxtZXRhZGF0YUpzb246HZqyGRkIARoD",
+            "dWRiKLDqATADQAFKBmJhY2t1cFABIqMBChdQdXRCYWNrdXBQb2xpY3lSZXNw",
+            "b25zZRIbCglwb2xpY3lfaWQYASABKAlSCHBvbGljeUlkEhgKB21lc3NhZ2UY",
+            "AiABKAlSB21lc3NhZ2USMgoFZXJyb3IYAyABKAsyHC51ZGIuY29yZS5jb21t",
             "b24udjEuQXBpRXJyb3JSBWVycm9yOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZi",
-            "YWNrdXBQASKoAgoUUmVzdG9yZVRlbmFudFJlcXVlc3QSKAoQc291cmNlX3Rl",
-            "bmFudF9pZBgBIAEoCVIOc291cmNlVGVuYW50SWQSKAoQdGFyZ2V0X3RlbmFu",
-            "dF9pZBgCIAEoCVIOdGFyZ2V0VGVuYW50SWQSGwoJYmFja3VwX2lkGAMgASgJ",
-            "UghiYWNrdXBJZBItChJjb25maXJtYXRpb25fdG9rZW4YBCABKAlSEWNvbmZp",
-            "cm1hdGlvblRva2VuEiwKEmFsbG93X2Nyb3NzX3RlbmFudBgFIAEoCFIQYWxs",
-            "b3dDcm9zc1RlbmFudBIjCg1tZXRhZGF0YV9qc29uGAYgASgJUgxtZXRhZGF0",
-            "YUpzb246HZqyGRkIARoDdWRiKLDqATADQAFKBmJhY2t1cFABIqoCChVSZXN0",
-            "b3JlVGVuYW50UmVzcG9uc2USGwoJYmFja3VwX2lkGAEgASgJUghiYWNrdXBJ",
-            "ZBIwChRzb3VyY2Vfb2JqZWN0X3ByZWZpeBgCIAEoCVISc291cmNlT2JqZWN0",
-            "UHJlZml4EjAKFHJlc3RvcmVkX3RhYmxlX2NvdW50GAMgASgFUhJyZXN0b3Jl",
-            "ZFRhYmxlQ291bnQSIwoNcmVzdG9yZWRfcm93cxgEIAEoA1IMcmVzdG9yZWRS",
-            "b3dzEhgKB21lc3NhZ2UYBSABKAlSB21lc3NhZ2USMgoFZXJyb3IYBiABKAsy",
-            "HC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JSBWVycm9yOh2ashkZCAEa",
-            "A3VkYiiw6gEwA0ABSgZiYWNrdXBQASKgAQoSTGlzdEJhY2t1cHNSZXF1ZXN0",
-            "EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50SWQSGwoJcGFnZV9zaXplGAIg",
-            "ASgFUghwYWdlU2l6ZRIdCgpwYWdlX3Rva2VuGAMgASgJUglwYWdlVG9rZW4S",
-            "EgoEa2luZBgEIAEoCVIEa2luZDodmrIZGQgBGgN1ZGIosOoBMANAAUoGYmFj",
-            "a3VwUAEi2QEKE0xpc3RCYWNrdXBzUmVzcG9uc2USRwoHYmFja3VwcxgBIAMo",
-            "CzItLnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5CYWNrdXBSdW5TdW1t",
-            "YXJ5UgdiYWNrdXBzEiYKD25leHRfcGFnZV90b2tlbhgCIAEoCVINbmV4dFBh",
-            "Z2VUb2tlbhIyCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5B",
-            "cGlFcnJvclIFZXJyb3I6HZqyGRkIARoDdWRiKLDqATADQAFKBmJhY2t1cFAB",
-            "ImsKEEdldEJhY2t1cFJlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJUgh0ZW5h",
-            "bnRJZBIbCgliYWNrdXBfaWQYAiABKAlSCGJhY2t1cElkOh2ashkZCAEaA3Vk",
-            "Yiiw6gEwA0ABSgZiYWNrdXBQASLCAgoRR2V0QmFja3VwUmVzcG9uc2USRQoG",
-            "YmFja3VwGAEgASgLMi0udWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLkJh",
-            "Y2t1cFJ1blN1bW1hcnlSBmJhY2t1cBJFCgZ0YWJsZXMYAiADKAsyLS51ZGIu",
-            "Y29yZS5iYWNrdXAuc2VydmljZXMudjEuQmFja3VwVGFibGVFbnRyeVIGdGFi",
-            "bGVzEkwKCGV4Y2x1ZGVkGAMgAygLMjAudWRiLmNvcmUuYmFja3VwLnNlcnZp",
-            "Y2VzLnYxLkJhY2t1cEV4Y2x1ZGVkVGFibGVSCGV4Y2x1ZGVkEjIKBWVycm9y",
-            "GAQgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjod",
-            "mrIZGQgBGgN1ZGIosOoBMANAAUoGYmFja3VwUAEi/gIKFlB1dEJhY2t1cFBv",
-            "bGljeVJlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJUgh0ZW5hbnRJZBIfCgtw",
-            "b2xpY3lfbmFtZRgCIAEoCVIKcG9saWN5TmFtZRIjCg1zY2hlZHVsZV9jcm9u",
-            "GAMgASgJUgxzY2hlZHVsZUNyb24SJQoOcmV0ZW50aW9uX2RheXMYBCABKAVS",
-            "DXJldGVudGlvbkRheXMSMAoUbWF4X3JldGFpbmVkX2JhY2t1cHMYBSABKAVS",
-            "Em1heFJldGFpbmVkQmFja3VwcxIYCgdlbmFibGVkGAYgASgIUgdlbmFibGVk",
-            "EiUKDm9iamVjdF9iYWNrZW5kGAcgASgJUg1vYmplY3RCYWNrZW5kEiMKDW9i",
-            "amVjdF9idWNrZXQYCCABKAlSDG9iamVjdEJ1Y2tldBIjCg1tZXRhZGF0YV9q",
-            "c29uGAkgASgJUgxtZXRhZGF0YUpzb246HZqyGRkIARoDdWRiKLDqATADQAFK",
-            "BmJhY2t1cFABIqMBChdQdXRCYWNrdXBQb2xpY3lSZXNwb25zZRIbCglwb2xp",
-            "Y3lfaWQYASABKAlSCHBvbGljeUlkEhgKB21lc3NhZ2UYAiABKAlSB21lc3Nh",
-            "Z2USMgoFZXJyb3IYAyABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJy",
-            "b3JSBWVycm9yOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZiYWNrdXBQASJ1ChZH",
-            "ZXRCYWNrdXBQb2xpY3lSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVu",
-            "YW50SWQSHwoLcG9saWN5X25hbWUYAiABKAlSCnBvbGljeU5hbWU6HZqyGRkI",
-            "ARoDdWRiKLDqATADQAFKBmJhY2t1cFABIrMBChdHZXRCYWNrdXBQb2xpY3lS",
-            "ZXNwb25zZRJFCgZwb2xpY3kYASABKAsyLS51ZGIuY29yZS5iYWNrdXAuc2Vy",
-            "dmljZXMudjEuQmFja3VwUG9saWN5Vmlld1IGcG9saWN5EjIKBWVycm9yGAIg",
-            "ASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjodmrIZ",
-            "GQgBGgN1ZGIosOoBMANAAUoGYmFja3VwUAEikwEKGUxpc3RCYWNrdXBQb2xp",
-            "Y2llc1JlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJUgh0ZW5hbnRJZBIbCglw",
-            "YWdlX3NpemUYAiABKAVSCHBhZ2VTaXplEh0KCnBhZ2VfdG9rZW4YAyABKAlS",
-            "CXBhZ2VUb2tlbjodmrIZGQgBGgN1ZGIosOoBMANAAUoGYmFja3VwUAEi4gEK",
-            "Gkxpc3RCYWNrdXBQb2xpY2llc1Jlc3BvbnNlEkkKCHBvbGljaWVzGAEgAygL",
-            "Mi0udWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLkJhY2t1cFBvbGljeVZp",
-            "ZXdSCHBvbGljaWVzEiYKD25leHRfcGFnZV90b2tlbhgCIAEoCVINbmV4dFBh",
-            "Z2VUb2tlbhIyCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5B",
-            "cGlFcnJvclIFZXJyb3I6HZqyGRkIARoDdWRiKLDqATADQAFKBmJhY2t1cFAB",
-            "IngKGURlbGV0ZUJhY2t1cFBvbGljeVJlcXVlc3QSGwoJdGVuYW50X2lkGAEg",
-            "ASgJUgh0ZW5hbnRJZBIfCgtwb2xpY3lfbmFtZRgCIAEoCVIKcG9saWN5TmFt",
-            "ZTodmrIZGQgBGgN1ZGIosOoBMANAAUoGYmFja3VwUAEiowEKGkRlbGV0ZUJh",
-            "Y2t1cFBvbGljeVJlc3BvbnNlEhgKB2RlbGV0ZWQYASABKAhSB2RlbGV0ZWQS",
-            "GAoHbWVzc2FnZRgCIAEoCVIHbWVzc2FnZRIyCgVlcnJvchgDIAEoCzIcLnVk",
-            "Yi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HZqyGRkIARoDdWRi",
-            "KLDqATADQAFKBmJhY2t1cFABMqcdCg1CYWNrdXBTZXJ2aWNlEukDChFTdGFy",
-            "dFRlbmFudEJhY2t1cBI1LnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5T",
-            "dGFydFRlbmFudEJhY2t1cFJlcXVlc3QaNi51ZGIuY29yZS5iYWNrdXAuc2Vy",
-            "dmljZXMudjEuU3RhcnRUZW5hbnRCYWNrdXBSZXNwb25zZSLkAsrzGEYIAhoe",
-            "dWRiOmJhY2t1cDpzdGFydC10ZW5hbnQtYmFja3VwIAFKAwECBGoYYmFja3Vw",
-            "LlN0YXJ0VGVuYW50QmFja3VwkAEB0vMYBggBEAEgAdrzGEEIARITc3RhcnRf",
-            "dGVuYW50X2JhY2t1cBoDdWRiKLDqATADQAFKBmJhY2t1cFABWhFzdGFydFRl",
-            "bmFudEJhY2t1cOrzGGMKGGJhY2t1cC5TdGFydFRlbmFudEJhY2t1cBIbdWRi",
-            "LmJhY2t1cC5ydW4uY29tcGxldGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJk",
-            "Kg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xhACgZiYWNrdXAaCHBvc3RncmVz",
-            "MhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdF",
-            "VPjzGAKC0+STAhYiES92MS9iYWNrdXBzOnN0YXJ0OgEqEs4DCg1SZXN0b3Jl",
-            "VGVuYW50EjEudWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLlJlc3RvcmVU",
-            "ZW5hbnRSZXF1ZXN0GjIudWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLlJl",
-            "c3RvcmVUZW5hbnRSZXNwb25zZSLVAsrzGDwIAhoZdWRiOmJhY2t1cDpyZXN0",
-            "b3JlLXRlbmFudCABSgIBAmoUYmFja3VwLlJlc3RvcmVUZW5hbnSQAQHS8xgG",
-            "CAEQASAB2vMYOAgBEg5yZXN0b3JlX3RlbmFudBoDdWRiKLDqATADQAFKBmJh",
-            "Y2t1cFABWg1yZXN0b3JlVGVuYW506vMYZQoUYmFja3VwLlJlc3RvcmVUZW5h",
-            "bnQSGnVkYi5iYWNrdXAucnVuLnJlc3RvcmVkLnYxGhB0YXJnZXRfdGVuYW50",
-            "X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoGYmFj",
-            "a3VwGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9V",
-            "REJfR1JQQ19UQVJHRVT48xgDgtPkkwIYIhMvdjEvYmFja3VwczpyZXN0b3Jl",
-            "OgEqEswCCgtMaXN0QmFja3VwcxIvLnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNl",
-            "cy52MS5MaXN0QmFja3Vwc1JlcXVlc3QaMC51ZGIuY29yZS5iYWNrdXAuc2Vy",
-            "dmljZXMudjEuTGlzdEJhY2t1cHNSZXNwb25zZSLZAcrzGDgIAhoXdWRiOmJh",
-            "Y2t1cDpsaXN0LWJhY2t1cHMgAUoCAQJqEmJhY2t1cC5MaXN0QmFja3Vwc5AB",
-            "AdLzGAYIARABIAHa8xg0CAESDGxpc3RfYmFja3VwcxoDdWRiKLDqATADQAFK",
-            "BmJhY2t1cFABWgtsaXN0QmFja3Vwc/LzGEAKBmJhY2t1cBoIcG9zdGdyZXMy",
-            "G1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU",
-            "+PMYAYLT5JMCDRILL3YxL2JhY2t1cHMSygIKCUdldEJhY2t1cBItLnVkYi5j",
-            "b3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5HZXRCYWNrdXBSZXF1ZXN0Gi4udWRi",
-            "LmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLkdldEJhY2t1cFJlc3BvbnNlIt0B",
-            "yvMYNAgCGhV1ZGI6YmFja3VwOmdldC1iYWNrdXAgAUoCAQJqEGJhY2t1cC5H",
-            "ZXRCYWNrdXCQAQHS8xgGCAEQASAB2vMYMAgBEgpnZXRfYmFja3VwGgN1ZGIo",
-            "sOoBMANAAUoGYmFja3VwUAFaCWdldEJhY2t1cPLzGEAKBmJhY2t1cBoIcG9z",
-            "dGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENf",
-            "VEFSR0VU+PMYAYLT5JMCGRIXL3YxL2JhY2t1cHMve2JhY2t1cF9pZH0S3QMK",
-            "D1B1dEJhY2t1cFBvbGljeRIzLnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52",
-            "MS5QdXRCYWNrdXBQb2xpY3lSZXF1ZXN0GjQudWRiLmNvcmUuYmFja3VwLnNl",
-            "cnZpY2VzLnYxLlB1dEJhY2t1cFBvbGljeVJlc3BvbnNlIt4CyvMYQQgCGhx1",
-            "ZGI6YmFja3VwOnB1dC1iYWNrdXAtcG9saWN5IAFKAgECahZiYWNrdXAuUHV0",
-            "QmFja3VwUG9saWN5kAEB0vMYBggBEAEgAdrzGD0IARIRcHV0X2JhY2t1cF9w",
-            "b2xpY3kaA3VkYiiw6gEwA0ABSgZiYWNrdXBQAVoPcHV0QmFja3VwUG9saWN5",
-            "6vMYYwoWYmFja3VwLlB1dEJhY2t1cFBvbGljeRIddWRiLmJhY2t1cC5wb2xp",
-            "Y3kudXBzZXJ0ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0",
-            "X29uY2UyBnN0YWJsZfLzGEAKBmJhY2t1cBoIcG9zdGdyZXMyG1VEQl9OQVRJ",
-            "VkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMC",
-            "GSIUL3YxL2JhY2t1cHMvcG9saWNpZXM6ASoSgQMKD0dldEJhY2t1cFBvbGlj",
-            "eRIzLnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5HZXRCYWNrdXBQb2xp",
-            "Y3lSZXF1ZXN0GjQudWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLkdldEJh",
-            "Y2t1cFBvbGljeVJlc3BvbnNlIoICyvMYQQgCGhx1ZGI6YmFja3VwOmdldC1i",
-            "YWNrdXAtcG9saWN5IAFKAgECahZiYWNrdXAuR2V0QmFja3VwUG9saWN5kAEB",
-            "0vMYBggBEAEgAdrzGD0IARIRZ2V0X2JhY2t1cF9wb2xpY3kaA3VkYiiw6gEw",
-            "A0ABSgZiYWNrdXBQAVoPZ2V0QmFja3VwUG9saWN58vMYQAoGYmFja3VwGghw",
-            "b3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQ",
-            "Q19UQVJHRVT48xgBgtPkkwIkEiIvdjEvYmFja3Vwcy9wb2xpY2llcy97cG9s",
-            "aWN5X25hbWV9EogDChJMaXN0QmFja3VwUG9saWNpZXMSNi51ZGIuY29yZS5i",
-            "YWNrdXAuc2VydmljZXMudjEuTGlzdEJhY2t1cFBvbGljaWVzUmVxdWVzdBo3",
-            "LnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5MaXN0QmFja3VwUG9saWNp",
-            "ZXNSZXNwb25zZSKAAsrzGEcIAhofdWRiOmJhY2t1cDpsaXN0LWJhY2t1cC1w",
-            "b2xpY2llcyABSgIBAmoZYmFja3VwLkxpc3RCYWNrdXBQb2xpY2llc5ABAdLz",
-            "GAYIARABIAHa8xhDCAESFGxpc3RfYmFja3VwX3BvbGljaWVzGgN1ZGIosOoB",
-            "MANAAUoGYmFja3VwUAFaEmxpc3RCYWNrdXBQb2xpY2llc/LzGEAKBmJhY2t1",
-            "cBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURC",
-            "X0dSUENfVEFSR0VU+PMYAYLT5JMCFhIUL3YxL2JhY2t1cHMvcG9saWNpZXMS",
-            "/wMKEkRlbGV0ZUJhY2t1cFBvbGljeRI2LnVkYi5jb3JlLmJhY2t1cC5zZXJ2",
-            "aWNlcy52MS5EZWxldGVCYWNrdXBQb2xpY3lSZXF1ZXN0GjcudWRiLmNvcmUu",
-            "YmFja3VwLnNlcnZpY2VzLnYxLkRlbGV0ZUJhY2t1cFBvbGljeVJlc3BvbnNl",
-            "IvcCyvMYRwgCGh91ZGI6YmFja3VwOmRlbGV0ZS1iYWNrdXAtcG9saWN5IAFK",
-            "AgECahliYWNrdXAuRGVsZXRlQmFja3VwUG9saWN5kAEB0vMYBggBEAEgAdrz",
-            "GEMIARIUZGVsZXRlX2JhY2t1cF9wb2xpY3kaA3VkYiiw6gEwA0ABSgZiYWNr",
-            "dXBQAVoSZGVsZXRlQmFja3VwUG9saWN56vMYZQoZYmFja3VwLkRlbGV0ZUJh",
-            "Y2t1cFBvbGljeRIcdWRiLmJhY2t1cC5wb2xpY3kuZGVsZXRlZC52MRoJdGVu",
-            "YW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoG",
+            "YWNrdXBQASJ1ChZHZXRCYWNrdXBQb2xpY3lSZXF1ZXN0EhsKCXRlbmFudF9p",
+            "ZBgBIAEoCVIIdGVuYW50SWQSHwoLcG9saWN5X25hbWUYAiABKAlSCnBvbGlj",
+            "eU5hbWU6HZqyGRkIARoDdWRiKLDqATADQAFKBmJhY2t1cFABIrMBChdHZXRC",
+            "YWNrdXBQb2xpY3lSZXNwb25zZRJFCgZwb2xpY3kYASABKAsyLS51ZGIuY29y",
+            "ZS5iYWNrdXAuc2VydmljZXMudjEuQmFja3VwUG9saWN5Vmlld1IGcG9saWN5",
+            "EjIKBWVycm9yGAIgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9y",
+            "UgVlcnJvcjodmrIZGQgBGgN1ZGIosOoBMANAAUoGYmFja3VwUAEikwEKGUxp",
+            "c3RCYWNrdXBQb2xpY2llc1JlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJUgh0",
+            "ZW5hbnRJZBIbCglwYWdlX3NpemUYAiABKAVSCHBhZ2VTaXplEh0KCnBhZ2Vf",
+            "dG9rZW4YAyABKAlSCXBhZ2VUb2tlbjodmrIZGQgBGgN1ZGIosOoBMANAAUoG",
+            "YmFja3VwUAEi4gEKGkxpc3RCYWNrdXBQb2xpY2llc1Jlc3BvbnNlEkkKCHBv",
+            "bGljaWVzGAEgAygLMi0udWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLkJh",
+            "Y2t1cFBvbGljeVZpZXdSCHBvbGljaWVzEiYKD25leHRfcGFnZV90b2tlbhgC",
+            "IAEoCVINbmV4dFBhZ2VUb2tlbhIyCgVlcnJvchgDIAEoCzIcLnVkYi5jb3Jl",
+            "LmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HZqyGRkIARoDdWRiKLDqATAD",
+            "QAFKBmJhY2t1cFABIngKGURlbGV0ZUJhY2t1cFBvbGljeVJlcXVlc3QSGwoJ",
+            "dGVuYW50X2lkGAEgASgJUgh0ZW5hbnRJZBIfCgtwb2xpY3lfbmFtZRgCIAEo",
+            "CVIKcG9saWN5TmFtZTodmrIZGQgBGgN1ZGIosOoBMANAAUoGYmFja3VwUAEi",
+            "owEKGkRlbGV0ZUJhY2t1cFBvbGljeVJlc3BvbnNlEhgKB2RlbGV0ZWQYASAB",
+            "KAhSB2RlbGV0ZWQSGAoHbWVzc2FnZRgCIAEoCVIHbWVzc2FnZRIyCgVlcnJv",
+            "chgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6",
+            "HZqyGRkIARoDdWRiKLDqATADQAFKBmJhY2t1cFABKl0KC0JhY2t1cFNjb3Bl",
+            "EhwKGEJBQ0tVUF9TQ09QRV9VTlNQRUNJRklFRBAAEhcKE0JBQ0tVUF9TQ09Q",
+            "RV9URU5BTlQQARIXChNCQUNLVVBfU0NPUEVfU0hBUkVEEAIypx0KDUJhY2t1",
+            "cFNlcnZpY2US6QMKEVN0YXJ0VGVuYW50QmFja3VwEjUudWRiLmNvcmUuYmFj",
+            "a3VwLnNlcnZpY2VzLnYxLlN0YXJ0VGVuYW50QmFja3VwUmVxdWVzdBo2LnVk",
+            "Yi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5TdGFydFRlbmFudEJhY2t1cFJl",
+            "c3BvbnNlIuQCyvMYRggCGh51ZGI6YmFja3VwOnN0YXJ0LXRlbmFudC1iYWNr",
+            "dXAgAUoDAQIEahhiYWNrdXAuU3RhcnRUZW5hbnRCYWNrdXCQAQHS8xgGCAEQ",
+            "ASAB2vMYQQgBEhNzdGFydF90ZW5hbnRfYmFja3VwGgN1ZGIosOoBMANAAUoG",
+            "YmFja3VwUAFaEXN0YXJ0VGVuYW50QmFja3Vw6vMYYwoYYmFja3VwLlN0YXJ0",
+            "VGVuYW50QmFja3VwEht1ZGIuYmFja3VwLnJ1bi5jb21wbGV0ZWQudjEaCXRl",
+            "bmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZfLzGEAK",
+            "BmJhY2t1cBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxF",
+            "RDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCFiIRL3YxL2JhY2t1cHM6c3Rh",
+            "cnQ6ASoSzgMKDVJlc3RvcmVUZW5hbnQSMS51ZGIuY29yZS5iYWNrdXAuc2Vy",
+            "dmljZXMudjEuUmVzdG9yZVRlbmFudFJlcXVlc3QaMi51ZGIuY29yZS5iYWNr",
+            "dXAuc2VydmljZXMudjEuUmVzdG9yZVRlbmFudFJlc3BvbnNlItUCyvMYPAgC",
+            "Ghl1ZGI6YmFja3VwOnJlc3RvcmUtdGVuYW50IAFKAgECahRiYWNrdXAuUmVz",
+            "dG9yZVRlbmFudJABAdLzGAYIARABIAHa8xg4CAESDnJlc3RvcmVfdGVuYW50",
+            "GgN1ZGIosOoBMANAAUoGYmFja3VwUAFaDXJlc3RvcmVUZW5hbnTq8xhlChRi",
+            "YWNrdXAuUmVzdG9yZVRlbmFudBIadWRiLmJhY2t1cC5ydW4ucmVzdG9yZWQu",
+            "djEaEHRhcmdldF90ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNl",
+            "MgZzdGFibGXy8xhACgZiYWNrdXAaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NF",
+            "UlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAOC0+STAhgiEy92",
+            "MS9iYWNrdXBzOnJlc3RvcmU6ASoSzAIKC0xpc3RCYWNrdXBzEi8udWRiLmNv",
+            "cmUuYmFja3VwLnNlcnZpY2VzLnYxLkxpc3RCYWNrdXBzUmVxdWVzdBowLnVk",
+            "Yi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5MaXN0QmFja3Vwc1Jlc3BvbnNl",
+            "ItkByvMYOAgCGhd1ZGI6YmFja3VwOmxpc3QtYmFja3VwcyABSgIBAmoSYmFj",
+            "a3VwLkxpc3RCYWNrdXBzkAEB0vMYBggBEAEgAdrzGDQIARIMbGlzdF9iYWNr",
+            "dXBzGgN1ZGIosOoBMANAAUoGYmFja3VwUAFaC2xpc3RCYWNrdXBz8vMYQAoG",
             "YmFja3VwGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVE",
-            "Mg9VREJfR1JQQ19UQVJHRVT48xgCgtPkkwIkKiIvdjEvYmFja3Vwcy9wb2xp",
-            "Y2llcy97cG9saWN5X25hbWV9GssCyvAZWAoGYmFja3VwEgZiYWNrdXAaBmJh",
-            "Y2t1cCIGQmFja3VwKgZiYWNrdXAwATgBaAF6BmJhY2t1cIIBBmJhY2t1cIoB",
-            "BmJhY2t1cJIBDW5hdGl2ZS5iYWNrdXDS8BkZCAEaA3VkYiiw6gEwA0ABSgZi",
-            "YWNrdXBQAdrwGYkBCgZiYWNrdXASEXVkYi9uYXRpdmUvYmFja3VwGhtVREJf",
-            "TkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIYdWRi",
-            "Lm5hdGl2ZS5iYWNrdXAuY29uZmlnOgZiYWNrdXBKC1VEQl9BUElfS0VZWg91",
-            "ZGIgbmF0aXZlIGxpbnTi8BlACgZiYWNrdXAaCHBvc3RncmVzMhtVREJfTkFU",
-            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVEKRAgofY29t",
-            "LnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MUISQmFja3VwU2VydmljZVBy",
-            "b3RvUAFaSWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRi",
-            "L2NvcmUvYmFja3VwL3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgRVQ0JTqgIb",
-            "VWRiLkNvcmUuQmFja3VwLlNlcnZpY2VzLlYxygIbVWRiXENvcmVcQmFja3Vw",
-            "XFNlcnZpY2VzXFYx4gInVWRiXEdQQk1ldGFkYXRhXENvcmVcQmFja3VwXFNl",
-            "cnZpY2VzXFYx6gIfVWRiOjpDb3JlOjpCYWNrdXA6OlNlcnZpY2VzOjpWMWIG",
-            "cHJvdG8z"));
+            "Mg9VREJfR1JQQ19UQVJHRVT48xgBgtPkkwINEgsvdjEvYmFja3VwcxLKAgoJ",
+            "R2V0QmFja3VwEi0udWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLkdldEJh",
+            "Y2t1cFJlcXVlc3QaLi51ZGIuY29yZS5iYWNrdXAuc2VydmljZXMudjEuR2V0",
+            "QmFja3VwUmVzcG9uc2Ui3QHK8xg0CAIaFXVkYjpiYWNrdXA6Z2V0LWJhY2t1",
+            "cCABSgIBAmoQYmFja3VwLkdldEJhY2t1cJABAdLzGAYIARABIAHa8xgwCAES",
+            "CmdldF9iYWNrdXAaA3VkYiiw6gEwA0ABSgZiYWNrdXBQAVoJZ2V0QmFja3Vw",
+            "8vMYQAoGYmFja3VwGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19F",
+            "TkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgBgtPkkwIZEhcvdjEvYmFja3Vw",
+            "cy97YmFja3VwX2lkfRLdAwoPUHV0QmFja3VwUG9saWN5EjMudWRiLmNvcmUu",
+            "YmFja3VwLnNlcnZpY2VzLnYxLlB1dEJhY2t1cFBvbGljeVJlcXVlc3QaNC51",
+            "ZGIuY29yZS5iYWNrdXAuc2VydmljZXMudjEuUHV0QmFja3VwUG9saWN5UmVz",
+            "cG9uc2Ui3gLK8xhBCAIaHHVkYjpiYWNrdXA6cHV0LWJhY2t1cC1wb2xpY3kg",
+            "AUoCAQJqFmJhY2t1cC5QdXRCYWNrdXBQb2xpY3mQAQHS8xgGCAEQASAB2vMY",
+            "PQgBEhFwdXRfYmFja3VwX3BvbGljeRoDdWRiKLDqATADQAFKBmJhY2t1cFAB",
+            "Wg9wdXRCYWNrdXBQb2xpY3nq8xhjChZiYWNrdXAuUHV0QmFja3VwUG9saWN5",
+            "Eh11ZGIuYmFja3VwLnBvbGljeS51cHNlcnRlZC52MRoJdGVuYW50X2lkIghz",
+            "dGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoGYmFja3VwGghw",
+            "b3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQ",
+            "Q19UQVJHRVT48xgCgtPkkwIZIhQvdjEvYmFja3Vwcy9wb2xpY2llczoBKhKB",
+            "AwoPR2V0QmFja3VwUG9saWN5EjMudWRiLmNvcmUuYmFja3VwLnNlcnZpY2Vz",
+            "LnYxLkdldEJhY2t1cFBvbGljeVJlcXVlc3QaNC51ZGIuY29yZS5iYWNrdXAu",
+            "c2VydmljZXMudjEuR2V0QmFja3VwUG9saWN5UmVzcG9uc2UiggLK8xhBCAIa",
+            "HHVkYjpiYWNrdXA6Z2V0LWJhY2t1cC1wb2xpY3kgAUoCAQJqFmJhY2t1cC5H",
+            "ZXRCYWNrdXBQb2xpY3mQAQHS8xgGCAEQASAB2vMYPQgBEhFnZXRfYmFja3Vw",
+            "X3BvbGljeRoDdWRiKLDqATADQAFKBmJhY2t1cFABWg9nZXRCYWNrdXBQb2xp",
+            "Y3ny8xhACgZiYWNrdXAaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VT",
+            "X0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+STAiQSIi92MS9iYWNr",
+            "dXBzL3BvbGljaWVzL3twb2xpY3lfbmFtZX0SiAMKEkxpc3RCYWNrdXBQb2xp",
+            "Y2llcxI2LnVkYi5jb3JlLmJhY2t1cC5zZXJ2aWNlcy52MS5MaXN0QmFja3Vw",
+            "UG9saWNpZXNSZXF1ZXN0GjcudWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYx",
+            "Lkxpc3RCYWNrdXBQb2xpY2llc1Jlc3BvbnNlIoACyvMYRwgCGh91ZGI6YmFj",
+            "a3VwOmxpc3QtYmFja3VwLXBvbGljaWVzIAFKAgECahliYWNrdXAuTGlzdEJh",
+            "Y2t1cFBvbGljaWVzkAEB0vMYBggBEAEgAdrzGEMIARIUbGlzdF9iYWNrdXBf",
+            "cG9saWNpZXMaA3VkYiiw6gEwA0ABSgZiYWNrdXBQAVoSbGlzdEJhY2t1cFBv",
+            "bGljaWVz8vMYQAoGYmFja3VwGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJW",
+            "SUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgBgtPkkwIWEhQvdjEv",
+            "YmFja3Vwcy9wb2xpY2llcxL/AwoSRGVsZXRlQmFja3VwUG9saWN5EjYudWRi",
+            "LmNvcmUuYmFja3VwLnNlcnZpY2VzLnYxLkRlbGV0ZUJhY2t1cFBvbGljeVJl",
+            "cXVlc3QaNy51ZGIuY29yZS5iYWNrdXAuc2VydmljZXMudjEuRGVsZXRlQmFj",
+            "a3VwUG9saWN5UmVzcG9uc2Ui9wLK8xhHCAIaH3VkYjpiYWNrdXA6ZGVsZXRl",
+            "LWJhY2t1cC1wb2xpY3kgAUoCAQJqGWJhY2t1cC5EZWxldGVCYWNrdXBQb2xp",
+            "Y3mQAQHS8xgGCAEQASAB2vMYQwgBEhRkZWxldGVfYmFja3VwX3BvbGljeRoD",
+            "dWRiKLDqATADQAFKBmJhY2t1cFABWhJkZWxldGVCYWNrdXBQb2xpY3nq8xhl",
+            "ChliYWNrdXAuRGVsZXRlQmFja3VwUG9saWN5Ehx1ZGIuYmFja3VwLnBvbGlj",
+            "eS5kZWxldGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9v",
+            "bmNlMgZzdGFibGXy8xhACgZiYWNrdXAaCHBvc3RncmVzMhtVREJfTkFUSVZF",
+            "X1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAiQq",
+            "Ii92MS9iYWNrdXBzL3BvbGljaWVzL3twb2xpY3lfbmFtZX0aywLK8BlYCgZi",
+            "YWNrdXASBmJhY2t1cBoGYmFja3VwIgZCYWNrdXAqBmJhY2t1cDABOAFoAXoG",
+            "YmFja3VwggEGYmFja3VwigEGYmFja3VwkgENbmF0aXZlLmJhY2t1cNLwGRkI",
+            "ARoDdWRiKLDqATADQAFKBmJhY2t1cFAB2vAZiQEKBmJhY2t1cBIRdWRiL25h",
+            "dGl2ZS9iYWNrdXAaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURC",
+            "X0dSUENfVEFSR0VUIhh1ZGIubmF0aXZlLmJhY2t1cC5jb25maWc6BmJhY2t1",
+            "cEoLVURCX0FQSV9LRVlaD3VkYiBuYXRpdmUgbGludOLwGUAKBmJhY2t1cBoI",
+            "cG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dS",
+            "UENfVEFSR0VUQpECCh9jb20udWRiLmNvcmUuYmFja3VwLnNlcnZpY2VzLnYx",
+            "QhJCYWNrdXBTZXJ2aWNlUHJvdG9QAVpJZ2l0aHViLmNvbS9mYWhhcmEwMi91",
+            "ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9iYWNrdXAvc2VydmljZXMvdjE7c2Vy",
+            "dmljZXN2MaICBFVDQlOqAhtVZGIuQ29yZS5CYWNrdXAuU2VydmljZXMuVjHK",
+            "AhtVZGJcQ29yZVxCYWNrdXBcU2VydmljZXNcVjHiAidVZGJcR1BCTWV0YWRh",
+            "dGFcQ29yZVxCYWNrdXBcU2VydmljZXNcVjHqAh9VZGI6OkNvcmU6OkJhY2t1",
+            "cDo6U2VydmljZXM6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::Udb.Core.Common.V1.DtoReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Udb.Core.Backup.Services.V1.BackupScope), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.BackupTableEntry), global::Udb.Core.Backup.Services.V1.BackupTableEntry.Parser, new[]{ "Schema", "Table", "TenantColumn", "ObjectKey", "RowCount", "ChecksumSha256" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.BackupExcludedTable), global::Udb.Core.Backup.Services.V1.BackupExcludedTable.Parser, new[]{ "Schema", "Table", "Reason" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.BackupRunSummary), global::Udb.Core.Backup.Services.V1.BackupRunSummary.Parser, new[]{ "BackupId", "TenantId", "Kind", "Status", "ObjectPrefix", "ManifestChecksum", "TableCount", "TotalRows", "ExcludedCount", "SourceTenantId", "TargetTenantId", "CreatedAtUnix", "CompletedAtUnix", "ProjectId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.BackupRunSummary), global::Udb.Core.Backup.Services.V1.BackupRunSummary.Parser, new[]{ "BackupId", "TenantId", "Kind", "Status", "ObjectPrefix", "ManifestChecksum", "TableCount", "TotalRows", "ExcludedCount", "SourceTenantId", "TargetTenantId", "CreatedAtUnix", "CompletedAtUnix", "ProjectId", "Scope" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.BackupPolicyView), global::Udb.Core.Backup.Services.V1.BackupPolicyView.Parser, new[]{ "PolicyId", "TenantId", "PolicyName", "ScheduleCron", "RetentionDays", "MaxRetainedBackups", "Enabled", "ObjectBackend", "ObjectBucket", "CreatedAtUnix", "UpdatedAtUnix", "ProjectId" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.StartTenantBackupRequest), global::Udb.Core.Backup.Services.V1.StartTenantBackupRequest.Parser, new[]{ "TenantId", "PolicyName", "ObjectBackend", "ObjectBucket", "MetadataJson" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.StartTenantBackupRequest), global::Udb.Core.Backup.Services.V1.StartTenantBackupRequest.Parser, new[]{ "TenantId", "PolicyName", "ObjectBackend", "ObjectBucket", "MetadataJson", "Scope" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.StartTenantBackupResponse), global::Udb.Core.Backup.Services.V1.StartTenantBackupResponse.Parser, new[]{ "BackupId", "ObjectPrefix", "ManifestChecksum", "TableCount", "TotalRows", "ExcludedCount", "Tables", "Excluded", "Message", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.RestoreTenantRequest), global::Udb.Core.Backup.Services.V1.RestoreTenantRequest.Parser, new[]{ "SourceTenantId", "TargetTenantId", "BackupId", "ConfirmationToken", "AllowCrossTenant", "MetadataJson" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.RestoreTenantRequest), global::Udb.Core.Backup.Services.V1.RestoreTenantRequest.Parser, new[]{ "SourceTenantId", "TargetTenantId", "BackupId", "ConfirmationToken", "AllowCrossTenant", "MetadataJson", "Scope" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.RestoreTenantResponse), global::Udb.Core.Backup.Services.V1.RestoreTenantResponse.Parser, new[]{ "BackupId", "SourceObjectPrefix", "RestoredTableCount", "RestoredRows", "Message", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.ListBackupsRequest), global::Udb.Core.Backup.Services.V1.ListBackupsRequest.Parser, new[]{ "TenantId", "PageSize", "PageToken", "Kind" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Backup.Services.V1.ListBackupsResponse), global::Udb.Core.Backup.Services.V1.ListBackupsResponse.Parser, new[]{ "Backups", "NextPageToken", "Error" }, null, null, null, null),
@@ -256,6 +262,29 @@ namespace Udb.Core.Backup.Services.V1 {
     #endregion
 
   }
+  #region Enums
+  /// <summary>
+  /// Which rows a backup or restore moves.
+  /// </summary>
+  public enum BackupScope {
+    /// <summary>
+    /// Treated as BACKUP_SCOPE_TENANT.
+    /// </summary>
+    [pbr::OriginalName("BACKUP_SCOPE_UNSPECIFIED")] Unspecified = 0,
+    /// <summary>
+    /// One tenant's rows in the tenant-owned tables (the default).
+    /// </summary>
+    [pbr::OriginalName("BACKUP_SCOPE_TENANT")] Tenant = 1,
+    /// <summary>
+    /// Every row of the active project catalog's shared (global) tables: tenant
+    /// isolation declared none/global/disabled/off and no tenant column. Platform
+    /// admin only; tenant-owned tables are reported as excluded.
+    /// </summary>
+    [pbr::OriginalName("BACKUP_SCOPE_SHARED")] Shared = 2,
+  }
+
+  #endregion
+
   #region Messages
   /// <summary>
   /// One backed-up tenant table: where its encrypted JSONL artifact lives and its
@@ -645,8 +674,9 @@ namespace Udb.Core.Backup.Services.V1 {
   }
 
   /// <summary>
-  /// A table excluded from the backup because it has no resolvable tenant column.
-  /// Reported, never silently skipped.
+  /// A table excluded from the backup: in a tenant backup one with no resolvable
+  /// tenant column, in a shared backup one that is not a shared table. Reported,
+  /// never silently skipped.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class BackupExcludedTable : pb::IMessage<BackupExcludedTable>
@@ -972,6 +1002,7 @@ namespace Udb.Core.Backup.Services.V1 {
       createdAtUnix_ = other.createdAtUnix_;
       completedAtUnix_ = other.completedAtUnix_;
       projectId_ = other.projectId_;
+      scope_ = other.scope_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1152,6 +1183,23 @@ namespace Udb.Core.Backup.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "scope" field.</summary>
+    public const int ScopeFieldNumber = 15;
+    private global::Udb.Core.Backup.Services.V1.BackupScope scope_ = global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified;
+    /// <summary>
+    /// BACKUP_SCOPE_SHARED for a shared-table backup or restore (its
+    /// source_tenant_id is the reserved shared marker `*shared*`), otherwise
+    /// BACKUP_SCOPE_TENANT.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Core.Backup.Services.V1.BackupScope Scope {
+      get { return scope_; }
+      set {
+        scope_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1181,6 +1229,7 @@ namespace Udb.Core.Backup.Services.V1 {
       if (CreatedAtUnix != other.CreatedAtUnix) return false;
       if (CompletedAtUnix != other.CompletedAtUnix) return false;
       if (ProjectId != other.ProjectId) return false;
+      if (Scope != other.Scope) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1202,6 +1251,7 @@ namespace Udb.Core.Backup.Services.V1 {
       if (CreatedAtUnix != 0L) hash ^= CreatedAtUnix.GetHashCode();
       if (CompletedAtUnix != 0L) hash ^= CompletedAtUnix.GetHashCode();
       if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) hash ^= Scope.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1276,6 +1326,10 @@ namespace Udb.Core.Backup.Services.V1 {
         output.WriteRawTag(114);
         output.WriteString(ProjectId);
       }
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        output.WriteRawTag(120);
+        output.WriteEnum((int) Scope);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1342,6 +1396,10 @@ namespace Udb.Core.Backup.Services.V1 {
         output.WriteRawTag(114);
         output.WriteString(ProjectId);
       }
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        output.WriteRawTag(120);
+        output.WriteEnum((int) Scope);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1393,6 +1451,9 @@ namespace Udb.Core.Backup.Services.V1 {
       }
       if (ProjectId.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Scope);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1447,6 +1508,9 @@ namespace Udb.Core.Backup.Services.V1 {
       }
       if (other.ProjectId.Length != 0) {
         ProjectId = other.ProjectId;
+      }
+      if (other.Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        Scope = other.Scope;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1523,6 +1587,10 @@ namespace Udb.Core.Backup.Services.V1 {
             ProjectId = input.ReadString();
             break;
           }
+          case 120: {
+            Scope = (global::Udb.Core.Backup.Services.V1.BackupScope) input.ReadEnum();
+            break;
+          }
         }
       }
     #endif
@@ -1596,6 +1664,10 @@ namespace Udb.Core.Backup.Services.V1 {
           }
           case 114: {
             ProjectId = input.ReadString();
+            break;
+          }
+          case 120: {
+            Scope = (global::Udb.Core.Backup.Services.V1.BackupScope) input.ReadEnum();
             break;
           }
         }
@@ -2256,6 +2328,7 @@ namespace Udb.Core.Backup.Services.V1 {
       objectBackend_ = other.objectBackend_;
       objectBucket_ = other.objectBucket_;
       metadataJson_ = other.metadataJson_;
+      scope_ = other.scope_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -2334,6 +2407,23 @@ namespace Udb.Core.Backup.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "scope" field.</summary>
+    public const int ScopeFieldNumber = 6;
+    private global::Udb.Core.Backup.Services.V1.BackupScope scope_ = global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified;
+    /// <summary>
+    /// BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+    /// tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+    /// journaled under `tenant_id`.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Core.Backup.Services.V1.BackupScope Scope {
+      get { return scope_; }
+      set {
+        scope_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -2354,6 +2444,7 @@ namespace Udb.Core.Backup.Services.V1 {
       if (ObjectBackend != other.ObjectBackend) return false;
       if (ObjectBucket != other.ObjectBucket) return false;
       if (MetadataJson != other.MetadataJson) return false;
+      if (Scope != other.Scope) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -2366,6 +2457,7 @@ namespace Udb.Core.Backup.Services.V1 {
       if (ObjectBackend.Length != 0) hash ^= ObjectBackend.GetHashCode();
       if (ObjectBucket.Length != 0) hash ^= ObjectBucket.GetHashCode();
       if (MetadataJson.Length != 0) hash ^= MetadataJson.GetHashCode();
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) hash ^= Scope.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -2404,6 +2496,10 @@ namespace Udb.Core.Backup.Services.V1 {
         output.WriteRawTag(42);
         output.WriteString(MetadataJson);
       }
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        output.WriteRawTag(48);
+        output.WriteEnum((int) Scope);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -2434,6 +2530,10 @@ namespace Udb.Core.Backup.Services.V1 {
         output.WriteRawTag(42);
         output.WriteString(MetadataJson);
       }
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        output.WriteRawTag(48);
+        output.WriteEnum((int) Scope);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -2458,6 +2558,9 @@ namespace Udb.Core.Backup.Services.V1 {
       }
       if (MetadataJson.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(MetadataJson);
+      }
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Scope);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2485,6 +2588,9 @@ namespace Udb.Core.Backup.Services.V1 {
       }
       if (other.MetadataJson.Length != 0) {
         MetadataJson = other.MetadataJson;
+      }
+      if (other.Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        Scope = other.Scope;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2525,6 +2631,10 @@ namespace Udb.Core.Backup.Services.V1 {
             MetadataJson = input.ReadString();
             break;
           }
+          case 48: {
+            Scope = (global::Udb.Core.Backup.Services.V1.BackupScope) input.ReadEnum();
+            break;
+          }
         }
       }
     #endif
@@ -2562,6 +2672,10 @@ namespace Udb.Core.Backup.Services.V1 {
           }
           case 42: {
             MetadataJson = input.ReadString();
+            break;
+          }
+          case 48: {
+            Scope = (global::Udb.Core.Backup.Services.V1.BackupScope) input.ReadEnum();
             break;
           }
         }
@@ -3130,6 +3244,7 @@ namespace Udb.Core.Backup.Services.V1 {
       confirmationToken_ = other.confirmationToken_;
       allowCrossTenant_ = other.allowCrossTenant_;
       metadataJson_ = other.metadataJson_;
+      scope_ = other.scope_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -3228,6 +3343,26 @@ namespace Udb.Core.Backup.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "scope" field.</summary>
+    public const int ScopeFieldNumber = 7;
+    private global::Udb.Core.Backup.Services.V1.BackupScope scope_ = global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified;
+    /// <summary>
+    /// BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+    /// tables. Platform admin only. `source_tenant_id` names the tenant whose
+    /// journal holds the run (the `tenant_id` the shared backup was started with);
+    /// `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+    /// rows belong to no tenant. A shared backup is never restored with the
+    /// tenant scope, nor a tenant backup with the shared scope.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Core.Backup.Services.V1.BackupScope Scope {
+      get { return scope_; }
+      set {
+        scope_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -3249,6 +3384,7 @@ namespace Udb.Core.Backup.Services.V1 {
       if (ConfirmationToken != other.ConfirmationToken) return false;
       if (AllowCrossTenant != other.AllowCrossTenant) return false;
       if (MetadataJson != other.MetadataJson) return false;
+      if (Scope != other.Scope) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -3262,6 +3398,7 @@ namespace Udb.Core.Backup.Services.V1 {
       if (ConfirmationToken.Length != 0) hash ^= ConfirmationToken.GetHashCode();
       if (AllowCrossTenant != false) hash ^= AllowCrossTenant.GetHashCode();
       if (MetadataJson.Length != 0) hash ^= MetadataJson.GetHashCode();
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) hash ^= Scope.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3304,6 +3441,10 @@ namespace Udb.Core.Backup.Services.V1 {
         output.WriteRawTag(50);
         output.WriteString(MetadataJson);
       }
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        output.WriteRawTag(56);
+        output.WriteEnum((int) Scope);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3338,6 +3479,10 @@ namespace Udb.Core.Backup.Services.V1 {
         output.WriteRawTag(50);
         output.WriteString(MetadataJson);
       }
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        output.WriteRawTag(56);
+        output.WriteEnum((int) Scope);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -3365,6 +3510,9 @@ namespace Udb.Core.Backup.Services.V1 {
       }
       if (MetadataJson.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(MetadataJson);
+      }
+      if (Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Scope);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -3395,6 +3543,9 @@ namespace Udb.Core.Backup.Services.V1 {
       }
       if (other.MetadataJson.Length != 0) {
         MetadataJson = other.MetadataJson;
+      }
+      if (other.Scope != global::Udb.Core.Backup.Services.V1.BackupScope.Unspecified) {
+        Scope = other.Scope;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -3439,6 +3590,10 @@ namespace Udb.Core.Backup.Services.V1 {
             MetadataJson = input.ReadString();
             break;
           }
+          case 56: {
+            Scope = (global::Udb.Core.Backup.Services.V1.BackupScope) input.ReadEnum();
+            break;
+          }
         }
       }
     #endif
@@ -3480,6 +3635,10 @@ namespace Udb.Core.Backup.Services.V1 {
           }
           case 50: {
             MetadataJson = input.ReadString();
+            break;
+          }
+          case 56: {
+            Scope = (global::Udb.Core.Backup.Services.V1.BackupScope) input.ReadEnum();
             break;
           }
         }

@@ -601,6 +601,80 @@ message M {
     }
 }
 
+/// `projection_filter` on a typed store or a data_store reaches the projection
+/// in canonical form (physical columns); a bad filter fails the catalog with an
+/// error naming the entity, the store and the problem.
+#[test]
+fn projection_filter_reaches_the_projection_canonical_and_bad_ones_fail_the_build() {
+    let manifest = |filter: &str| {
+        let source = format!(
+            r#"package acme.terms.v1;
+message Concept {{
+  option (udb.core.common.v1.pg_table) = {{ table_name: "concepts" schema_name: "terms" is_table: true }};
+  option (udb.core.common.v1.vector_store) = {{
+    backend: VECTOR_BACKEND_QDRANT collection_name: "concepts_vec" dimension: 4
+    projection_filter: "{filter}"
+  }};
+  option (udb.core.common.v1.data_store) = {{
+    store_kind: "document" backend: "mongodb" resource_name: "concepts_doc"
+    projection_filter: "{filter}"
+  }};
+  string id = 1 [(udb.core.common.v1.pg_column) = {{ primary_key: true }}];
+  string state = 2;
+  int64 to_seq = 3;
+}}
+"#
+        );
+        crate::generation::CatalogManifest::from_schemas(&parse_str(&source))
+            .expect("build the catalog")
+    };
+
+    let good = manifest("STATE = 'PUBLISHED' and TO_SEQ is null");
+    assert!(
+        good.validation_errors.is_empty(),
+        "{:?}",
+        good.validation_errors
+    );
+    for resource in ["concepts_vec", "concepts_doc"] {
+        let projection = good
+            .projections
+            .iter()
+            .find(|projection| projection.resource_name == resource)
+            .unwrap_or_else(|| panic!("{resource} projection"));
+        assert!(
+            projection
+                .options
+                .iter()
+                .any(|option| option.key == "projection_filter"
+                    && option.value == "state = 'PUBLISHED' AND to_seq IS NULL"),
+            "{resource}: {:?}",
+            projection.options
+        );
+    }
+
+    let bad = manifest("status = 'PUBLISHED'");
+    for resource in ["concepts_vec", "concepts_doc"] {
+        assert!(
+            bad.validation_errors
+                .iter()
+                .any(|error| error.contains("Concept")
+                    && error.contains(resource)
+                    && error.contains("'status' is not a column of terms.concepts")),
+            "{resource}: {:?}",
+            bad.validation_errors
+        );
+    }
+    let mistyped = manifest("to_seq = 'one'");
+    assert!(
+        mistyped
+            .validation_errors
+            .iter()
+            .any(|error| error.contains("compared with a text literal")),
+        "{:?}",
+        mistyped.validation_errors
+    );
+}
+
 /// Every proto this repository ships still parses under the refusal.
 #[test]
 fn every_shipped_proto_uses_only_keys_its_options_have() {

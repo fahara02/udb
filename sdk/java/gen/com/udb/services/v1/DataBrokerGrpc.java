@@ -295,6 +295,37 @@ public final class DataBrokerGrpc {
     return getBulkCasMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.BulkUpsertRequest,
+      com.udb.entity.v1.BulkUpsertResponse> getBulkUpsertMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "BulkUpsert",
+      requestType = com.udb.entity.v1.BulkUpsertRequest.class,
+      responseType = com.udb.entity.v1.BulkUpsertResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.entity.v1.BulkUpsertRequest,
+      com.udb.entity.v1.BulkUpsertResponse> getBulkUpsertMethod() {
+    io.grpc.MethodDescriptor<com.udb.entity.v1.BulkUpsertRequest, com.udb.entity.v1.BulkUpsertResponse> getBulkUpsertMethod;
+    if ((getBulkUpsertMethod = DataBrokerGrpc.getBulkUpsertMethod) == null) {
+      synchronized (DataBrokerGrpc.class) {
+        if ((getBulkUpsertMethod = DataBrokerGrpc.getBulkUpsertMethod) == null) {
+          DataBrokerGrpc.getBulkUpsertMethod = getBulkUpsertMethod =
+              io.grpc.MethodDescriptor.<com.udb.entity.v1.BulkUpsertRequest, com.udb.entity.v1.BulkUpsertResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "BulkUpsert"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.BulkUpsertRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.BulkUpsertResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DataBrokerMethodDescriptorSupplier("BulkUpsert"))
+              .build();
+        }
+      }
+    }
+    return getBulkUpsertMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.VectorSearchRequest,
       com.udb.entity.v1.VectorSet> getVectorSearchMethod;
 
@@ -2788,6 +2819,21 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Audited bulk load: write one batch of whole rows to one table in ONE
+     * write transaction (all rows or none), with multi-row statements, ONE
+     * summarising change event, ONE audit record and a size-aware rate-limit
+     * charge. Authorized per table exactly like BatchUpsert's items (the
+     * `Upsert` action; shared tables need a platform admin or the global-write
+     * scope). Every row is validated, scoped and encrypted like a single Upsert.
+     * </pre>
+     */
+    default void bulkUpsert(com.udb.entity.v1.BulkUpsertRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.BulkUpsertResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getBulkUpsertMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -3609,6 +3655,22 @@ public final class DataBrokerGrpc {
         io.grpc.stub.StreamObserver<com.udb.entity.v1.BulkCasResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getBulkCasMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Audited bulk load: write one batch of whole rows to one table in ONE
+     * write transaction (all rows or none), with multi-row statements, ONE
+     * summarising change event, ONE audit record and a size-aware rate-limit
+     * charge. Authorized per table exactly like BatchUpsert's items (the
+     * `Upsert` action; shared tables need a platform admin or the global-write
+     * scope). Every row is validated, scoped and encrypted like a single Upsert.
+     * </pre>
+     */
+    public void bulkUpsert(com.udb.entity.v1.BulkUpsertRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.BulkUpsertResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getBulkUpsertMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -4495,6 +4557,21 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Audited bulk load: write one batch of whole rows to one table in ONE
+     * write transaction (all rows or none), with multi-row statements, ONE
+     * summarising change event, ONE audit record and a size-aware rate-limit
+     * charge. Authorized per table exactly like BatchUpsert's items (the
+     * `Upsert` action; shared tables need a platform admin or the global-write
+     * scope). Every row is validated, scoped and encrypted like a single Upsert.
+     * </pre>
+     */
+    public com.udb.entity.v1.BulkUpsertResponse bulkUpsert(com.udb.entity.v1.BulkUpsertRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getBulkUpsertMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -5293,6 +5370,21 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Audited bulk load: write one batch of whole rows to one table in ONE
+     * write transaction (all rows or none), with multi-row statements, ONE
+     * summarising change event, ONE audit record and a size-aware rate-limit
+     * charge. Authorized per table exactly like BatchUpsert's items (the
+     * `Upsert` action; shared tables need a platform admin or the global-write
+     * scope). Every row is validated, scoped and encrypted like a single Upsert.
+     * </pre>
+     */
+    public com.udb.entity.v1.BulkUpsertResponse bulkUpsert(com.udb.entity.v1.BulkUpsertRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getBulkUpsertMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -6049,6 +6141,22 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Audited bulk load: write one batch of whole rows to one table in ONE
+     * write transaction (all rows or none), with multi-row statements, ONE
+     * summarising change event, ONE audit record and a size-aware rate-limit
+     * charge. Authorized per table exactly like BatchUpsert's items (the
+     * `Upsert` action; shared tables need a platform admin or the global-write
+     * scope). Every row is validated, scoped and encrypted like a single Upsert.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.BulkUpsertResponse> bulkUpsert(
+        com.udb.entity.v1.BulkUpsertRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getBulkUpsertMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -6765,83 +6873,84 @@ public final class DataBrokerGrpc {
   private static final int METHODID_DELETE = 4;
   private static final int METHODID_UPDATE = 5;
   private static final int METHODID_BULK_CAS = 6;
-  private static final int METHODID_VECTOR_SEARCH = 7;
-  private static final int METHODID_VECTOR_HYBRID_SEARCH = 8;
-  private static final int METHODID_VECTOR_UPSERT = 9;
-  private static final int METHODID_GET_OBJECT = 10;
-  private static final int METHODID_GENERATE_PRESIGNED_URL = 11;
-  private static final int METHODID_INITIATE_MULTIPART_UPLOAD = 12;
-  private static final int METHODID_COMPLETE_MULTIPART_UPLOAD = 13;
-  private static final int METHODID_ABORT_MULTIPART_UPLOAD = 14;
-  private static final int METHODID_CACHE_GET = 15;
-  private static final int METHODID_CACHE_SET = 16;
-  private static final int METHODID_CACHE_DELETE = 17;
-  private static final int METHODID_CACHE_SCAN = 18;
-  private static final int METHODID_DOCUMENT_GET = 19;
-  private static final int METHODID_DOCUMENT_FIND = 20;
-  private static final int METHODID_DOCUMENT_UPSERT = 21;
-  private static final int METHODID_DOCUMENT_DELETE = 22;
-  private static final int METHODID_GRAPH_QUERY = 23;
-  private static final int METHODID_GRAPH_MUTATE = 24;
-  private static final int METHODID_TIME_SERIES_WRITE = 25;
-  private static final int METHODID_TIME_SERIES_QUERY = 26;
-  private static final int METHODID_ANALYTICAL_QUERY = 27;
-  private static final int METHODID_PUBLISH_CDC = 28;
-  private static final int METHODID_ACK_CDC_EVENTS = 29;
-  private static final int METHODID_NACK_CDC_EVENTS = 30;
-  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 31;
-  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 32;
-  private static final int METHODID_GENERIC_DISPATCH = 33;
-  private static final int METHODID_ENSURE_RESOURCE = 34;
-  private static final int METHODID_DROP_RESOURCE = 35;
-  private static final int METHODID_LIST_RESOURCES = 36;
-  private static final int METHODID_STAGE_CATALOG = 37;
-  private static final int METHODID_ACTIVATE_CATALOG = 38;
-  private static final int METHODID_ROLLBACK_CATALOG = 39;
-  private static final int METHODID_VALIDATE_CATALOG = 40;
-  private static final int METHODID_GET_CATALOG_VERSIONS = 41;
-  private static final int METHODID_GET_CATALOG_VERSION = 42;
-  private static final int METHODID_PLAN_MIGRATION = 43;
-  private static final int METHODID_APPLY_MIGRATION = 44;
-  private static final int METHODID_GET_MIGRATION_STATUS = 45;
-  private static final int METHODID_LIST_MIGRATION_RUNS = 46;
-  private static final int METHODID_APPROVE_MIGRATION_PLAN = 47;
-  private static final int METHODID_LIST_DLQ_EVENTS = 48;
-  private static final int METHODID_GET_DLQ_EVENT = 49;
-  private static final int METHODID_REPLAY_DLQ_EVENT = 50;
-  private static final int METHODID_DISMISS_DLQ_EVENT = 51;
-  private static final int METHODID_QUARANTINE_DLQ_EVENT = 52;
-  private static final int METHODID_GET_CDC_STATUS = 53;
-  private static final int METHODID_PAUSE_CDC = 54;
-  private static final int METHODID_RESUME_CDC = 55;
-  private static final int METHODID_STEP_DOWN_CDC_LEADER = 56;
-  private static final int METHODID_PREVIEW_CDC_REDACTION = 57;
-  private static final int METHODID_SCAN_PROJECTION_DRIFT = 58;
-  private static final int METHODID_PURGE_SUBJECT = 59;
-  private static final int METHODID_LIST_SAGAS = 60;
-  private static final int METHODID_GET_SAGA = 61;
-  private static final int METHODID_RETRY_SAGA_COMPENSATION = 62;
-  private static final int METHODID_MARK_SAGA_REVIEWED = 63;
-  private static final int METHODID_ENSURE_BASELINE = 64;
-  private static final int METHODID_LIST_POLICIES = 65;
-  private static final int METHODID_DELETE_POLICY = 66;
-  private static final int METHODID_RELOAD_POLICIES = 67;
-  private static final int METHODID_LINT_POLICIES = 68;
-  private static final int METHODID_GET_CAPABILITIES = 69;
-  private static final int METHODID_GET_CATALOG_MANIFEST = 70;
-  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 71;
-  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 72;
-  private static final int METHODID_GET_HEALTH_REPORT = 73;
-  private static final int METHODID_ENSURE_PROJECT = 74;
-  private static final int METHODID_LIST_PROJECTS = 75;
-  private static final int METHODID_GET_ADMIN_SUMMARY = 76;
-  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 77;
-  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 78;
-  private static final int METHODID_BATCH_SELECT = 79;
-  private static final int METHODID_BATCH_UPSERT = 80;
-  private static final int METHODID_VECTOR_BATCH_UPSERT = 81;
-  private static final int METHODID_PUT_OBJECT = 82;
-  private static final int METHODID_BEGIN_TX = 83;
+  private static final int METHODID_BULK_UPSERT = 7;
+  private static final int METHODID_VECTOR_SEARCH = 8;
+  private static final int METHODID_VECTOR_HYBRID_SEARCH = 9;
+  private static final int METHODID_VECTOR_UPSERT = 10;
+  private static final int METHODID_GET_OBJECT = 11;
+  private static final int METHODID_GENERATE_PRESIGNED_URL = 12;
+  private static final int METHODID_INITIATE_MULTIPART_UPLOAD = 13;
+  private static final int METHODID_COMPLETE_MULTIPART_UPLOAD = 14;
+  private static final int METHODID_ABORT_MULTIPART_UPLOAD = 15;
+  private static final int METHODID_CACHE_GET = 16;
+  private static final int METHODID_CACHE_SET = 17;
+  private static final int METHODID_CACHE_DELETE = 18;
+  private static final int METHODID_CACHE_SCAN = 19;
+  private static final int METHODID_DOCUMENT_GET = 20;
+  private static final int METHODID_DOCUMENT_FIND = 21;
+  private static final int METHODID_DOCUMENT_UPSERT = 22;
+  private static final int METHODID_DOCUMENT_DELETE = 23;
+  private static final int METHODID_GRAPH_QUERY = 24;
+  private static final int METHODID_GRAPH_MUTATE = 25;
+  private static final int METHODID_TIME_SERIES_WRITE = 26;
+  private static final int METHODID_TIME_SERIES_QUERY = 27;
+  private static final int METHODID_ANALYTICAL_QUERY = 28;
+  private static final int METHODID_PUBLISH_CDC = 29;
+  private static final int METHODID_ACK_CDC_EVENTS = 30;
+  private static final int METHODID_NACK_CDC_EVENTS = 31;
+  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 32;
+  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 33;
+  private static final int METHODID_GENERIC_DISPATCH = 34;
+  private static final int METHODID_ENSURE_RESOURCE = 35;
+  private static final int METHODID_DROP_RESOURCE = 36;
+  private static final int METHODID_LIST_RESOURCES = 37;
+  private static final int METHODID_STAGE_CATALOG = 38;
+  private static final int METHODID_ACTIVATE_CATALOG = 39;
+  private static final int METHODID_ROLLBACK_CATALOG = 40;
+  private static final int METHODID_VALIDATE_CATALOG = 41;
+  private static final int METHODID_GET_CATALOG_VERSIONS = 42;
+  private static final int METHODID_GET_CATALOG_VERSION = 43;
+  private static final int METHODID_PLAN_MIGRATION = 44;
+  private static final int METHODID_APPLY_MIGRATION = 45;
+  private static final int METHODID_GET_MIGRATION_STATUS = 46;
+  private static final int METHODID_LIST_MIGRATION_RUNS = 47;
+  private static final int METHODID_APPROVE_MIGRATION_PLAN = 48;
+  private static final int METHODID_LIST_DLQ_EVENTS = 49;
+  private static final int METHODID_GET_DLQ_EVENT = 50;
+  private static final int METHODID_REPLAY_DLQ_EVENT = 51;
+  private static final int METHODID_DISMISS_DLQ_EVENT = 52;
+  private static final int METHODID_QUARANTINE_DLQ_EVENT = 53;
+  private static final int METHODID_GET_CDC_STATUS = 54;
+  private static final int METHODID_PAUSE_CDC = 55;
+  private static final int METHODID_RESUME_CDC = 56;
+  private static final int METHODID_STEP_DOWN_CDC_LEADER = 57;
+  private static final int METHODID_PREVIEW_CDC_REDACTION = 58;
+  private static final int METHODID_SCAN_PROJECTION_DRIFT = 59;
+  private static final int METHODID_PURGE_SUBJECT = 60;
+  private static final int METHODID_LIST_SAGAS = 61;
+  private static final int METHODID_GET_SAGA = 62;
+  private static final int METHODID_RETRY_SAGA_COMPENSATION = 63;
+  private static final int METHODID_MARK_SAGA_REVIEWED = 64;
+  private static final int METHODID_ENSURE_BASELINE = 65;
+  private static final int METHODID_LIST_POLICIES = 66;
+  private static final int METHODID_DELETE_POLICY = 67;
+  private static final int METHODID_RELOAD_POLICIES = 68;
+  private static final int METHODID_LINT_POLICIES = 69;
+  private static final int METHODID_GET_CAPABILITIES = 70;
+  private static final int METHODID_GET_CATALOG_MANIFEST = 71;
+  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 72;
+  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 73;
+  private static final int METHODID_GET_HEALTH_REPORT = 74;
+  private static final int METHODID_ENSURE_PROJECT = 75;
+  private static final int METHODID_LIST_PROJECTS = 76;
+  private static final int METHODID_GET_ADMIN_SUMMARY = 77;
+  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 78;
+  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 79;
+  private static final int METHODID_BATCH_SELECT = 80;
+  private static final int METHODID_BATCH_UPSERT = 81;
+  private static final int METHODID_VECTOR_BATCH_UPSERT = 82;
+  private static final int METHODID_PUT_OBJECT = 83;
+  private static final int METHODID_BEGIN_TX = 84;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -6887,6 +6996,10 @@ public final class DataBrokerGrpc {
         case METHODID_BULK_CAS:
           serviceImpl.bulkCas((com.udb.entity.v1.BulkCasRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.entity.v1.BulkCasResponse>) responseObserver);
+          break;
+        case METHODID_BULK_UPSERT:
+          serviceImpl.bulkUpsert((com.udb.entity.v1.BulkUpsertRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.entity.v1.BulkUpsertResponse>) responseObserver);
           break;
         case METHODID_VECTOR_SEARCH:
           serviceImpl.vectorSearch((com.udb.entity.v1.VectorSearchRequest) request,
@@ -7272,6 +7385,13 @@ public final class DataBrokerGrpc {
               com.udb.entity.v1.BulkCasRequest,
               com.udb.entity.v1.BulkCasResponse>(
                 service, METHODID_BULK_CAS)))
+        .<com.udb.entity.v1.BulkUpsertRequest, com.udb.entity.v1.BulkUpsertResponse>addMethod(
+          getBulkUpsertMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.BulkUpsertRequest, com.udb.entity.v1.BulkUpsertResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.entity.v1.BulkUpsertRequest,
+              com.udb.entity.v1.BulkUpsertResponse>(
+                service, METHODID_BULK_UPSERT)))
         .<com.udb.entity.v1.VectorSearchRequest, com.udb.entity.v1.VectorSet>addMethod(
           getVectorSearchMethod(),
           io.grpc.stub.ServerCalls.<com.udb.entity.v1.VectorSearchRequest, com.udb.entity.v1.VectorSet>asyncUnaryCall(
@@ -7854,6 +7974,7 @@ public final class DataBrokerGrpc {
               .addMethod(getDeleteMethod())
               .addMethod(getUpdateMethod())
               .addMethod(getBulkCasMethod())
+              .addMethod(getBulkUpsertMethod())
               .addMethod(getVectorSearchMethod())
               .addMethod(getVectorHybridSearchMethod())
               .addMethod(getVectorUpsertMethod())

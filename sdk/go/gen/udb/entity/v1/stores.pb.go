@@ -78,11 +78,15 @@ func (GraphTraversalDirection) EnumDescriptor() ([]byte, []int) {
 }
 
 type CacheGetRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Context       *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	Resource      *StoreResource         `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
-	Key           string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
-	Touch         bool                   `protobuf:"varint,4,opt,name=touch,proto3" json:"touch,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Context  *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Resource *StoreResource         `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
+	Key      string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	Touch    bool                   `protobuf:"varint,4,opt,name=touch,proto3" json:"touch,omitempty"`
+	// Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+	// every tenant) instead of the caller's tenant namespace. Redis and
+	// Memcached cache backends only.
+	Shared        bool `protobuf:"varint,5,opt,name=shared,proto3" json:"shared,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -141,6 +145,13 @@ func (x *CacheGetRequest) GetKey() string {
 func (x *CacheGetRequest) GetTouch() bool {
 	if x != nil {
 		return x.Touch
+	}
+	return false
+}
+
+func (x *CacheGetRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
 	}
 	return false
 }
@@ -233,8 +244,13 @@ type CacheSetRequest struct {
 	OnlyIfPresent  bool                   `protobuf:"varint,8,opt,name=only_if_present,json=onlyIfPresent,proto3" json:"only_if_present,omitempty"`
 	IdempotencyKey string                 `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	Metadata       *structpb.Struct       `protobuf:"bytes,10,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+	// every tenant) instead of the caller's tenant namespace. Requires
+	// `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+	// (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+	Shared        bool `protobuf:"varint,11,opt,name=shared,proto3" json:"shared,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CacheSetRequest) Reset() {
@@ -337,14 +353,26 @@ func (x *CacheSetRequest) GetMetadata() *structpb.Struct {
 	return nil
 }
 
+func (x *CacheSetRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
+}
+
 type CacheDeleteRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Context        *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
 	Resource       *StoreResource         `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
 	Key            string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
 	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+	// every tenant) instead of the caller's tenant namespace. Requires
+	// `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+	// (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+	Shared        bool `protobuf:"varint,5,opt,name=shared,proto3" json:"shared,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CacheDeleteRequest) Reset() {
@@ -405,13 +433,24 @@ func (x *CacheDeleteRequest) GetIdempotencyKey() string {
 	return ""
 }
 
+func (x *CacheDeleteRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
+}
+
 type CacheScanRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Context       *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	Resource      *StoreResource         `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
-	KeyPattern    string                 `protobuf:"bytes,3,opt,name=key_pattern,json=keyPattern,proto3" json:"key_pattern,omitempty"`
-	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	PageToken     string                 `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Context    *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Resource   *StoreResource         `protobuf:"bytes,2,opt,name=resource,proto3" json:"resource,omitempty"`
+	KeyPattern string                 `protobuf:"bytes,3,opt,name=key_pattern,json=keyPattern,proto3" json:"key_pattern,omitempty"`
+	Limit      int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	PageToken  string                 `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Read the shared cache namespace (`udb:{project}:*shared*:`, readable by
+	// every tenant) instead of the caller's tenant namespace. Redis and
+	// Memcached cache backends only.
+	Shared        bool `protobuf:"varint,6,opt,name=shared,proto3" json:"shared,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -479,6 +518,13 @@ func (x *CacheScanRequest) GetPageToken() string {
 		return x.PageToken
 	}
 	return ""
+}
+
+func (x *CacheScanRequest) GetShared() bool {
+	if x != nil {
+		return x.Shared
+	}
+	return false
 }
 
 type CacheEntry struct {
@@ -1871,19 +1917,20 @@ var File_udb_entity_v1_stores_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_stores_proto_rawDesc = "" +
 	"\n" +
-	"\x1audb/entity/v1/stores.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/entity/v1/context.proto\x1a\x1dudb/entity/v1/operation.proto\x1a\x1eudb/entity/v1/relational.proto\"\xac\x01\n" +
+	"\x1audb/entity/v1/stores.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/entity/v1/context.proto\x1a\x1dudb/entity/v1/operation.proto\x1a\x1eudb/entity/v1/relational.proto\"\xc4\x01\n" +
 	"\x0fCacheGetRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x128\n" +
 	"\bresource\x18\x02 \x01(\v2\x1c.udb.entity.v1.StoreResourceR\bresource\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12\x14\n" +
-	"\x05touch\x18\x04 \x01(\bR\x05touch\"\xb7\x01\n" +
+	"\x05touch\x18\x04 \x01(\bR\x05touch\x12\x16\n" +
+	"\x06shared\x18\x05 \x01(\bR\x06shared\"\xb7\x01\n" +
 	"\x10CacheGetResponse\x12\x14\n" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\fR\x05value\x12!\n" +
 	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x1f\n" +
 	"\vttl_seconds\x18\x04 \x01(\x03R\n" +
 	"ttlSeconds\x123\n" +
-	"\bmetadata\x18\x05 \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\x9c\x03\n" +
+	"\bmetadata\x18\x05 \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\xb4\x03\n" +
 	"\x0fCacheSetRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x128\n" +
 	"\bresource\x18\x02 \x01(\v2\x1c.udb.entity.v1.StoreResourceR\bresource\x12\x10\n" +
@@ -1896,12 +1943,14 @@ const file_udb_entity_v1_stores_proto_rawDesc = "" +
 	"\x0fonly_if_present\x18\b \x01(\bR\ronlyIfPresent\x12'\n" +
 	"\x0fidempotency_key\x18\t \x01(\tR\x0eidempotencyKey\x123\n" +
 	"\bmetadata\x18\n" +
-	" \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\xc2\x01\n" +
+	" \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12\x16\n" +
+	"\x06shared\x18\v \x01(\bR\x06shared\"\xda\x01\n" +
 	"\x12CacheDeleteRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x128\n" +
 	"\bresource\x18\x02 \x01(\v2\x1c.udb.entity.v1.StoreResourceR\bresource\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12'\n" +
-	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\"\xdb\x01\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x12\x16\n" +
+	"\x06shared\x18\x05 \x01(\bR\x06shared\"\xf3\x01\n" +
 	"\x10CacheScanRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x128\n" +
 	"\bresource\x18\x02 \x01(\v2\x1c.udb.entity.v1.StoreResourceR\bresource\x12\x1f\n" +
@@ -1909,7 +1958,8 @@ const file_udb_entity_v1_stores_proto_rawDesc = "" +
 	"keyPattern\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x05 \x01(\tR\tpageToken\"\xad\x01\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken\x12\x16\n" +
+	"\x06shared\x18\x06 \x01(\bR\x06shared\"\xad\x01\n" +
 	"\n" +
 	"CacheEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +

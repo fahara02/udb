@@ -15,6 +15,7 @@ from udb.entity.v1 import types_pb2
 from udb.services.v1 import data_broker_pb2_grpc
 
 from ._channel import merge_channel_options, ssl_credentials
+from .bulk import bulk_upsert_request, run_bulk_load, run_bulk_load_async
 from .error_code import map_rpc_error
 from .exceptions import UdbConfigurationError
 from .generated_client import (
@@ -403,6 +404,7 @@ class UdbClient(_ClientBase):
         page_token: str = "",
         sort: Sequence[types_pb2.Sort] = (),
         include_total: bool = False,
+        include_deleted: bool = False,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.RecordSet:
@@ -414,6 +416,7 @@ class UdbClient(_ClientBase):
             page_token=page_token,
             sort=list(sort),
             include_total=include_total,
+            include_deleted=include_deleted,
         )
         return self.call("Select", req, metadata=metadata, timeout=timeout)
 
@@ -615,6 +618,63 @@ class UdbClient(_ClientBase):
                 metadata=self._call_metadata(metadata),
                 timeout=self._timeout if timeout is None else timeout,
             ),
+        )
+
+    def bulk_upsert(
+        self,
+        message_type: str,
+        rows: Sequence[JsonMapping | bytes | str],
+        *,
+        conflict_fields: Sequence[str] = (),
+        idempotency_key: str = "",
+        batch_id: str = "",
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        """Upsert ``rows`` as ONE batch in ONE broker transaction: every row is
+        written or none is. Each row is checked and scoped as :meth:`upsert` checks
+        it, every row must carry the same columns, and no two rows may share a
+        conflict key. The broker emits one change event for the batch. An empty
+        ``batch_id`` is assigned by the broker; the response carries it and a
+        SHA-256 over the rows' keys. Returns the ``BulkUpsertResponse``."""
+        request = bulk_upsert_request(
+            message_type, [to_record_json(row) for row in rows], conflict_fields, idempotency_key, batch_id
+        )
+        return self.call("BulkUpsert", request, metadata=metadata, timeout=timeout)
+
+    def bulk_load(
+        self,
+        message_type: str,
+        rows: Iterable[JsonMapping],
+        *,
+        batch_rows: int = 1000,
+        max_batch_bytes: int = 4 * 1024 * 1024,
+        conflict_fields: Sequence[str] = (),
+        batch_id_prefix: str = "",
+        idempotency_key_prefix: str = "",
+        on_batch: Callable[[int, Any], Any] | None = None,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        """Upsert any number of ``rows`` through :meth:`bulk_upsert`, batch after
+        batch. A batch closes at ``batch_rows`` rows or before a row that would take
+        it past ``max_batch_bytes`` of encoded JSON; a row bigger than that alone
+        raises. With ``batch_id_prefix`` batch ``i`` is ``<prefix>/<i:06d>``; with
+        ``idempotency_key_prefix`` its key is ``<prefix>-<i>``, so a re-run replays
+        the batches that committed. ``on_batch(i, response)`` runs after each batch.
+
+        Nothing is retried. The first failure raises
+        :class:`~udb_client.bulk.BulkLoadError`, which says how many batches
+        committed before it. Returns a :class:`~udb_client.bulk.BulkLoadResult`."""
+        def send(records: list[bytes], batch_id: str, key: str) -> Any:
+            request = bulk_upsert_request(message_type, records, conflict_fields, key, batch_id)
+            return self.call("BulkUpsert", request, metadata=metadata, timeout=timeout)
+
+        return run_bulk_load(
+            send, rows, to_record_json,
+            batch_rows=batch_rows, max_batch_bytes=max_batch_bytes,
+            batch_id_prefix=batch_id_prefix, idempotency_key_prefix=idempotency_key_prefix,
+            on_batch=on_batch,
         )
 
     def vector_upsert(
@@ -840,6 +900,7 @@ class _EntityBase:
         page_token: str,
         sort: Sequence[types_pb2.Sort | str],
         include_total: bool,
+        include_deleted: bool = False,
     ) -> types_pb2.SelectRequest:
         request = types_pb2.SelectRequest(
             message_type=self._message_type,
@@ -849,6 +910,7 @@ class _EntityBase:
             page_token=page_token,
             sort=_sort_keys(sort),
             include_total=include_total,
+            include_deleted=include_deleted,
         )
         fence = self._client.read_fence()
         if fence is not None:
@@ -942,13 +1004,18 @@ class _BoundEntity(_EntityBase):
         limit: int = 0,
         page_token: str = "",
         include_total: bool = False,
+        include_deleted: bool = False,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Page:
         """One keyset-paginated ``Select``. Pass an empty ``page_token`` for the first
         page, then each returned ``next_page_token`` until it comes back empty. A
-        ``sort`` item is a :class:`Sort` or a column name (``"-column"`` descends)."""
-        request = self._select_request(where, fields, limit, page_token, sort, include_total)
+        ``sort`` item is a :class:`Sort` or a column name (``"-column"`` descends).
+        ``include_deleted`` also returns soft-deleted rows, each with its
+        soft-delete column (for example ``deleted_at``) set; it needs scope
+        ``udb:deleted:read``, works only on an entity with soft delete, and every
+        such read is audited."""
+        request = self._select_request(where, fields, limit, page_token, sort, include_total, include_deleted)
         record_set = self._client.select(request, metadata=self._metadata_for(metadata), timeout=timeout)
         return _page_from(record_set)
 
@@ -1057,10 +1124,11 @@ class _AsyncBoundEntity(_EntityBase):
         limit: int = 0,
         page_token: str = "",
         include_total: bool = False,
+        include_deleted: bool = False,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> Page:
-        request = self._select_request(where, fields, limit, page_token, sort, include_total)
+        request = self._select_request(where, fields, limit, page_token, sort, include_total, include_deleted)
         record_set = await self._client.select(request, metadata=self._metadata_for(metadata), timeout=timeout)
         return _page_from(record_set)
 
@@ -1220,6 +1288,7 @@ class UdbAsyncClient(_ClientBase):
         page_token: str = "",
         sort: Sequence[types_pb2.Sort] = (),
         include_total: bool = False,
+        include_deleted: bool = False,
         metadata: Metadata | None = None,
         timeout: float | None = None,
     ) -> types_pb2.RecordSet:
@@ -1231,6 +1300,7 @@ class UdbAsyncClient(_ClientBase):
             page_token=page_token,
             sort=list(sort),
             include_total=include_total,
+            include_deleted=include_deleted,
         )
         return await self.call("Select", req, metadata=metadata, timeout=timeout)
 
@@ -1384,6 +1454,49 @@ class UdbAsyncClient(_ClientBase):
                 f"udb: select_many sent {len(requests)} read(s) and received {len(results)} result(s)"
             )
         return results
+
+    async def bulk_upsert(
+        self,
+        message_type: str,
+        rows: Sequence[JsonMapping | bytes | str],
+        *,
+        conflict_fields: Sequence[str] = (),
+        idempotency_key: str = "",
+        batch_id: str = "",
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        """See :meth:`UdbClient.bulk_upsert`."""
+        request = bulk_upsert_request(
+            message_type, [to_record_json(row) for row in rows], conflict_fields, idempotency_key, batch_id
+        )
+        return await self.call("BulkUpsert", request, metadata=metadata, timeout=timeout)
+
+    async def bulk_load(
+        self,
+        message_type: str,
+        rows: Iterable[JsonMapping],
+        *,
+        batch_rows: int = 1000,
+        max_batch_bytes: int = 4 * 1024 * 1024,
+        conflict_fields: Sequence[str] = (),
+        batch_id_prefix: str = "",
+        idempotency_key_prefix: str = "",
+        on_batch: Callable[[int, Any], Any] | None = None,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        """See :meth:`UdbClient.bulk_load`. ``on_batch`` may be a coroutine function."""
+        async def send(records: list[bytes], batch_id: str, key: str) -> Any:
+            request = bulk_upsert_request(message_type, records, conflict_fields, key, batch_id)
+            return await self.call("BulkUpsert", request, metadata=metadata, timeout=timeout)
+
+        return await run_bulk_load_async(
+            send, rows, to_record_json,
+            batch_rows=batch_rows, max_batch_bytes=max_batch_bytes,
+            batch_id_prefix=batch_id_prefix, idempotency_key_prefix=idempotency_key_prefix,
+            on_batch=on_batch,
+        )
 
     async def vector_upsert(
         self,

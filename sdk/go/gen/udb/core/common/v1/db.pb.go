@@ -769,8 +769,15 @@ type TableOptions struct {
 	VectorStore *VectorStoreOptions `protobuf:"bytes,32,opt,name=vector_store,json=vectorStore,proto3" json:"vector_store,omitempty"`
 	// native_service_id: which native service owns this internal table.
 	NativeServiceId string `protobuf:"bytes,33,opt,name=native_service_id,json=nativeServiceId,proto3" json:"native_service_id,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// cross_project_shared: this physical table is deliberately shared by every
+	// project whose catalog declares it. Tables carry no project prefix, so two
+	// projects that declare the same table on the same backend instance would
+	// read and write the same rows. UDB refuses to activate such a catalog
+	// unless BOTH projects set this flag on the table (or both scope its rows
+	// with a project column, see db_table_security.project_isolation_mode).
+	CrossProjectShared bool `protobuf:"varint,34,opt,name=cross_project_shared,json=crossProjectShared,proto3" json:"cross_project_shared,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *TableOptions) Reset() {
@@ -1032,6 +1039,13 @@ func (x *TableOptions) GetNativeServiceId() string {
 		return x.NativeServiceId
 	}
 	return ""
+}
+
+func (x *TableOptions) GetCrossProjectShared() bool {
+	if x != nil {
+		return x.CrossProjectShared
+	}
+	return false
 }
 
 // RlsPolicy defines a single PostgreSQL Row-Level Security policy.
@@ -2225,8 +2239,15 @@ type VectorStoreOptions struct {
 	// hnsw_m / hnsw_ef_construction: HNSW hyperparameters
 	HnswM              int32 `protobuf:"varint,9,opt,name=hnsw_m,json=hnswM,proto3" json:"hnsw_m,omitempty"`
 	HnswEfConstruction int32 `protobuf:"varint,10,opt,name=hnsw_ef_construction,json=hnswEfConstruction,proto3" json:"hnsw_ef_construction,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Row filter: only rows matching this expression are projected; a row that
+	// stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+	// the store, and a delete still deletes. Columns of this entity compared with
+	// literals: =, <>, <, <=, >, >=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+	// parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+	// Validated when the catalog is built.
+	ProjectionFilter string `protobuf:"bytes,11,opt,name=projection_filter,json=projectionFilter,proto3" json:"projection_filter,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *VectorStoreOptions) Reset() {
@@ -2327,6 +2348,13 @@ func (x *VectorStoreOptions) GetHnswEfConstruction() int32 {
 		return x.HnswEfConstruction
 	}
 	return 0
+}
+
+func (x *VectorStoreOptions) GetProjectionFilter() string {
+	if x != nil {
+		return x.ProjectionFilter
+	}
+	return ""
 }
 
 type CacheOptions struct {
@@ -2713,8 +2741,15 @@ type GraphStoreOptions struct {
 	EdgeSourceField   string                 `protobuf:"bytes,6,opt,name=edge_source_field,json=edgeSourceField,proto3" json:"edge_source_field,omitempty"`
 	EdgeTargetField   string                 `protobuf:"bytes,7,opt,name=edge_target_field,json=edgeTargetField,proto3" json:"edge_target_field,omitempty"`
 	PayloadSchemaJson string                 `protobuf:"bytes,8,opt,name=payload_schema_json,json=payloadSchemaJson,proto3" json:"payload_schema_json,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Row filter: only rows matching this expression are projected; a row that
+	// stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+	// the store, and a delete still deletes. Columns of this entity compared with
+	// literals: =, <>, <, <=, >, >=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+	// parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+	// Validated when the catalog is built.
+	ProjectionFilter string `protobuf:"bytes,9,opt,name=projection_filter,json=projectionFilter,proto3" json:"projection_filter,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GraphStoreOptions) Reset() {
@@ -2803,6 +2838,13 @@ func (x *GraphStoreOptions) GetPayloadSchemaJson() string {
 	return ""
 }
 
+func (x *GraphStoreOptions) GetProjectionFilter() string {
+	if x != nil {
+		return x.ProjectionFilter
+	}
+	return ""
+}
+
 type DocumentStoreOptions struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Backend           NoSqlBackendType       `protobuf:"varint,1,opt,name=backend,proto3,enum=udb.core.common.v1.NoSqlBackendType" json:"backend,omitempty"`
@@ -2813,8 +2855,15 @@ type DocumentStoreOptions struct {
 	TenantField       string                 `protobuf:"bytes,6,opt,name=tenant_field,json=tenantField,proto3" json:"tenant_field,omitempty"`
 	TtlSeconds        int32                  `protobuf:"varint,7,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
 	PayloadSchemaJson string                 `protobuf:"bytes,8,opt,name=payload_schema_json,json=payloadSchemaJson,proto3" json:"payload_schema_json,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Row filter: only rows matching this expression are projected; a row that
+	// stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+	// the store, and a delete still deletes. Columns of this entity compared with
+	// literals: =, <>, <, <=, >, >=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+	// parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+	// Validated when the catalog is built.
+	ProjectionFilter string `protobuf:"bytes,9,opt,name=projection_filter,json=projectionFilter,proto3" json:"projection_filter,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *DocumentStoreOptions) Reset() {
@@ -2899,6 +2948,13 @@ func (x *DocumentStoreOptions) GetTtlSeconds() int32 {
 func (x *DocumentStoreOptions) GetPayloadSchemaJson() string {
 	if x != nil {
 		return x.PayloadSchemaJson
+	}
+	return ""
+}
+
+func (x *DocumentStoreOptions) GetProjectionFilter() string {
+	if x != nil {
+		return x.ProjectionFilter
 	}
 	return ""
 }
@@ -3141,8 +3197,15 @@ type GenericStoreOptions struct {
 	EdgeTargetField string `protobuf:"bytes,15,opt,name=edge_target_field,json=edgeTargetField,proto3" json:"edge_target_field,omitempty"`
 	EdgeSourceLabel string `protobuf:"bytes,16,opt,name=edge_source_label,json=edgeSourceLabel,proto3" json:"edge_source_label,omitempty"`
 	EdgeTargetLabel string `protobuf:"bytes,17,opt,name=edge_target_label,json=edgeTargetLabel,proto3" json:"edge_target_label,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Row filter: only rows matching this expression are projected; a row that
+	// stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+	// the store, and a delete still deletes. Columns of this entity compared with
+	// literals: =, <>, <, <=, >, >=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+	// parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+	// Validated when the catalog is built. Same as options["projection_filter"].
+	ProjectionFilter string `protobuf:"bytes,18,opt,name=projection_filter,json=projectionFilter,proto3" json:"projection_filter,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GenericStoreOptions) Reset() {
@@ -3290,6 +3353,13 @@ func (x *GenericStoreOptions) GetEdgeSourceLabel() string {
 func (x *GenericStoreOptions) GetEdgeTargetLabel() string {
 	if x != nil {
 		return x.EdgeTargetLabel
+	}
+	return ""
+}
+
+func (x *GenericStoreOptions) GetProjectionFilter() string {
+	if x != nil {
+		return x.ProjectionFilter
 	}
 	return ""
 }
@@ -3469,7 +3539,7 @@ var File_udb_core_common_v1_db_proto protoreflect.FileDescriptor
 
 const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\n" +
-	"\x1budb/core/common/v1/db.proto\x12\x12udb.core.common.v1\x1a google/protobuf/descriptor.proto\"\x8f\f\n" +
+	"\x1budb/core/common/v1/db.proto\x12\x12udb.core.common.v1\x1a google/protobuf/descriptor.proto\"\xc1\f\n" +
 	"\fTableOptions\x12\x1d\n" +
 	"\n" +
 	"table_name\x18\x01 \x01(\tR\ttableName\x12\x1f\n" +
@@ -3513,7 +3583,8 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\tcdc_topic\x18\x1e \x01(\tR\bcdcTopic\x12%\n" +
 	"\x0erequired_scope\x18\x1f \x01(\tR\rrequiredScope\x12I\n" +
 	"\fvector_store\x18  \x01(\v2&.udb.core.common.v1.VectorStoreOptionsR\vvectorStore\x12*\n" +
-	"\x11native_service_id\x18! \x01(\tR\x0fnativeServiceId\"\x9b\x01\n" +
+	"\x11native_service_id\x18! \x01(\tR\x0fnativeServiceId\x120\n" +
+	"\x14cross_project_shared\x18\" \x01(\bR\x12crossProjectShared\"\x9b\x01\n" +
 	"\tRlsPolicy\x12\x1f\n" +
 	"\vpolicy_name\x18\x01 \x01(\tR\n" +
 	"policyName\x12\x18\n" +
@@ -3650,7 +3721,7 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\x16server_side_encryption\x18\a \x01(\bR\x14serverSideEncryption\x12\x1c\n" +
 	"\n" +
 	"kms_key_id\x18\b \x01(\tR\bkmsKeyId\x12\x10\n" +
-	"\x03acl\x18\t \x01(\tR\x03acl\"\xba\x03\n" +
+	"\x03acl\x18\t \x01(\tR\x03acl\"\xe7\x03\n" +
 	"\x12VectorStoreOptions\x12?\n" +
 	"\abackend\x18\x01 \x01(\x0e2%.udb.core.common.v1.VectorBackendTypeR\abackend\x12'\n" +
 	"\x0fcollection_name\x18\x02 \x01(\tR\x0ecollectionName\x12\x1c\n" +
@@ -3663,7 +3734,8 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\x13payload_schema_json\x18\b \x01(\tR\x11payloadSchemaJson\x12\x15\n" +
 	"\x06hnsw_m\x18\t \x01(\x05R\x05hnswM\x120\n" +
 	"\x14hnsw_ef_construction\x18\n" +
-	" \x01(\x05R\x12hnswEfConstruction\"\xc7\x02\n" +
+	" \x01(\x05R\x12hnswEfConstruction\x12+\n" +
+	"\x11projection_filter\x18\v \x01(\tR\x10projectionFilter\"\xc7\x02\n" +
 	"\fCacheOptions\x12>\n" +
 	"\abackend\x18\x01 \x01(\x0e2$.udb.core.common.v1.CacheBackendTypeR\abackend\x12\x1f\n" +
 	"\vkey_pattern\x18\x02 \x01(\tR\n" +
@@ -3702,7 +3774,7 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\n" +
 	"data_class\x18\x05 \x01(\tR\tdataClass\x12)\n" +
 	"\x10consent_required\x18\x06 \x01(\bR\x0fconsentRequired\x12%\n" +
-	"\x0eretention_days\x18\a \x01(\x05R\rretentionDays\"\xd7\x02\n" +
+	"\x0eretention_days\x18\a \x01(\x05R\rretentionDays\"\x84\x03\n" +
 	"\x11GraphStoreOptions\x12>\n" +
 	"\abackend\x18\x01 \x01(\x0e2$.udb.core.common.v1.GraphBackendTypeR\abackend\x12\x1d\n" +
 	"\n" +
@@ -3713,7 +3785,8 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\ftenant_field\x18\x05 \x01(\tR\vtenantField\x12*\n" +
 	"\x11edge_source_field\x18\x06 \x01(\tR\x0fedgeSourceField\x12*\n" +
 	"\x11edge_target_field\x18\a \x01(\tR\x0fedgeTargetField\x12.\n" +
-	"\x13payload_schema_json\x18\b \x01(\tR\x11payloadSchemaJson\"\xd8\x02\n" +
+	"\x13payload_schema_json\x18\b \x01(\tR\x11payloadSchemaJson\x12+\n" +
+	"\x11projection_filter\x18\t \x01(\tR\x10projectionFilter\"\x85\x03\n" +
 	"\x14DocumentStoreOptions\x12>\n" +
 	"\abackend\x18\x01 \x01(\x0e2$.udb.core.common.v1.NoSqlBackendTypeR\abackend\x12#\n" +
 	"\rdatabase_name\x18\x02 \x01(\tR\fdatabaseName\x12'\n" +
@@ -3723,7 +3796,8 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\ftenant_field\x18\x06 \x01(\tR\vtenantField\x12\x1f\n" +
 	"\vttl_seconds\x18\a \x01(\x05R\n" +
 	"ttlSeconds\x12.\n" +
-	"\x13payload_schema_json\x18\b \x01(\tR\x11payloadSchemaJson\"\x85\x03\n" +
+	"\x13payload_schema_json\x18\b \x01(\tR\x11payloadSchemaJson\x12+\n" +
+	"\x11projection_filter\x18\t \x01(\tR\x10projectionFilter\"\x85\x03\n" +
 	"\x16TimeSeriesStoreOptions\x12C\n" +
 	"\abackend\x18\x01 \x01(\x0e2).udb.core.common.v1.TimeSeriesBackendTypeR\abackend\x12#\n" +
 	"\rdatabase_name\x18\x02 \x01(\tR\fdatabaseName\x12)\n" +
@@ -3746,7 +3820,7 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\vcompression\x18\x06 \x01(\tR\vcompression\x12\x1f\n" +
 	"\vttl_seconds\x18\a \x01(\x05R\n" +
 	"ttlSeconds\x12.\n" +
-	"\x13payload_schema_json\x18\b \x01(\tR\x11payloadSchemaJson\"\xde\x05\n" +
+	"\x13payload_schema_json\x18\b \x01(\tR\x11payloadSchemaJson\"\x8b\x06\n" +
 	"\x13GenericStoreOptions\x12\x1d\n" +
 	"\n" +
 	"store_kind\x18\x01 \x01(\tR\tstoreKind\x12\x18\n" +
@@ -3768,7 +3842,8 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\x11edge_source_field\x18\x0e \x01(\tR\x0fedgeSourceField\x12*\n" +
 	"\x11edge_target_field\x18\x0f \x01(\tR\x0fedgeTargetField\x12*\n" +
 	"\x11edge_source_label\x18\x10 \x01(\tR\x0fedgeSourceLabel\x12*\n" +
-	"\x11edge_target_label\x18\x11 \x01(\tR\x0fedgeTargetLabel\x1a:\n" +
+	"\x11edge_target_label\x18\x11 \x01(\tR\x0fedgeTargetLabel\x12+\n" +
+	"\x11projection_filter\x18\x12 \x01(\tR\x10projectionFilter\x1a:\n" +
 	"\fOptionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xd5\x01\n" +

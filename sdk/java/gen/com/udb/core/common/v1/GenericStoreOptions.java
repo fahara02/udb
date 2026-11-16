@@ -44,6 +44,7 @@ private static final long serialVersionUID = 0L;
     edgeTargetField_ = "";
     edgeSourceLabel_ = "";
     edgeTargetLabel_ = "";
+    projectionFilter_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -838,6 +839,63 @@ java.lang.String defaultValue) {
     }
   }
 
+  public static final int PROJECTION_FILTER_FIELD_NUMBER = 18;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object projectionFilter_ = "";
+  /**
+   * <pre>
+   * Row filter: only rows matching this expression are projected; a row that
+   * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+   * the store, and a delete still deletes. Columns of this entity compared with
+   * literals: =, &lt;&gt;, &lt;, &lt;=, &gt;, &gt;=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+   * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+   * Validated when the catalog is built. Same as options["projection_filter"].
+   * </pre>
+   *
+   * <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+   * @return The projectionFilter.
+   */
+  @java.lang.Override
+  public java.lang.String getProjectionFilter() {
+    java.lang.Object ref = projectionFilter_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      projectionFilter_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Row filter: only rows matching this expression are projected; a row that
+   * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+   * the store, and a delete still deletes. Columns of this entity compared with
+   * literals: =, &lt;&gt;, &lt;, &lt;=, &gt;, &gt;=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+   * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+   * Validated when the catalog is built. Same as options["projection_filter"].
+   * </pre>
+   *
+   * <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+   * @return The bytes for projectionFilter.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getProjectionFilterBytes() {
+    java.lang.Object ref = projectionFilter_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      projectionFilter_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -906,6 +964,9 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeTargetLabel_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 17, edgeTargetLabel_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectionFilter_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 18, projectionFilter_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -973,6 +1034,9 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(edgeTargetLabel_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(17, edgeTargetLabel_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectionFilter_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(18, projectionFilter_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -1022,6 +1086,8 @@ java.lang.String defaultValue) {
         .equals(other.getEdgeSourceLabel())) return false;
     if (!getEdgeTargetLabel()
         .equals(other.getEdgeTargetLabel())) return false;
+    if (!getProjectionFilter()
+        .equals(other.getProjectionFilter())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1069,6 +1135,8 @@ java.lang.String defaultValue) {
     hash = (53 * hash) + getEdgeSourceLabel().hashCode();
     hash = (37 * hash) + EDGE_TARGET_LABEL_FIELD_NUMBER;
     hash = (53 * hash) + getEdgeTargetLabel().hashCode();
+    hash = (37 * hash) + PROJECTION_FILTER_FIELD_NUMBER;
+    hash = (53 * hash) + getProjectionFilter().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1239,6 +1307,7 @@ java.lang.String defaultValue) {
       edgeTargetField_ = "";
       edgeSourceLabel_ = "";
       edgeTargetLabel_ = "";
+      projectionFilter_ = "";
       return this;
     }
 
@@ -1323,6 +1392,9 @@ java.lang.String defaultValue) {
       }
       if (((from_bitField0_ & 0x00010000) != 0)) {
         result.edgeTargetLabel_ = edgeTargetLabel_;
+      }
+      if (((from_bitField0_ & 0x00020000) != 0)) {
+        result.projectionFilter_ = projectionFilter_;
       }
     }
 
@@ -1419,6 +1491,11 @@ java.lang.String defaultValue) {
       if (!other.getEdgeTargetLabel().isEmpty()) {
         edgeTargetLabel_ = other.edgeTargetLabel_;
         bitField0_ |= 0x00010000;
+        onChanged();
+      }
+      if (!other.getProjectionFilter().isEmpty()) {
+        projectionFilter_ = other.projectionFilter_;
+        bitField0_ |= 0x00020000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1536,6 +1613,11 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00010000;
               break;
             } // case 138
+            case 146: {
+              projectionFilter_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00020000;
+              break;
+            } // case 146
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2970,6 +3052,123 @@ java.lang.String defaultValue) {
       checkByteStringIsUtf8(value);
       edgeTargetLabel_ = value;
       bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object projectionFilter_ = "";
+    /**
+     * <pre>
+     * Row filter: only rows matching this expression are projected; a row that
+     * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+     * the store, and a delete still deletes. Columns of this entity compared with
+     * literals: =, &lt;&gt;, &lt;, &lt;=, &gt;, &gt;=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+     * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+     * Validated when the catalog is built. Same as options["projection_filter"].
+     * </pre>
+     *
+     * <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+     * @return The projectionFilter.
+     */
+    public java.lang.String getProjectionFilter() {
+      java.lang.Object ref = projectionFilter_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        projectionFilter_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Row filter: only rows matching this expression are projected; a row that
+     * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+     * the store, and a delete still deletes. Columns of this entity compared with
+     * literals: =, &lt;&gt;, &lt;, &lt;=, &gt;, &gt;=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+     * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+     * Validated when the catalog is built. Same as options["projection_filter"].
+     * </pre>
+     *
+     * <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+     * @return The bytes for projectionFilter.
+     */
+    public com.google.protobuf.ByteString
+        getProjectionFilterBytes() {
+      java.lang.Object ref = projectionFilter_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        projectionFilter_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Row filter: only rows matching this expression are projected; a row that
+     * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+     * the store, and a delete still deletes. Columns of this entity compared with
+     * literals: =, &lt;&gt;, &lt;, &lt;=, &gt;, &gt;=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+     * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+     * Validated when the catalog is built. Same as options["projection_filter"].
+     * </pre>
+     *
+     * <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+     * @param value The projectionFilter to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectionFilter(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      projectionFilter_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Row filter: only rows matching this expression are projected; a row that
+     * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+     * the store, and a delete still deletes. Columns of this entity compared with
+     * literals: =, &lt;&gt;, &lt;, &lt;=, &gt;, &gt;=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+     * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+     * Validated when the catalog is built. Same as options["projection_filter"].
+     * </pre>
+     *
+     * <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProjectionFilter() {
+      projectionFilter_ = getDefaultInstance().getProjectionFilter();
+      bitField0_ = (bitField0_ & ~0x00020000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Row filter: only rows matching this expression are projected; a row that
+     * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+     * the store, and a delete still deletes. Columns of this entity compared with
+     * literals: =, &lt;&gt;, &lt;, &lt;=, &gt;, &gt;=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+     * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+     * Validated when the catalog is built. Same as options["projection_filter"].
+     * </pre>
+     *
+     * <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+     * @param value The bytes for projectionFilter to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectionFilterBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      projectionFilter_ = value;
+      bitField0_ |= 0x00020000;
       onChanged();
       return this;
     }

@@ -14,17 +14,37 @@ pub(crate) fn data_key(tenant: &str, namespace: &str, key: &str) -> String {
     format!("{KEY_ROOT}:{tenant}:{namespace}:k:{key}")
 }
 
+/// Escape the Redis glob metacharacters (`\ * ? [ ]`) in one key segment so it
+/// matches LITERALLY inside a SCAN `MATCH` pattern. Load-bearing for the shared
+/// namespace: its tenant segment is the reserved marker `*shared*`, which
+/// unescaped would match every tenant whose id contains `shared` and let a shared
+/// flush sweep their keys.
+pub(crate) fn glob_literal(segment: &str) -> String {
+    crate::runtime::executor_utils::redis_glob_literal(segment)
+}
+
 /// The SCAN `MATCH` pattern for data keys under a namespace, optionally narrowed
 /// by a namespace-local key prefix. Only `:k:` data keys match — the byte counter
-/// and meta blob are excluded.
+/// and meta blob are excluded. The tenant and namespace segments are matched
+/// literally ([`glob_literal`]); the caller's key prefix keeps its glob meaning
+/// inside its own namespace.
 pub(crate) fn data_match(tenant: &str, namespace: &str, key_prefix: &str) -> String {
-    format!("{KEY_ROOT}:{tenant}:{namespace}:k:{key_prefix}*")
+    format!(
+        "{KEY_ROOT}:{}:{}:k:{key_prefix}*",
+        glob_literal(tenant),
+        glob_literal(namespace)
+    )
 }
 
 /// The SCAN `MATCH` pattern for the ENTIRE namespace (data + counter + meta). Used
-/// by the namespace flush and the CDC invalidation worker.
+/// by the namespace flush and the CDC invalidation worker. Tenant and namespace
+/// are matched literally, so a flush never reaches past its own keyspace.
 pub(crate) fn namespace_match_all(tenant: &str, namespace: &str) -> String {
-    format!("{KEY_ROOT}:{tenant}:{namespace}:*")
+    format!(
+        "{KEY_ROOT}:{}:{}:*",
+        glob_literal(tenant),
+        glob_literal(namespace)
+    )
 }
 
 /// The per-namespace used-bytes counter key (`INCRBY` target).

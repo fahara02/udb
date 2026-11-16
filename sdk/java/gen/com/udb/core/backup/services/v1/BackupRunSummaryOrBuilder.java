@@ -155,4 +155,27 @@ public interface BackupRunSummaryOrBuilder extends
    */
   com.google.protobuf.ByteString
       getProjectIdBytes();
+
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED for a shared-table backup or restore (its
+   * source_tenant_id is the reserved shared marker `*shared*`), otherwise
+   * BACKUP_SCOPE_TENANT.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 15 [json_name = "scope"];</code>
+   * @return The enum numeric value on the wire for scope.
+   */
+  int getScopeValue();
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED for a shared-table backup or restore (its
+   * source_tenant_id is the reserved shared marker `*shared*`), otherwise
+   * BACKUP_SCOPE_TENANT.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 15 [json_name = "scope"];</code>
+   * @return The scope.
+   */
+  com.udb.core.backup.services.v1.BackupScope getScope();
 }

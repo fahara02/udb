@@ -46,6 +46,16 @@ const (
 // `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
 // leader-elected CDC invalidation worker maps source-table changes to a
 // namespace sweep and emits `udb.cache.invalidated.v1`.
+//
+// Shared namespace: every request that names a namespace carries `shared`. With
+// `shared` set the entry lives under the reserved shared-tenant marker
+// (`udb:cache:*shared*:<ns>:<key>`) instead of the caller's tenant, so it can
+// never collide with a real tenant's keys. Any authenticated caller of any
+// tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+// deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+// requires a platform admin or the `udb:global:write` scope and is otherwise
+// refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+// shared writes carry the shared marker as their tenant, like shared table rows.
 type CacheServiceClient interface {
 	// Read a value from a namespaced cache key. Tenant-scoped: the key is derived
 	// from the verified claim tenant, so a caller can never read another tenant's
@@ -247,6 +257,16 @@ func (c *cacheServiceClient) GetNamespaceStats(ctx context.Context, in *GetNames
 // `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
 // leader-elected CDC invalidation worker maps source-table changes to a
 // namespace sweep and emits `udb.cache.invalidated.v1`.
+//
+// Shared namespace: every request that names a namespace carries `shared`. With
+// `shared` set the entry lives under the reserved shared-tenant marker
+// (`udb:cache:*shared*:<ns>:<key>`) instead of the caller's tenant, so it can
+// never collide with a real tenant's keys. Any authenticated caller of any
+// tenant may read shared entries (Get, Scan, GetNamespaceStats); writing or
+// deleting them (Set, Increment, Delete, CreateNamespace, DeleteNamespace)
+// requires a platform admin or the `udb:global:write` scope and is otherwise
+// refused with PERMISSION_DENIED (`shared_cache_write_denied`). Events for
+// shared writes carry the shared marker as their tenant, like shared table rows.
 type CacheServiceServer interface {
 	// Read a value from a namespaced cache key. Tenant-scoped: the key is derived
 	// from the verified claim tenant, so a caller can never read another tenant's

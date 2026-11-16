@@ -344,7 +344,7 @@ public final class DbProto {
     java.lang.String[] descriptorData = {
       "\n\033udb/core/common/v1/db.proto\022\022udb.core." +
       "common.v1\032 google/protobuf/descriptor.pr" +
-      "oto\"\217\014\n\014TableOptions\022\035\n\ntable_name\030\001 \001(\t" +
+      "oto\"\301\014\n\014TableOptions\022\035\n\ntable_name\030\001 \001(\t" +
       "R\ttableName\022\037\n\013schema_name\030\002 \001(\tR\nschema" +
       "Name\022\'\n\017migration_order\030\003 \001(\005R\016migration" +
       "Order\022\031\n\010is_table\030\004 \001(\010R\007isTable\022\030\n\007comm" +
@@ -382,302 +382,307 @@ public final class DbProto {
       "%\n\016required_scope\030\037 \001(\tR\rrequiredScope\022I" +
       "\n\014vector_store\030  \001(\0132&.udb.core.common.v" +
       "1.VectorStoreOptionsR\013vectorStore\022*\n\021nat" +
-      "ive_service_id\030! \001(\tR\017nativeServiceId\"\233\001" +
-      "\n\tRlsPolicy\022\037\n\013policy_name\030\001 \001(\tR\npolicy" +
-      "Name\022\030\n\007command\030\002 \001(\tR\007command\022\024\n\005using\030" +
-      "\003 \001(\tR\005using\022\035\n\nwith_check\030\004 \001(\tR\twithCh" +
-      "eck\022\036\n\npermissive\030\005 \001(\010R\npermissive\"\315\003\n\017" +
-      "TableForeignKey\022\030\n\007columns\030\001 \003(\tR\007column" +
-      "s\022)\n\020references_table\030\002 \001(\tR\017referencesT" +
-      "able\022+\n\021references_column\030\003 \003(\tR\020referen" +
-      "cesColumn\022+\n\021references_schema\030\004 \001(\tR\020re" +
-      "ferencesSchema\022B\n\ton_delete\030\005 \001(\0162%.udb." +
-      "core.common.v1.ReferentialActionR\010onDele" +
-      "te\022B\n\ton_update\030\006 \001(\0162%.udb.core.common." +
-      "v1.ReferentialActionR\010onUpdate\022\'\n\017constr" +
-      "aint_name\030\007 \001(\tR\016constraintName\022\033\n\tnot_v" +
-      "alid\030\010 \001(\010R\010notValid\022\036\n\ndeferrable\030\t \001(\010" +
-      "R\ndeferrable\022-\n\022initially_deferred\030\n \001(\010" +
-      "R\021initiallyDeferred\"S\n\013DbExtension\022\022\n\004na" +
-      "me\030\001 \001(\tR\004name\022\026\n\006schema\030\002 \001(\tR\006schema\022\030" +
-      "\n\007version\030\003 \001(\tR\007version\"\203\001\n\020Materialize" +
-      "dView\022\033\n\tview_name\030\001 \001(\tR\010viewName\022\037\n\013sc" +
-      "hema_name\030\002 \001(\tR\nschemaName\022\024\n\005query\030\003 \001" +
-      "(\tR\005query\022\033\n\twith_data\030\004 \001(\010R\010withData\"\275" +
-      "\001\n\tDbTrigger\022!\n\014trigger_name\030\001 \001(\tR\013trig" +
-      "gerName\022\026\n\006timing\030\002 \001(\tR\006timing\022\024\n\005event" +
-      "\030\003 \001(\tR\005event\022#\n\rfunction_name\030\004 \001(\tR\014fu" +
-      "nctionName\022\031\n\010for_each\030\005 \001(\tR\007forEach\022\037\n" +
-      "\013when_clause\030\006 \001(\tR\nwhenClause\"\311\001\n\013SqlAr" +
-      "tifact\022\022\n\004name\030\001 \001(\tR\004name\022\030\n\007backend\030\002 " +
-      "\001(\tR\007backend\022\024\n\005phase\030\003 \001(\tR\005phase\022\020\n\003sq" +
-      "l\030\004 \001(\tR\003sql\022\022\n\004file\030\005 \001(\tR\004file\022\'\n\017chec" +
-      "ksum_sha256\030\006 \001(\tR\016checksumSha256\022\'\n\017req" +
-      "uires_review\030\007 \001(\010R\016requiresReview\"\371\n\n\rC" +
-      "olumnOptions\022\037\n\013column_name\030\001 \001(\tR\ncolum" +
-      "nName\022\031\n\010sql_type\030\002 \001(\tR\007sqlType\022\031\n\010not_" +
-      "null\030\003 \001(\010R\007notNull\022\026\n\006unique\030\004 \001(\010R\006uni" +
-      "que\022\037\n\013primary_key\030\005 \001(\010R\nprimaryKey\022%\n\016" +
-      "auto_increment\030\006 \001(\010R\rautoIncrement\022#\n\rd" +
-      "efault_value\030\007 \001(\tR\014defaultValue\022)\n\020chec" +
-      "k_constraint\030\010 \001(\tR\017checkConstraint\022?\n\013f" +
-      "oreign_key\030\t \001(\0132\036.udb.core.common.v1.Fo" +
-      "reignKeyR\nforeignKey\0226\n\005index\030\n \001(\0132 .ud" +
-      "b.core.common.v1.IndexOptionsR\005index\022\030\n\007" +
-      "comment\030\013 \001(\tR\007comment\022.\n\023exclude_from_i" +
-      "nsert\030\014 \001(\010R\021excludeFromInsert\022.\n\023exclud" +
-      "e_from_update\030\r \001(\010R\021excludeFromUpdate\022\034" +
-      "\n\tencrypted\030\016 \001(\010R\tencrypted\022\027\n\007is_json\030" +
-      "\017 \001(\010R\006isJson\022\031\n\010is_jsonb\030\020 \001(\010R\007isJsonb" +
-      "\022\"\n\rjson_path_ops\030\021 \001(\010R\013jsonPathOps\022\037\n\013" +
-      "is_tsvector\030\022 \001(\010R\nisTsvector\022+\n\021tsvecto" +
-      "r_language\030\023 \001(\tR\020tsvectorLanguage\0226\n\027ts" +
-      "vector_source_columns\030\024 \003(\tR\025tsvectorSou" +
-      "rceColumns\022#\n\rtrigram_index\030\025 \001(\010R\014trigr" +
-      "amIndex\022\034\n\tcollation\030\026 \001(\tR\tcollation\022\037\n" +
-      "\013enum_values\030\027 \003(\tR\nenumValues\0220\n\024previo" +
-      "us_column_name\030\030 \001(\tR\022previousColumnName" +
-      "\022!\n\014backfill_sql\030\031 \001(\tR\013backfillSql\022)\n\020u" +
-      "sing_expression\030\032 \001(\tR\017usingExpression\022\035" +
-      "\n\nallow_drop\030\033 \001(\010R\tallowDrop\022\034\n\tgenerat" +
-      "ed\030\034 \001(\010R\tgenerated\022%\n\016generated_expr\030\035 " +
-      "\001(\tR\rgeneratedExpr\022\032\n\010identity\030\036 \001(\010R\010id" +
-      "entity\022\036\n\nreferences\030\037 \001(\tR\nreferences\022B" +
-      "\n\ton_delete\030  \001(\0162%.udb.core.common.v1.R" +
-      "eferentialActionR\010onDelete\022B\n\ton_update\030" +
-      "! \001(\0162%.udb.core.common.v1.ReferentialAc" +
-      "tionR\010onUpdate\022\032\n\010nullable\030\" \001(\010R\010nullab" +
-      "le\022#\n\rtenant_column\030# \001(\010R\014tenantColumn\022" +
-      "%\n\016project_column\030$ \001(\010R\rprojectColumn\"\302" +
-      "\002\n\nForeignKey\022)\n\020references_table\030\001 \001(\tR" +
-      "\017referencesTable\022+\n\021references_column\030\002 " +
-      "\001(\tR\020referencesColumn\022+\n\021references_sche" +
-      "ma\030\003 \001(\tR\020referencesSchema\022B\n\ton_delete\030" +
-      "\004 \001(\0162%.udb.core.common.v1.ReferentialAc" +
-      "tionR\010onDelete\022B\n\ton_update\030\005 \001(\0162%.udb." +
-      "core.common.v1.ReferentialActionR\010onUpda" +
-      "te\022\'\n\017constraint_name\030\006 \001(\tR\016constraintN" +
-      "ame\"\365\003\n\014IndexOptions\022\035\n\nindex_name\030\001 \001(\t" +
-      "R\tindexName\022\035\n\nindex_type\030\002 \001(\tR\tindexTy" +
-      "pe\022\026\n\006unique\030\003 \001(\010R\006unique\022)\n\020composite_" +
-      "fields\030\004 \003(\tR\017compositeFields\022\'\n\017include" +
-      "_columns\030\005 \003(\tR\016includeColumns\022!\n\014index_" +
-      "method\030\006 \001(\tR\013indexMethod\022!\n\014where_claus" +
-      "e\030\007 \001(\tR\013whereClause\022%\n\016operator_class\030\010" +
-      " \001(\tR\roperatorClass\022T\n\014index_params\030\t \003(" +
-      "\01321.udb.core.common.v1.IndexOptions.Inde" +
-      "xParamsEntryR\013indexParams\022\036\n\nconcurrent\030" +
-      "\n \001(\010R\nconcurrent\022\030\n\007columns\030\013 \003(\tR\007colu" +
-      "mns\032>\n\020IndexParamsEntry\022\020\n\003key\030\001 \001(\tR\003ke" +
-      "y\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\206\003\n\023StorageF" +
-      "ieldOptions\022@\n\007backend\030\001 \001(\0162&.udb.core." +
-      "common.v1.StorageBackendTypeR\007backend\022$\n" +
-      "\016bucket_env_key\030\002 \001(\tR\014bucketEnvKey\022\035\n\nk" +
-      "ey_prefix\030\003 \001(\tR\tkeyPrefix\022%\n\016presigned_" +
-      "read\030\004 \001(\010R\rpresignedRead\022\'\n\017presigned_w" +
-      "rite\030\005 \001(\010R\016presignedWrite\0222\n\025presigned_" +
-      "ttl_seconds\030\006 \001(\005R\023presignedTtlSeconds\0224" +
-      "\n\026server_side_encryption\030\007 \001(\010R\024serverSi" +
-      "deEncryption\022\034\n\nkms_key_id\030\010 \001(\tR\010kmsKey" +
-      "Id\022\020\n\003acl\030\t \001(\tR\003acl\"\272\003\n\022VectorStoreOpti" +
-      "ons\022?\n\007backend\030\001 \001(\0162%.udb.core.common.v" +
-      "1.VectorBackendTypeR\007backend\022\'\n\017collecti" +
-      "on_name\030\002 \001(\tR\016collectionName\022\034\n\tdimensi" +
-      "on\030\003 \001(\005R\tdimension\022D\n\010distance\030\004 \001(\0162(." +
-      "udb.core.common.v1.VectorDistanceMetricR" +
-      "\010distance\022\037\n\013shard_count\030\005 \001(\005R\nshardCou" +
-      "nt\022#\n\rreplica_count\030\006 \001(\005R\014replicaCount\022" +
-      "\027\n\007on_disk\030\007 \001(\010R\006onDisk\022.\n\023payload_sche" +
-      "ma_json\030\010 \001(\tR\021payloadSchemaJson\022\025\n\006hnsw" +
-      "_m\030\t \001(\005R\005hnswM\0220\n\024hnsw_ef_construction\030" +
-      "\n \001(\005R\022hnswEfConstruction\"\307\002\n\014CacheOptio" +
-      "ns\022>\n\007backend\030\001 \001(\0162$.udb.core.common.v1" +
-      ".CacheBackendTypeR\007backend\022\037\n\013key_patter" +
-      "n\030\002 \001(\tR\nkeyPattern\022\037\n\013ttl_seconds\030\003 \001(\005" +
-      "R\nttlSeconds\022#\n\rwrite_through\030\004 \001(\010R\014wri" +
-      "teThrough\022!\n\014read_through\030\005 \001(\010R\013readThr" +
-      "ough\022\'\n\017eviction_policy\030\006 \001(\tR\016evictionP" +
-      "olicy\022&\n\017cluster_env_key\030\007 \001(\tR\rclusterE" +
-      "nvKey\022\034\n\tnamespace\030\010 \001(\tR\tnamespace\"\307\002\n\024" +
-      "ModelRegistryOptions\022>\n\007backend\030\001 \001(\0162$." +
-      "udb.core.common.v1.ModelBackendTypeR\007bac" +
-      "kend\022\'\n\017experiment_name\030\002 \001(\tR\016experimen" +
-      "tName\022#\n\rartifact_path\030\003 \001(\tR\014artifactPa" +
-      "th\022#\n\rauto_register\030\004 \001(\010R\014autoRegister\022" +
-      "\024\n\005stage\030\005 \001(\tR\005stage\022\037\n\013metric_keys\030\006 \003" +
-      "(\tR\nmetricKeys\022\035\n\nparam_keys\030\007 \003(\tR\tpara" +
-      "mKeys\022&\n\017storage_uri_env\030\010 \001(\tR\rstorageU" +
-      "riEnv\"\340\001\n\017SecurityOptions\0221\n\024classificat" +
-      "ion_level\030\001 \001(\tR\023classificationLevel\022!\n\014" +
-      "audit_writes\030\002 \001(\010R\013auditWrites\022\037\n\013audit" +
-      "_reads\030\003 \001(\010R\nauditReads\022%\n\016retention_da" +
-      "ys\030\004 \001(\005R\rretentionDays\022/\n\023encryption_re" +
-      "quired\030\005 \001(\010R\022encryptionRequired\"\212\002\n\025Col" +
-      "umnSecurityOptions\022\025\n\006is_pii\030\001 \001(\010R\005isPi" +
-      "i\022!\n\014is_encrypted\030\002 \001(\010R\013isEncrypted\022$\n\016" +
-      "is_blind_index\030\003 \001(\010R\014isBlindIndex\022 \n\014ma" +
-      "sk_in_logs\030\004 \001(\010R\nmaskInLogs\022\035\n\ndata_cla" +
-      "ss\030\005 \001(\tR\tdataClass\022)\n\020consent_required\030" +
-      "\006 \001(\010R\017consentRequired\022%\n\016retention_days" +
-      "\030\007 \001(\005R\rretentionDays\"\327\002\n\021GraphStoreOpti" +
-      "ons\022>\n\007backend\030\001 \001(\0162$.udb.core.common.v" +
-      "1.GraphBackendTypeR\007backend\022\035\n\ngraph_nam" +
-      "e\030\002 \001(\tR\tgraphName\022\035\n\nnode_label\030\003 \001(\tR\t" +
-      "nodeLabel\022\031\n\010id_field\030\004 \001(\tR\007idField\022!\n\014" +
-      "tenant_field\030\005 \001(\tR\013tenantField\022*\n\021edge_" +
-      "source_field\030\006 \001(\tR\017edgeSourceField\022*\n\021e" +
-      "dge_target_field\030\007 \001(\tR\017edgeTargetField\022" +
-      ".\n\023payload_schema_json\030\010 \001(\tR\021payloadSch" +
-      "emaJson\"\330\002\n\024DocumentStoreOptions\022>\n\007back" +
-      "end\030\001 \001(\0162$.udb.core.common.v1.NoSqlBack" +
-      "endTypeR\007backend\022#\n\rdatabase_name\030\002 \001(\tR" +
-      "\014databaseName\022\'\n\017collection_name\030\003 \001(\tR\016" +
-      "collectionName\022#\n\rpartition_key\030\004 \001(\tR\014p" +
-      "artitionKey\022\031\n\010id_field\030\005 \001(\tR\007idField\022!" +
-      "\n\014tenant_field\030\006 \001(\tR\013tenantField\022\037\n\013ttl" +
-      "_seconds\030\007 \001(\005R\nttlSeconds\022.\n\023payload_sc" +
-      "hema_json\030\010 \001(\tR\021payloadSchemaJson\"\205\003\n\026T" +
-      "imeSeriesStoreOptions\022C\n\007backend\030\001 \001(\0162)" +
-      ".udb.core.common.v1.TimeSeriesBackendTyp" +
-      "eR\007backend\022#\n\rdatabase_name\030\002 \001(\tR\014datab" +
-      "aseName\022)\n\020measurement_name\030\003 \001(\tR\017measu" +
-      "rementName\022\035\n\ntime_field\030\004 \001(\tR\ttimeFiel" +
-      "d\022!\n\014tenant_field\030\005 \001(\tR\013tenantField\022\035\n\n" +
-      "tag_fields\030\006 \003(\tR\ttagFields\022!\n\014value_fie" +
-      "lds\030\007 \003(\tR\013valueFields\022%\n\016retention_days" +
-      "\030\010 \001(\005R\rretentionDays\022+\n\021downsample_poli" +
-      "cy\030\t \001(\tR\020downsamplePolicy\"\314\002\n\022ColumnSto" +
-      "reOptions\022?\n\007backend\030\001 \001(\0162%.udb.core.co" +
-      "mmon.v1.ColumnBackendTypeR\007backend\022#\n\rda" +
-      "tabase_name\030\002 \001(\tR\014databaseName\022\035\n\ntable" +
-      "_name\030\003 \001(\tR\ttableName\022#\n\rpartition_key\030" +
-      "\004 \001(\tR\014partitionKey\022\031\n\010sort_key\030\005 \001(\tR\007s" +
-      "ortKey\022 \n\013compression\030\006 \001(\tR\013compression" +
-      "\022\037\n\013ttl_seconds\030\007 \001(\005R\nttlSeconds\022.\n\023pay" +
-      "load_schema_json\030\010 \001(\tR\021payloadSchemaJso" +
-      "n\"\336\005\n\023GenericStoreOptions\022\035\n\nstore_kind\030" +
-      "\001 \001(\tR\tstoreKind\022\030\n\007backend\030\002 \001(\tR\007backe" +
-      "nd\022!\n\014logical_name\030\003 \001(\tR\013logicalName\022#\n" +
-      "\rdatabase_name\030\004 \001(\tR\014databaseName\022\034\n\tna" +
-      "mespace\030\005 \001(\tR\tnamespace\022#\n\rresource_nam" +
-      "e\030\006 \001(\tR\014resourceName\022\036\n\013dsn_env_key\030\007 \001" +
-      "(\tR\tdsnEnvKey\022\020\n\003dsn\030\010 \001(\tR\003dsn\022.\n\023paylo" +
-      "ad_schema_json\030\t \001(\tR\021payloadSchemaJson\022" +
-      "N\n\007options\030\n \003(\01324.udb.core.common.v1.Ge" +
-      "nericStoreOptions.OptionsEntryR\007options\022" +
-      "%\n\016payload_fields\030\013 \001(\tR\rpayloadFields\022\037" +
-      "\n\013fts_columns\030\014 \001(\tR\nftsColumns\022\035\n\nfts_c" +
-      "onfig\030\r \001(\tR\tftsConfig\022*\n\021edge_source_fi" +
-      "eld\030\016 \001(\tR\017edgeSourceField\022*\n\021edge_targe" +
-      "t_field\030\017 \001(\tR\017edgeTargetField\022*\n\021edge_s" +
-      "ource_label\030\020 \001(\tR\017edgeSourceLabel\022*\n\021ed" +
-      "ge_target_label\030\021 \001(\tR\017edgeTargetLabel\032:" +
-      "\n\014OptionsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005valu" +
-      "e\030\002 \001(\tR\005value:\0028\001*\325\001\n\021PartitionStrategy" +
-      "\022\"\n\036PARTITION_STRATEGY_UNSPECIFIED\020\000\022\033\n\027" +
-      "PARTITION_STRATEGY_NONE\020\001\022!\n\035PARTITION_S" +
-      "TRATEGY_RANGE_YEAR\020\002\022\"\n\036PARTITION_STRATE" +
-      "GY_RANGE_MONTH\020\003\022\033\n\027PARTITION_STRATEGY_L" +
-      "IST\020\004\022\033\n\027PARTITION_STRATEGY_HASH\020\005*\337\001\n\021R" +
-      "eferentialAction\022\"\n\036REFERENTIAL_ACTION_U" +
-      "NSPECIFIED\020\000\022 \n\034REFERENTIAL_ACTION_NO_AC" +
-      "TION\020\001\022\037\n\033REFERENTIAL_ACTION_RESTRICT\020\002\022" +
-      "\036\n\032REFERENTIAL_ACTION_CASCADE\020\003\022\037\n\033REFER" +
-      "ENTIAL_ACTION_SET_NULL\020\004\022\"\n\036REFERENTIAL_" +
-      "ACTION_SET_DEFAULT\020\005*\344\001\n\tIndexType\022\032\n\026IN" +
-      "DEX_TYPE_UNSPECIFIED\020\000\022\023\n\017INDEX_TYPE_NON" +
-      "E\020\001\022\024\n\020INDEX_TYPE_BTREE\020\002\022\023\n\017INDEX_TYPE_" +
-      "HASH\020\003\022\022\n\016INDEX_TYPE_GIN\020\004\022\023\n\017INDEX_TYPE" +
-      "_GIST\020\005\022\023\n\017INDEX_TYPE_BRIN\020\006\022\023\n\017INDEX_TY" +
-      "PE_HNSW\020\007\022\022\n\016INDEX_TYPE_IVF\020\010\022\024\n\020INDEX_T" +
-      "YPE_IVFPQ\020\t*\274\001\n\022StorageBackendType\022\037\n\033ST" +
-      "ORAGE_BACKEND_UNSPECIFIED\020\000\022\026\n\022STORAGE_B" +
-      "ACKEND_S3\020\001\022\031\n\025STORAGE_BACKEND_MINIO\020\002\022\027" +
-      "\n\023STORAGE_BACKEND_GCS\020\003\022\036\n\032STORAGE_BACKE" +
-      "ND_AZURE_BLOB\020\004\022\031\n\025STORAGE_BACKEND_LOCAL" +
-      "\020\005*\337\001\n\021VectorBackendType\022\036\n\032VECTOR_BACKE" +
-      "ND_UNSPECIFIED\020\000\022\031\n\025VECTOR_BACKEND_QDRAN" +
-      "T\020\001\022\031\n\025VECTOR_BACKEND_MILVUS\020\002\022\033\n\027VECTOR" +
-      "_BACKEND_WEAVIATE\020\003\022\033\n\027VECTOR_BACKEND_PG" +
-      "VECTOR\020\004\022\033\n\027VECTOR_BACKEND_PINECONE\020\005\022\035\n" +
-      "\031VECTOR_BACKEND_OPENSEARCH\020\006*\252\001\n\024VectorD" +
-      "istanceMetric\022\037\n\033VECTOR_DISTANCE_UNSPECI" +
-      "FIED\020\000\022\032\n\026VECTOR_DISTANCE_COSINE\020\001\022\027\n\023VE" +
-      "CTOR_DISTANCE_DOT\020\002\022\035\n\031VECTOR_DISTANCE_E" +
-      "UCLIDEAN\020\003\022\035\n\031VECTOR_DISTANCE_MANHATTAN\020" +
-      "\004*\242\001\n\020CacheBackendType\022\035\n\031CACHE_BACKEND_" +
-      "UNSPECIFIED\020\000\022\027\n\023CACHE_BACKEND_REDIS\020\001\022\033" +
-      "\n\027CACHE_BACKEND_MEMCACHED\020\002\022\034\n\030CACHE_BAC" +
-      "KEND_IN_PROCESS\020\003\022\033\n\027CACHE_BACKEND_DRAGO" +
-      "NFLY\020\004*\202\001\n\020GraphBackendType\022\035\n\031GRAPH_BAC" +
-      "KEND_UNSPECIFIED\020\000\022\027\n\023GRAPH_BACKEND_NEO4" +
-      "J\020\001\022\032\n\026GRAPH_BACKEND_MEMGRAPH\020\002\022\032\n\026GRAPH" +
-      "_BACKEND_ARANGODB\020\003*\204\001\n\020NoSqlBackendType" +
-      "\022\035\n\031NOSQL_BACKEND_UNSPECIFIED\020\000\022\031\n\025NOSQL" +
-      "_BACKEND_MONGODB\020\001\022\032\n\026NOSQL_BACKEND_DYNA" +
-      "MODB\020\002\022\032\n\026NOSQL_BACKEND_COSMOSDB\020\003*\243\001\n\025T" +
-      "imeSeriesBackendType\022\"\n\036TIMESERIES_BACKE" +
-      "ND_UNSPECIFIED\020\000\022\"\n\036TIMESERIES_BACKEND_T" +
-      "IMESCALEDB\020\001\022\037\n\033TIMESERIES_BACKEND_INFLU" +
-      "XDB\020\002\022!\n\035TIMESERIES_BACKEND_CLICKHOUSE\020\003" +
-      "*\215\001\n\021ColumnBackendType\022\036\n\032COLUMN_BACKEND" +
-      "_UNSPECIFIED\020\000\022\035\n\031COLUMN_BACKEND_CLICKHO" +
-      "USE\020\001\022\034\n\030COLUMN_BACKEND_CASSANDRA\020\002\022\033\n\027C" +
-      "OLUMN_BACKEND_BIGTABLE\020\003*\356\001\n\020ModelBacken" +
-      "dType\022\035\n\031MODEL_BACKEND_UNSPECIFIED\020\000\022\030\n\024" +
-      "MODEL_BACKEND_MLFLOW\020\001\022\025\n\021MODEL_BACKEND_" +
-      "DVC\020\002\022\035\n\031MODEL_BACKEND_HUGGINGFACE\020\003\022\031\n\025" +
-      "MODEL_BACKEND_BENTOML\020\004\022\030\n\024MODEL_BACKEND" +
-      "_TRITON\020\005\022\034\n\030MODEL_BACKEND_TORCHSERVE\020\006\022" +
-      "\030\n\024MODEL_BACKEND_CUSTOM\020\007:Y\n\005table\022\037.goo" +
-      "gle.protobuf.MessageOptions\030\321\206\003 \001(\0132 .ud" +
-      "b.core.common.v1.TableOptionsR\005table:^\n\010" +
-      "pg_table\022\037.google.protobuf.MessageOption" +
-      "s\030\357\206\003 \001(\0132 .udb.core.common.v1.TableOpti" +
-      "onsR\007pgTable:l\n\014vector_store\022\037.google.pr" +
-      "otobuf.MessageOptions\030\323\206\003 \001(\0132&.udb.core" +
-      ".common.v1.VectorStoreOptionsR\013vectorSto" +
-      "re:Y\n\005cache\022\037.google.protobuf.MessageOpt" +
-      "ions\030\324\206\003 \001(\0132 .udb.core.common.v1.CacheO" +
-      "ptionsR\005cache:r\n\016model_registry\022\037.google" +
-      ".protobuf.MessageOptions\030\325\206\003 \001(\0132(.udb.c" +
-      "ore.common.v1.ModelRegistryOptionsR\rmode" +
-      "lRegistry:i\n\013graph_store\022\037.google.protob" +
-      "uf.MessageOptions\030\327\206\003 \001(\0132%.udb.core.com" +
-      "mon.v1.GraphStoreOptionsR\ngraphStore:r\n\016" +
-      "document_store\022\037.google.protobuf.Message" +
-      "Options\030\330\206\003 \001(\0132(.udb.core.common.v1.Doc" +
-      "umentStoreOptionsR\rdocumentStore:l\n\013nosq" +
-      "l_store\022\037.google.protobuf.MessageOptions" +
-      "\030\331\206\003 \001(\0132(.udb.core.common.v1.DocumentSt" +
-      "oreOptionsR\nnosqlStore:x\n\020timeseries_sto" +
-      "re\022\037.google.protobuf.MessageOptions\030\332\206\003 " +
-      "\001(\0132*.udb.core.common.v1.TimeSeriesStore" +
-      "OptionsR\017timeseriesStore:l\n\014column_store" +
-      "\022\037.google.protobuf.MessageOptions\030\333\206\003 \001(" +
-      "\0132&.udb.core.common.v1.ColumnStoreOption" +
-      "sR\013columnStore:i\n\ndata_store\022\037.google.pr" +
-      "otobuf.MessageOptions\030\334\206\003 \001(\0132\'.udb.core" +
-      ".common.v1.GenericStoreOptionsR\tdataStor" +
-      "e:b\n\010security\022\037.google.protobuf.MessageO" +
-      "ptions\030\335\206\003 \001(\0132#.udb.core.common.v1.Secu" +
-      "rityOptionsR\010security:Z\n\006column\022\035.google" +
-      ".protobuf.FieldOptions\030\322\206\003 \001(\0132!.udb.cor" +
-      "e.common.v1.ColumnOptionsR\006column:_\n\tpg_" +
-      "column\022\035.google.protobuf.FieldOptions\030\360\206" +
-      "\003 \001(\0132!.udb.core.common.v1.ColumnOptions" +
-      "R\010pgColumn:b\n\007storage\022\035.google.protobuf." +
-      "FieldOptions\030\326\206\003 \001(\0132\'.udb.core.common.v" +
-      "1.StorageFieldOptionsR\007storage:s\n\017column" +
-      "_security\022\035.google.protobuf.FieldOptions" +
-      "\030\345\206\003 \001(\0132).udb.core.common.v1.ColumnSecu" +
-      "rityOptionsR\016columnSecurityB\314\001\n\026com.udb." +
-      "core.common.v1B\007DbProtoP\001Z>github.com/fa" +
-      "hara02/udb/sdk/go/gen/udb/core/common/v1" +
-      ";commonv1\242\002\003UCC\252\002\022Udb.Core.Common.V1\312\002\022U" +
-      "db\\Core\\Common\\V1\342\002\036Udb\\GPBMetadata\\Core" +
-      "\\Common\\V1\352\002\025Udb::Core::Common::V1b\006prot" +
-      "o3"
+      "ive_service_id\030! \001(\tR\017nativeServiceId\0220\n" +
+      "\024cross_project_shared\030\" \001(\010R\022crossProjec" +
+      "tShared\"\233\001\n\tRlsPolicy\022\037\n\013policy_name\030\001 \001" +
+      "(\tR\npolicyName\022\030\n\007command\030\002 \001(\tR\007command" +
+      "\022\024\n\005using\030\003 \001(\tR\005using\022\035\n\nwith_check\030\004 \001" +
+      "(\tR\twithCheck\022\036\n\npermissive\030\005 \001(\010R\npermi" +
+      "ssive\"\315\003\n\017TableForeignKey\022\030\n\007columns\030\001 \003" +
+      "(\tR\007columns\022)\n\020references_table\030\002 \001(\tR\017r" +
+      "eferencesTable\022+\n\021references_column\030\003 \003(" +
+      "\tR\020referencesColumn\022+\n\021references_schema" +
+      "\030\004 \001(\tR\020referencesSchema\022B\n\ton_delete\030\005 " +
+      "\001(\0162%.udb.core.common.v1.ReferentialActi" +
+      "onR\010onDelete\022B\n\ton_update\030\006 \001(\0162%.udb.co" +
+      "re.common.v1.ReferentialActionR\010onUpdate" +
+      "\022\'\n\017constraint_name\030\007 \001(\tR\016constraintNam" +
+      "e\022\033\n\tnot_valid\030\010 \001(\010R\010notValid\022\036\n\ndeferr" +
+      "able\030\t \001(\010R\ndeferrable\022-\n\022initially_defe" +
+      "rred\030\n \001(\010R\021initiallyDeferred\"S\n\013DbExten" +
+      "sion\022\022\n\004name\030\001 \001(\tR\004name\022\026\n\006schema\030\002 \001(\t" +
+      "R\006schema\022\030\n\007version\030\003 \001(\tR\007version\"\203\001\n\020M" +
+      "aterializedView\022\033\n\tview_name\030\001 \001(\tR\010view" +
+      "Name\022\037\n\013schema_name\030\002 \001(\tR\nschemaName\022\024\n" +
+      "\005query\030\003 \001(\tR\005query\022\033\n\twith_data\030\004 \001(\010R\010" +
+      "withData\"\275\001\n\tDbTrigger\022!\n\014trigger_name\030\001" +
+      " \001(\tR\013triggerName\022\026\n\006timing\030\002 \001(\tR\006timin" +
+      "g\022\024\n\005event\030\003 \001(\tR\005event\022#\n\rfunction_name" +
+      "\030\004 \001(\tR\014functionName\022\031\n\010for_each\030\005 \001(\tR\007" +
+      "forEach\022\037\n\013when_clause\030\006 \001(\tR\nwhenClause" +
+      "\"\311\001\n\013SqlArtifact\022\022\n\004name\030\001 \001(\tR\004name\022\030\n\007" +
+      "backend\030\002 \001(\tR\007backend\022\024\n\005phase\030\003 \001(\tR\005p" +
+      "hase\022\020\n\003sql\030\004 \001(\tR\003sql\022\022\n\004file\030\005 \001(\tR\004fi" +
+      "le\022\'\n\017checksum_sha256\030\006 \001(\tR\016checksumSha" +
+      "256\022\'\n\017requires_review\030\007 \001(\010R\016requiresRe" +
+      "view\"\371\n\n\rColumnOptions\022\037\n\013column_name\030\001 " +
+      "\001(\tR\ncolumnName\022\031\n\010sql_type\030\002 \001(\tR\007sqlTy" +
+      "pe\022\031\n\010not_null\030\003 \001(\010R\007notNull\022\026\n\006unique\030" +
+      "\004 \001(\010R\006unique\022\037\n\013primary_key\030\005 \001(\010R\nprim" +
+      "aryKey\022%\n\016auto_increment\030\006 \001(\010R\rautoIncr" +
+      "ement\022#\n\rdefault_value\030\007 \001(\tR\014defaultVal" +
+      "ue\022)\n\020check_constraint\030\010 \001(\tR\017checkConst" +
+      "raint\022?\n\013foreign_key\030\t \001(\0132\036.udb.core.co" +
+      "mmon.v1.ForeignKeyR\nforeignKey\0226\n\005index\030" +
+      "\n \001(\0132 .udb.core.common.v1.IndexOptionsR" +
+      "\005index\022\030\n\007comment\030\013 \001(\tR\007comment\022.\n\023excl" +
+      "ude_from_insert\030\014 \001(\010R\021excludeFromInsert" +
+      "\022.\n\023exclude_from_update\030\r \001(\010R\021excludeFr" +
+      "omUpdate\022\034\n\tencrypted\030\016 \001(\010R\tencrypted\022\027" +
+      "\n\007is_json\030\017 \001(\010R\006isJson\022\031\n\010is_jsonb\030\020 \001(" +
+      "\010R\007isJsonb\022\"\n\rjson_path_ops\030\021 \001(\010R\013jsonP" +
+      "athOps\022\037\n\013is_tsvector\030\022 \001(\010R\nisTsvector\022" +
+      "+\n\021tsvector_language\030\023 \001(\tR\020tsvectorLang" +
+      "uage\0226\n\027tsvector_source_columns\030\024 \003(\tR\025t" +
+      "svectorSourceColumns\022#\n\rtrigram_index\030\025 " +
+      "\001(\010R\014trigramIndex\022\034\n\tcollation\030\026 \001(\tR\tco" +
+      "llation\022\037\n\013enum_values\030\027 \003(\tR\nenumValues" +
+      "\0220\n\024previous_column_name\030\030 \001(\tR\022previous" +
+      "ColumnName\022!\n\014backfill_sql\030\031 \001(\tR\013backfi" +
+      "llSql\022)\n\020using_expression\030\032 \001(\tR\017usingEx" +
+      "pression\022\035\n\nallow_drop\030\033 \001(\010R\tallowDrop\022" +
+      "\034\n\tgenerated\030\034 \001(\010R\tgenerated\022%\n\016generat" +
+      "ed_expr\030\035 \001(\tR\rgeneratedExpr\022\032\n\010identity" +
+      "\030\036 \001(\010R\010identity\022\036\n\nreferences\030\037 \001(\tR\nre" +
+      "ferences\022B\n\ton_delete\030  \001(\0162%.udb.core.c" +
+      "ommon.v1.ReferentialActionR\010onDelete\022B\n\t" +
+      "on_update\030! \001(\0162%.udb.core.common.v1.Ref" +
+      "erentialActionR\010onUpdate\022\032\n\010nullable\030\" \001" +
+      "(\010R\010nullable\022#\n\rtenant_column\030# \001(\010R\014ten" +
+      "antColumn\022%\n\016project_column\030$ \001(\010R\rproje" +
+      "ctColumn\"\302\002\n\nForeignKey\022)\n\020references_ta" +
+      "ble\030\001 \001(\tR\017referencesTable\022+\n\021references" +
+      "_column\030\002 \001(\tR\020referencesColumn\022+\n\021refer" +
+      "ences_schema\030\003 \001(\tR\020referencesSchema\022B\n\t" +
+      "on_delete\030\004 \001(\0162%.udb.core.common.v1.Ref" +
+      "erentialActionR\010onDelete\022B\n\ton_update\030\005 " +
+      "\001(\0162%.udb.core.common.v1.ReferentialActi" +
+      "onR\010onUpdate\022\'\n\017constraint_name\030\006 \001(\tR\016c" +
+      "onstraintName\"\365\003\n\014IndexOptions\022\035\n\nindex_" +
+      "name\030\001 \001(\tR\tindexName\022\035\n\nindex_type\030\002 \001(" +
+      "\tR\tindexType\022\026\n\006unique\030\003 \001(\010R\006unique\022)\n\020" +
+      "composite_fields\030\004 \003(\tR\017compositeFields\022" +
+      "\'\n\017include_columns\030\005 \003(\tR\016includeColumns" +
+      "\022!\n\014index_method\030\006 \001(\tR\013indexMethod\022!\n\014w" +
+      "here_clause\030\007 \001(\tR\013whereClause\022%\n\016operat" +
+      "or_class\030\010 \001(\tR\roperatorClass\022T\n\014index_p" +
+      "arams\030\t \003(\01321.udb.core.common.v1.IndexOp" +
+      "tions.IndexParamsEntryR\013indexParams\022\036\n\nc" +
+      "oncurrent\030\n \001(\010R\nconcurrent\022\030\n\007columns\030\013" +
+      " \003(\tR\007columns\032>\n\020IndexParamsEntry\022\020\n\003key" +
+      "\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\206\003" +
+      "\n\023StorageFieldOptions\022@\n\007backend\030\001 \001(\0162&" +
+      ".udb.core.common.v1.StorageBackendTypeR\007" +
+      "backend\022$\n\016bucket_env_key\030\002 \001(\tR\014bucketE" +
+      "nvKey\022\035\n\nkey_prefix\030\003 \001(\tR\tkeyPrefix\022%\n\016" +
+      "presigned_read\030\004 \001(\010R\rpresignedRead\022\'\n\017p" +
+      "resigned_write\030\005 \001(\010R\016presignedWrite\0222\n\025" +
+      "presigned_ttl_seconds\030\006 \001(\005R\023presignedTt" +
+      "lSeconds\0224\n\026server_side_encryption\030\007 \001(\010" +
+      "R\024serverSideEncryption\022\034\n\nkms_key_id\030\010 \001" +
+      "(\tR\010kmsKeyId\022\020\n\003acl\030\t \001(\tR\003acl\"\347\003\n\022Vecto" +
+      "rStoreOptions\022?\n\007backend\030\001 \001(\0162%.udb.cor" +
+      "e.common.v1.VectorBackendTypeR\007backend\022\'" +
+      "\n\017collection_name\030\002 \001(\tR\016collectionName\022" +
+      "\034\n\tdimension\030\003 \001(\005R\tdimension\022D\n\010distanc" +
+      "e\030\004 \001(\0162(.udb.core.common.v1.VectorDista" +
+      "nceMetricR\010distance\022\037\n\013shard_count\030\005 \001(\005" +
+      "R\nshardCount\022#\n\rreplica_count\030\006 \001(\005R\014rep" +
+      "licaCount\022\027\n\007on_disk\030\007 \001(\010R\006onDisk\022.\n\023pa" +
+      "yload_schema_json\030\010 \001(\tR\021payloadSchemaJs" +
+      "on\022\025\n\006hnsw_m\030\t \001(\005R\005hnswM\0220\n\024hnsw_ef_con" +
+      "struction\030\n \001(\005R\022hnswEfConstruction\022+\n\021p" +
+      "rojection_filter\030\013 \001(\tR\020projectionFilter" +
+      "\"\307\002\n\014CacheOptions\022>\n\007backend\030\001 \001(\0162$.udb" +
+      ".core.common.v1.CacheBackendTypeR\007backen" +
+      "d\022\037\n\013key_pattern\030\002 \001(\tR\nkeyPattern\022\037\n\013tt" +
+      "l_seconds\030\003 \001(\005R\nttlSeconds\022#\n\rwrite_thr" +
+      "ough\030\004 \001(\010R\014writeThrough\022!\n\014read_through" +
+      "\030\005 \001(\010R\013readThrough\022\'\n\017eviction_policy\030\006" +
+      " \001(\tR\016evictionPolicy\022&\n\017cluster_env_key\030" +
+      "\007 \001(\tR\rclusterEnvKey\022\034\n\tnamespace\030\010 \001(\tR" +
+      "\tnamespace\"\307\002\n\024ModelRegistryOptions\022>\n\007b" +
+      "ackend\030\001 \001(\0162$.udb.core.common.v1.ModelB" +
+      "ackendTypeR\007backend\022\'\n\017experiment_name\030\002" +
+      " \001(\tR\016experimentName\022#\n\rartifact_path\030\003 " +
+      "\001(\tR\014artifactPath\022#\n\rauto_register\030\004 \001(\010" +
+      "R\014autoRegister\022\024\n\005stage\030\005 \001(\tR\005stage\022\037\n\013" +
+      "metric_keys\030\006 \003(\tR\nmetricKeys\022\035\n\nparam_k" +
+      "eys\030\007 \003(\tR\tparamKeys\022&\n\017storage_uri_env\030" +
+      "\010 \001(\tR\rstorageUriEnv\"\340\001\n\017SecurityOptions" +
+      "\0221\n\024classification_level\030\001 \001(\tR\023classifi" +
+      "cationLevel\022!\n\014audit_writes\030\002 \001(\010R\013audit" +
+      "Writes\022\037\n\013audit_reads\030\003 \001(\010R\nauditReads\022" +
+      "%\n\016retention_days\030\004 \001(\005R\rretentionDays\022/" +
+      "\n\023encryption_required\030\005 \001(\010R\022encryptionR" +
+      "equired\"\212\002\n\025ColumnSecurityOptions\022\025\n\006is_" +
+      "pii\030\001 \001(\010R\005isPii\022!\n\014is_encrypted\030\002 \001(\010R\013" +
+      "isEncrypted\022$\n\016is_blind_index\030\003 \001(\010R\014isB" +
+      "lindIndex\022 \n\014mask_in_logs\030\004 \001(\010R\nmaskInL" +
+      "ogs\022\035\n\ndata_class\030\005 \001(\tR\tdataClass\022)\n\020co" +
+      "nsent_required\030\006 \001(\010R\017consentRequired\022%\n" +
+      "\016retention_days\030\007 \001(\005R\rretentionDays\"\204\003\n" +
+      "\021GraphStoreOptions\022>\n\007backend\030\001 \001(\0162$.ud" +
+      "b.core.common.v1.GraphBackendTypeR\007backe" +
+      "nd\022\035\n\ngraph_name\030\002 \001(\tR\tgraphName\022\035\n\nnod" +
+      "e_label\030\003 \001(\tR\tnodeLabel\022\031\n\010id_field\030\004 \001" +
+      "(\tR\007idField\022!\n\014tenant_field\030\005 \001(\tR\013tenan" +
+      "tField\022*\n\021edge_source_field\030\006 \001(\tR\017edgeS" +
+      "ourceField\022*\n\021edge_target_field\030\007 \001(\tR\017e" +
+      "dgeTargetField\022.\n\023payload_schema_json\030\010 " +
+      "\001(\tR\021payloadSchemaJson\022+\n\021projection_fil" +
+      "ter\030\t \001(\tR\020projectionFilter\"\205\003\n\024Document" +
+      "StoreOptions\022>\n\007backend\030\001 \001(\0162$.udb.core" +
+      ".common.v1.NoSqlBackendTypeR\007backend\022#\n\r" +
+      "database_name\030\002 \001(\tR\014databaseName\022\'\n\017col" +
+      "lection_name\030\003 \001(\tR\016collectionName\022#\n\rpa" +
+      "rtition_key\030\004 \001(\tR\014partitionKey\022\031\n\010id_fi" +
+      "eld\030\005 \001(\tR\007idField\022!\n\014tenant_field\030\006 \001(\t" +
+      "R\013tenantField\022\037\n\013ttl_seconds\030\007 \001(\005R\nttlS" +
+      "econds\022.\n\023payload_schema_json\030\010 \001(\tR\021pay" +
+      "loadSchemaJson\022+\n\021projection_filter\030\t \001(" +
+      "\tR\020projectionFilter\"\205\003\n\026TimeSeriesStoreO" +
+      "ptions\022C\n\007backend\030\001 \001(\0162).udb.core.commo" +
+      "n.v1.TimeSeriesBackendTypeR\007backend\022#\n\rd" +
+      "atabase_name\030\002 \001(\tR\014databaseName\022)\n\020meas" +
+      "urement_name\030\003 \001(\tR\017measurementName\022\035\n\nt" +
+      "ime_field\030\004 \001(\tR\ttimeField\022!\n\014tenant_fie" +
+      "ld\030\005 \001(\tR\013tenantField\022\035\n\ntag_fields\030\006 \003(" +
+      "\tR\ttagFields\022!\n\014value_fields\030\007 \003(\tR\013valu" +
+      "eFields\022%\n\016retention_days\030\010 \001(\005R\rretenti" +
+      "onDays\022+\n\021downsample_policy\030\t \001(\tR\020downs" +
+      "amplePolicy\"\314\002\n\022ColumnStoreOptions\022?\n\007ba" +
+      "ckend\030\001 \001(\0162%.udb.core.common.v1.ColumnB" +
+      "ackendTypeR\007backend\022#\n\rdatabase_name\030\002 \001" +
+      "(\tR\014databaseName\022\035\n\ntable_name\030\003 \001(\tR\tta" +
+      "bleName\022#\n\rpartition_key\030\004 \001(\tR\014partitio" +
+      "nKey\022\031\n\010sort_key\030\005 \001(\tR\007sortKey\022 \n\013compr" +
+      "ession\030\006 \001(\tR\013compression\022\037\n\013ttl_seconds" +
+      "\030\007 \001(\005R\nttlSeconds\022.\n\023payload_schema_jso" +
+      "n\030\010 \001(\tR\021payloadSchemaJson\"\213\006\n\023GenericSt" +
+      "oreOptions\022\035\n\nstore_kind\030\001 \001(\tR\tstoreKin" +
+      "d\022\030\n\007backend\030\002 \001(\tR\007backend\022!\n\014logical_n" +
+      "ame\030\003 \001(\tR\013logicalName\022#\n\rdatabase_name\030" +
+      "\004 \001(\tR\014databaseName\022\034\n\tnamespace\030\005 \001(\tR\t" +
+      "namespace\022#\n\rresource_name\030\006 \001(\tR\014resour" +
+      "ceName\022\036\n\013dsn_env_key\030\007 \001(\tR\tdsnEnvKey\022\020" +
+      "\n\003dsn\030\010 \001(\tR\003dsn\022.\n\023payload_schema_json\030" +
+      "\t \001(\tR\021payloadSchemaJson\022N\n\007options\030\n \003(" +
+      "\01324.udb.core.common.v1.GenericStoreOptio" +
+      "ns.OptionsEntryR\007options\022%\n\016payload_fiel" +
+      "ds\030\013 \001(\tR\rpayloadFields\022\037\n\013fts_columns\030\014" +
+      " \001(\tR\nftsColumns\022\035\n\nfts_config\030\r \001(\tR\tft" +
+      "sConfig\022*\n\021edge_source_field\030\016 \001(\tR\017edge" +
+      "SourceField\022*\n\021edge_target_field\030\017 \001(\tR\017" +
+      "edgeTargetField\022*\n\021edge_source_label\030\020 \001" +
+      "(\tR\017edgeSourceLabel\022*\n\021edge_target_label" +
+      "\030\021 \001(\tR\017edgeTargetLabel\022+\n\021projection_fi" +
+      "lter\030\022 \001(\tR\020projectionFilter\032:\n\014OptionsE" +
+      "ntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005v" +
+      "alue:\0028\001*\325\001\n\021PartitionStrategy\022\"\n\036PARTIT" +
+      "ION_STRATEGY_UNSPECIFIED\020\000\022\033\n\027PARTITION_" +
+      "STRATEGY_NONE\020\001\022!\n\035PARTITION_STRATEGY_RA" +
+      "NGE_YEAR\020\002\022\"\n\036PARTITION_STRATEGY_RANGE_M" +
+      "ONTH\020\003\022\033\n\027PARTITION_STRATEGY_LIST\020\004\022\033\n\027P" +
+      "ARTITION_STRATEGY_HASH\020\005*\337\001\n\021Referential" +
+      "Action\022\"\n\036REFERENTIAL_ACTION_UNSPECIFIED" +
+      "\020\000\022 \n\034REFERENTIAL_ACTION_NO_ACTION\020\001\022\037\n\033" +
+      "REFERENTIAL_ACTION_RESTRICT\020\002\022\036\n\032REFEREN" +
+      "TIAL_ACTION_CASCADE\020\003\022\037\n\033REFERENTIAL_ACT" +
+      "ION_SET_NULL\020\004\022\"\n\036REFERENTIAL_ACTION_SET" +
+      "_DEFAULT\020\005*\344\001\n\tIndexType\022\032\n\026INDEX_TYPE_U" +
+      "NSPECIFIED\020\000\022\023\n\017INDEX_TYPE_NONE\020\001\022\024\n\020IND" +
+      "EX_TYPE_BTREE\020\002\022\023\n\017INDEX_TYPE_HASH\020\003\022\022\n\016" +
+      "INDEX_TYPE_GIN\020\004\022\023\n\017INDEX_TYPE_GIST\020\005\022\023\n" +
+      "\017INDEX_TYPE_BRIN\020\006\022\023\n\017INDEX_TYPE_HNSW\020\007\022" +
+      "\022\n\016INDEX_TYPE_IVF\020\010\022\024\n\020INDEX_TYPE_IVFPQ\020" +
+      "\t*\274\001\n\022StorageBackendType\022\037\n\033STORAGE_BACK" +
+      "END_UNSPECIFIED\020\000\022\026\n\022STORAGE_BACKEND_S3\020" +
+      "\001\022\031\n\025STORAGE_BACKEND_MINIO\020\002\022\027\n\023STORAGE_" +
+      "BACKEND_GCS\020\003\022\036\n\032STORAGE_BACKEND_AZURE_B" +
+      "LOB\020\004\022\031\n\025STORAGE_BACKEND_LOCAL\020\005*\337\001\n\021Vec" +
+      "torBackendType\022\036\n\032VECTOR_BACKEND_UNSPECI" +
+      "FIED\020\000\022\031\n\025VECTOR_BACKEND_QDRANT\020\001\022\031\n\025VEC" +
+      "TOR_BACKEND_MILVUS\020\002\022\033\n\027VECTOR_BACKEND_W" +
+      "EAVIATE\020\003\022\033\n\027VECTOR_BACKEND_PGVECTOR\020\004\022\033" +
+      "\n\027VECTOR_BACKEND_PINECONE\020\005\022\035\n\031VECTOR_BA" +
+      "CKEND_OPENSEARCH\020\006*\252\001\n\024VectorDistanceMet" +
+      "ric\022\037\n\033VECTOR_DISTANCE_UNSPECIFIED\020\000\022\032\n\026" +
+      "VECTOR_DISTANCE_COSINE\020\001\022\027\n\023VECTOR_DISTA" +
+      "NCE_DOT\020\002\022\035\n\031VECTOR_DISTANCE_EUCLIDEAN\020\003" +
+      "\022\035\n\031VECTOR_DISTANCE_MANHATTAN\020\004*\242\001\n\020Cach" +
+      "eBackendType\022\035\n\031CACHE_BACKEND_UNSPECIFIE" +
+      "D\020\000\022\027\n\023CACHE_BACKEND_REDIS\020\001\022\033\n\027CACHE_BA" +
+      "CKEND_MEMCACHED\020\002\022\034\n\030CACHE_BACKEND_IN_PR" +
+      "OCESS\020\003\022\033\n\027CACHE_BACKEND_DRAGONFLY\020\004*\202\001\n" +
+      "\020GraphBackendType\022\035\n\031GRAPH_BACKEND_UNSPE" +
+      "CIFIED\020\000\022\027\n\023GRAPH_BACKEND_NEO4J\020\001\022\032\n\026GRA" +
+      "PH_BACKEND_MEMGRAPH\020\002\022\032\n\026GRAPH_BACKEND_A" +
+      "RANGODB\020\003*\204\001\n\020NoSqlBackendType\022\035\n\031NOSQL_" +
+      "BACKEND_UNSPECIFIED\020\000\022\031\n\025NOSQL_BACKEND_M" +
+      "ONGODB\020\001\022\032\n\026NOSQL_BACKEND_DYNAMODB\020\002\022\032\n\026" +
+      "NOSQL_BACKEND_COSMOSDB\020\003*\243\001\n\025TimeSeriesB" +
+      "ackendType\022\"\n\036TIMESERIES_BACKEND_UNSPECI" +
+      "FIED\020\000\022\"\n\036TIMESERIES_BACKEND_TIMESCALEDB" +
+      "\020\001\022\037\n\033TIMESERIES_BACKEND_INFLUXDB\020\002\022!\n\035T" +
+      "IMESERIES_BACKEND_CLICKHOUSE\020\003*\215\001\n\021Colum" +
+      "nBackendType\022\036\n\032COLUMN_BACKEND_UNSPECIFI" +
+      "ED\020\000\022\035\n\031COLUMN_BACKEND_CLICKHOUSE\020\001\022\034\n\030C" +
+      "OLUMN_BACKEND_CASSANDRA\020\002\022\033\n\027COLUMN_BACK" +
+      "END_BIGTABLE\020\003*\356\001\n\020ModelBackendType\022\035\n\031M" +
+      "ODEL_BACKEND_UNSPECIFIED\020\000\022\030\n\024MODEL_BACK" +
+      "END_MLFLOW\020\001\022\025\n\021MODEL_BACKEND_DVC\020\002\022\035\n\031M" +
+      "ODEL_BACKEND_HUGGINGFACE\020\003\022\031\n\025MODEL_BACK" +
+      "END_BENTOML\020\004\022\030\n\024MODEL_BACKEND_TRITON\020\005\022" +
+      "\034\n\030MODEL_BACKEND_TORCHSERVE\020\006\022\030\n\024MODEL_B" +
+      "ACKEND_CUSTOM\020\007:Y\n\005table\022\037.google.protob" +
+      "uf.MessageOptions\030\321\206\003 \001(\0132 .udb.core.com" +
+      "mon.v1.TableOptionsR\005table:^\n\010pg_table\022\037" +
+      ".google.protobuf.MessageOptions\030\357\206\003 \001(\0132" +
+      " .udb.core.common.v1.TableOptionsR\007pgTab" +
+      "le:l\n\014vector_store\022\037.google.protobuf.Mes" +
+      "sageOptions\030\323\206\003 \001(\0132&.udb.core.common.v1" +
+      ".VectorStoreOptionsR\013vectorStore:Y\n\005cach" +
+      "e\022\037.google.protobuf.MessageOptions\030\324\206\003 \001" +
+      "(\0132 .udb.core.common.v1.CacheOptionsR\005ca" +
+      "che:r\n\016model_registry\022\037.google.protobuf." +
+      "MessageOptions\030\325\206\003 \001(\0132(.udb.core.common" +
+      ".v1.ModelRegistryOptionsR\rmodelRegistry:" +
+      "i\n\013graph_store\022\037.google.protobuf.Message" +
+      "Options\030\327\206\003 \001(\0132%.udb.core.common.v1.Gra" +
+      "phStoreOptionsR\ngraphStore:r\n\016document_s" +
+      "tore\022\037.google.protobuf.MessageOptions\030\330\206" +
+      "\003 \001(\0132(.udb.core.common.v1.DocumentStore" +
+      "OptionsR\rdocumentStore:l\n\013nosql_store\022\037." +
+      "google.protobuf.MessageOptions\030\331\206\003 \001(\0132(" +
+      ".udb.core.common.v1.DocumentStoreOptions" +
+      "R\nnosqlStore:x\n\020timeseries_store\022\037.googl" +
+      "e.protobuf.MessageOptions\030\332\206\003 \001(\0132*.udb." +
+      "core.common.v1.TimeSeriesStoreOptionsR\017t" +
+      "imeseriesStore:l\n\014column_store\022\037.google." +
+      "protobuf.MessageOptions\030\333\206\003 \001(\0132&.udb.co" +
+      "re.common.v1.ColumnStoreOptionsR\013columnS" +
+      "tore:i\n\ndata_store\022\037.google.protobuf.Mes" +
+      "sageOptions\030\334\206\003 \001(\0132\'.udb.core.common.v1" +
+      ".GenericStoreOptionsR\tdataStore:b\n\010secur" +
+      "ity\022\037.google.protobuf.MessageOptions\030\335\206\003" +
+      " \001(\0132#.udb.core.common.v1.SecurityOption" +
+      "sR\010security:Z\n\006column\022\035.google.protobuf." +
+      "FieldOptions\030\322\206\003 \001(\0132!.udb.core.common.v" +
+      "1.ColumnOptionsR\006column:_\n\tpg_column\022\035.g" +
+      "oogle.protobuf.FieldOptions\030\360\206\003 \001(\0132!.ud" +
+      "b.core.common.v1.ColumnOptionsR\010pgColumn" +
+      ":b\n\007storage\022\035.google.protobuf.FieldOptio" +
+      "ns\030\326\206\003 \001(\0132\'.udb.core.common.v1.StorageF" +
+      "ieldOptionsR\007storage:s\n\017column_security\022" +
+      "\035.google.protobuf.FieldOptions\030\345\206\003 \001(\0132)" +
+      ".udb.core.common.v1.ColumnSecurityOption" +
+      "sR\016columnSecurityB\314\001\n\026com.udb.core.commo" +
+      "n.v1B\007DbProtoP\001Z>github.com/fahara02/udb" +
+      "/sdk/go/gen/udb/core/common/v1;commonv1\242" +
+      "\002\003UCC\252\002\022Udb.Core.Common.V1\312\002\022Udb\\Core\\Co" +
+      "mmon\\V1\342\002\036Udb\\GPBMetadata\\Core\\Common\\V1" +
+      "\352\002\025Udb::Core::Common::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -689,7 +694,7 @@ public final class DbProto {
     internal_static_udb_core_common_v1_TableOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_TableOptions_descriptor,
-        new java.lang.String[] { "TableName", "SchemaName", "MigrationOrder", "IsTable", "Comment", "SoftDelete", "AuditFields", "EnableRls", "PartitionStrategy", "PartitionColumn", "RetentionDays", "RlsPolicies", "ForceRls", "SoftDeleteColumn", "Unlogged", "Tablespace", "Indexes", "ForeignKeys", "Extensions", "MaterializedViews", "Triggers", "PreviousTableName", "AllowDrop", "SqlArtifacts", "PartitionInterval", "PartitionPremake", "PartitionDefault", "PartitionRetentionMonths", "ReplicaHint", "CdcTopic", "RequiredScope", "VectorStore", "NativeServiceId", });
+        new java.lang.String[] { "TableName", "SchemaName", "MigrationOrder", "IsTable", "Comment", "SoftDelete", "AuditFields", "EnableRls", "PartitionStrategy", "PartitionColumn", "RetentionDays", "RlsPolicies", "ForceRls", "SoftDeleteColumn", "Unlogged", "Tablespace", "Indexes", "ForeignKeys", "Extensions", "MaterializedViews", "Triggers", "PreviousTableName", "AllowDrop", "SqlArtifacts", "PartitionInterval", "PartitionPremake", "PartitionDefault", "PartitionRetentionMonths", "ReplicaHint", "CdcTopic", "RequiredScope", "VectorStore", "NativeServiceId", "CrossProjectShared", });
     internal_static_udb_core_common_v1_RlsPolicy_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_udb_core_common_v1_RlsPolicy_fieldAccessorTable = new
@@ -761,7 +766,7 @@ public final class DbProto {
     internal_static_udb_core_common_v1_VectorStoreOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_VectorStoreOptions_descriptor,
-        new java.lang.String[] { "Backend", "CollectionName", "Dimension", "Distance", "ShardCount", "ReplicaCount", "OnDisk", "PayloadSchemaJson", "HnswM", "HnswEfConstruction", });
+        new java.lang.String[] { "Backend", "CollectionName", "Dimension", "Distance", "ShardCount", "ReplicaCount", "OnDisk", "PayloadSchemaJson", "HnswM", "HnswEfConstruction", "ProjectionFilter", });
     internal_static_udb_core_common_v1_CacheOptions_descriptor =
       getDescriptor().getMessageTypes().get(12);
     internal_static_udb_core_common_v1_CacheOptions_fieldAccessorTable = new
@@ -791,13 +796,13 @@ public final class DbProto {
     internal_static_udb_core_common_v1_GraphStoreOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_GraphStoreOptions_descriptor,
-        new java.lang.String[] { "Backend", "GraphName", "NodeLabel", "IdField", "TenantField", "EdgeSourceField", "EdgeTargetField", "PayloadSchemaJson", });
+        new java.lang.String[] { "Backend", "GraphName", "NodeLabel", "IdField", "TenantField", "EdgeSourceField", "EdgeTargetField", "PayloadSchemaJson", "ProjectionFilter", });
     internal_static_udb_core_common_v1_DocumentStoreOptions_descriptor =
       getDescriptor().getMessageTypes().get(17);
     internal_static_udb_core_common_v1_DocumentStoreOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_DocumentStoreOptions_descriptor,
-        new java.lang.String[] { "Backend", "DatabaseName", "CollectionName", "PartitionKey", "IdField", "TenantField", "TtlSeconds", "PayloadSchemaJson", });
+        new java.lang.String[] { "Backend", "DatabaseName", "CollectionName", "PartitionKey", "IdField", "TenantField", "TtlSeconds", "PayloadSchemaJson", "ProjectionFilter", });
     internal_static_udb_core_common_v1_TimeSeriesStoreOptions_descriptor =
       getDescriptor().getMessageTypes().get(18);
     internal_static_udb_core_common_v1_TimeSeriesStoreOptions_fieldAccessorTable = new
@@ -815,7 +820,7 @@ public final class DbProto {
     internal_static_udb_core_common_v1_GenericStoreOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_GenericStoreOptions_descriptor,
-        new java.lang.String[] { "StoreKind", "Backend", "LogicalName", "DatabaseName", "Namespace", "ResourceName", "DsnEnvKey", "Dsn", "PayloadSchemaJson", "Options", "PayloadFields", "FtsColumns", "FtsConfig", "EdgeSourceField", "EdgeTargetField", "EdgeSourceLabel", "EdgeTargetLabel", });
+        new java.lang.String[] { "StoreKind", "Backend", "LogicalName", "DatabaseName", "Namespace", "ResourceName", "DsnEnvKey", "Dsn", "PayloadSchemaJson", "Options", "PayloadFields", "FtsColumns", "FtsConfig", "EdgeSourceField", "EdgeTargetField", "EdgeSourceLabel", "EdgeTargetLabel", "ProjectionFilter", });
     internal_static_udb_core_common_v1_GenericStoreOptions_OptionsEntry_descriptor =
       internal_static_udb_core_common_v1_GenericStoreOptions_descriptor.getNestedTypes().get(0);
     internal_static_udb_core_common_v1_GenericStoreOptions_OptionsEntry_fieldAccessorTable = new

@@ -656,6 +656,7 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
         source_file: schema.file.replace('\\', "/"),
         previous_table_name: normalize_ident(&schema.previous_table_name),
         allow_drop: schema.allow_drop,
+        cross_project_shared: schema.cross_project_shared,
         warnings,
         ..ManifestTable::default()
     }
@@ -815,13 +816,98 @@ pub(crate) fn build_manifest_projections(
                 write_owner: store_option(store, "write_owner")
                     .map(|value| matches!(value.as_str(), "1" | "true" | "yes" | "on"))
                     .unwrap_or(false),
-                options: store.options.clone(),
+                options: with_canonical_projection_filter(&store.options, table),
             });
         }
         projections.extend(table_projections.clone());
         table.projections = table_projections;
     }
     projections
+}
+
+/// `options` with a valid `projection_filter` rewritten to its canonical form
+/// (physical column names, upper-case keywords), the text the projection worker,
+/// the drift scanner and the hybrid-search text leg evaluate. An invalid filter
+/// is kept as written: [`validate_projection_filters`] reports it.
+fn with_canonical_projection_filter(
+    options: &[ManifestStoreOption],
+    table: &ManifestTable,
+) -> Vec<ManifestStoreOption> {
+    options
+        .iter()
+        .map(|option| {
+            if option.key.trim() != projection_filter::PROJECTION_FILTER_OPTION {
+                return option.clone();
+            }
+            match projection_filter::canonical_projection_filter(&option.value, table) {
+                Ok(value) => ManifestStoreOption {
+                    key: option.key.clone(),
+                    value,
+                },
+                Err(_) => option.clone(),
+            }
+        })
+        .collect()
+}
+
+/// A projection's `projection_filter` must parse, name only the entity's own
+/// filterable columns with literals of their type, appear once, and target a
+/// store that can REMOVE a row that leaves the filter. Each problem is one
+/// error naming the entity, the store and the problem.
+pub(crate) fn validate_projection_filters(table: &ManifestTable) -> Vec<String> {
+    let mut errors = Vec::new();
+    for projection in &table.projections {
+        let filters = projection
+            .options
+            .iter()
+            .filter(|option| option.key.trim() == projection_filter::PROJECTION_FILTER_OPTION)
+            .collect::<Vec<_>>();
+        if filters.is_empty() {
+            continue;
+        }
+        let target = format!(
+            "entity {} ({}.{}) {} {} projection '{}'",
+            table.message_fqn(),
+            table.schema,
+            table.table,
+            projection.backend,
+            projection.projection_kind,
+            projection.resource_name
+        );
+        if filters.len() > 1 {
+            errors.push(format!(
+                "{target}: projection_filter is declared {} times; declare it once (the typed field or options[\"projection_filter\"], not both)",
+                filters.len()
+            ));
+            continue;
+        }
+        if projection
+            .projection_kind
+            .trim()
+            .eq_ignore_ascii_case("relational")
+            && projection.backend.trim().eq_ignore_ascii_case("postgres")
+        {
+            errors.push(format!(
+                "{target}: projection_filter applies to secondary-store projections only; the canonical table holds every row"
+            ));
+            continue;
+        }
+        if projection.backend.trim().eq_ignore_ascii_case("clickhouse") {
+            errors.push(format!(
+                "{target}: projection_filter is not supported on ClickHouse projections: they are append-only and cannot remove a row that leaves the filter"
+            ));
+            continue;
+        }
+        if let Err(problem) =
+            projection_filter::canonical_projection_filter(&filters[0].value, table)
+        {
+            errors.push(format!(
+                "{target}: projection_filter \"{}\" is invalid: {problem}",
+                filters[0].value.trim()
+            ));
+        }
+    }
+    errors
 }
 
 pub(crate) fn projection_kind_for_store(store: &ManifestStore) -> String {
@@ -1058,6 +1144,7 @@ pub(crate) fn stores_from_schema(schema: &ProtoSchema) -> Vec<ManifestStore> {
                     "hnsw_ef_construction",
                     store.hnsw_ef_construction.to_string(),
                 ),
+                ("projection_filter", store.projection_filter.clone()),
             ]),
             ..ManifestStore::default()
         });
@@ -1079,6 +1166,7 @@ pub(crate) fn stores_from_schema(schema: &ProtoSchema) -> Vec<ManifestStore> {
                 ("tenant_field", store.tenant_field.clone()),
                 ("edge_source_field", store.edge_source_field.clone()),
                 ("edge_target_field", store.edge_target_field.clone()),
+                ("projection_filter", store.projection_filter.clone()),
             ]),
             ..ManifestStore::default()
         });
@@ -1100,6 +1188,7 @@ pub(crate) fn stores_from_schema(schema: &ProtoSchema) -> Vec<ManifestStore> {
                 ("id_field", store.id_field.clone()),
                 ("tenant_field", store.tenant_field.clone()),
                 ("ttl_seconds", store.ttl_seconds.to_string()),
+                ("projection_filter", store.projection_filter.clone()),
             ]),
             ..ManifestStore::default()
         });
@@ -1433,6 +1522,7 @@ pub(crate) fn validate_manifest_tables(tables: &[ManifestTable]) -> Vec<String> 
         .collect::<BTreeSet<_>>();
     for table in tables {
         errors.extend(validate_table_security_alignment(table));
+        errors.extend(validate_projection_filters(table));
         // RLS on, no tenant/project column to build the default isolation
         // policy from, and no explicit policy: PostgreSQL then hides every row
         // and the planner refuses every request, which looked like a working

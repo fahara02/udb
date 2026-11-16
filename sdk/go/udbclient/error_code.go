@@ -89,6 +89,7 @@ var reasonCodes = map[string]ErrorCode{
 	"UDB_TENANT_MISMATCH":              CodePolicyDenied,
 	"UDB_TABLE_NOT_TENANT_SCOPED":      CodeInvalid,
 	"UDB_SCOPE_MISSING":                CodeScopeMissing,
+	"UDB_DELETED_READ_SCOPE_MISSING":   CodeScopeMissing,
 	"UDB_POLICY_DENIED":                CodePolicyDenied,
 	"UDB_REDACTED_VALUE_WRITE":         CodeRedacted,
 	"UDB_RATE_LIMITED":                 CodeRateLimited,

@@ -98,6 +98,17 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string edge_target_label = 17 [json_name = "edgeTargetLabel"];</code>
      */
     protected $edge_target_label = '';
+    /**
+     * Row filter: only rows matching this expression are projected; a row that
+     * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+     * the store, and a delete still deletes. Columns of this entity compared with
+     * literals: =, <>, <, <=, >, >=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+     * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+     * Validated when the catalog is built. Same as options["projection_filter"].
+     *
+     * Generated from protobuf field <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+     */
+    protected $projection_filter = '';
 
     /**
      * Constructor.
@@ -133,6 +144,13 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      *     @type string $edge_target_field
      *     @type string $edge_source_label
      *     @type string $edge_target_label
+     *     @type string $projection_filter
+     *           Row filter: only rows matching this expression are projected; a row that
+     *           stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+     *           the store, and a delete still deletes. Columns of this entity compared with
+     *           literals: =, <>, <, <=, >, >=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+     *           parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+     *           Validated when the catalog is built. Same as options["projection_filter"].
      * }
      */
     public function __construct($data = NULL) {
@@ -542,6 +560,42 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->edge_target_label = $var;
+
+        return $this;
+    }
+
+    /**
+     * Row filter: only rows matching this expression are projected; a row that
+     * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+     * the store, and a delete still deletes. Columns of this entity compared with
+     * literals: =, <>, <, <=, >, >=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+     * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+     * Validated when the catalog is built. Same as options["projection_filter"].
+     *
+     * Generated from protobuf field <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+     * @return string
+     */
+    public function getProjectionFilter()
+    {
+        return $this->projection_filter;
+    }
+
+    /**
+     * Row filter: only rows matching this expression are projected; a row that
+     * stops matching (e.g. state moves from PUBLISHED to RETIRED) is removed from
+     * the store, and a delete still deletes. Columns of this entity compared with
+     * literals: =, <>, <, <=, >, >=, IS [NOT] NULL, [NOT] IN (...), AND/OR/NOT,
+     * parentheses. Example: "state = 'PUBLISHED' AND superseded_at IS NULL".
+     * Validated when the catalog is built. Same as options["projection_filter"].
+     *
+     * Generated from protobuf field <code>string projection_filter = 18 [json_name = "projectionFilter"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectionFilter($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->projection_filter = $var;
 
         return $this;
     }

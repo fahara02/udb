@@ -7,8 +7,9 @@ package com.udb.core.backup.services.v1;
 
 /**
  * <pre>
- * A table excluded from the backup because it has no resolvable tenant column.
- * Reported, never silently skipped.
+ * A table excluded from the backup: in a tenant backup one with no resolvable
+ * tenant column, in a shared backup one that is not a shared table. Reported,
+ * never silently skipped.
  * </pre>
  *
  * Protobuf type {@code udb.core.backup.services.v1.BackupExcludedTable}
@@ -346,8 +347,9 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * A table excluded from the backup because it has no resolvable tenant column.
-   * Reported, never silently skipped.
+   * A table excluded from the backup: in a tenant backup one with no resolvable
+   * tenant column, in a shared backup one that is not a shared table. Reported,
+   * never silently skipped.
    * </pre>
    *
    * Protobuf type {@code udb.core.backup.services.v1.BackupExcludedTable}

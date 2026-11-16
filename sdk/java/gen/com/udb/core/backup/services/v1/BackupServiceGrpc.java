@@ -12,6 +12,13 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  * skipped. A restore validates the cross-tenant movement scope, refuses to write
  * over a live (non-empty) target tenant, and rewrites the tenant column to the
  * target on insert.
+ * Shared (global) tables have no tenant column, so a tenant backup reports them
+ * as excluded. A platform admin backs them up and restores them with
+ * `scope: BACKUP_SCOPE_SHARED` on the same two RPCs: the same encrypted JSONL
+ * artifacts, checksummed manifest, object storage and journal, carrying every
+ * row of the active project catalog's shared tables instead of one tenant's
+ * rows. A shared restore refuses to write into shared tables that already hold
+ * rows, exactly as a tenant restore refuses a live target tenant.
  * </pre>
  */
 @io.grpc.stub.annotations.GrpcGenerated
@@ -339,6 +346,13 @@ public final class BackupServiceGrpc {
    * skipped. A restore validates the cross-tenant movement scope, refuses to write
    * over a live (non-empty) target tenant, and rewrites the tenant column to the
    * target on insert.
+   * Shared (global) tables have no tenant column, so a tenant backup reports them
+   * as excluded. A platform admin backs them up and restores them with
+   * `scope: BACKUP_SCOPE_SHARED` on the same two RPCs: the same encrypted JSONL
+   * artifacts, checksummed manifest, object storage and journal, carrying every
+   * row of the active project catalog's shared tables instead of one tenant's
+   * rows. A shared restore refuses to write into shared tables that already hold
+   * rows, exactly as a tenant restore refuses a live target tenant.
    * </pre>
    */
   public interface AsyncService {
@@ -347,7 +361,9 @@ public final class BackupServiceGrpc {
      * <pre>
      * Start a logical backup of the calling tenant. Enumerates tenant-owned tables
      * via the shared resolver, encrypts each table's rows to object storage, and
-     * journals the run. Tenant-less tables are reported as excluded.
+     * journals the run. Tenant-less tables are reported as excluded. With
+     * `scope: BACKUP_SCOPE_SHARED` (platform admin only) it backs up the rows of
+     * the project's shared tables instead.
      * </pre>
      */
     default void startTenantBackup(com.udb.core.backup.services.v1.StartTenantBackupRequest request,
@@ -360,6 +376,8 @@ public final class BackupServiceGrpc {
      * Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires
      * an explicit confirmation token, the cross-tenant movement scope check, and a
      * target tenant that holds no rows (restoring over a live tenant is refused).
+     * With `scope: BACKUP_SCOPE_SHARED` (platform admin only) it restores a shared
+     * backup into the project's shared tables, which must hold no rows.
      * </pre>
      */
     default void restoreTenant(com.udb.core.backup.services.v1.RestoreTenantRequest request,
@@ -439,6 +457,13 @@ public final class BackupServiceGrpc {
    * skipped. A restore validates the cross-tenant movement scope, refuses to write
    * over a live (non-empty) target tenant, and rewrites the tenant column to the
    * target on insert.
+   * Shared (global) tables have no tenant column, so a tenant backup reports them
+   * as excluded. A platform admin backs them up and restores them with
+   * `scope: BACKUP_SCOPE_SHARED` on the same two RPCs: the same encrypted JSONL
+   * artifacts, checksummed manifest, object storage and journal, carrying every
+   * row of the active project catalog's shared tables instead of one tenant's
+   * rows. A shared restore refuses to write into shared tables that already hold
+   * rows, exactly as a tenant restore refuses a live target tenant.
    * </pre>
    */
   public static abstract class BackupServiceImplBase
@@ -460,6 +485,13 @@ public final class BackupServiceGrpc {
    * skipped. A restore validates the cross-tenant movement scope, refuses to write
    * over a live (non-empty) target tenant, and rewrites the tenant column to the
    * target on insert.
+   * Shared (global) tables have no tenant column, so a tenant backup reports them
+   * as excluded. A platform admin backs them up and restores them with
+   * `scope: BACKUP_SCOPE_SHARED` on the same two RPCs: the same encrypted JSONL
+   * artifacts, checksummed manifest, object storage and journal, carrying every
+   * row of the active project catalog's shared tables instead of one tenant's
+   * rows. A shared restore refuses to write into shared tables that already hold
+   * rows, exactly as a tenant restore refuses a live target tenant.
    * </pre>
    */
   public static final class BackupServiceStub
@@ -479,7 +511,9 @@ public final class BackupServiceGrpc {
      * <pre>
      * Start a logical backup of the calling tenant. Enumerates tenant-owned tables
      * via the shared resolver, encrypts each table's rows to object storage, and
-     * journals the run. Tenant-less tables are reported as excluded.
+     * journals the run. Tenant-less tables are reported as excluded. With
+     * `scope: BACKUP_SCOPE_SHARED` (platform admin only) it backs up the rows of
+     * the project's shared tables instead.
      * </pre>
      */
     public void startTenantBackup(com.udb.core.backup.services.v1.StartTenantBackupRequest request,
@@ -493,6 +527,8 @@ public final class BackupServiceGrpc {
      * Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires
      * an explicit confirmation token, the cross-tenant movement scope check, and a
      * target tenant that holds no rows (restoring over a live tenant is refused).
+     * With `scope: BACKUP_SCOPE_SHARED` (platform admin only) it restores a shared
+     * backup into the project's shared tables, which must hold no rows.
      * </pre>
      */
     public void restoreTenant(com.udb.core.backup.services.v1.RestoreTenantRequest request,
@@ -579,6 +615,13 @@ public final class BackupServiceGrpc {
    * skipped. A restore validates the cross-tenant movement scope, refuses to write
    * over a live (non-empty) target tenant, and rewrites the tenant column to the
    * target on insert.
+   * Shared (global) tables have no tenant column, so a tenant backup reports them
+   * as excluded. A platform admin backs them up and restores them with
+   * `scope: BACKUP_SCOPE_SHARED` on the same two RPCs: the same encrypted JSONL
+   * artifacts, checksummed manifest, object storage and journal, carrying every
+   * row of the active project catalog's shared tables instead of one tenant's
+   * rows. A shared restore refuses to write into shared tables that already hold
+   * rows, exactly as a tenant restore refuses a live target tenant.
    * </pre>
    */
   public static final class BackupServiceBlockingV2Stub
@@ -598,7 +641,9 @@ public final class BackupServiceGrpc {
      * <pre>
      * Start a logical backup of the calling tenant. Enumerates tenant-owned tables
      * via the shared resolver, encrypts each table's rows to object storage, and
-     * journals the run. Tenant-less tables are reported as excluded.
+     * journals the run. Tenant-less tables are reported as excluded. With
+     * `scope: BACKUP_SCOPE_SHARED` (platform admin only) it backs up the rows of
+     * the project's shared tables instead.
      * </pre>
      */
     public com.udb.core.backup.services.v1.StartTenantBackupResponse startTenantBackup(com.udb.core.backup.services.v1.StartTenantBackupRequest request) throws io.grpc.StatusException {
@@ -611,6 +656,8 @@ public final class BackupServiceGrpc {
      * Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires
      * an explicit confirmation token, the cross-tenant movement scope check, and a
      * target tenant that holds no rows (restoring over a live tenant is refused).
+     * With `scope: BACKUP_SCOPE_SHARED` (platform admin only) it restores a shared
+     * backup into the project's shared tables, which must hold no rows.
      * </pre>
      */
     public com.udb.core.backup.services.v1.RestoreTenantResponse restoreTenant(com.udb.core.backup.services.v1.RestoreTenantRequest request) throws io.grpc.StatusException {
@@ -690,6 +737,13 @@ public final class BackupServiceGrpc {
    * skipped. A restore validates the cross-tenant movement scope, refuses to write
    * over a live (non-empty) target tenant, and rewrites the tenant column to the
    * target on insert.
+   * Shared (global) tables have no tenant column, so a tenant backup reports them
+   * as excluded. A platform admin backs them up and restores them with
+   * `scope: BACKUP_SCOPE_SHARED` on the same two RPCs: the same encrypted JSONL
+   * artifacts, checksummed manifest, object storage and journal, carrying every
+   * row of the active project catalog's shared tables instead of one tenant's
+   * rows. A shared restore refuses to write into shared tables that already hold
+   * rows, exactly as a tenant restore refuses a live target tenant.
    * </pre>
    */
   public static final class BackupServiceBlockingStub
@@ -709,7 +763,9 @@ public final class BackupServiceGrpc {
      * <pre>
      * Start a logical backup of the calling tenant. Enumerates tenant-owned tables
      * via the shared resolver, encrypts each table's rows to object storage, and
-     * journals the run. Tenant-less tables are reported as excluded.
+     * journals the run. Tenant-less tables are reported as excluded. With
+     * `scope: BACKUP_SCOPE_SHARED` (platform admin only) it backs up the rows of
+     * the project's shared tables instead.
      * </pre>
      */
     public com.udb.core.backup.services.v1.StartTenantBackupResponse startTenantBackup(com.udb.core.backup.services.v1.StartTenantBackupRequest request) {
@@ -722,6 +778,8 @@ public final class BackupServiceGrpc {
      * Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires
      * an explicit confirmation token, the cross-tenant movement scope check, and a
      * target tenant that holds no rows (restoring over a live tenant is refused).
+     * With `scope: BACKUP_SCOPE_SHARED` (platform admin only) it restores a shared
+     * backup into the project's shared tables, which must hold no rows.
      * </pre>
      */
     public com.udb.core.backup.services.v1.RestoreTenantResponse restoreTenant(com.udb.core.backup.services.v1.RestoreTenantRequest request) {
@@ -801,6 +859,13 @@ public final class BackupServiceGrpc {
    * skipped. A restore validates the cross-tenant movement scope, refuses to write
    * over a live (non-empty) target tenant, and rewrites the tenant column to the
    * target on insert.
+   * Shared (global) tables have no tenant column, so a tenant backup reports them
+   * as excluded. A platform admin backs them up and restores them with
+   * `scope: BACKUP_SCOPE_SHARED` on the same two RPCs: the same encrypted JSONL
+   * artifacts, checksummed manifest, object storage and journal, carrying every
+   * row of the active project catalog's shared tables instead of one tenant's
+   * rows. A shared restore refuses to write into shared tables that already hold
+   * rows, exactly as a tenant restore refuses a live target tenant.
    * </pre>
    */
   public static final class BackupServiceFutureStub
@@ -820,7 +885,9 @@ public final class BackupServiceGrpc {
      * <pre>
      * Start a logical backup of the calling tenant. Enumerates tenant-owned tables
      * via the shared resolver, encrypts each table's rows to object storage, and
-     * journals the run. Tenant-less tables are reported as excluded.
+     * journals the run. Tenant-less tables are reported as excluded. With
+     * `scope: BACKUP_SCOPE_SHARED` (platform admin only) it backs up the rows of
+     * the project's shared tables instead.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.core.backup.services.v1.StartTenantBackupResponse> startTenantBackup(
@@ -834,6 +901,8 @@ public final class BackupServiceGrpc {
      * Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires
      * an explicit confirmation token, the cross-tenant movement scope check, and a
      * target tenant that holds no rows (restoring over a live tenant is refused).
+     * With `scope: BACKUP_SCOPE_SHARED` (platform admin only) it restores a shared
+     * backup into the project's shared tables, which must hold no rows.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.core.backup.services.v1.RestoreTenantResponse> restoreTenant(

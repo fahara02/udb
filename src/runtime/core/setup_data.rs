@@ -7,6 +7,11 @@
 use super::*;
 use crate::backend::plugin::RegisterCtx;
 
+/// `BulkUpsert`: audited bulk load. A child module so it reuses this file's
+/// private write chokepoints (idempotency claim, row revisions, outbox emit)
+/// instead of copying them.
+pub(crate) mod bulk_upsert;
+
 fn setup_data_invalid_field(
     field: impl Into<String>,
     description: impl Into<String>,
@@ -251,6 +256,77 @@ fn setup_data_internal_status(
     message: impl Into<String>,
 ) -> tonic::Status {
     crate::runtime::executor_utils::internal_status("setup_data", operation, message)
+}
+
+/// The scope a Select needs to set `include_deleted`.
+pub(crate) const DELETED_READ_SCOPE: &str = "udb:deleted:read";
+
+/// The audit topic (`auth_audit_log.event_type`) of a read that included
+/// soft-deleted rows.
+pub(crate) const DELETED_READ_AUDIT_TOPIC: &str = "udb.data.deleted_read";
+
+/// Admit an `include_deleted` read before anything else reads the request. The
+/// verified caller must hold `udb:deleted:read` (or the `udb:*` / `*` wildcard
+/// every data-plane scope check accepts), and the entity must have soft delete:
+/// an entity without it is refused by name rather than read as a plain Select.
+/// Returns the soft-delete column each returned row carries.
+fn admit_include_deleted(
+    manifest: &CatalogManifest,
+    message_type: &str,
+    context: &RequestContext,
+) -> Result<String, tonic::Status> {
+    let granted = context.scopes.iter().any(|scope| {
+        let scope = scope.trim();
+        scope == DELETED_READ_SCOPE || scope == "udb:*" || scope == "*"
+    });
+    if !granted {
+        return Err(crate::runtime::error_reasons::Refusal::new(
+            crate::runtime::error_reasons::DELETED_READ_SCOPE_MISSING,
+            format!("include_deleted needs scope {DELETED_READ_SCOPE}"),
+        )
+        .missing("scope", DELETED_READ_SCOPE)
+        .into_status());
+    }
+    let table = resolve_table_for_message(manifest, message_type)
+        .map_err(|_| message_type_lookup_status(manifest, message_type))?;
+    crate::planning::broker::soft_delete_read_column(table).map_err(|message| {
+        setup_data_invalid_field(
+            "include_deleted",
+            "the entity has no usable soft-delete column, so there are no deleted rows to include",
+            message,
+        )
+    })
+}
+
+/// The audit record of one `include_deleted` read: who read (tenant, project,
+/// user or service), what (entity and table) and how many rows came back.
+fn deleted_read_audit_envelope(
+    context: &RequestContext,
+    message_type: &str,
+    table: &ManifestTable,
+    row_count: usize,
+) -> JsonValue {
+    let actor = if context.user_id.trim().is_empty() {
+        context.service_identity.as_str()
+    } else {
+        context.user_id.as_str()
+    };
+    serde_json::json!({
+        "event_id": uuid::Uuid::new_v4().to_string(),
+        "actor": actor,
+        "actor_tenant": context.tenant_id,
+        "project_id": context.project_id,
+        "user_id": context.user_id,
+        "service_identity": context.service_identity,
+        "purpose": context.purpose,
+        "target_resource": message_type,
+        "table": format!("{}.{}", table.schema, table.table),
+        "operation": "include_deleted_read",
+        "outcome": "allowed",
+        "row_count": row_count,
+        "correlation_id": context.correlation_id,
+        "decision_id": context.decision_id,
+    })
 }
 
 /// bug #8.2 — a `cdc_required` mutation whose change event cannot be durably
@@ -917,6 +993,17 @@ impl DataBrokerRuntime {
                 .select_join_fusion(manifest, request, context, filter)
                 .await;
         }
+        // include_deleted: scope and entity are checked before anything reads
+        // the request; `deleted_column` is the column that marks a deleted row.
+        let deleted_column = if request.include_deleted {
+            Some(admit_include_deleted(
+                manifest,
+                &request.message_type,
+                &context,
+            )?)
+        } else {
+            None
+        };
         // P-1: when paginating, resolve the physical sort keys, extend them with
         // primary-key tiebreakers for a TOTAL order, decode any incoming cursor,
         // and inject the lexicographic "after" predicate into the filter (reusing
@@ -943,6 +1030,15 @@ impl DataBrokerRuntime {
             filter = self.prepare_filter(table_for_encryption, &filter, &context.tenant_id)?;
         }
         let mut fields = request.fields.clone();
+        // include_deleted: every returned row carries the soft-delete column, so
+        // a caller can tell a deleted row from a live one even when it named its
+        // own `fields` (SELECT * — empty `fields` — already has it).
+        if let Some(column) = &deleted_column
+            && !fields.is_empty()
+            && !fields.iter().any(|field| field == column)
+        {
+            fields.push(column.clone());
+        }
         // #5: an include_revision read must carry every primary-key column in its
         // projection so each returned row can be keyed against the revision map (a
         // SELECT * — empty `fields` — already has them). Mirrors the pagination
@@ -1105,6 +1201,7 @@ impl DataBrokerRuntime {
             fields: fields.clone(),
             limit: request.limit,
             sort,
+            include_deleted: request.include_deleted,
         };
         let plan = build_select_query_plan(manifest, &plan_request);
         reject_plan(&plan.errors)?;
@@ -1173,6 +1270,9 @@ impl DataBrokerRuntime {
             && !request.include_revision
             // include_total: a cached RecordSet carries no count.
             && !request.include_total
+            // include_deleted: the cache key does not know about deleted rows,
+            // and every such read must reach the audit log.
+            && !request.include_deleted
             // Read-your-writes: a read that must see the primary (strong /
             // primary consistency, a primary routing policy, or a read fence the
             // replicas have not reached) is never answered from the cache.
@@ -1350,6 +1450,8 @@ impl DataBrokerRuntime {
             // #5: never populate the record cache from an include_revision read —
             // the entry would carry revisions a later plain read never asked for.
             && !request.include_revision
+            // include_deleted: never let a plain read be answered with deleted rows.
+            && !request.include_deleted
             && let Some(cache_key) = cache_key.as_deref()
         {
             let ttl = request
@@ -1368,7 +1470,53 @@ impl DataBrokerRuntime {
                 )
                 .await;
         }
+        // include_deleted: no rows leave without their audit record.
+        if request.include_deleted {
+            self.audit_deleted_read(
+                &context,
+                &request.message_type,
+                table,
+                record_set.records_json.len(),
+            )
+            .await?;
+        }
         Ok((record_set, stale_warning))
+    }
+
+    /// Write the audit record of an `include_deleted` read to the durable audit
+    /// log before its rows are returned. A record that cannot be written refuses
+    /// the read (retryable): deleted rows are never returned unrecorded.
+    async fn audit_deleted_read(
+        &self,
+        context: &RequestContext,
+        message_type: &str,
+        table: &ManifestTable,
+        row_count: usize,
+    ) -> Result<(), tonic::Status> {
+        let refused = |detail: &str| {
+            tracing::error!(
+                error = %detail,
+                message_type,
+                "include_deleted read refused: its audit record failed"
+            );
+            crate::runtime::executor_utils::retryable_status(
+                "postgres",
+                "deleted_read_audit",
+                1_000,
+                "a read that includes deleted rows cannot return them without its audit record",
+            )
+        };
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Err(refused("no audit database"));
+        };
+        let envelope = deleted_read_audit_envelope(context, message_type, table, row_count);
+        crate::runtime::service::cross_tenant_read::record_privileged_read(
+            pool,
+            DELETED_READ_AUDIT_TOPIC,
+            envelope,
+        )
+        .await
+        .map_err(|err| refused(&err))
     }
 
     pub(crate) async fn select_join_fusion(
@@ -1384,6 +1532,13 @@ impl DataBrokerRuntime {
         ),
         tonic::Status,
     > {
+        if request.include_deleted {
+            return Err(setup_data_invalid_field(
+                "include_deleted",
+                "a join read cannot include deleted rows",
+                "a join read cannot include deleted rows; read one table to include them",
+            ));
+        }
         if !request.sort.is_empty()
             || !request.page_token.trim().is_empty()
             || request.include_total
@@ -2381,6 +2536,37 @@ impl DataBrokerRuntime {
         context: &RequestContext,
         cdc_required: bool,
     ) -> Result<(), tonic::Status> {
+        self.emit_cdc_outbox_event_checked(
+            tx,
+            manifest,
+            message_type,
+            operation,
+            record,
+            context,
+            cdc_required,
+            None,
+        )
+        .await
+        .map(|_| ())
+    }
+
+    /// The shared body of the mutation change-event emitters. `document_id`
+    /// overrides the partition key / `document_id` (a `BulkUpsert` batch event
+    /// is keyed by its batch id, not by a row's primary key); `None` keeps the
+    /// record's first primary-key value. Returns the event id when an event was
+    /// enqueued, `None` when the best-effort cases skipped it.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn emit_cdc_outbox_event_checked(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        manifest: &CatalogManifest,
+        message_type: &str,
+        operation: &str,
+        record: &JsonValue,
+        context: &RequestContext,
+        cdc_required: bool,
+        document_id: Option<&str>,
+    ) -> Result<Option<Uuid>, tonic::Status> {
         // Resolve via the SAME index the mutation used (case-insensitive, full or
         // leaf message name) so the emit gate matches exactly what was written —
         // an exact `==` missed the entity and silently skipped the event.
@@ -2394,7 +2580,7 @@ impl DataBrokerRuntime {
                     "the entity declares no cdc_topic, so no change event can be delivered",
                 ));
             }
-            return Ok(());
+            return Ok(None);
         }
         // When CDC delivery is disabled (UDB_CDC_ENABLED=false) nothing drains the
         // outbox — neither the Kafka tailer nor the in-process stream both live on
@@ -2409,7 +2595,7 @@ impl DataBrokerRuntime {
                     "CDC delivery is disabled (UDB_CDC_ENABLED=false); a cdc_required mutation cannot be honoured",
                 ));
             }
-            return Ok(());
+            return Ok(None);
         }
         // Tenant-scoped topics can't reach a subscriber without a tenant; skip
         // (or fail closed when the caller requires delivery).
@@ -2425,17 +2611,20 @@ impl DataBrokerRuntime {
                 message_type,
                 "[cdc] skip mutation event: tenant-scoped topic with no tenant_id"
             );
-            return Ok(());
+            return Ok(None);
         }
         // Partition key = the record's first primary-key value (column-keyed at this
         // point), falling back to a fresh id so the row is always partitionable.
-        let partition_key = table
-            .primary_key
-            .first()
-            .and_then(|pk| record.get(pk.as_str()))
-            .map(crate::runtime::executor_utils::json_scalar_to_string)
-            .filter(|value| !value.trim().is_empty())
-            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        let partition_key = match document_id {
+            Some(document_id) => document_id.to_string(),
+            None => table
+                .primary_key
+                .first()
+                .and_then(|pk| record.get(pk.as_str()))
+                .map(crate::runtime::executor_utils::json_scalar_to_string)
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or_else(|| Uuid::new_v4().to_string()),
+        };
         let event_id = Uuid::new_v4();
         // Bug #8.3/#8.4: the correlation_id MUST be the caller's verified
         // correlation_id, NOT the partition key (which is the record PK) — the old
@@ -2503,7 +2692,8 @@ impl DataBrokerRuntime {
         .await
         .map_err(|err| {
             setup_data_internal_status("cdc_outbox_emit", format!("CDC outbox emit failed: {err}"))
-        })
+        })?;
+        Ok(Some(event_id))
     }
 
     /// `pub(crate)`: takes `MutationGuards`, which is crate-private, so this was
@@ -14881,5 +15071,130 @@ mod vector_project_scope_tests {
         runtime
             .ensure_vector_instance_allowed_for_project("WEAVIATE", Some("billing_vectors"), "hr")
             .expect_err("a mixed-case backend token must still resolve and refuse");
+    }
+}
+
+#[cfg(test)]
+mod include_deleted_admission_tests {
+    use super::{DELETED_READ_SCOPE, admit_include_deleted, deleted_read_audit_envelope};
+    use crate::RequestContext;
+    use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
+
+    fn column(name: &str) -> ManifestColumn {
+        ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            sql_type: "TEXT".to_string(),
+            is_primary: name == "id",
+            ..ManifestColumn::default()
+        }
+    }
+
+    fn manifest(soft_delete: bool) -> CatalogManifest {
+        CatalogManifest {
+            tables: vec![ManifestTable {
+                proto_package: "acme.sd.v1".to_string(),
+                message_name: "Doc".to_string(),
+                schema: "acme".to_string(),
+                table: "docs".to_string(),
+                primary_key: vec!["id".to_string()],
+                columns: vec![column("id"), column("tenant_id"), column("deleted_at")],
+                soft_delete,
+                soft_delete_column: "deleted_at".to_string(),
+                ..ManifestTable::default()
+            }],
+            ..CatalogManifest::default()
+        }
+    }
+
+    fn context(scopes: &[&str]) -> RequestContext {
+        RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            project_id: "project-a".to_string(),
+            user_id: "user-1".to_string(),
+            purpose: "support".to_string(),
+            correlation_id: "corr-1".to_string(),
+            scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
+            ..RequestContext::default()
+        }
+    }
+
+    fn reason(status: &tonic::Status) -> String {
+        crate::runtime::error_reasons::reason_of(status).unwrap_or_default()
+    }
+
+    /// The scope (or a wildcard) admits the read and names the soft-delete
+    /// column; `udb:read` and `udb:admin` alone do not.
+    #[test]
+    fn include_deleted_needs_the_deleted_read_scope() {
+        let manifest = manifest(true);
+        let admitted: [&[&str]; 3] = [&[DELETED_READ_SCOPE], &["udb:*"], &["*"]];
+        for scopes in admitted {
+            assert_eq!(
+                admit_include_deleted(&manifest, "acme.sd.v1.Doc", &context(scopes))
+                    .expect("admitted"),
+                "deleted_at"
+            );
+        }
+        let refused_scopes: [&[&str]; 2] = [&["udb:read", "udb:admin"], &[]];
+        for scopes in refused_scopes {
+            let refused = admit_include_deleted(&manifest, "acme.sd.v1.Doc", &context(scopes))
+                .expect_err("refused without udb:deleted:read");
+            assert_eq!(refused.code(), tonic::Code::PermissionDenied);
+            assert_eq!(reason(&refused), "UDB_DELETED_READ_SCOPE_MISSING");
+        }
+    }
+
+    /// An entity without soft delete refuses the field by name, even for a
+    /// caller holding the scope.
+    #[test]
+    fn include_deleted_on_an_entity_without_soft_delete_is_refused_by_name() {
+        let refused = admit_include_deleted(
+            &manifest(false),
+            "acme.sd.v1.Doc",
+            &context(&[DELETED_READ_SCOPE]),
+        )
+        .expect_err("no soft delete");
+        assert_eq!(refused.code(), tonic::Code::InvalidArgument);
+        let raw = refused
+            .metadata()
+            .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail")
+            .to_bytes()
+            .expect("detail bytes");
+        let detail = crate::runtime::executor_utils::decode_error_detail_from_raw(&raw);
+        assert!(
+            detail
+                .field_violations
+                .iter()
+                .any(|violation| violation.field == "include_deleted"),
+            "{detail:?}"
+        );
+    }
+
+    /// The audit record names tenant, project, actor, entity, table and the
+    /// number of rows returned; a service caller is the actor when no user is.
+    #[test]
+    fn the_deleted_read_audit_record_names_who_what_and_how_many() {
+        let manifest = manifest(true);
+        let table = &manifest.tables[0];
+        let envelope = deleted_read_audit_envelope(&context(&[]), "acme.sd.v1.Doc", table, 3);
+        assert_eq!(envelope["actor"], "user-1");
+        assert_eq!(envelope["actor_tenant"], "tenant-a");
+        assert_eq!(envelope["project_id"], "project-a");
+        assert_eq!(envelope["target_resource"], "acme.sd.v1.Doc");
+        assert_eq!(envelope["table"], "acme.docs");
+        assert_eq!(envelope["operation"], "include_deleted_read");
+        assert_eq!(envelope["row_count"], 3);
+        assert!(uuid::Uuid::parse_str(envelope["event_id"].as_str().unwrap()).is_ok());
+
+        let service = RequestContext {
+            user_id: String::new(),
+            service_identity: "svc-reporting".to_string(),
+            ..context(&[])
+        };
+        let envelope = deleted_read_audit_envelope(&service, "acme.sd.v1.Doc", table, 0);
+        assert_eq!(envelope["actor"], "svc-reporting");
+        assert_eq!(envelope["row_count"], 0);
     }
 }

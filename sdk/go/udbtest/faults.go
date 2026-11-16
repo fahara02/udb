@@ -180,7 +180,7 @@ func errorKind(code codes.Code, reason string) entityv1.ErrorKind {
 		return entityv1.ErrorKind_ERROR_KIND_UNIQUE
 	case "UDB_NOT_NULL_VIOLATION":
 		return entityv1.ErrorKind_ERROR_KIND_NOT_NULL
-	case "UDB_SCOPE_MISSING", "UDB_TENANT_MISMATCH", "UDB_PROJECT_MISMATCH":
+	case "UDB_SCOPE_MISSING", "UDB_DELETED_READ_SCOPE_MISSING", "UDB_TENANT_MISMATCH", "UDB_PROJECT_MISMATCH":
 		return entityv1.ErrorKind_ERROR_KIND_PERMISSION
 	case "UDB_POLICY_DENIED":
 		return entityv1.ErrorKind_ERROR_KIND_POLICY

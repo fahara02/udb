@@ -1,16 +1,20 @@
 //! The eight `CacheService` RPC handlers, extracted from the trait impl; `mod.rs`
 //! delegates one line to each. The tenant is always taken from the VERIFIED
-//! claim/header (`validate_request_tenant`), never the request body.
+//! claim/header (`validate_request_tenant`), never the request body. Every RPC
+//! resolves its keyspace through [`resolve_scope`]: the caller's tenant, or the
+//! shared namespace when `shared` is set (shared writes need shared-write
+//! authority).
 
 use tonic::{Request, Response, Status};
 
 use crate::proto::udb::core::cache::services::v1 as cache_pb;
 use crate::runtime::channels::OperationChannel;
 
-use super::super::native_helpers::{admit_on as native_admit_on, validate_request_tenant};
+use super::super::native_helpers::admit_on as native_admit_on;
 use super::CacheServiceImpl;
 use super::errors::{require_field, validate_namespace};
 use super::keys::effective_max_bytes;
+use super::scope::{CacheAccess, resolve_scope};
 
 #[cfg(feature = "redis")]
 use super::config::{
@@ -30,9 +34,16 @@ pub(crate) async fn get(
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     // Cross-tenant guard FIRST: the body tenant_id must match the verified
-    // claim/header; after this passes it IS the verified tenant.
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant = req.tenant_id.trim().to_string();
+    // claim/header; after this passes it IS the verified tenant. Any
+    // authenticated caller may read the shared namespace.
+    let scope = resolve_scope(
+        &metadata,
+        &req.tenant_id,
+        req.shared,
+        CacheAccess::Read,
+        "cache_get",
+    )?;
+    let tenant = scope.key_tenant.clone();
     let namespace = validate_namespace(&req.namespace)?;
     let key = require_field("key", &req.key)?;
     let _admit = native_admit_on(
@@ -40,7 +51,7 @@ pub(crate) async fn get(
         &svc.metrics,
         "cache",
         OperationChannel::Read,
-        &tenant,
+        &scope.caller_tenant,
         None,
     )
     .await?;
@@ -68,8 +79,14 @@ pub(crate) async fn set(
 ) -> Result<Response<cache_pb::SetResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant = req.tenant_id.trim().to_string();
+    let scope = resolve_scope(
+        &metadata,
+        &req.tenant_id,
+        req.shared,
+        CacheAccess::Write,
+        "cache_set",
+    )?;
+    let tenant = scope.key_tenant.clone();
     let namespace = validate_namespace(&req.namespace)?;
     let key = require_field("key", &req.key)?;
     // Set is an ordinary data mutation, so it shares the Write admission lane
@@ -81,7 +98,7 @@ pub(crate) async fn set(
         &svc.metrics,
         "cache",
         OperationChannel::Write,
-        &tenant,
+        &scope.caller_tenant,
         None,
     )
     .await?;
@@ -103,12 +120,11 @@ pub(crate) async fn set(
             TOPIC_ENTRY_SET,
             &tenant,
             &namespace,
-            serde_json::json!({
-                "tenant_id": tenant,
+            scope.event_payload(serde_json::json!({
                 "namespace": namespace,
                 "key": key,
                 "used_bytes": outcome.used_bytes,
-            }),
+            })),
         )
         .await;
         Ok(Response::new(cache_pb::SetResponse {
@@ -132,8 +148,14 @@ pub(crate) async fn increment(
 ) -> Result<Response<cache_pb::IncrementResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant = req.tenant_id.trim().to_string();
+    let scope = resolve_scope(
+        &metadata,
+        &req.tenant_id,
+        req.shared,
+        CacheAccess::Write,
+        "cache_increment",
+    )?;
+    let tenant = scope.key_tenant.clone();
     let namespace = validate_namespace(&req.namespace)?;
     let key = require_field("key", &req.key)?;
     // A data mutation like `Set`, so it shares the Write admission lane.
@@ -142,7 +164,7 @@ pub(crate) async fn increment(
         &svc.metrics,
         "cache",
         OperationChannel::Write,
-        &tenant,
+        &scope.caller_tenant,
         None,
     )
     .await?;
@@ -187,8 +209,14 @@ pub(crate) async fn delete(
 ) -> Result<Response<cache_pb::DeleteResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant = req.tenant_id.trim().to_string();
+    let scope = resolve_scope(
+        &metadata,
+        &req.tenant_id,
+        req.shared,
+        CacheAccess::Write,
+        "cache_delete",
+    )?;
+    let tenant = scope.key_tenant.clone();
     let namespace = validate_namespace(&req.namespace)?;
     let key = require_field("key", &req.key)?;
     let _admit = native_admit_on(
@@ -196,7 +224,7 @@ pub(crate) async fn delete(
         &svc.metrics,
         "cache",
         OperationChannel::Admin,
-        &tenant,
+        &scope.caller_tenant,
         None,
     )
     .await?;
@@ -211,12 +239,11 @@ pub(crate) async fn delete(
                 TOPIC_ENTRY_DELETED,
                 &tenant,
                 &namespace,
-                serde_json::json!({
-                    "tenant_id": tenant,
+                scope.event_payload(serde_json::json!({
                     "namespace": namespace,
                     "key": key,
                     "used_bytes": used_bytes,
-                }),
+                })),
             )
             .await;
         }
@@ -244,15 +271,21 @@ pub(crate) async fn scan(
 ) -> Result<Response<cache_pb::ScanResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant = req.tenant_id.trim().to_string();
+    let scope = resolve_scope(
+        &metadata,
+        &req.tenant_id,
+        req.shared,
+        CacheAccess::Read,
+        "cache_scan",
+    )?;
+    let tenant = scope.key_tenant.clone();
     let namespace = validate_namespace(&req.namespace)?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "cache",
         OperationChannel::Read,
-        &tenant,
+        &scope.caller_tenant,
         None,
     )
     .await?;
@@ -293,8 +326,14 @@ pub(crate) async fn create_namespace(
 ) -> Result<Response<cache_pb::CreateNamespaceResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant = req.tenant_id.trim().to_string();
+    let scope = resolve_scope(
+        &metadata,
+        &req.tenant_id,
+        req.shared,
+        CacheAccess::Write,
+        "cache_create_namespace",
+    )?;
+    let tenant = scope.key_tenant.clone();
     let namespace = validate_namespace(&req.namespace)?;
     let max_bytes = effective_max_bytes(req.max_bytes);
     let default_ttl = req.default_ttl_seconds.max(0);
@@ -303,7 +342,7 @@ pub(crate) async fn create_namespace(
         &svc.metrics,
         "cache",
         OperationChannel::Admin,
-        &tenant,
+        &scope.caller_tenant,
         None,
     )
     .await?;
@@ -317,12 +356,11 @@ pub(crate) async fn create_namespace(
             TOPIC_NAMESPACE_CREATED,
             &tenant,
             &namespace,
-            serde_json::json!({
-                "tenant_id": tenant,
+            scope.event_payload(serde_json::json!({
                 "namespace": namespace,
                 "max_bytes": max_bytes,
                 "default_ttl_seconds": default_ttl,
-            }),
+            })),
         )
         .await;
         Ok(Response::new(cache_pb::CreateNamespaceResponse {
@@ -346,8 +384,14 @@ pub(crate) async fn delete_namespace(
 ) -> Result<Response<cache_pb::DeleteNamespaceResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant = req.tenant_id.trim().to_string();
+    let scope = resolve_scope(
+        &metadata,
+        &req.tenant_id,
+        req.shared,
+        CacheAccess::Write,
+        "cache_delete_namespace",
+    )?;
+    let tenant = scope.key_tenant.clone();
     let namespace = validate_namespace(&req.namespace)?;
     // DESTRUCTIVE namespace flush: an empty confirmation token fails CLOSED.
     if req.confirmation_token.trim().is_empty() {
@@ -364,7 +408,7 @@ pub(crate) async fn delete_namespace(
         &svc.metrics,
         "cache",
         OperationChannel::Admin,
-        &tenant,
+        &scope.caller_tenant,
         None,
     )
     .await?;
@@ -378,12 +422,11 @@ pub(crate) async fn delete_namespace(
             TOPIC_INVALIDATED,
             &tenant,
             &namespace,
-            serde_json::json!({
-                "tenant_id": tenant,
+            scope.event_payload(serde_json::json!({
                 "namespace": namespace,
                 "keys_invalidated": keys_deleted,
                 "reason": "delete_namespace",
-            }),
+            })),
         )
         .await;
         Ok(Response::new(cache_pb::DeleteNamespaceResponse {
@@ -406,15 +449,21 @@ pub(crate) async fn get_namespace_stats(
 ) -> Result<Response<cache_pb::GetNamespaceStatsResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant = req.tenant_id.trim().to_string();
+    let scope = resolve_scope(
+        &metadata,
+        &req.tenant_id,
+        req.shared,
+        CacheAccess::Read,
+        "cache_get_namespace_stats",
+    )?;
+    let tenant = scope.key_tenant.clone();
     let namespace = validate_namespace(&req.namespace)?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
         "cache",
         OperationChannel::Read,
-        &tenant,
+        &scope.caller_tenant,
         None,
     )
     .await?;

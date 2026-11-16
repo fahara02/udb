@@ -2127,6 +2127,11 @@ fn ts_value_type(column: &EntityColumnDescriptor) -> String {
             return "(string | number)[]".to_string();
         }
         if !go_enum_text_column(column) {
+            // The numeric named type `render_ts_enum_types` emits for an
+            // integer-stored enum whose value numbers resolved.
+            if ts_enum_has_numbers(column) {
+                return format!("{}Number", go_enum_type_name(&column.proto_type));
+            }
             return "number".to_string();
         }
         // The named type `render_ts_entities_file` emits once per proto enum.
@@ -2297,6 +2302,12 @@ fn go_enum_key_text(column: &EntityColumnDescriptor, full: &str) -> String {
     }
 }
 
+/// True when an enum column carries its proto enum's value numbers, one per value
+/// name, so an integer-stored column can be given a named numeric type.
+fn ts_enum_has_numbers(column: &EntityColumnDescriptor) -> bool {
+    !column.enum_values.is_empty() && column.enum_numbers.len() == column.enum_values.len()
+}
+
 /// True for a column stored as enum value text, which crosses the mappers.
 fn column_is_text_enum(column: &EntityColumnDescriptor) -> bool {
     !column.enum_values.is_empty() && !column.is_array && go_enum_text_column(column)
@@ -2322,8 +2333,11 @@ fn refuse_short_name_collisions(
 /// The TypeScript `as const` object and type for each proto enum the entities'
 /// columns use, in first-use order. The keys are the value names without the
 /// enum's common prefix; the values stay the full proto value names, which is what
-/// a decoded row carries. Two enums that would share a name, or an enum named like
-/// a generated or referenced name, refuse generation rather than being renamed.
+/// a decoded row carries. An enum an INTEGER column stores also gets a
+/// `<Enum>Number` object and type whose values are the proto enum's numbers, which
+/// is what that column carries (when the numbers did not resolve, the column stays
+/// `number`). Two enums that would share a name, or an enum named like a generated
+/// or referenced name, refuse generation rather than being renamed.
 fn render_ts_enum_types(entities: &[EntityDescriptor]) -> Result<String, String> {
     let mut taken: BTreeMap<String, String> = [
         "UdbColumn",
@@ -2423,6 +2437,67 @@ fn render_ts_enum_types(entities: &[EntityDescriptor]) -> Result<String, String>
         }
     }
 
+    // The integer-stored enums whose numbers resolved, named `<Enum>Number`.
+    let mut numeric: Vec<(String, String, &Vec<String>, &Vec<i32>)> = Vec::new();
+    for entity in entities {
+        for column in entity.columns.iter().filter(|column| {
+            column.declared_in_proto
+                && !column.is_array
+                && !go_enum_text_column(column)
+                && ts_enum_has_numbers(column)
+        }) {
+            let written = column.proto_type.trim_start_matches('.');
+            let qualified;
+            let proto_type = if written.contains('.') || entity.proto_package.is_empty() {
+                written
+            } else {
+                qualified = format!("{}.{written}", entity.proto_package);
+                qualified.as_str()
+            };
+            let name = format!("{}Number", go_enum_type_name(proto_type));
+            if let Some((_, seen_type, seen_values, seen_numbers)) =
+                numeric.iter().find(|(seen, _, _, _)| *seen == name)
+            {
+                let same_type = seen_type == proto_type
+                    || seen_type.ends_with(&format!(".{proto_type}"))
+                    || proto_type.ends_with(&format!(".{seen_type}"));
+                if !same_type
+                    || *seen_values != &column.enum_values
+                    || *seen_numbers != &column.enum_numbers
+                {
+                    return Err(format!(
+                        "two proto enums would generate the TypeScript type `{name}` \
+                         (`{seen_type}` and `{proto_type}`, used by column `{}` of `{}`); \
+                         rename one enum or generate them from separate --project-proto \
+                         directories",
+                        column.field_name, entity.message_type
+                    ));
+                }
+                continue;
+            }
+            let owner = taken.get(&name).cloned().or_else(|| {
+                enums
+                    .iter()
+                    .find(|(seen, _, _)| *seen == name)
+                    .map(|(_, seen_type, _)| format!("generated for proto enum `{seen_type}`"))
+            });
+            if let Some(owner) = owner {
+                return Err(format!(
+                    "proto enum `{proto_type}` (column `{}` of `{}`) would generate the \
+                     TypeScript type `{name}`, which collides with a name {owner}; rename the \
+                     enum or the message",
+                    column.field_name, entity.message_type
+                ));
+            }
+            numeric.push((
+                name,
+                proto_type.to_string(),
+                &column.enum_values,
+                &column.enum_numbers,
+            ));
+        }
+    }
+
     let is_identifier = |key: &str| {
         let mut chars = key.chars();
         chars
@@ -2446,6 +2521,27 @@ fn render_ts_enum_types(entities: &[EntityDescriptor]) -> Result<String, String>
                 out.push_str(&format!("  {short}: {value:?},\n"));
             } else {
                 out.push_str(&format!("  {short:?}: {value:?},\n"));
+            }
+        }
+        out.push_str(&format!(
+            "}} as const;\nexport type {name} = (typeof {name})[keyof typeof {name}];\n\n"
+        ));
+    }
+    for (name, proto_type, values, numbers) in numeric {
+        let prefix = enum_common_prefix(values);
+        out.push_str(&format!(
+            "/** Numbers of the proto enum `{proto_type}`, as an integer column carries them. */\n\
+             export const {name} = {{\n"
+        ));
+        for (value, number) in values.iter().zip(numbers) {
+            let short = value
+                .strip_prefix(prefix.as_str())
+                .filter(|short| !short.is_empty())
+                .unwrap_or(value);
+            if is_identifier(short) {
+                out.push_str(&format!("  {short}: {number},\n"));
+            } else {
+                out.push_str(&format!("  {short:?}: {number},\n"));
             }
         }
         out.push_str(&format!(
@@ -4931,6 +5027,7 @@ mod tests {
             has_presence: false,
             oneof_group: String::new(),
             enum_values: Vec::new(),
+            enum_numbers: Vec::new(),
             check_values: Vec::new(),
             enum_cross_package: false,
             enum_go_import: None,
@@ -5214,8 +5311,9 @@ mod tests {
         );
         assert!(
             out.contains("  level: number;\n"),
-            "an integer-stored enum stays a number"
+            "an integer-stored enum without resolved numbers stays a number"
         );
+        assert!(!out.contains("LevelNumber"), "{out}");
         assert!(
             !out.contains("\"TICKET_STATUS_OPEN\" | "),
             "no inline unions remain"
@@ -5248,6 +5346,87 @@ mod tests {
             err.contains("TicketKey") && err.contains("acme.v1.Ticket"),
             "{err}"
         );
+    }
+
+    #[test]
+    fn typescript_integer_enums_get_a_named_numeric_const_and_type() {
+        let int_enum = |field: &str| {
+            let mut col = column(field, ".acme.v1.Priority");
+            col.sql_type = "INTEGER".to_string();
+            col.enum_values = vec![
+                "PRIORITY_UNSPECIFIED".into(),
+                "PRIORITY_LOW".into(),
+                "PRIORITY_2X".into(),
+                "PRIORITY_URGENT".into(),
+            ];
+            col.enum_numbers = vec![0, 1, 2, -1];
+            col
+        };
+        let mut previous = int_enum("previous_priority");
+        previous.not_null = false;
+        let mut text = column("label", "acme.v1.Priority");
+        text.sql_type = "TEXT".to_string();
+        text.enum_values = int_enum("x").enum_values;
+        let task = ts_entity(
+            "Task",
+            &["id"],
+            vec![column("id", "string"), int_enum("priority"), previous, text],
+        );
+        let audit = ts_entity(
+            "TaskAudit",
+            &["id"],
+            vec![column("id", "string"), int_enum("priority")],
+        );
+        let out = render_ts_entities_file(&[task, audit]).expect("render");
+        assert_eq!(
+            out.matches("export const PriorityNumber = {\n").count(),
+            1,
+            "one numeric const per proto enum, however many columns use it:\n{out}"
+        );
+        assert!(
+            out.contains(
+                "export const PriorityNumber = {\n  UNSPECIFIED: 0,\n  LOW: 1,\n  \"2X\": 2,\n  \
+                 URGENT: -1,\n} as const;\n\
+                 export type PriorityNumber = (typeof PriorityNumber)[keyof typeof PriorityNumber];\n"
+            ),
+            "{out}"
+        );
+        // The string const stays, for the text column that stores the same enum.
+        assert!(out.contains("export const Priority = {\n"), "{out}");
+        assert!(out.contains("  label: Priority;\n"), "{out}");
+        assert!(out.contains("  priority: PriorityNumber;\n"), "{out}");
+        assert!(
+            out.contains("  previousPriority?: PriorityNumber | null;\n"),
+            "{out}"
+        );
+        assert!(
+            out.contains("  priority: new UdbColumn<PriorityNumber>(\"priority\"),\n"),
+            "{out}"
+        );
+
+        // A numeric type named like another proto enum is refused, not renamed.
+        let mut named = column("kind", "acme.v1.PriorityNumber");
+        named.sql_type = "TEXT".to_string();
+        named.enum_values = vec!["PRIORITY_NUMBER_UNSPECIFIED".into()];
+        let task = ts_entity(
+            "Task",
+            &["id"],
+            vec![column("id", "string"), named, int_enum("priority")],
+        );
+        let err = render_ts_entities_file(&[task]).expect_err("collision");
+        assert!(
+            err.contains("PriorityNumber") && err.contains("acme.v1.Priority"),
+            "{err}"
+        );
+
+        // A numeric type named like a generated entity name is refused.
+        let mut clash = int_enum("kind");
+        clash.proto_type = "acme.v1.Ticket".to_string();
+        let mut numbered = ts_entity("TicketNumber", &["id"], vec![column("id", "string")]);
+        numbered.message_type = "acme.v1.TicketNumber".to_string();
+        let owner = ts_entity("Owner", &["id"], vec![column("id", "string"), clash]);
+        let err = render_ts_entities_file(&[numbered, owner]).expect_err("clash");
+        assert!(err.contains("TicketNumber"), "{err}");
     }
 
     #[test]

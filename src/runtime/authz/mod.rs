@@ -259,7 +259,7 @@ pub(crate) fn snapshot_stale_age_secs() -> Option<u64> {
 pub fn rpc_action(rpc_name: &str) -> &'static str {
     match rpc_name {
         "Select" | "BatchSelect" => "data.select",
-        "Upsert" | "BatchUpsert" => "data.upsert",
+        "Upsert" | "BatchUpsert" | "BulkUpsert" => "data.upsert",
         "Delete" => "data.delete",
         "VectorSearch" | "VectorHybridSearch" => "vector.search",
         "VectorUpsert" | "VectorBatchUpsert" => "vector.upsert",

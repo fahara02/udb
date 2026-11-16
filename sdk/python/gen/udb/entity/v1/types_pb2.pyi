@@ -32,6 +32,8 @@ from udb.entity.v1.relational_pb2 import BulkCasItem as BulkCasItem
 from udb.entity.v1.relational_pb2 import BulkCasRequest as BulkCasRequest
 from udb.entity.v1.relational_pb2 import BulkCasItemResult as BulkCasItemResult
 from udb.entity.v1.relational_pb2 import BulkCasResponse as BulkCasResponse
+from udb.entity.v1.relational_pb2 import BulkUpsertRequest as BulkUpsertRequest
+from udb.entity.v1.relational_pb2 import BulkUpsertResponse as BulkUpsertResponse
 from udb.entity.v1.mutation_pb2 import MutationResponse as MutationResponse
 from udb.entity.v1.vector_pb2 import VectorSearchRequest as VectorSearchRequest
 from udb.entity.v1.vector_pb2 import VectorHybridSearchRequest as VectorHybridSearchRequest

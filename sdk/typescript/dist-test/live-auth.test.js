@@ -178,6 +178,30 @@ function serviceAccountBenchmarkLogin(fixtures) {
         projectHint: fixtures.m.get("membership_exchange_project_id") ?? "",
     };
 }
+// ExchangeTokenForJob is refused unless the caller is a service account
+// presenting its own bearer whose ACTIVE grant holds udb:token:delegate, in the
+// tenant of the user token it exchanges (the benchmark user's `token` seed).
+const DELEGATING_SERVICE_BENCHMARK_RPCS = new Set([
+    "AuthnService/exchange_token_for_job",
+]);
+function requiresDelegatingServiceBenchmarkIdentity(serviceName, methodName) {
+    return DELEGATING_SERVICE_BENCHMARK_RPCS.has(`${serviceName}/${methodName}`);
+}
+/** The bench-tenant delegating service that measures ExchangeTokenForJob, from
+ *  the prepared fixtures; undefined when the fixture script provided none, in
+ *  which case the row runs on the ordinary caller and fails honestly. Read by
+ *  EXACT key: PerfFixtures.lookup suffix-matches, so `delegate_service_username`
+ *  would otherwise resolve to the `username` seed. */
+function delegatingServiceBenchmarkLogin(fixtures, tenantId, projectId) {
+    const username = fixtures.m.get("delegate_service_username");
+    if (!username)
+        return undefined;
+    return {
+        username,
+        tenantHint: tenantId,
+        projectHint: fixtures.m.get("delegate_service_project_id") || projectId,
+    };
+}
 function governanceSeedActor(platformActorUserId, tenantId, projectId, expiresAtUnix) {
     return {
         subject: platformActorUserId,
@@ -1087,7 +1111,9 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(rollback?.project_id, "project-1");
     node_assert_1.strict.equal(stage?.manifest_json, "e30=");
     node_assert_1.strict.equal(stage?.reason, "stage");
-    node_assert_1.strict.deepEqual(timeSeries?.points?.[0]?.timestamp, { seconds: 1767225600, nanos: 0 });
+    // The raw resource declares no time_field, so the body sends no timestamp (the broker refuses one).
+    node_assert_1.strict.equal(timeSeries?.points?.[0]?.timestamp, undefined);
+    node_assert_1.strict.equal(timeSeries?.points?.[0]?.values?.cpu, 0.5);
     node_assert_1.strict.equal(timeSeries?.points?.[0]?.values?.cpu, 0.5);
     node_assert_1.strict.equal(validate?.manifest_json, "e30=");
     node_assert_1.strict.equal(validate?.reason, "validate");
@@ -1993,6 +2019,27 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(exchange?.target_tenant_id, "tenant-1");
     node_assert_1.strict.equal(exchange?.target_project_id, "project-1");
 });
+(0, node_test_1.test)("benchmark delegating-service routing covers only ExchangeTokenForJob", () => {
+    node_assert_1.strict.equal(requiresDelegatingServiceBenchmarkIdentity("AuthnService", "exchange_token_for_job"), true);
+    node_assert_1.strict.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "exchange_token_for_job"), false);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("AuthnService", "exchange_token_for_job"), false);
+    for (const name of ["exchange_service_token_for_tenant", "list_own_tenant_memberships", "create_service_account_grant", "login", "validate_token"]) {
+        node_assert_1.strict.equal(requiresDelegatingServiceBenchmarkIdentity("AuthnService", name), false);
+    }
+    // Absent fixture: no delegating caller, even though lookup() would
+    // suffix-match `delegate_service_username` to the `username` seed.
+    const fixtures = fullSurfaceManifestFixtures();
+    node_assert_1.strict.ok(fixtures.lookup("delegate_service_username"));
+    node_assert_1.strict.equal(delegatingServiceBenchmarkLogin(fixtures, "tenant-1", "project-1"), undefined);
+    fixtures.set("delegate_service_username", "sdk-bench-delegate");
+    node_assert_1.strict.deepEqual(delegatingServiceBenchmarkLogin(fixtures, "tenant-1", "project-1"), {
+        username: "sdk-bench-delegate",
+        tenantHint: "tenant-1",
+        projectHint: "project-1",
+    });
+    fixtures.set("delegate_service_project_id", "bench-project");
+    node_assert_1.strict.equal(delegatingServiceBenchmarkLogin(fixtures, "tenant-1", "project-1")?.projectHint, "bench-project");
+});
 // A "kitchen-sink" request: protobufjs (under proto-loader) drops keys that the
 // concrete request type doesn't declare, so every read RPC picks up exactly the
 // fields it has (tenant/project/context/message_type/…). This deepens the probe
@@ -2137,6 +2184,14 @@ const MEMBERSHIP_FIXTURE_KEYS = [
     "membership_exchange_username",
     "membership_exchange_project_id",
 ];
+/** The delegating service account for ExchangeTokenForJob that
+ *  scripts/prepare-benchmark-fixtures.py writes (same list in every harness):
+ *  its username and project, never its password (UDB_LIVE_PASSWORD). Optional
+ *  (fixtures that predate delegated job tokens have none). */
+const DELEGATE_FIXTURE_KEYS = [
+    "delegate_service_username",
+    "delegate_service_project_id",
+];
 /** The 0.6.6 identity-flow fixtures (tenant auth policy, passwordless sign-in,
  *  invitations, step-up, OIDC) scripts/prepare-benchmark-fixtures.py writes
  *  (same list in every harness): single-use codes, invitation accept tokens and
@@ -2191,6 +2246,13 @@ async function seedPerfFixtures(gen, platformGen, data, tenantId, projectId, uui
         // tenant, its membership in the bench tenant, and the account that measures
         // ExchangeServiceTokenForTenant); absent on a broker that predates them.
         for (const key of MEMBERSHIP_FIXTURE_KEYS) {
+            const value = prepared.fixtures?.[key];
+            if (typeof value === "string" && value)
+                fix.set(key, value);
+        }
+        // The bench-tenant service account that measures ExchangeTokenForJob;
+        // absent when the prepared fixtures predate delegated job tokens.
+        for (const key of DELEGATE_FIXTURE_KEYS) {
             const value = prepared.fixtures?.[key];
             if (typeof value === "string" && value)
                 fix.set(key, value);
@@ -5120,8 +5182,10 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         // tenant), verify the bearer and measure on a client carrying that principal's
         // tenant/project/user/service identity. Without the fixture (or if that login
         // fails) the row runs on the ordinary caller and its refusal is recorded.
-        const measureAsServiceAccount = async (u) => {
-            const caller = serviceAccountBenchmarkLogin(fixtures);
+        // ExchangeTokenForJob takes the same path with the bench-tenant delegating
+        // service (delegatingServiceBenchmarkLogin); its subject_token is the
+        // benchmark user's current `token` seed.
+        const measureAsServiceAccount = async (u, caller) => {
             if (!caller) {
                 await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
                 return;
@@ -5175,8 +5239,10 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             }
         };
         const measureUnit = (u) => requiresServiceAccountBenchmarkIdentity(u.serviceName, u.methodName)
-            ? measureAsServiceAccount(u)
-            : measureRpc(u.serviceName, u.api, u.methodName, u.fn);
+            ? measureAsServiceAccount(u, serviceAccountBenchmarkLogin(fixtures))
+            : requiresDelegatingServiceBenchmarkIdentity(u.serviceName, u.methodName)
+                ? measureAsServiceAccount(u, delegatingServiceBenchmarkLogin(fixtures, tenantId, projectId))
+                : measureRpc(u.serviceName, u.api, u.methodName, u.fn);
         // Phase 1: establish/validate the session FIRST (the seed phase already ran above
         // and captured the session/token fixtures these RPCs consume).
         for (const u of phase1)

@@ -226,7 +226,10 @@ pub(crate) fn policy_conflict() -> ConflictStrategy {
 
 /// Persist the durable RUNNING identity before any backup artifact is written.
 /// A collision is an error: operation ids are immutable journal identities, not
-/// replaceable aliases.
+/// replaceable aliases. `source_tenant_id`/`target_tenant_id` are recorded from
+/// the start, so a run that never completes still shows its scope (a shared
+/// run carries the shared marker there).
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn journal_run_started(
     runtime: &DataBrokerRuntime,
     context: &crate::RequestContext,
@@ -235,6 +238,8 @@ pub(crate) async fn journal_run_started(
     project_id: &str,
     kind: &str,
     object_prefix: &str,
+    source_tenant_id: &str,
+    target_tenant_id: &str,
     metadata: &serde_json::Value,
 ) -> Result<(), Status> {
     let now = Utc::now();
@@ -249,8 +254,14 @@ pub(crate) async fn journal_run_started(
     record.insert("table_count".to_string(), LogicalValue::Int(0));
     record.insert("total_rows".to_string(), LogicalValue::Int(0));
     record.insert("excluded_count".to_string(), LogicalValue::Int(0));
-    record.insert("source_tenant_id".to_string(), logical_string(""));
-    record.insert("target_tenant_id".to_string(), logical_string(""));
+    record.insert(
+        "source_tenant_id".to_string(),
+        logical_string(source_tenant_id),
+    );
+    record.insert(
+        "target_tenant_id".to_string(),
+        logical_string(target_tenant_id),
+    );
     record.insert("error_message".to_string(), logical_string(""));
     record.insert("created_at".to_string(), LogicalValue::Timestamp(now));
     record.insert("completed_at".to_string(), LogicalValue::Null);

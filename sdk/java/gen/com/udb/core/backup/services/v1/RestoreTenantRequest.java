@@ -33,6 +33,7 @@ private static final long serialVersionUID = 0L;
     backupId_ = "";
     confirmationToken_ = "";
     metadataJson_ = "";
+    scope_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -293,6 +294,42 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int SCOPE_FIELD_NUMBER = 7;
+  private int scope_ = 0;
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+   * tables. Platform admin only. `source_tenant_id` names the tenant whose
+   * journal holds the run (the `tenant_id` the shared backup was started with);
+   * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+   * rows belong to no tenant. A shared backup is never restored with the
+   * tenant scope, nor a tenant backup with the shared scope.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+   * @return The enum numeric value on the wire for scope.
+   */
+  @java.lang.Override public int getScopeValue() {
+    return scope_;
+  }
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+   * tables. Platform admin only. `source_tenant_id` names the tenant whose
+   * journal holds the run (the `tenant_id` the shared backup was started with);
+   * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+   * rows belong to no tenant. A shared backup is never restored with the
+   * tenant scope, nor a tenant backup with the shared scope.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+   * @return The scope.
+   */
+  @java.lang.Override public com.udb.core.backup.services.v1.BackupScope getScope() {
+    com.udb.core.backup.services.v1.BackupScope result = com.udb.core.backup.services.v1.BackupScope.forNumber(scope_);
+    return result == null ? com.udb.core.backup.services.v1.BackupScope.UNRECOGNIZED : result;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -325,6 +362,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 6, metadataJson_);
     }
+    if (scope_ != com.udb.core.backup.services.v1.BackupScope.BACKUP_SCOPE_UNSPECIFIED.getNumber()) {
+      output.writeEnum(7, scope_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -353,6 +393,10 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(6, metadataJson_);
     }
+    if (scope_ != com.udb.core.backup.services.v1.BackupScope.BACKUP_SCOPE_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(7, scope_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -380,6 +424,7 @@ private static final long serialVersionUID = 0L;
         != other.getAllowCrossTenant()) return false;
     if (!getMetadataJson()
         .equals(other.getMetadataJson())) return false;
+    if (scope_ != other.scope_) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -404,6 +449,8 @@ private static final long serialVersionUID = 0L;
         getAllowCrossTenant());
     hash = (37 * hash) + METADATA_JSON_FIELD_NUMBER;
     hash = (53 * hash) + getMetadataJson().hashCode();
+    hash = (37 * hash) + SCOPE_FIELD_NUMBER;
+    hash = (53 * hash) + scope_;
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -541,6 +588,7 @@ private static final long serialVersionUID = 0L;
       confirmationToken_ = "";
       allowCrossTenant_ = false;
       metadataJson_ = "";
+      scope_ = 0;
       return this;
     }
 
@@ -592,6 +640,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000020) != 0)) {
         result.metadataJson_ = metadataJson_;
       }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.scope_ = scope_;
+      }
     }
 
     @java.lang.Override
@@ -633,6 +684,9 @@ private static final long serialVersionUID = 0L;
         metadataJson_ = other.metadataJson_;
         bitField0_ |= 0x00000020;
         onChanged();
+      }
+      if (other.scope_ != 0) {
+        setScopeValue(other.getScopeValue());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -690,6 +744,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 50
+            case 56: {
+              scope_ = input.readEnum();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1195,6 +1254,102 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       metadataJson_ = value;
       bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private int scope_ = 0;
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+     * tables. Platform admin only. `source_tenant_id` names the tenant whose
+     * journal holds the run (the `tenant_id` the shared backup was started with);
+     * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+     * rows belong to no tenant. A shared backup is never restored with the
+     * tenant scope, nor a tenant backup with the shared scope.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+     * @return The enum numeric value on the wire for scope.
+     */
+    @java.lang.Override public int getScopeValue() {
+      return scope_;
+    }
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+     * tables. Platform admin only. `source_tenant_id` names the tenant whose
+     * journal holds the run (the `tenant_id` the shared backup was started with);
+     * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+     * rows belong to no tenant. A shared backup is never restored with the
+     * tenant scope, nor a tenant backup with the shared scope.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+     * @param value The enum numeric value on the wire for scope to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScopeValue(int value) {
+      scope_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+     * tables. Platform admin only. `source_tenant_id` names the tenant whose
+     * journal holds the run (the `tenant_id` the shared backup was started with);
+     * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+     * rows belong to no tenant. A shared backup is never restored with the
+     * tenant scope, nor a tenant backup with the shared scope.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+     * @return The scope.
+     */
+    @java.lang.Override
+    public com.udb.core.backup.services.v1.BackupScope getScope() {
+      com.udb.core.backup.services.v1.BackupScope result = com.udb.core.backup.services.v1.BackupScope.forNumber(scope_);
+      return result == null ? com.udb.core.backup.services.v1.BackupScope.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+     * tables. Platform admin only. `source_tenant_id` names the tenant whose
+     * journal holds the run (the `tenant_id` the shared backup was started with);
+     * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+     * rows belong to no tenant. A shared backup is never restored with the
+     * tenant scope, nor a tenant backup with the shared scope.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+     * @param value The scope to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScope(com.udb.core.backup.services.v1.BackupScope value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00000040;
+      scope_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+     * tables. Platform admin only. `source_tenant_id` names the tenant whose
+     * journal holds the run (the `tenant_id` the shared backup was started with);
+     * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+     * rows belong to no tenant. A shared backup is never restored with the
+     * tenant scope, nor a tenant backup with the shared scope.
+     * </pre>
+     *
+     * <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearScope() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      scope_ = 0;
       onChanged();
       return this;
     }

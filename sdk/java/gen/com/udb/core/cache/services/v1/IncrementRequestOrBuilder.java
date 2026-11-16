@@ -78,4 +78,16 @@ public interface IncrementRequestOrBuilder extends
    * @return The max.
    */
   long getMax();
+
+  /**
+   * <pre>
+   * Write the shared namespace (the reserved shared-tenant keyspace every
+   * tenant reads) instead of the caller's tenant keyspace. Requires a platform
+   * admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+   * </pre>
+   *
+   * <code>bool shared = 7 [json_name = "shared"];</code>
+   * @return The shared.
+   */
+  boolean getShared();
 }

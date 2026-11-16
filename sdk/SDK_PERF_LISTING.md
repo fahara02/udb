@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 427 RPCs across 29 services.
+Current generated RPC surface: 428 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -58,7 +58,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | CacheService | 8 | 3 | 4 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 84 | 35 | 42 | 7 | 0 |
+| DataBroker | 85 | 35 | 43 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -271,6 +271,7 @@ identity surface available to benchmark reports.
 | `DataBroker/BatchUpsert` | `batch_upsert` | `batchUpsert` | MUTATION |
 | `DataBroker/BeginTx` | `begin_tx` | `beginTx` | MUTATION |
 | `DataBroker/BulkCas` | `bulk_cas` | `bulkCas` | MUTATION |
+| `DataBroker/BulkUpsert` | `bulk_upsert` | `bulkUpsert` | MUTATION |
 | `DataBroker/CacheDelete` | `cache_delete` | `cacheDelete` | MUTATION |
 | `DataBroker/CacheGet` | `cache_get` | `cacheGet` | READ_ONLY |
 | `DataBroker/CacheScan` | `cache_scan` | `cacheScan` | READ_ONLY |

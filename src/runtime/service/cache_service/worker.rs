@@ -286,14 +286,11 @@ pub(crate) async fn run_cache_invalidation_once(
 /// metacharacters in the namespace are escaped so it matches literally.
 #[cfg(any(test, feature = "redis"))]
 pub(crate) fn any_tenant_namespace_pattern(namespace: &str) -> String {
-    let mut escaped = String::with_capacity(namespace.len());
-    for ch in namespace.chars() {
-        if matches!(ch, '\\' | '*' | '?' | '[' | ']') {
-            escaped.push('\\');
-        }
-        escaped.push(ch);
-    }
-    format!("{}:*:{escaped}:*", super::config::KEY_ROOT)
+    format!(
+        "{}:*:{}:*",
+        super::config::KEY_ROOT,
+        super::keys::glob_literal(namespace)
+    )
 }
 
 /// The tenants that hold `namespace`, recovered from full cache keys. A key is

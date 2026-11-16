@@ -114,4 +114,33 @@ public interface RestoreTenantRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getMetadataJsonBytes();
+
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+   * tables. Platform admin only. `source_tenant_id` names the tenant whose
+   * journal holds the run (the `tenant_id` the shared backup was started with);
+   * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+   * rows belong to no tenant. A shared backup is never restored with the
+   * tenant scope, nor a tenant backup with the shared scope.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+   * @return The enum numeric value on the wire for scope.
+   */
+  int getScopeValue();
+  /**
+   * <pre>
+   * BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+   * tables. Platform admin only. `source_tenant_id` names the tenant whose
+   * journal holds the run (the `tenant_id` the shared backup was started with);
+   * `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+   * rows belong to no tenant. A shared backup is never restored with the
+   * tenant scope, nor a tenant backup with the shared scope.
+   * </pre>
+   *
+   * <code>.udb.core.backup.services.v1.BackupScope scope = 7 [json_name = "scope"];</code>
+   * @return The scope.
+   */
+  com.udb.core.backup.services.v1.BackupScope getScope();
 }

@@ -60,7 +60,7 @@ public final class DataBrokerProto {
       "ntity.v1.RequestContextR\007context\"i\n\026Ensu" +
       "reBaselineResponse\022\031\n\010saga_ids\030\001 \003(\tR\007sa" +
       "gaIds\022\027\n\007dlq_ids\030\002 \003(\tR\006dlqIds\022\033\n\tdevice" +
-      "_id\030\003 \001(\tR\010deviceId2\270Z\n\nDataBroker\022\\\n\006Se" +
+      "_id\030\003 \001(\tR\010deviceId2\260[\n\nDataBroker\022\\\n\006Se" +
       "lect\022\034.udb.entity.v1.SelectRequest\032\030.udb" +
       ".entity.v1.RecordSet\"\032\332\363\030\022\010\001\022\006selectZ\006se" +
       "lect\370\363\030\001\022p\n\013BatchSelect\022\034.udb.entity.v1." +
@@ -88,7 +88,10 @@ public final class DataBrokerProto {
       "empotency_key\032\rwas_duplicate \001\022g\n\007BulkCa" +
       "s\022\035.udb.entity.v1.BulkCasRequest\032\036.udb.e" +
       "ntity.v1.BulkCasResponse\"\035\332\363\030\025\010\001\022\010bulk_c" +
-      "asZ\007bulkCas\370\363\030\002\022u\n\014VectorSearch\022\".udb.en" +
+      "asZ\007bulkCas\370\363\030\002\022v\n\nBulkUpsert\022 .udb.enti" +
+      "ty.v1.BulkUpsertRequest\032!.udb.entity.v1." +
+      "BulkUpsertResponse\"#\332\363\030\033\010\001\022\013bulk_upsertZ" +
+      "\nbulkUpsert\370\363\030\002\022u\n\014VectorSearch\022\".udb.en" +
       "tity.v1.VectorSearchRequest\032\030.udb.entity" +
       ".v1.VectorSet\"\'\332\363\030\037\010\001\022\rvector_searchZ\014ve" +
       "ctorSearch\370\363\030\001\022\216\001\n\022VectorHybridSearch\022(." +

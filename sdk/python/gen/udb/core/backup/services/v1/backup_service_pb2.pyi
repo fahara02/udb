@@ -2,12 +2,22 @@ from google.api import annotations_pb2 as _annotations_pb2
 from udb.core.common.v1 import dto_pb2 as _dto_pb2
 from udb.core.common.v1 import security_pb2 as _security_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class BackupScope(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    BACKUP_SCOPE_UNSPECIFIED: _ClassVar[BackupScope]
+    BACKUP_SCOPE_TENANT: _ClassVar[BackupScope]
+    BACKUP_SCOPE_SHARED: _ClassVar[BackupScope]
+BACKUP_SCOPE_UNSPECIFIED: BackupScope
+BACKUP_SCOPE_TENANT: BackupScope
+BACKUP_SCOPE_SHARED: BackupScope
 
 class BackupTableEntry(_message.Message):
     __slots__ = ("schema", "table", "tenant_column", "object_key", "row_count", "checksum_sha256")
@@ -36,7 +46,7 @@ class BackupExcludedTable(_message.Message):
     def __init__(self, schema: _Optional[str] = ..., table: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class BackupRunSummary(_message.Message):
-    __slots__ = ("backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "created_at_unix", "completed_at_unix", "project_id")
+    __slots__ = ("backup_id", "tenant_id", "kind", "status", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "source_tenant_id", "target_tenant_id", "created_at_unix", "completed_at_unix", "project_id", "scope")
     BACKUP_ID_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
@@ -51,6 +61,7 @@ class BackupRunSummary(_message.Message):
     CREATED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
     COMPLETED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    SCOPE_FIELD_NUMBER: _ClassVar[int]
     backup_id: str
     tenant_id: str
     kind: str
@@ -65,7 +76,8 @@ class BackupRunSummary(_message.Message):
     created_at_unix: int
     completed_at_unix: int
     project_id: str
-    def __init__(self, backup_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., kind: _Optional[str] = ..., status: _Optional[str] = ..., object_prefix: _Optional[str] = ..., manifest_checksum: _Optional[str] = ..., table_count: _Optional[int] = ..., total_rows: _Optional[int] = ..., excluded_count: _Optional[int] = ..., source_tenant_id: _Optional[str] = ..., target_tenant_id: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., completed_at_unix: _Optional[int] = ..., project_id: _Optional[str] = ...) -> None: ...
+    scope: BackupScope
+    def __init__(self, backup_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., kind: _Optional[str] = ..., status: _Optional[str] = ..., object_prefix: _Optional[str] = ..., manifest_checksum: _Optional[str] = ..., table_count: _Optional[int] = ..., total_rows: _Optional[int] = ..., excluded_count: _Optional[int] = ..., source_tenant_id: _Optional[str] = ..., target_tenant_id: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., completed_at_unix: _Optional[int] = ..., project_id: _Optional[str] = ..., scope: _Optional[_Union[BackupScope, str]] = ...) -> None: ...
 
 class BackupPolicyView(_message.Message):
     __slots__ = ("policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at_unix", "updated_at_unix", "project_id")
@@ -96,18 +108,20 @@ class BackupPolicyView(_message.Message):
     def __init__(self, policy_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., policy_name: _Optional[str] = ..., schedule_cron: _Optional[str] = ..., retention_days: _Optional[int] = ..., max_retained_backups: _Optional[int] = ..., enabled: bool = ..., object_backend: _Optional[str] = ..., object_bucket: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., updated_at_unix: _Optional[int] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class StartTenantBackupRequest(_message.Message):
-    __slots__ = ("tenant_id", "policy_name", "object_backend", "object_bucket", "metadata_json")
+    __slots__ = ("tenant_id", "policy_name", "object_backend", "object_bucket", "metadata_json", "scope")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     POLICY_NAME_FIELD_NUMBER: _ClassVar[int]
     OBJECT_BACKEND_FIELD_NUMBER: _ClassVar[int]
     OBJECT_BUCKET_FIELD_NUMBER: _ClassVar[int]
     METADATA_JSON_FIELD_NUMBER: _ClassVar[int]
+    SCOPE_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     policy_name: str
     object_backend: str
     object_bucket: str
     metadata_json: str
-    def __init__(self, tenant_id: _Optional[str] = ..., policy_name: _Optional[str] = ..., object_backend: _Optional[str] = ..., object_bucket: _Optional[str] = ..., metadata_json: _Optional[str] = ...) -> None: ...
+    scope: BackupScope
+    def __init__(self, tenant_id: _Optional[str] = ..., policy_name: _Optional[str] = ..., object_backend: _Optional[str] = ..., object_bucket: _Optional[str] = ..., metadata_json: _Optional[str] = ..., scope: _Optional[_Union[BackupScope, str]] = ...) -> None: ...
 
 class StartTenantBackupResponse(_message.Message):
     __slots__ = ("backup_id", "object_prefix", "manifest_checksum", "table_count", "total_rows", "excluded_count", "tables", "excluded", "message", "error")
@@ -134,20 +148,22 @@ class StartTenantBackupResponse(_message.Message):
     def __init__(self, backup_id: _Optional[str] = ..., object_prefix: _Optional[str] = ..., manifest_checksum: _Optional[str] = ..., table_count: _Optional[int] = ..., total_rows: _Optional[int] = ..., excluded_count: _Optional[int] = ..., tables: _Optional[_Iterable[_Union[BackupTableEntry, _Mapping]]] = ..., excluded: _Optional[_Iterable[_Union[BackupExcludedTable, _Mapping]]] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class RestoreTenantRequest(_message.Message):
-    __slots__ = ("source_tenant_id", "target_tenant_id", "backup_id", "confirmation_token", "allow_cross_tenant", "metadata_json")
+    __slots__ = ("source_tenant_id", "target_tenant_id", "backup_id", "confirmation_token", "allow_cross_tenant", "metadata_json", "scope")
     SOURCE_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     BACKUP_ID_FIELD_NUMBER: _ClassVar[int]
     CONFIRMATION_TOKEN_FIELD_NUMBER: _ClassVar[int]
     ALLOW_CROSS_TENANT_FIELD_NUMBER: _ClassVar[int]
     METADATA_JSON_FIELD_NUMBER: _ClassVar[int]
+    SCOPE_FIELD_NUMBER: _ClassVar[int]
     source_tenant_id: str
     target_tenant_id: str
     backup_id: str
     confirmation_token: str
     allow_cross_tenant: bool
     metadata_json: str
-    def __init__(self, source_tenant_id: _Optional[str] = ..., target_tenant_id: _Optional[str] = ..., backup_id: _Optional[str] = ..., confirmation_token: _Optional[str] = ..., allow_cross_tenant: bool = ..., metadata_json: _Optional[str] = ...) -> None: ...
+    scope: BackupScope
+    def __init__(self, source_tenant_id: _Optional[str] = ..., target_tenant_id: _Optional[str] = ..., backup_id: _Optional[str] = ..., confirmation_token: _Optional[str] = ..., allow_cross_tenant: bool = ..., metadata_json: _Optional[str] = ..., scope: _Optional[_Union[BackupScope, str]] = ...) -> None: ...
 
 class RestoreTenantResponse(_message.Message):
     __slots__ = ("backup_id", "source_object_prefix", "restored_table_count", "restored_rows", "message", "error")

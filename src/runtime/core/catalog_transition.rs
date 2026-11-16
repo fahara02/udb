@@ -5,7 +5,9 @@ use super::*;
 use crate::migration::diff::{ChangeKind, ChangeOperation, ChangeSafety};
 use crate::runtime::system::SystemCatalogConfig;
 
-const TRANSITIONS_TABLE: &str = "udb_catalog_reviewed_transitions";
+/// Reviewed catalog transitions, one per migration run they reviewed; a run
+/// it names cannot be deleted (the cleanup service keeps such runs).
+pub(crate) const TRANSITIONS_TABLE: &str = "udb_catalog_reviewed_transitions";
 const TARGET_REBINDS_TABLE: &str = "udb_catalog_reviewed_target_rebinds";
 const MAX_TRANSACTIONAL_ARTIFACT_BYTES: usize = 1024 * 1024;
 

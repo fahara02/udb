@@ -272,7 +272,7 @@ impl SystemCatalogConfig {
         relation(&self.cdc.system_schema, &self.topic_policy_table)
     }
 
-    fn admin_audit_log_relation(&self) -> String {
+    pub(crate) fn admin_audit_log_relation(&self) -> String {
         relation(&self.cdc.system_schema, &self.admin_audit_log_table)
     }
 

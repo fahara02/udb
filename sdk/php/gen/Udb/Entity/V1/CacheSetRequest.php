@@ -54,6 +54,15 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Struct metadata = 10 [json_name = "metadata"];</code>
      */
     protected $metadata = null;
+    /**
+     * Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Requires
+     * `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+     * (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+     *
+     * Generated from protobuf field <code>bool shared = 11 [json_name = "shared"];</code>
+     */
+    protected $shared = false;
 
     /**
      * Constructor.
@@ -71,6 +80,11 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      *     @type bool $only_if_present
      *     @type string $idempotency_key
      *     @type \Google\Protobuf\Struct $metadata
+     *     @type bool $shared
+     *           Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     *           every tenant) instead of the caller's tenant namespace. Requires
+     *           `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+     *           (`shared_cache_write_denied`). Redis and Memcached cache backends only.
      * }
      */
     public function __construct($data = NULL) {
@@ -324,6 +338,38 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->metadata = $var;
+
+        return $this;
+    }
+
+    /**
+     * Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Requires
+     * `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+     * (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+     *
+     * Generated from protobuf field <code>bool shared = 11 [json_name = "shared"];</code>
+     * @return bool
+     */
+    public function getShared()
+    {
+        return $this->shared;
+    }
+
+    /**
+     * Write the shared cache namespace (`udb:{project}:*shared*:`, readable by
+     * every tenant) instead of the caller's tenant namespace. Requires
+     * `udb:platform_admin` or `udb:global:write`, otherwise PERMISSION_DENIED
+     * (`shared_cache_write_denied`). Redis and Memcached cache backends only.
+     *
+     * Generated from protobuf field <code>bool shared = 11 [json_name = "shared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->shared = $var;
 
         return $this;
     }

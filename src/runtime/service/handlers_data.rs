@@ -834,6 +834,115 @@ impl DataBrokerService {
         }
     }
 
+    /// Audited bulk load: one batch of whole rows, one write transaction.
+    ///
+    /// Gates in BatchUpsert's order: the call-level gate (readiness, catalog
+    /// authority, one unit of the tenant's `BulkUpsert` rate bucket), then the
+    /// per-table `Upsert` decision through the same Casbin path BatchUpsert
+    /// items use, plus the shared-table write rule. The rest of the batch's
+    /// size-aware rate cost is charged before any work, so an over-budget
+    /// batch writes nothing.
+    pub(crate) async fn bulk_upsert_inner(
+        &self,
+        request: Request<BulkUpsertRequest>,
+    ) -> Result<Response<BulkUpsertResponse>, Status> {
+        let (started, security) = authorized_call!(self, request, "BulkUpsert");
+        let request = request.into_inner();
+        if let Err(err) =
+            super::reject_wildcard_data_message_type(&request.message_type, "BulkUpsert")
+        {
+            return self.record_grpc("BulkUpsert", started, Err(err));
+        }
+        let manifest = &self.catalog.active_for(&security.project_id).manifest;
+        // Shared (global) tables: only a platform admin or a holder of the
+        // global-write scope writes them; the reserved shared tenant never
+        // writes. Refused before any work, like the unary write verbs.
+        if let Some(message) =
+            crate::broker::resolve_table_for_message(manifest, &request.message_type)
+                .ok()
+                .and_then(|table| {
+                    crate::broker::global_table_write_error(&security.request_context(), table)
+                })
+        {
+            return self.record_grpc(
+                "BulkUpsert",
+                started,
+                Err(crate::runtime::executor_utils::policy_status_with_code(
+                    tonic::Code::PermissionDenied,
+                    "BulkUpsert",
+                    "shared_table_write_denied",
+                    message,
+                )),
+            );
+        }
+        let decision_id = match DataBrokerService::authorize_message_item(
+            &self.current_authz_snapshot(),
+            &security,
+            &request.message_type,
+            "Upsert",
+        )
+        .await
+        {
+            Ok(id) => id,
+            Err(err) => return self.record_grpc("BulkUpsert", started, Err(err)),
+        };
+        let runtime = self.runtime_snapshot();
+        let service_config = &runtime.config().service;
+        if service_config.rate_limit_enabled && !security.tenant_id.is_empty() {
+            // The call gate charged one unit; charge the rest of the batch.
+            let cost = crate::runtime::core::setup_data::bulk_upsert::bulk_upsert_rate_cost(
+                request.records_json.len(),
+                service_config.bulk_upsert_rows_per_rate_unit,
+            );
+            if let Err(err) = self
+                .rate_limit_handle()
+                .check_weighted(
+                    &security.tenant_id,
+                    "BulkUpsert",
+                    &security.credential_id,
+                    security.rate_limit_per_minute,
+                    &security.user_id,
+                    cost.saturating_sub(1),
+                )
+                .await
+            {
+                return self.record_grpc("BulkUpsert", started, Err(err));
+            }
+        }
+        let metadata_context = security.request_context_with_decision(&decision_id);
+        let exec_context = metadata_context.clone();
+        let exec_runtime = runtime.clone();
+        let result = self
+            .execute_with_channel_scoped(
+                crate::runtime::channels::OperationChannel::Write,
+                Some(&metadata_context),
+                Some("postgres"),
+                || async move {
+                    exec_runtime
+                        .bulk_upsert(manifest, request, exec_context)
+                        .await
+                },
+            )
+            .await;
+        match result {
+            Ok(res) => {
+                // Automatic read-after-write on the batch's primary position.
+                // The receipt stays in the body only: a batch with projections
+                // lists one task key per row, too large for a header.
+                let source_lsn = serde_json::from_str::<crate::runtime::consistency::WriteReceipt>(
+                    &res.write_receipt_json,
+                )
+                .map(|receipt| receipt.source_lsn)
+                .unwrap_or_default();
+                runtime.record_own_write(&metadata_context, &source_lsn);
+                let response =
+                    self.with_catalog_response_headers(Response::new(res), &metadata_context);
+                self.record_grpc("BulkUpsert", started, Ok(response))
+            }
+            Err(err) => self.record_grpc("BulkUpsert", started, Err(err)),
+        }
+    }
+
     pub(crate) async fn generic_dispatch_inner(
         &self,
         request: Request<GenericDispatchRequest>,
@@ -994,7 +1103,47 @@ impl DataBrokerService {
         resource_name: String,
         spec_json: String,
     ) -> Result<String, tonic::Status> {
+        self.execute_backend_operation_keyed(
+            context,
+            None,
+            backend,
+            write,
+            operation,
+            resource_name,
+            spec_json,
+        )
+        .await
+    }
+
+    /// [`Self::execute_backend_operation`] with the KEY tenant set apart from
+    /// the caller. `key_tenant` replaces the caller's tenant only where keys are
+    /// built (the IR compile, the raw-spec key scoping and the executor's key
+    /// namespace); admission, the read fence and the channel stay charged to the
+    /// caller. The typed cache RPCs pass the shared-tenant marker here for a
+    /// `shared` request, after checking the caller may address the shared
+    /// namespace. `None` is the ordinary caller-keyed dispatch.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn execute_backend_operation_keyed(
+        &self,
+        context: &crate::RequestContext,
+        key_tenant: Option<&str>,
+        backend: &str,
+        write: bool,
+        operation: String,
+        resource_name: String,
+        spec_json: String,
+    ) -> Result<String, tonic::Status> {
         guard_rls_bypass_operation(&operation, &spec_json)?;
+        let key_context_owned;
+        let key_context: &crate::RequestContext = match key_tenant {
+            Some(tenant) => {
+                let mut keyed = context.clone();
+                keyed.tenant_id = tenant.to_string();
+                key_context_owned = keyed;
+                &key_context_owned
+            }
+            None => context,
+        };
         let runtime = self.runtime_snapshot();
         let resolved_backend =
             runtime.resolve_backend_selector_for_project(backend, &context.project_id)?;
@@ -1002,7 +1151,7 @@ impl DataBrokerService {
         let compiled_dispatch = compile_neutral_ir_dispatch(
             &resolved_backend.backend,
             resolved_backend.instance.as_deref(),
-            context,
+            key_context,
             &active_catalog.manifest,
             &operation,
             &spec_json,
@@ -1013,7 +1162,12 @@ impl DataBrokerService {
         // that HAVE a neutral-IR compiler this raw fall-through is now the gated
         // exception: blocked (fail-closed) in production, counted in dev.
         let traversal_spec = if compiled_dispatch.is_none() {
-            scoped_graph_traversal_spec(&resolved_backend.backend, &operation, context, &spec_json)?
+            scoped_graph_traversal_spec(
+                &resolved_backend.backend,
+                &operation,
+                key_context,
+                &spec_json,
+            )?
         } else {
             None
         };
@@ -1027,7 +1181,12 @@ impl DataBrokerService {
             // Raw specs never carry the broker-internal `compiler_mediated`
             // marker, and raw KV/object keys are forced under the caller's
             // tenant namespace (the same scheme as the IR / typed paths).
-            harden_raw_dispatch_spec(&resolved_backend.backend, &operation, context, spec_json)?
+            harden_raw_dispatch_spec(
+                &resolved_backend.backend,
+                &operation,
+                key_context,
+                spec_json,
+            )?
         } else {
             spec_json
         };
@@ -1086,12 +1245,16 @@ impl DataBrokerService {
                 )
                 .await?;
         }
+        // The executor derives its key namespace from the context it is built
+        // with, so it gets the key tenant; everything else stays the caller's.
+        let mut executor_context = admission_context.clone();
+        executor_context.tenant_id = key_context.tenant_id.clone();
         let executor = runtime.resolve_dispatch_executor(
             &target.backend,
             target.instance.as_deref(),
             write,
             tonic::Code::FailedPrecondition,
-            Some(&admission_context),
+            Some(&executor_context),
         )?;
         let dispatch_backend = breaker_backend.clone();
         let result = self

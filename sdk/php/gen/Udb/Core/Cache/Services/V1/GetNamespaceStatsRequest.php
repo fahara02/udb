@@ -22,6 +22,13 @@ class GetNamespaceStatsRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string namespace = 2 [json_name = "namespace"];</code>
      */
     protected $namespace = '';
+    /**
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     *
+     * Generated from protobuf field <code>bool shared = 3 [json_name = "shared"];</code>
+     */
+    protected $shared = false;
 
     /**
      * Constructor.
@@ -31,6 +38,9 @@ class GetNamespaceStatsRequest extends \Google\Protobuf\Internal\Message
      *
      *     @type string $tenant_id
      *     @type string $namespace
+     *     @type bool $shared
+     *           Read the shared namespace (the reserved shared-tenant keyspace every
+     *           tenant reads) instead of the caller's tenant keyspace.
      * }
      */
     public function __construct($data = NULL) {
@@ -78,6 +88,34 @@ class GetNamespaceStatsRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->namespace = $var;
+
+        return $this;
+    }
+
+    /**
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     *
+     * Generated from protobuf field <code>bool shared = 3 [json_name = "shared"];</code>
+     * @return bool
+     */
+    public function getShared()
+    {
+        return $this->shared;
+    }
+
+    /**
+     * Read the shared namespace (the reserved shared-tenant keyspace every
+     * tenant reads) instead of the caller's tenant keyspace.
+     *
+     * Generated from protobuf field <code>bool shared = 3 [json_name = "shared"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setShared($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->shared = $var;
 
         return $this;
     }

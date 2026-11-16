@@ -23,6 +23,61 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Which rows a backup or restore moves.
+type BackupScope int32
+
+const (
+	// Treated as BACKUP_SCOPE_TENANT.
+	BackupScope_BACKUP_SCOPE_UNSPECIFIED BackupScope = 0
+	// One tenant's rows in the tenant-owned tables (the default).
+	BackupScope_BACKUP_SCOPE_TENANT BackupScope = 1
+	// Every row of the active project catalog's shared (global) tables: tenant
+	// isolation declared none/global/disabled/off and no tenant column. Platform
+	// admin only; tenant-owned tables are reported as excluded.
+	BackupScope_BACKUP_SCOPE_SHARED BackupScope = 2
+)
+
+// Enum value maps for BackupScope.
+var (
+	BackupScope_name = map[int32]string{
+		0: "BACKUP_SCOPE_UNSPECIFIED",
+		1: "BACKUP_SCOPE_TENANT",
+		2: "BACKUP_SCOPE_SHARED",
+	}
+	BackupScope_value = map[string]int32{
+		"BACKUP_SCOPE_UNSPECIFIED": 0,
+		"BACKUP_SCOPE_TENANT":      1,
+		"BACKUP_SCOPE_SHARED":      2,
+	}
+)
+
+func (x BackupScope) Enum() *BackupScope {
+	p := new(BackupScope)
+	*p = x
+	return p
+}
+
+func (x BackupScope) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BackupScope) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_backup_services_v1_backup_service_proto_enumTypes[0].Descriptor()
+}
+
+func (BackupScope) Type() protoreflect.EnumType {
+	return &file_udb_core_backup_services_v1_backup_service_proto_enumTypes[0]
+}
+
+func (x BackupScope) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BackupScope.Descriptor instead.
+func (BackupScope) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_backup_services_v1_backup_service_proto_rawDescGZIP(), []int{0}
+}
+
 // One backed-up tenant table: where its encrypted JSONL artifact lives and its
 // integrity anchor.
 type BackupTableEntry struct {
@@ -109,8 +164,9 @@ func (x *BackupTableEntry) GetChecksumSha256() string {
 	return ""
 }
 
-// A table excluded from the backup because it has no resolvable tenant column.
-// Reported, never silently skipped.
+// A table excluded from the backup: in a tenant backup one with no resolvable
+// tenant column, in a shared backup one that is not a shared table. Reported,
+// never silently skipped.
 type BackupExcludedTable struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Schema        string                 `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
@@ -188,7 +244,11 @@ type BackupRunSummary struct {
 	CreatedAtUnix    int64                  `protobuf:"varint,12,opt,name=created_at_unix,json=createdAtUnix,proto3" json:"created_at_unix,omitempty"`
 	CompletedAtUnix  int64                  `protobuf:"varint,13,opt,name=completed_at_unix,json=completedAtUnix,proto3" json:"completed_at_unix,omitempty"`
 	// First-class project owner of this journal row.
-	ProjectId     string `protobuf:"bytes,14,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ProjectId string `protobuf:"bytes,14,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// BACKUP_SCOPE_SHARED for a shared-table backup or restore (its
+	// source_tenant_id is the reserved shared marker `*shared*`), otherwise
+	// BACKUP_SCOPE_TENANT.
+	Scope         BackupScope `protobuf:"varint,15,opt,name=scope,proto3,enum=udb.core.backup.services.v1.BackupScope" json:"scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -319,6 +379,13 @@ func (x *BackupRunSummary) GetProjectId() string {
 		return x.ProjectId
 	}
 	return ""
+}
+
+func (x *BackupRunSummary) GetScope() BackupScope {
+	if x != nil {
+		return x.Scope
+	}
+	return BackupScope_BACKUP_SCOPE_UNSPECIFIED
 }
 
 // A backup retention/schedule policy.
@@ -465,6 +532,10 @@ type StartTenantBackupRequest struct {
 	ObjectBackend string `protobuf:"bytes,3,opt,name=object_backend,json=objectBackend,proto3" json:"object_backend,omitempty"`
 	ObjectBucket  string `protobuf:"bytes,4,opt,name=object_bucket,json=objectBucket,proto3" json:"object_bucket,omitempty"`
 	MetadataJson  string `protobuf:"bytes,5,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
+	// BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+	// tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+	// journaled under `tenant_id`.
+	Scope         BackupScope `protobuf:"varint,6,opt,name=scope,proto3,enum=udb.core.backup.services.v1.BackupScope" json:"scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -532,6 +603,13 @@ func (x *StartTenantBackupRequest) GetMetadataJson() string {
 		return x.MetadataJson
 	}
 	return ""
+}
+
+func (x *StartTenantBackupRequest) GetScope() BackupScope {
+	if x != nil {
+		return x.Scope
+	}
+	return BackupScope_BACKUP_SCOPE_UNSPECIFIED
 }
 
 type StartTenantBackupResponse struct {
@@ -665,8 +743,15 @@ type RestoreTenantRequest struct {
 	// restore needs explicit privileged approval (fail closed otherwise).
 	AllowCrossTenant bool   `protobuf:"varint,5,opt,name=allow_cross_tenant,json=allowCrossTenant,proto3" json:"allow_cross_tenant,omitempty"`
 	MetadataJson     string `protobuf:"bytes,6,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+	// tables. Platform admin only. `source_tenant_id` names the tenant whose
+	// journal holds the run (the `tenant_id` the shared backup was started with);
+	// `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+	// rows belong to no tenant. A shared backup is never restored with the
+	// tenant scope, nor a tenant backup with the shared scope.
+	Scope         BackupScope `protobuf:"varint,7,opt,name=scope,proto3,enum=udb.core.backup.services.v1.BackupScope" json:"scope,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RestoreTenantRequest) Reset() {
@@ -739,6 +824,13 @@ func (x *RestoreTenantRequest) GetMetadataJson() string {
 		return x.MetadataJson
 	}
 	return ""
+}
+
+func (x *RestoreTenantRequest) GetScope() BackupScope {
+	if x != nil {
+		return x.Scope
+	}
+	return BackupScope_BACKUP_SCOPE_UNSPECIFIED
 }
 
 type RestoreTenantResponse struct {
@@ -1595,7 +1687,7 @@ const file_udb_core_backup_services_v1_backup_service_proto_rawDesc = "" +
 	"\x13BackupExcludedTable\x12\x16\n" +
 	"\x06schema\x18\x01 \x01(\tR\x06schema\x12\x14\n" +
 	"\x05table\x18\x02 \x01(\tR\x05table\x12\x16\n" +
-	"\x06reason\x18\x03 \x01(\tR\x06reason\"\xf8\x03\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"\xb8\x04\n" +
 	"\x10BackupRunSummary\x12\x1b\n" +
 	"\tbackup_id\x18\x01 \x01(\tR\bbackupId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x12\n" +
@@ -1614,7 +1706,8 @@ const file_udb_core_backup_services_v1_backup_service_proto_rawDesc = "" +
 	"\x0fcreated_at_unix\x18\f \x01(\x03R\rcreatedAtUnix\x12*\n" +
 	"\x11completed_at_unix\x18\r \x01(\x03R\x0fcompletedAtUnix\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x0e \x01(\tR\tprojectId\"\xc0\x03\n" +
+	"project_id\x18\x0e \x01(\tR\tprojectId\x12>\n" +
+	"\x05scope\x18\x0f \x01(\x0e2(.udb.core.backup.services.v1.BackupScopeR\x05scope\"\xc0\x03\n" +
 	"\x10BackupPolicyView\x12\x1b\n" +
 	"\tpolicy_id\x18\x01 \x01(\tR\bpolicyId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1f\n" +
@@ -1630,14 +1723,15 @@ const file_udb_core_backup_services_v1_backup_service_proto_rawDesc = "" +
 	" \x01(\x03R\rcreatedAtUnix\x12&\n" +
 	"\x0fupdated_at_unix\x18\v \x01(\x03R\rupdatedAtUnix\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\f \x01(\tR\tprojectId\"\xe8\x01\n" +
+	"project_id\x18\f \x01(\tR\tprojectId\"\xa8\x02\n" +
 	"\x18StartTenantBackupRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vpolicy_name\x18\x02 \x01(\tR\n" +
 	"policyName\x12%\n" +
 	"\x0eobject_backend\x18\x03 \x01(\tR\robjectBackend\x12#\n" +
 	"\robject_bucket\x18\x04 \x01(\tR\fobjectBucket\x12#\n" +
-	"\rmetadata_json\x18\x05 \x01(\tR\fmetadataJson:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x01\"\xf3\x03\n" +
+	"\rmetadata_json\x18\x05 \x01(\tR\fmetadataJson\x12>\n" +
+	"\x05scope\x18\x06 \x01(\x0e2(.udb.core.backup.services.v1.BackupScopeR\x05scope:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x01\"\xf3\x03\n" +
 	"\x19StartTenantBackupResponse\x12\x1b\n" +
 	"\tbackup_id\x18\x01 \x01(\tR\bbackupId\x12#\n" +
 	"\robject_prefix\x18\x02 \x01(\tR\fobjectPrefix\x12+\n" +
@@ -1651,14 +1745,15 @@ const file_udb_core_backup_services_v1_backup_service_proto_rawDesc = "" +
 	"\bexcluded\x18\b \x03(\v20.udb.core.backup.services.v1.BackupExcludedTableR\bexcluded\x12\x18\n" +
 	"\amessage\x18\t \x01(\tR\amessage\x122\n" +
 	"\x05error\x18\n" +
-	" \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x01\"\xa8\x02\n" +
+	" \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x01\"\xe8\x02\n" +
 	"\x14RestoreTenantRequest\x12(\n" +
 	"\x10source_tenant_id\x18\x01 \x01(\tR\x0esourceTenantId\x12(\n" +
 	"\x10target_tenant_id\x18\x02 \x01(\tR\x0etargetTenantId\x12\x1b\n" +
 	"\tbackup_id\x18\x03 \x01(\tR\bbackupId\x12-\n" +
 	"\x12confirmation_token\x18\x04 \x01(\tR\x11confirmationToken\x12,\n" +
 	"\x12allow_cross_tenant\x18\x05 \x01(\bR\x10allowCrossTenant\x12#\n" +
-	"\rmetadata_json\x18\x06 \x01(\tR\fmetadataJson:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x01\"\xaa\x02\n" +
+	"\rmetadata_json\x18\x06 \x01(\tR\fmetadataJson\x12>\n" +
+	"\x05scope\x18\a \x01(\x0e2(.udb.core.backup.services.v1.BackupScopeR\x05scope:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x01\"\xaa\x02\n" +
 	"\x15RestoreTenantResponse\x12\x1b\n" +
 	"\tbackup_id\x18\x01 \x01(\tR\bbackupId\x120\n" +
 	"\x14source_object_prefix\x18\x02 \x01(\tR\x12sourceObjectPrefix\x120\n" +
@@ -1722,7 +1817,11 @@ const file_udb_core_backup_services_v1_backup_service_proto_rawDesc = "" +
 	"\x1aDeleteBackupPolicyResponse\x12\x18\n" +
 	"\adeleted\x18\x01 \x01(\bR\adeleted\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x012\xa7\x1d\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x01*]\n" +
+	"\vBackupScope\x12\x1c\n" +
+	"\x18BACKUP_SCOPE_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13BACKUP_SCOPE_TENANT\x10\x01\x12\x17\n" +
+	"\x13BACKUP_SCOPE_SHARED\x10\x022\xa7\x1d\n" +
 	"\rBackupService\x12\xe9\x03\n" +
 	"\x11StartTenantBackup\x125.udb.core.backup.services.v1.StartTenantBackupRequest\x1a6.udb.core.backup.services.v1.StartTenantBackupResponse\"\xe4\x02\xca\xf3\x18F\b\x02\x1a\x1eudb:backup:start-tenant-backup \x01J\x03\x01\x02\x04j\x18backup.StartTenantBackup\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18A\b\x01\x12\x13start_tenant_backup\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06backupP\x01Z\x11startTenantBackup\xea\xf3\x18c\n" +
 	"\x18backup.StartTenantBackup\x12\x1budb.backup.run.completed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
@@ -1762,68 +1861,73 @@ func file_udb_core_backup_services_v1_backup_service_proto_rawDescGZIP() []byte 
 	return file_udb_core_backup_services_v1_backup_service_proto_rawDescData
 }
 
+var file_udb_core_backup_services_v1_backup_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_udb_core_backup_services_v1_backup_service_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_udb_core_backup_services_v1_backup_service_proto_goTypes = []any{
-	(*BackupTableEntry)(nil),           // 0: udb.core.backup.services.v1.BackupTableEntry
-	(*BackupExcludedTable)(nil),        // 1: udb.core.backup.services.v1.BackupExcludedTable
-	(*BackupRunSummary)(nil),           // 2: udb.core.backup.services.v1.BackupRunSummary
-	(*BackupPolicyView)(nil),           // 3: udb.core.backup.services.v1.BackupPolicyView
-	(*StartTenantBackupRequest)(nil),   // 4: udb.core.backup.services.v1.StartTenantBackupRequest
-	(*StartTenantBackupResponse)(nil),  // 5: udb.core.backup.services.v1.StartTenantBackupResponse
-	(*RestoreTenantRequest)(nil),       // 6: udb.core.backup.services.v1.RestoreTenantRequest
-	(*RestoreTenantResponse)(nil),      // 7: udb.core.backup.services.v1.RestoreTenantResponse
-	(*ListBackupsRequest)(nil),         // 8: udb.core.backup.services.v1.ListBackupsRequest
-	(*ListBackupsResponse)(nil),        // 9: udb.core.backup.services.v1.ListBackupsResponse
-	(*GetBackupRequest)(nil),           // 10: udb.core.backup.services.v1.GetBackupRequest
-	(*GetBackupResponse)(nil),          // 11: udb.core.backup.services.v1.GetBackupResponse
-	(*PutBackupPolicyRequest)(nil),     // 12: udb.core.backup.services.v1.PutBackupPolicyRequest
-	(*PutBackupPolicyResponse)(nil),    // 13: udb.core.backup.services.v1.PutBackupPolicyResponse
-	(*GetBackupPolicyRequest)(nil),     // 14: udb.core.backup.services.v1.GetBackupPolicyRequest
-	(*GetBackupPolicyResponse)(nil),    // 15: udb.core.backup.services.v1.GetBackupPolicyResponse
-	(*ListBackupPoliciesRequest)(nil),  // 16: udb.core.backup.services.v1.ListBackupPoliciesRequest
-	(*ListBackupPoliciesResponse)(nil), // 17: udb.core.backup.services.v1.ListBackupPoliciesResponse
-	(*DeleteBackupPolicyRequest)(nil),  // 18: udb.core.backup.services.v1.DeleteBackupPolicyRequest
-	(*DeleteBackupPolicyResponse)(nil), // 19: udb.core.backup.services.v1.DeleteBackupPolicyResponse
-	(*v1.ApiError)(nil),                // 20: udb.core.common.v1.ApiError
+	(BackupScope)(0),                   // 0: udb.core.backup.services.v1.BackupScope
+	(*BackupTableEntry)(nil),           // 1: udb.core.backup.services.v1.BackupTableEntry
+	(*BackupExcludedTable)(nil),        // 2: udb.core.backup.services.v1.BackupExcludedTable
+	(*BackupRunSummary)(nil),           // 3: udb.core.backup.services.v1.BackupRunSummary
+	(*BackupPolicyView)(nil),           // 4: udb.core.backup.services.v1.BackupPolicyView
+	(*StartTenantBackupRequest)(nil),   // 5: udb.core.backup.services.v1.StartTenantBackupRequest
+	(*StartTenantBackupResponse)(nil),  // 6: udb.core.backup.services.v1.StartTenantBackupResponse
+	(*RestoreTenantRequest)(nil),       // 7: udb.core.backup.services.v1.RestoreTenantRequest
+	(*RestoreTenantResponse)(nil),      // 8: udb.core.backup.services.v1.RestoreTenantResponse
+	(*ListBackupsRequest)(nil),         // 9: udb.core.backup.services.v1.ListBackupsRequest
+	(*ListBackupsResponse)(nil),        // 10: udb.core.backup.services.v1.ListBackupsResponse
+	(*GetBackupRequest)(nil),           // 11: udb.core.backup.services.v1.GetBackupRequest
+	(*GetBackupResponse)(nil),          // 12: udb.core.backup.services.v1.GetBackupResponse
+	(*PutBackupPolicyRequest)(nil),     // 13: udb.core.backup.services.v1.PutBackupPolicyRequest
+	(*PutBackupPolicyResponse)(nil),    // 14: udb.core.backup.services.v1.PutBackupPolicyResponse
+	(*GetBackupPolicyRequest)(nil),     // 15: udb.core.backup.services.v1.GetBackupPolicyRequest
+	(*GetBackupPolicyResponse)(nil),    // 16: udb.core.backup.services.v1.GetBackupPolicyResponse
+	(*ListBackupPoliciesRequest)(nil),  // 17: udb.core.backup.services.v1.ListBackupPoliciesRequest
+	(*ListBackupPoliciesResponse)(nil), // 18: udb.core.backup.services.v1.ListBackupPoliciesResponse
+	(*DeleteBackupPolicyRequest)(nil),  // 19: udb.core.backup.services.v1.DeleteBackupPolicyRequest
+	(*DeleteBackupPolicyResponse)(nil), // 20: udb.core.backup.services.v1.DeleteBackupPolicyResponse
+	(*v1.ApiError)(nil),                // 21: udb.core.common.v1.ApiError
 }
 var file_udb_core_backup_services_v1_backup_service_proto_depIdxs = []int32{
-	0,  // 0: udb.core.backup.services.v1.StartTenantBackupResponse.tables:type_name -> udb.core.backup.services.v1.BackupTableEntry
-	1,  // 1: udb.core.backup.services.v1.StartTenantBackupResponse.excluded:type_name -> udb.core.backup.services.v1.BackupExcludedTable
-	20, // 2: udb.core.backup.services.v1.StartTenantBackupResponse.error:type_name -> udb.core.common.v1.ApiError
-	20, // 3: udb.core.backup.services.v1.RestoreTenantResponse.error:type_name -> udb.core.common.v1.ApiError
-	2,  // 4: udb.core.backup.services.v1.ListBackupsResponse.backups:type_name -> udb.core.backup.services.v1.BackupRunSummary
-	20, // 5: udb.core.backup.services.v1.ListBackupsResponse.error:type_name -> udb.core.common.v1.ApiError
-	2,  // 6: udb.core.backup.services.v1.GetBackupResponse.backup:type_name -> udb.core.backup.services.v1.BackupRunSummary
-	0,  // 7: udb.core.backup.services.v1.GetBackupResponse.tables:type_name -> udb.core.backup.services.v1.BackupTableEntry
-	1,  // 8: udb.core.backup.services.v1.GetBackupResponse.excluded:type_name -> udb.core.backup.services.v1.BackupExcludedTable
-	20, // 9: udb.core.backup.services.v1.GetBackupResponse.error:type_name -> udb.core.common.v1.ApiError
-	20, // 10: udb.core.backup.services.v1.PutBackupPolicyResponse.error:type_name -> udb.core.common.v1.ApiError
-	3,  // 11: udb.core.backup.services.v1.GetBackupPolicyResponse.policy:type_name -> udb.core.backup.services.v1.BackupPolicyView
-	20, // 12: udb.core.backup.services.v1.GetBackupPolicyResponse.error:type_name -> udb.core.common.v1.ApiError
-	3,  // 13: udb.core.backup.services.v1.ListBackupPoliciesResponse.policies:type_name -> udb.core.backup.services.v1.BackupPolicyView
-	20, // 14: udb.core.backup.services.v1.ListBackupPoliciesResponse.error:type_name -> udb.core.common.v1.ApiError
-	20, // 15: udb.core.backup.services.v1.DeleteBackupPolicyResponse.error:type_name -> udb.core.common.v1.ApiError
-	4,  // 16: udb.core.backup.services.v1.BackupService.StartTenantBackup:input_type -> udb.core.backup.services.v1.StartTenantBackupRequest
-	6,  // 17: udb.core.backup.services.v1.BackupService.RestoreTenant:input_type -> udb.core.backup.services.v1.RestoreTenantRequest
-	8,  // 18: udb.core.backup.services.v1.BackupService.ListBackups:input_type -> udb.core.backup.services.v1.ListBackupsRequest
-	10, // 19: udb.core.backup.services.v1.BackupService.GetBackup:input_type -> udb.core.backup.services.v1.GetBackupRequest
-	12, // 20: udb.core.backup.services.v1.BackupService.PutBackupPolicy:input_type -> udb.core.backup.services.v1.PutBackupPolicyRequest
-	14, // 21: udb.core.backup.services.v1.BackupService.GetBackupPolicy:input_type -> udb.core.backup.services.v1.GetBackupPolicyRequest
-	16, // 22: udb.core.backup.services.v1.BackupService.ListBackupPolicies:input_type -> udb.core.backup.services.v1.ListBackupPoliciesRequest
-	18, // 23: udb.core.backup.services.v1.BackupService.DeleteBackupPolicy:input_type -> udb.core.backup.services.v1.DeleteBackupPolicyRequest
-	5,  // 24: udb.core.backup.services.v1.BackupService.StartTenantBackup:output_type -> udb.core.backup.services.v1.StartTenantBackupResponse
-	7,  // 25: udb.core.backup.services.v1.BackupService.RestoreTenant:output_type -> udb.core.backup.services.v1.RestoreTenantResponse
-	9,  // 26: udb.core.backup.services.v1.BackupService.ListBackups:output_type -> udb.core.backup.services.v1.ListBackupsResponse
-	11, // 27: udb.core.backup.services.v1.BackupService.GetBackup:output_type -> udb.core.backup.services.v1.GetBackupResponse
-	13, // 28: udb.core.backup.services.v1.BackupService.PutBackupPolicy:output_type -> udb.core.backup.services.v1.PutBackupPolicyResponse
-	15, // 29: udb.core.backup.services.v1.BackupService.GetBackupPolicy:output_type -> udb.core.backup.services.v1.GetBackupPolicyResponse
-	17, // 30: udb.core.backup.services.v1.BackupService.ListBackupPolicies:output_type -> udb.core.backup.services.v1.ListBackupPoliciesResponse
-	19, // 31: udb.core.backup.services.v1.BackupService.DeleteBackupPolicy:output_type -> udb.core.backup.services.v1.DeleteBackupPolicyResponse
-	24, // [24:32] is the sub-list for method output_type
-	16, // [16:24] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	0,  // 0: udb.core.backup.services.v1.BackupRunSummary.scope:type_name -> udb.core.backup.services.v1.BackupScope
+	0,  // 1: udb.core.backup.services.v1.StartTenantBackupRequest.scope:type_name -> udb.core.backup.services.v1.BackupScope
+	1,  // 2: udb.core.backup.services.v1.StartTenantBackupResponse.tables:type_name -> udb.core.backup.services.v1.BackupTableEntry
+	2,  // 3: udb.core.backup.services.v1.StartTenantBackupResponse.excluded:type_name -> udb.core.backup.services.v1.BackupExcludedTable
+	21, // 4: udb.core.backup.services.v1.StartTenantBackupResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 5: udb.core.backup.services.v1.RestoreTenantRequest.scope:type_name -> udb.core.backup.services.v1.BackupScope
+	21, // 6: udb.core.backup.services.v1.RestoreTenantResponse.error:type_name -> udb.core.common.v1.ApiError
+	3,  // 7: udb.core.backup.services.v1.ListBackupsResponse.backups:type_name -> udb.core.backup.services.v1.BackupRunSummary
+	21, // 8: udb.core.backup.services.v1.ListBackupsResponse.error:type_name -> udb.core.common.v1.ApiError
+	3,  // 9: udb.core.backup.services.v1.GetBackupResponse.backup:type_name -> udb.core.backup.services.v1.BackupRunSummary
+	1,  // 10: udb.core.backup.services.v1.GetBackupResponse.tables:type_name -> udb.core.backup.services.v1.BackupTableEntry
+	2,  // 11: udb.core.backup.services.v1.GetBackupResponse.excluded:type_name -> udb.core.backup.services.v1.BackupExcludedTable
+	21, // 12: udb.core.backup.services.v1.GetBackupResponse.error:type_name -> udb.core.common.v1.ApiError
+	21, // 13: udb.core.backup.services.v1.PutBackupPolicyResponse.error:type_name -> udb.core.common.v1.ApiError
+	4,  // 14: udb.core.backup.services.v1.GetBackupPolicyResponse.policy:type_name -> udb.core.backup.services.v1.BackupPolicyView
+	21, // 15: udb.core.backup.services.v1.GetBackupPolicyResponse.error:type_name -> udb.core.common.v1.ApiError
+	4,  // 16: udb.core.backup.services.v1.ListBackupPoliciesResponse.policies:type_name -> udb.core.backup.services.v1.BackupPolicyView
+	21, // 17: udb.core.backup.services.v1.ListBackupPoliciesResponse.error:type_name -> udb.core.common.v1.ApiError
+	21, // 18: udb.core.backup.services.v1.DeleteBackupPolicyResponse.error:type_name -> udb.core.common.v1.ApiError
+	5,  // 19: udb.core.backup.services.v1.BackupService.StartTenantBackup:input_type -> udb.core.backup.services.v1.StartTenantBackupRequest
+	7,  // 20: udb.core.backup.services.v1.BackupService.RestoreTenant:input_type -> udb.core.backup.services.v1.RestoreTenantRequest
+	9,  // 21: udb.core.backup.services.v1.BackupService.ListBackups:input_type -> udb.core.backup.services.v1.ListBackupsRequest
+	11, // 22: udb.core.backup.services.v1.BackupService.GetBackup:input_type -> udb.core.backup.services.v1.GetBackupRequest
+	13, // 23: udb.core.backup.services.v1.BackupService.PutBackupPolicy:input_type -> udb.core.backup.services.v1.PutBackupPolicyRequest
+	15, // 24: udb.core.backup.services.v1.BackupService.GetBackupPolicy:input_type -> udb.core.backup.services.v1.GetBackupPolicyRequest
+	17, // 25: udb.core.backup.services.v1.BackupService.ListBackupPolicies:input_type -> udb.core.backup.services.v1.ListBackupPoliciesRequest
+	19, // 26: udb.core.backup.services.v1.BackupService.DeleteBackupPolicy:input_type -> udb.core.backup.services.v1.DeleteBackupPolicyRequest
+	6,  // 27: udb.core.backup.services.v1.BackupService.StartTenantBackup:output_type -> udb.core.backup.services.v1.StartTenantBackupResponse
+	8,  // 28: udb.core.backup.services.v1.BackupService.RestoreTenant:output_type -> udb.core.backup.services.v1.RestoreTenantResponse
+	10, // 29: udb.core.backup.services.v1.BackupService.ListBackups:output_type -> udb.core.backup.services.v1.ListBackupsResponse
+	12, // 30: udb.core.backup.services.v1.BackupService.GetBackup:output_type -> udb.core.backup.services.v1.GetBackupResponse
+	14, // 31: udb.core.backup.services.v1.BackupService.PutBackupPolicy:output_type -> udb.core.backup.services.v1.PutBackupPolicyResponse
+	16, // 32: udb.core.backup.services.v1.BackupService.GetBackupPolicy:output_type -> udb.core.backup.services.v1.GetBackupPolicyResponse
+	18, // 33: udb.core.backup.services.v1.BackupService.ListBackupPolicies:output_type -> udb.core.backup.services.v1.ListBackupPoliciesResponse
+	20, // 34: udb.core.backup.services.v1.BackupService.DeleteBackupPolicy:output_type -> udb.core.backup.services.v1.DeleteBackupPolicyResponse
+	27, // [27:35] is the sub-list for method output_type
+	19, // [19:27] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_backup_services_v1_backup_service_proto_init() }
@@ -1836,13 +1940,14 @@ func file_udb_core_backup_services_v1_backup_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_backup_services_v1_backup_service_proto_rawDesc), len(file_udb_core_backup_services_v1_backup_service_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_udb_core_backup_services_v1_backup_service_proto_goTypes,
 		DependencyIndexes: file_udb_core_backup_services_v1_backup_service_proto_depIdxs,
+		EnumInfos:         file_udb_core_backup_services_v1_backup_service_proto_enumTypes,
 		MessageInfos:      file_udb_core_backup_services_v1_backup_service_proto_msgTypes,
 	}.Build()
 	File_udb_core_backup_services_v1_backup_service_proto = out.File

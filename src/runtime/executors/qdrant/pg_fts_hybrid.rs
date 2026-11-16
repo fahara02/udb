@@ -54,6 +54,9 @@ pub(crate) struct PgFtsHybridSource {
     /// Physical columns concatenated into the searched document.
     pub(crate) fts_columns: Vec<String>,
     pub(crate) fts_config: String,
+    /// The projection's `projection_filter` as a SQL predicate over `t`, so
+    /// the text leg ranks only rows the collection holds.
+    pub(crate) row_filter_sql: Option<String>,
 }
 
 fn store_option_value(options: &[ManifestStoreOption], key: &str) -> Option<String> {
@@ -147,6 +150,13 @@ impl PgFtsHybridSource {
         }
         let fts_config = store_option_value(&target.options, "fts_config")
             .unwrap_or_else(|| DEFAULT_FTS_CONFIG.to_string());
+        let row_filter_sql = crate::runtime::projection::target_row_filter(&target.options)
+            .map_err(|err| format!("collection '{collection}': {err}"))?
+            .map(|filter| {
+                crate::generation::manifest::projection_filter::render_projection_filter_sql(
+                    &filter, "t",
+                )
+            });
         let target_options = serde_json::to_value(&target.options)
             .map_err(|err| format!("collection '{collection}': projection options: {err}"))?;
         Ok(Some(Self {
@@ -155,6 +165,7 @@ impl PgFtsHybridSource {
             target_options,
             fts_columns,
             fts_config,
+            row_filter_sql,
         }))
     }
 
@@ -325,6 +336,9 @@ pub(crate) fn build_text_leg_query(
                 )
             })?;
         predicates.push(format!("t.{} IS NULL", qi(&column.column_name)));
+    }
+    if let Some(row_filter) = &source.row_filter_sql {
+        predicates.push(format!("({row_filter})"));
     }
 
     let sql = format!(
@@ -710,6 +724,40 @@ mod tests {
         );
         // The query text is a bind, never spliced into the statement.
         assert!(!query.sql.contains("zebra"));
+    }
+
+    /// A collection fed through a `projection_filter` holds only matching rows,
+    /// so the text leg ranks only those rows too.
+    #[test]
+    fn text_leg_applies_the_projection_row_filter() {
+        let filtered = PgFtsHybridSource::for_collection(
+            &manifest(vec![
+                opt("vector_field", "vector"),
+                opt("fts_columns", "title"),
+                opt(
+                    "projection_filter",
+                    "title <> 'draft' AND body_text IS NOT NULL",
+                ),
+            ]),
+            "docs_vec",
+        )
+        .unwrap()
+        .expect("fts source");
+        let query = build_text_leg_query(&filtered, &context("t1", ""), "q", 5).unwrap();
+        assert!(
+            query.sql.contains(
+                "AND t.\"tenant_id\" = $3 AND (t.\"title\" <> 'draft' AND t.\"body_text\" IS NOT NULL) ORDER BY"
+            ),
+            "{}",
+            query.sql
+        );
+        assert_eq!(query.binds, vec!["simple", "q", "t1"]);
+        assert!(source().row_filter_sql.is_none());
+        let broken = manifest(vec![
+            opt("fts_columns", "title"),
+            opt("projection_filter", "title = "),
+        ]);
+        assert!(PgFtsHybridSource::for_collection(&broken, "docs_vec").is_err());
     }
 
     #[test]

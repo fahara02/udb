@@ -148,6 +148,11 @@ pub struct ProtoSchema {
     pub generic_stores: Vec<GenericStore>,
     pub previous_table_name: String,
     pub allow_drop: bool,
+    /// `pg_table.cross_project_shared`: the physical table is deliberately
+    /// shared by every project that declares it. Serialized only when set, so
+    /// schemas that never use it keep their checksum.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub cross_project_shared: bool,
     /// NW-universal: proto3 `reserved <n>, <n>;` field numbers.
     /// Pre-fix the `db_parser` silently skipped reserved blocks,
     /// which meant the manifest had no way to detect a NEW field that
@@ -553,6 +558,10 @@ pub struct VectorStore {
     pub payload_schema_json: String,
     pub hnsw_m: i32,
     pub hnsw_ef_construction: i32,
+    /// Row filter (`projection_filter`): only matching rows are projected.
+    /// Skipped when empty so schemas without it keep their checksums.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub projection_filter: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -565,6 +574,10 @@ pub struct GraphStore {
     pub edge_source_field: String,
     pub edge_target_field: String,
     pub payload_schema_json: String,
+    /// Row filter (`projection_filter`): only matching rows are projected.
+    /// Skipped when empty so schemas without it keep their checksums.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub projection_filter: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -577,6 +590,10 @@ pub struct DocumentStore {
     pub tenant_field: String,
     pub ttl_seconds: i32,
     pub payload_schema_json: String,
+    /// Row filter (`projection_filter`): only matching rows are projected.
+    /// Skipped when empty so schemas without it keep their checksums.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub projection_filter: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

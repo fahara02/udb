@@ -248,6 +248,11 @@ type PageOptions struct {
 	// IncludeTotal also counts every matching row into Page.ExactTotal (one
 	// extra COUNT on the broker; the read cache is skipped).
 	IncludeTotal bool
+	// IncludeDeleted also returns soft-deleted rows; a deleted row has its
+	// soft-delete column (for example deleted_at) set. It needs scope
+	// udb:deleted:read, works only on an entity with soft delete, and every
+	// such read is audited.
+	IncludeDeleted bool
 }
 
 // Page is one page of a keyset-paginated read.
@@ -278,14 +283,15 @@ func (e *Entity) SelectPage(ctx context.Context, where map[string]any, opts Page
 		sort = append(sort, &entityv1.Sort{Field: s.Field, Descending: s.Descending})
 	}
 	rs, err := e.client.Select(ctx, &entityv1.SelectRequest{
-		Context:      e.requestContext(),
-		MessageType:  e.fqn,
-		Filter:       filter,
-		Fields:       opts.Fields,
-		Limit:        opts.Limit,
-		PageToken:    opts.PageToken,
-		Sort:         sort,
-		IncludeTotal: opts.IncludeTotal,
+		Context:        e.requestContext(),
+		MessageType:    e.fqn,
+		Filter:         filter,
+		Fields:         opts.Fields,
+		Limit:          opts.Limit,
+		PageToken:      opts.PageToken,
+		Sort:           sort,
+		IncludeTotal:   opts.IncludeTotal,
+		IncludeDeleted: opts.IncludeDeleted,
 	})
 	if err != nil {
 		return nil, err
@@ -377,11 +383,11 @@ func (e *Entity) Delete(ctx context.Context, where map[string]any, opts ...Delet
 		}
 	}
 	return e.client.Delete(ctx, &entityv1.DeleteRequest{
-		Context:        e.requestContext(),
-		MessageType:    e.fqn,
-		Filter:         filter,
-		Expected:       expected,
-		IdempotencyKey: o.idempotencyKey,
+		Context:         e.requestContext(),
+		MessageType:     e.fqn,
+		Filter:          filter,
+		Expected:        expected,
+		IdempotencyKey:  o.idempotencyKey,
 		RequireAffected: o.requireAffected,
 	})
 }
@@ -489,14 +495,14 @@ func (e *Entity) update(ctx context.Context, where map[string]any, changes map[s
 		})
 	}
 	return e.client.Update(ctx, &entityv1.UpdateRequest{
-		Context:        e.requestContext(),
-		MessageType:    e.fqn,
-		Filter:         filter,
-		Changes:        changesStruct,
-		Expected:       expected,
-		Increments:     increments,
-		IdempotencyKey: o.idempotencyKey,
-		ReturnRecord:   o.returnRecord,
+		Context:         e.requestContext(),
+		MessageType:     e.fqn,
+		Filter:          filter,
+		Changes:         changesStruct,
+		Expected:        expected,
+		Increments:      increments,
+		IdempotencyKey:  o.idempotencyKey,
+		ReturnRecord:    o.returnRecord,
 		RequireAffected: o.requireAffected,
 	})
 }

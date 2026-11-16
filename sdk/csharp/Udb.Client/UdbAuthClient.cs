@@ -152,6 +152,137 @@ public sealed class UdbAuthClient : IAsyncDisposable
         return await _authn.RefreshTokenAsync(request, Headers(), cancellationToken: ct).ResponseAsync;
     }
 
+    // ── Delegated job tokens ──────────────────────────────────────────────────
+    /// <summary>
+    /// Exchange a user's current access token for a delegated job token
+    /// (<c>AuthnService.ExchangeTokenForJob</c>), so a durable job (an export, a
+    /// report, a nightly sync) acts for that user after the user's own short-lived
+    /// token expired. Call it on a client carrying the SERVICE's own bearer (a
+    /// service account whose grant holds <c>udb:token:delegate</c>, in the user's
+    /// tenant); the broker refuses any other caller, and any subject token that is
+    /// not a valid user access token of that tenant, with <c>PermissionDenied</c>.
+    /// The token names the user as subject and the service as actor, carries
+    /// <paramref name="purpose"/> and <paramref name="jobId"/>, and lives at most
+    /// <paramref name="ttlSeconds"/> (0 = the broker's maximum,
+    /// <c>UDB_DELEGATED_TOKEN_MAX_TTL</c>, 24 hours by default). It has no refresh
+    /// token, cannot be exchanged again, and stops working as soon as the user, the
+    /// token or the service's grant is revoked: see <see cref="IsTokenExpired"/>
+    /// and <see cref="IsTokenRevoked"/>.
+    /// </summary>
+    /// <param name="subjectToken">The user's current access token (<c>Bearer </c> prefix optional).</param>
+    /// <param name="purpose">Why the job acts for the user, e.g. <c>"export"</c>; signed into the token.</param>
+    /// <param name="jobId">The job the token is for; at most 200 bytes.</param>
+    /// <param name="ttlSeconds">The requested lifetime; 0 asks for the broker's maximum.</param>
+    /// <exception cref="ArgumentException">A required argument is blank or <paramref name="ttlSeconds"/> is negative.</exception>
+    /// <exception cref="RpcException">The broker refused the exchange.</exception>
+    public async Task<DelegatedJobToken> ExchangeTokenForJobAsync(
+        string subjectToken, string purpose, string jobId, long ttlSeconds = 0, CancellationToken ct = default)
+    {
+        var request = JobTokenRequest(subjectToken, purpose, jobId, ttlSeconds);
+        var response = await _authn.ExchangeTokenForJobAsync(request, Headers(), cancellationToken: ct).ResponseAsync;
+        return ToDelegatedJobToken(response, jobId);
+    }
+
+    internal static AuthnV1.ExchangeTokenForJobRequest JobTokenRequest(
+        string subjectToken, string purpose, string jobId, long ttlSeconds)
+    {
+        if (string.IsNullOrWhiteSpace(subjectToken))
+        {
+            throw new ArgumentException("udb: ExchangeTokenForJob: subjectToken is required", nameof(subjectToken));
+        }
+        if (string.IsNullOrWhiteSpace(jobId))
+        {
+            throw new ArgumentException("udb: ExchangeTokenForJob: jobId is required", nameof(jobId));
+        }
+        if (string.IsNullOrWhiteSpace(purpose))
+        {
+            throw new ArgumentException("udb: ExchangeTokenForJob: purpose is required", nameof(purpose));
+        }
+        if (ttlSeconds < 0)
+        {
+            throw new ArgumentException("udb: ExchangeTokenForJob: ttlSeconds must not be negative", nameof(ttlSeconds));
+        }
+        return new AuthnV1.ExchangeTokenForJobRequest
+        {
+            SubjectToken = subjectToken,
+            Purpose = purpose,
+            JobId = jobId,
+            TtlSeconds = ttlSeconds,
+        };
+    }
+
+    internal static DelegatedJobToken ToDelegatedJobToken(AuthnV1.ExchangeTokenForJobResponse response, string jobId)
+    {
+        if (string.IsNullOrEmpty(response.AccessToken))
+        {
+            throw new InvalidOperationException(
+                $"udb: exchange the user's token for job {jobId}: the broker returned no token");
+        }
+        return new DelegatedJobToken(
+            response.AccessToken,
+            response.Jti,
+            response.ExpiresAtUnix,
+            response.Subject,
+            response.Actor,
+            response.Purpose,
+            response.JobId,
+            response.Scopes.ToArray(),
+            response.TenantId,
+            response.ProjectId);
+    }
+
+    /// <summary>
+    /// The broker's typed refusal reason (<c>ErrorDetail.reason</c>, e.g.
+    /// <c>UDB_TOKEN_EXPIRED</c>) carried by a failed call, or <c>""</c> when the
+    /// error carries none. Reads a raw <see cref="RpcException"/>'s
+    /// <c>udb-error-detail-bin</c> trailer and a generated client's
+    /// <see cref="Udb.Client.Generated.UdbRpcException"/>, including either one
+    /// found as an inner exception. The message text is never matched.
+    /// </summary>
+    public static string ErrorReason(Exception? error)
+    {
+        for (var e = error; e is not null; e = e.InnerException)
+        {
+            if (e is global::Udb.Client.Generated.UdbRpcException udb)
+            {
+                return udb.DecodedErrorDetail?.Reason ?? "";
+            }
+            if (e is RpcException rpc)
+            {
+                foreach (var entry in rpc.Trailers)
+                {
+                    if (entry.IsBinary &&
+                        string.Equals(entry.Key, "udb-error-detail-bin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            return global::Udb.Entity.V1.ErrorDetail.Parser.ParseFrom(entry.ValueBytes).Reason;
+                        }
+                        catch (Google.Protobuf.InvalidProtocolBufferException)
+                        {
+                            return "";
+                        }
+                    }
+                }
+                return "";
+            }
+        }
+        return "";
+    }
+
+    /// <summary>
+    /// The broker refused the bearer because it expired (<c>UDB_TOKEN_EXPIRED</c>):
+    /// refresh it or sign in again. A delegated job token cannot be refreshed: the
+    /// job exchanges a fresh user token or stops.
+    /// </summary>
+    public static bool IsTokenExpired(Exception? error) => ErrorReason(error) == "UDB_TOKEN_EXPIRED";
+
+    /// <summary>
+    /// The broker refused the bearer because it was revoked or is no longer backed
+    /// by live state (<c>UDB_TOKEN_REVOKED</c>): do not retry with it.
+    /// </summary>
+    public static bool IsTokenRevoked(Exception? error) => ErrorReason(error) == "UDB_TOKEN_REVOKED";
+
     // ── Authorization ─────────────────────────────────────────────────────────
     public async Task<AuthzV1.Decision> AuthorizeAsync(AuthzV1.AuthzRequest request, CancellationToken ct = default)
     {

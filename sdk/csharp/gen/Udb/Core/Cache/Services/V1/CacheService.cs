@@ -27,180 +27,184 @@ namespace Udb.Core.Cache.Services.V1 {
             "Ci51ZGIvY29yZS9jYWNoZS9zZXJ2aWNlcy92MS9jYWNoZV9zZXJ2aWNlLnBy",
             "b3RvEhp1ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MRocZ29vZ2xlL2FwaS9h",
             "bm5vdGF0aW9ucy5wcm90bxocdWRiL2NvcmUvY29tbW9uL3YxL2R0by5wcm90",
-            "bxohdWRiL2NvcmUvY29tbW9uL3YxL3NlY3VyaXR5LnByb3RvIncKCkdldFJl",
-            "cXVlc3QSGwoJdGVuYW50X2lkGAEgASgJUgh0ZW5hbnRJZBIcCgluYW1lc3Bh",
-            "Y2UYAiABKAlSCW5hbWVzcGFjZRIQCgNrZXkYAyABKAlSA2tleTocmrIZGAgB",
-            "GgN1ZGIosOoBMANAAUoFY2FjaGVQASK/AQoLR2V0UmVzcG9uc2USFAoFZm91",
-            "bmQYASABKAhSBWZvdW5kEhQKBXZhbHVlGAIgASgMUgV2YWx1ZRIyChV0dGxf",
-            "cmVtYWluaW5nX3NlY29uZHMYAyABKANSE3R0bFJlbWFpbmluZ1NlY29uZHMS",
-            "MgoFZXJyb3IYBCABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JS",
-            "BWVycm9yOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIq4BCgpTZXRS",
+            "bxohdWRiL2NvcmUvY29tbW9uL3YxL3NlY3VyaXR5LnByb3RvIo8BCgpHZXRS",
             "ZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50SWQSHAoJbmFtZXNw",
-            "YWNlGAIgASgJUgluYW1lc3BhY2USEAoDa2V5GAMgASgJUgNrZXkSFAoFdmFs",
-            "dWUYBCABKAxSBXZhbHVlEh8KC3R0bF9zZWNvbmRzGAUgASgDUgp0dGxTZWNv",
-            "bmRzOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIs0BCgtTZXRSZXNw",
-            "b25zZRIWCgZzdG9yZWQYASABKAhSBnN0b3JlZBIdCgp1c2VkX2J5dGVzGAIg",
-            "ASgDUgl1c2VkQnl0ZXMSGwoJbWF4X2J5dGVzGAMgASgDUghtYXhCeXRlcxIY",
-            "CgdtZXNzYWdlGAQgASgJUgdtZXNzYWdlEjIKBWVycm9yGAUgASgLMhwudWRi",
+            "YWNlGAIgASgJUgluYW1lc3BhY2USEAoDa2V5GAMgASgJUgNrZXkSFgoGc2hh",
+            "cmVkGAQgASgIUgZzaGFyZWQ6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hl",
+            "UAEivwEKC0dldFJlc3BvbnNlEhQKBWZvdW5kGAEgASgIUgVmb3VuZBIUCgV2",
+            "YWx1ZRgCIAEoDFIFdmFsdWUSMgoVdHRsX3JlbWFpbmluZ19zZWNvbmRzGAMg",
+            "ASgDUhN0dGxSZW1haW5pbmdTZWNvbmRzEjIKBWVycm9yGAQgASgLMhwudWRi",
             "LmNvcmUuY29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjocmrIZGAgBGgN1ZGIo",
-            "sOoBMANAAUoFY2FjaGVQASLaAQoQSW5jcmVtZW50UmVxdWVzdBIbCgl0ZW5h",
-            "bnRfaWQYASABKAlSCHRlbmFudElkEhwKCW5hbWVzcGFjZRgCIAEoCVIJbmFt",
-            "ZXNwYWNlEhAKA2tleRgDIAEoCVIDa2V5EhQKBWRlbHRhGAQgASgDUgVkZWx0",
-            "YRIzChZ0dGxfc2Vjb25kc19pZl9jcmVhdGVkGAUgASgDUhN0dGxTZWNvbmRz",
-            "SWZDcmVhdGVkEhAKA21heBgGIAEoA1IDbWF4OhyashkYCAEaA3VkYiiw6gEw",
-            "AUABSgVjYWNoZVABIuMBChFJbmNyZW1lbnRSZXNwb25zZRIUCgV2YWx1ZRgB",
-            "IAEoA1IFdmFsdWUSGAoHY3JlYXRlZBgCIAEoCFIHY3JlYXRlZBIYCgdyZWZ1",
-            "c2VkGAMgASgIUgdyZWZ1c2VkEjIKFXR0bF9yZW1haW5pbmdfc2Vjb25kcxgE",
-            "IAEoA1ITdHRsUmVtYWluaW5nU2Vjb25kcxIyCgVlcnJvchgFIAEoCzIcLnVk",
-            "Yi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HJqyGRgIARoDdWRi",
-            "KLDqATABQAFKBWNhY2hlUAEiegoNRGVsZXRlUmVxdWVzdBIbCgl0ZW5hbnRf",
-            "aWQYASABKAlSCHRlbmFudElkEhwKCW5hbWVzcGFjZRgCIAEoCVIJbmFtZXNw",
-            "YWNlEhAKA2tleRgDIAEoCVIDa2V5OhyashkYCAEaA3VkYiiw6gEwA0ABSgVj",
-            "YWNoZVABIrUBCg5EZWxldGVSZXNwb25zZRIYCgdkZWxldGVkGAEgASgIUgdk",
-            "ZWxldGVkEh0KCnVzZWRfYnl0ZXMYAiABKANSCXVzZWRCeXRlcxIYCgdtZXNz",
-            "YWdlGAMgASgJUgdtZXNzYWdlEjIKBWVycm9yGAQgASgLMhwudWRiLmNvcmUu",
-            "Y29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjocmrIZGAgBGgN1ZGIosOoBMANA",
-            "AUoFY2FjaGVQASK6AQoLU2NhblJlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJ",
-            "Ugh0ZW5hbnRJZBIcCgluYW1lc3BhY2UYAiABKAlSCW5hbWVzcGFjZRIdCgpr",
-            "ZXlfcHJlZml4GAMgASgJUglrZXlQcmVmaXgSFAoFbGltaXQYBCABKAVSBWxp",
-            "bWl0Eh0KCnBhZ2VfdG9rZW4YBSABKAlSCXBhZ2VUb2tlbjocmrIZGAgBGgN1",
-            "ZGIosOoBMANAAUoFY2FjaGVQASLFAQoMU2NhblJlc3BvbnNlEjsKBWl0ZW1z",
-            "GAEgAygLMiUudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuQ2FjaGVJdGVt",
-            "UgVpdGVtcxImCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAlSDW5leHRQYWdlVG9r",
-            "ZW4SMgoFZXJyb3IYAyABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJy",
-            "b3JSBWVycm9yOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIoUBCglD",
-            "YWNoZUl0ZW0SEAoDa2V5GAEgASgJUgNrZXkSFAoFdmFsdWUYAiABKAxSBXZh",
-            "bHVlEjIKFXR0bF9yZW1haW5pbmdfc2Vjb25kcxgDIAEoA1ITdHRsUmVtYWlu",
-            "aW5nU2Vjb25kczocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASK+AQoW",
-            "Q3JlYXRlTmFtZXNwYWNlUmVxdWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRl",
-            "bmFudElkEhwKCW5hbWVzcGFjZRgCIAEoCVIJbmFtZXNwYWNlEhsKCW1heF9i",
-            "eXRlcxgDIAEoA1IIbWF4Qnl0ZXMSLgoTZGVmYXVsdF90dGxfc2Vjb25kcxgE",
-            "IAEoA1IRZGVmYXVsdFR0bFNlY29uZHM6HJqyGRgIARoDdWRiKLDqATADQAFK",
-            "BWNhY2hlUAEi8AEKF0NyZWF0ZU5hbWVzcGFjZVJlc3BvbnNlEhwKCW5hbWVz",
-            "cGFjZRgBIAEoCVIJbmFtZXNwYWNlEhsKCW1heF9ieXRlcxgCIAEoA1IIbWF4",
-            "Qnl0ZXMSLgoTZGVmYXVsdF90dGxfc2Vjb25kcxgDIAEoA1IRZGVmYXVsdFR0",
-            "bFNlY29uZHMSGAoHbWVzc2FnZRgEIAEoCVIHbWVzc2FnZRIyCgVlcnJvchgF",
-            "IAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HJqy",
-            "GRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEioAEKFkRlbGV0ZU5hbWVzcGFj",
-            "ZVJlcXVlc3QSGwoJdGVuYW50X2lkGAEgASgJUgh0ZW5hbnRJZBIcCgluYW1l",
-            "c3BhY2UYAiABKAlSCW5hbWVzcGFjZRItChJjb25maXJtYXRpb25fdG9rZW4Y",
-            "AyABKAlSEWNvbmZpcm1hdGlvblRva2VuOhyashkYCAEaA3VkYiiw6gEwA0AB",
-            "SgVjYWNoZVABIsYBChdEZWxldGVOYW1lc3BhY2VSZXNwb25zZRIcCgluYW1l",
-            "c3BhY2UYASABKAlSCW5hbWVzcGFjZRIhCgxrZXlzX2RlbGV0ZWQYAiABKARS",
-            "C2tleXNEZWxldGVkEhgKB21lc3NhZ2UYAyABKAlSB21lc3NhZ2USMgoFZXJy",
-            "b3IYBCABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JSBWVycm9y",
-            "OhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABInMKGEdldE5hbWVzcGFj",
-            "ZVN0YXRzUmVxdWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFudElkEhwK",
-            "CW5hbWVzcGFjZRgCIAEoCVIJbmFtZXNwYWNlOhyashkYCAEaA3VkYiiw6gEw",
-            "A0ABSgVjYWNoZVABIuYBChlHZXROYW1lc3BhY2VTdGF0c1Jlc3BvbnNlEhwK",
-            "CW5hbWVzcGFjZRgBIAEoCVIJbmFtZXNwYWNlEh0KCnVzZWRfYnl0ZXMYAiAB",
-            "KANSCXVzZWRCeXRlcxIbCgltYXhfYnl0ZXMYAyABKANSCG1heEJ5dGVzEh0K",
-            "Cml0ZW1fY291bnQYBCABKARSCWl0ZW1Db3VudBIyCgVlcnJvchgFIAEoCzIc",
+            "sOoBMANAAUoFY2FjaGVQASLGAQoKU2V0UmVxdWVzdBIbCgl0ZW5hbnRfaWQY",
+            "ASABKAlSCHRlbmFudElkEhwKCW5hbWVzcGFjZRgCIAEoCVIJbmFtZXNwYWNl",
+            "EhAKA2tleRgDIAEoCVIDa2V5EhQKBXZhbHVlGAQgASgMUgV2YWx1ZRIfCgt0",
+            "dGxfc2Vjb25kcxgFIAEoA1IKdHRsU2Vjb25kcxIWCgZzaGFyZWQYBiABKAhS",
+            "BnNoYXJlZDocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASLNAQoLU2V0",
+            "UmVzcG9uc2USFgoGc3RvcmVkGAEgASgIUgZzdG9yZWQSHQoKdXNlZF9ieXRl",
+            "cxgCIAEoA1IJdXNlZEJ5dGVzEhsKCW1heF9ieXRlcxgDIAEoA1IIbWF4Qnl0",
+            "ZXMSGAoHbWVzc2FnZRgEIAEoCVIHbWVzc2FnZRIyCgVlcnJvchgFIAEoCzIc",
             "LnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HJqyGRgIARoD",
-            "dWRiKLDqATADQAFKBWNhY2hlUAEysRsKDENhY2hlU2VydmljZRKuAgoDR2V0",
-            "EiYudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuR2V0UmVxdWVzdBonLnVk",
-            "Yi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkdldFJlc3BvbnNlItUByvMYJggC",
-            "Gg11ZGI6Y2FjaGU6Z2V0IAFKAwECBGoJY2FjaGUuR2V0kAEB0vMYBggBEAEg",
-            "AdrzGDYIARIJY2FjaGVfZ2V0GgN1ZGIosOoBMANAAUoFY2FjaGVQAVoRY2Fj",
-            "aGVOYW1lc3BhY2VHZXTy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVf",
-            "U0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCHRIb",
-            "L3YxL2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9EoQDCgNTZXQSJi51ZGIuY29y",
-            "ZS5jYWNoZS5zZXJ2aWNlcy52MS5TZXRSZXF1ZXN0GicudWRiLmNvcmUuY2Fj",
-            "aGUuc2VydmljZXMudjEuU2V0UmVzcG9uc2UiqwLK8xgmCAIaDXVkYjpjYWNo",
-            "ZTpzZXQgAUoDAQIEagljYWNoZS5TZXSQAQHS8xgGCAEQASAB2vMYNggBEglj",
-            "YWNoZV9zZXQaA3VkYiiw6gEwA0ABSgVjYWNoZVABWhFjYWNoZU5hbWVzcGFj",
-            "ZVNldOrzGE8KCWNhY2hlLlNldBIWdWRiLmNhY2hlLmVudHJ5LnNldC52MRoJ",
-            "bmFtZXNwYWNlIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMY",
-            "PAoFY2FjaGUaBXJlZGlzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQy",
-            "D1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAiAaGy92MS9jYWNoZS97bmFtZXNw",
-            "YWNlfS97a2V5fToBKhLlAgoJSW5jcmVtZW50EiwudWRiLmNvcmUuY2FjaGUu",
-            "c2VydmljZXMudjEuSW5jcmVtZW50UmVxdWVzdBotLnVkYi5jb3JlLmNhY2hl",
-            "LnNlcnZpY2VzLnYxLkluY3JlbWVudFJlc3BvbnNlIvoByvMYMggCGhN1ZGI6",
-            "Y2FjaGU6aW5jcmVtZW50IAFKAwECBGoPY2FjaGUuSW5jcmVtZW50kAEB0vMY",
-            "BggBEAEgAdrzGEIIARIPY2FjaGVfaW5jcmVtZW50GgN1ZGIosOoBMAFAAUoF",
-            "Y2FjaGVQAVoXY2FjaGVOYW1lc3BhY2VJbmNyZW1lbnTy8xg8CgVjYWNoZRoF",
-            "cmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENf",
-            "VEFSR0VU+PMYAoLT5JMCKiIlL3YxL2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9",
-            "OmluY3JlbWVudDoBKhKdAwoGRGVsZXRlEikudWRiLmNvcmUuY2FjaGUuc2Vy",
-            "dmljZXMudjEuRGVsZXRlUmVxdWVzdBoqLnVkYi5jb3JlLmNhY2hlLnNlcnZp",
-            "Y2VzLnYxLkRlbGV0ZVJlc3BvbnNlIrsCyvMYLAgCGhB1ZGI6Y2FjaGU6ZGVs",
-            "ZXRlIAFKAwECBGoMY2FjaGUuRGVsZXRlkAEB0vMYBggBEAEgAdrzGDwIARIM",
-            "Y2FjaGVfZGVsZXRlGgN1ZGIosOoBMANAAUoFY2FjaGVQAVoUY2FjaGVOYW1l",
-            "c3BhY2VEZWxldGXq8xhWCgxjYWNoZS5EZWxldGUSGnVkYi5jYWNoZS5lbnRy",
-            "eS5kZWxldGVkLnYxGgluYW1lc3BhY2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9v",
-            "bmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VS",
-            "VklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCHSobL3Yx",
-            "L2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9ErQCCgRTY2FuEicudWRiLmNvcmUu",
-            "Y2FjaGUuc2VydmljZXMudjEuU2NhblJlcXVlc3QaKC51ZGIuY29yZS5jYWNo",
-            "ZS5zZXJ2aWNlcy52MS5TY2FuUmVzcG9uc2Ui2AHK8xgoCAIaDnVkYjpjYWNo",
-            "ZTpzY2FuIAFKAwECBGoKY2FjaGUuU2NhbpABAdLzGAYIARABIAHa8xg4CAES",
-            "CmNhY2hlX3NjYW4aA3VkYiiw6gEwA0ABSgVjYWNoZVABWhJjYWNoZU5hbWVz",
-            "cGFjZVNjYW7y8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklD",
-            "RVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCHBIaL3YxL2Nh",
-            "Y2hlL3tuYW1lc3BhY2V9OnNjYW4S3QMKD0NyZWF0ZU5hbWVzcGFjZRIyLnVk",
-            "Yi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkNyZWF0ZU5hbWVzcGFjZVJlcXVl",
-            "c3QaMy51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5DcmVhdGVOYW1lc3Bh",
-            "Y2VSZXNwb25zZSLgAsrzGD4IAhoadWRiOmNhY2hlOmNyZWF0ZS1uYW1lc3Bh",
-            "Y2UgAUoCAQJqFWNhY2hlLkNyZWF0ZU5hbWVzcGFjZZABAdLzGAYIARABIAHa",
-            "8xhGCAESFmNyZWF0ZV9jYWNoZV9uYW1lc3BhY2UaA3VkYiiw6gEwA0ABSgVj",
-            "YWNoZVABWhRjcmVhdGVDYWNoZU5hbWVzcGFjZerzGGMKFWNhY2hlLkNyZWF0",
-            "ZU5hbWVzcGFjZRIedWRiLmNhY2hlLm5hbWVzcGFjZS5jcmVhdGVkLnYxGglu",
-            "YW1lc3BhY2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8",
-            "CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIP",
-            "VURCX0dSUENfVEFSR0VU+PMYAoLT5JMCGSIUL3YxL2NhY2hlL25hbWVzcGFj",
-            "ZXM6ASoS6QMKD0RlbGV0ZU5hbWVzcGFjZRIyLnVkYi5jb3JlLmNhY2hlLnNl",
-            "cnZpY2VzLnYxLkRlbGV0ZU5hbWVzcGFjZVJlcXVlc3QaMy51ZGIuY29yZS5j",
-            "YWNoZS5zZXJ2aWNlcy52MS5EZWxldGVOYW1lc3BhY2VSZXNwb25zZSLsAsrz",
-            "GD4IAhoadWRiOmNhY2hlOmRlbGV0ZS1uYW1lc3BhY2UgAUoCAQJqFWNhY2hl",
-            "LkRlbGV0ZU5hbWVzcGFjZZABAdLzGAYIARABIAHa8xhGCAESFmRlbGV0ZV9j",
-            "YWNoZV9uYW1lc3BhY2UaA3VkYiiw6gEwA0ABSgVjYWNoZVABWhRkZWxldGVD",
-            "YWNoZU5hbWVzcGFjZerzGF0KFWNhY2hlLkRlbGV0ZU5hbWVzcGFjZRIYdWRi",
-            "LmNhY2hlLmludmFsaWRhdGVkLnYxGgluYW1lc3BhY2UiCHN0YW5kYXJkKg1h",
-            "dF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9O",
-            "QVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYA4LT",
-            "5JMCKyImL3YxL2NhY2hlL25hbWVzcGFjZXMve25hbWVzcGFjZX06Zmx1c2g6",
-            "ASoSlQMKEUdldE5hbWVzcGFjZVN0YXRzEjQudWRiLmNvcmUuY2FjaGUuc2Vy",
-            "dmljZXMudjEuR2V0TmFtZXNwYWNlU3RhdHNSZXF1ZXN0GjUudWRiLmNvcmUu",
-            "Y2FjaGUuc2VydmljZXMudjEuR2V0TmFtZXNwYWNlU3RhdHNSZXNwb25zZSKS",
-            "AsrzGEMIAhoddWRiOmNhY2hlOmdldC1uYW1lc3BhY2Utc3RhdHMgAUoCAQJq",
-            "F2NhY2hlLkdldE5hbWVzcGFjZVN0YXRzkAEB0vMYBggBEAEgAdrzGEsIARIZ",
-            "Z2V0X2NhY2hlX25hbWVzcGFjZV9zdGF0cxoDdWRiKLDqATADQAFKBWNhY2hl",
-            "UAFaFmdldENhY2hlTmFtZXNwYWNlU3RhdHPy8xg8CgVjYWNoZRoFcmVkaXMy",
+            "dWRiKLDqATADQAFKBWNhY2hlUAEi8gEKEEluY3JlbWVudFJlcXVlc3QSGwoJ",
+            "dGVuYW50X2lkGAEgASgJUgh0ZW5hbnRJZBIcCgluYW1lc3BhY2UYAiABKAlS",
+            "CW5hbWVzcGFjZRIQCgNrZXkYAyABKAlSA2tleRIUCgVkZWx0YRgEIAEoA1IF",
+            "ZGVsdGESMwoWdHRsX3NlY29uZHNfaWZfY3JlYXRlZBgFIAEoA1ITdHRsU2Vj",
+            "b25kc0lmQ3JlYXRlZBIQCgNtYXgYBiABKANSA21heBIWCgZzaGFyZWQYByAB",
+            "KAhSBnNoYXJlZDocmrIZGAgBGgN1ZGIosOoBMAFAAUoFY2FjaGVQASLjAQoR",
+            "SW5jcmVtZW50UmVzcG9uc2USFAoFdmFsdWUYASABKANSBXZhbHVlEhgKB2Ny",
+            "ZWF0ZWQYAiABKAhSB2NyZWF0ZWQSGAoHcmVmdXNlZBgDIAEoCFIHcmVmdXNl",
+            "ZBIyChV0dGxfcmVtYWluaW5nX3NlY29uZHMYBCABKANSE3R0bFJlbWFpbmlu",
+            "Z1NlY29uZHMSMgoFZXJyb3IYBSABKAsyHC51ZGIuY29yZS5jb21tb24udjEu",
+            "QXBpRXJyb3JSBWVycm9yOhyashkYCAEaA3VkYiiw6gEwAUABSgVjYWNoZVAB",
+            "IpIBCg1EZWxldGVSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50",
+            "SWQSHAoJbmFtZXNwYWNlGAIgASgJUgluYW1lc3BhY2USEAoDa2V5GAMgASgJ",
+            "UgNrZXkSFgoGc2hhcmVkGAQgASgIUgZzaGFyZWQ6HJqyGRgIARoDdWRiKLDq",
+            "ATADQAFKBWNhY2hlUAEitQEKDkRlbGV0ZVJlc3BvbnNlEhgKB2RlbGV0ZWQY",
+            "ASABKAhSB2RlbGV0ZWQSHQoKdXNlZF9ieXRlcxgCIAEoA1IJdXNlZEJ5dGVz",
+            "EhgKB21lc3NhZ2UYAyABKAlSB21lc3NhZ2USMgoFZXJyb3IYBCABKAsyHC51",
+            "ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JSBWVycm9yOhyashkYCAEaA3Vk",
+            "Yiiw6gEwA0ABSgVjYWNoZVABItIBCgtTY2FuUmVxdWVzdBIbCgl0ZW5hbnRf",
+            "aWQYASABKAlSCHRlbmFudElkEhwKCW5hbWVzcGFjZRgCIAEoCVIJbmFtZXNw",
+            "YWNlEh0KCmtleV9wcmVmaXgYAyABKAlSCWtleVByZWZpeBIUCgVsaW1pdBgE",
+            "IAEoBVIFbGltaXQSHQoKcGFnZV90b2tlbhgFIAEoCVIJcGFnZVRva2VuEhYK",
+            "BnNoYXJlZBgGIAEoCFIGc2hhcmVkOhyashkYCAEaA3VkYiiw6gEwA0ABSgVj",
+            "YWNoZVABIsUBCgxTY2FuUmVzcG9uc2USOwoFaXRlbXMYASADKAsyJS51ZGIu",
+            "Y29yZS5jYWNoZS5zZXJ2aWNlcy52MS5DYWNoZUl0ZW1SBWl0ZW1zEiYKD25l",
+            "eHRfcGFnZV90b2tlbhgCIAEoCVINbmV4dFBhZ2VUb2tlbhIyCgVlcnJvchgD",
+            "IAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HJqy",
+            "GRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEihQEKCUNhY2hlSXRlbRIQCgNr",
+            "ZXkYASABKAlSA2tleRIUCgV2YWx1ZRgCIAEoDFIFdmFsdWUSMgoVdHRsX3Jl",
+            "bWFpbmluZ19zZWNvbmRzGAMgASgDUhN0dGxSZW1haW5pbmdTZWNvbmRzOhya",
+            "shkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABItYBChZDcmVhdGVOYW1lc3Bh",
+            "Y2VSZXF1ZXN0EhsKCXRlbmFudF9pZBgBIAEoCVIIdGVuYW50SWQSHAoJbmFt",
+            "ZXNwYWNlGAIgASgJUgluYW1lc3BhY2USGwoJbWF4X2J5dGVzGAMgASgDUght",
+            "YXhCeXRlcxIuChNkZWZhdWx0X3R0bF9zZWNvbmRzGAQgASgDUhFkZWZhdWx0",
+            "VHRsU2Vjb25kcxIWCgZzaGFyZWQYBSABKAhSBnNoYXJlZDocmrIZGAgBGgN1",
+            "ZGIosOoBMANAAUoFY2FjaGVQASLwAQoXQ3JlYXRlTmFtZXNwYWNlUmVzcG9u",
+            "c2USHAoJbmFtZXNwYWNlGAEgASgJUgluYW1lc3BhY2USGwoJbWF4X2J5dGVz",
+            "GAIgASgDUghtYXhCeXRlcxIuChNkZWZhdWx0X3R0bF9zZWNvbmRzGAMgASgD",
+            "UhFkZWZhdWx0VHRsU2Vjb25kcxIYCgdtZXNzYWdlGAQgASgJUgdtZXNzYWdl",
+            "EjIKBWVycm9yGAUgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9y",
+            "UgVlcnJvcjocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASK4AQoWRGVs",
+            "ZXRlTmFtZXNwYWNlUmVxdWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFu",
+            "dElkEhwKCW5hbWVzcGFjZRgCIAEoCVIJbmFtZXNwYWNlEi0KEmNvbmZpcm1h",
+            "dGlvbl90b2tlbhgDIAEoCVIRY29uZmlybWF0aW9uVG9rZW4SFgoGc2hhcmVk",
+            "GAQgASgIUgZzaGFyZWQ6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEi",
+            "xgEKF0RlbGV0ZU5hbWVzcGFjZVJlc3BvbnNlEhwKCW5hbWVzcGFjZRgBIAEo",
+            "CVIJbmFtZXNwYWNlEiEKDGtleXNfZGVsZXRlZBgCIAEoBFILa2V5c0RlbGV0",
+            "ZWQSGAoHbWVzc2FnZRgDIAEoCVIHbWVzc2FnZRIyCgVlcnJvchgEIAEoCzIc",
+            "LnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIFZXJyb3I6HJqyGRgIARoD",
+            "dWRiKLDqATADQAFKBWNhY2hlUAEiiwEKGEdldE5hbWVzcGFjZVN0YXRzUmVx",
+            "dWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFudElkEhwKCW5hbWVzcGFj",
+            "ZRgCIAEoCVIJbmFtZXNwYWNlEhYKBnNoYXJlZBgDIAEoCFIGc2hhcmVkOhya",
+            "shkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIuYBChlHZXROYW1lc3BhY2VT",
+            "dGF0c1Jlc3BvbnNlEhwKCW5hbWVzcGFjZRgBIAEoCVIJbmFtZXNwYWNlEh0K",
+            "CnVzZWRfYnl0ZXMYAiABKANSCXVzZWRCeXRlcxIbCgltYXhfYnl0ZXMYAyAB",
+            "KANSCG1heEJ5dGVzEh0KCml0ZW1fY291bnQYBCABKARSCWl0ZW1Db3VudBIy",
+            "CgVlcnJvchgFIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvclIF",
+            "ZXJyb3I6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEysRsKDENhY2hl",
+            "U2VydmljZRKuAgoDR2V0EiYudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEu",
+            "R2V0UmVxdWVzdBonLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkdldFJl",
+            "c3BvbnNlItUByvMYJggCGg11ZGI6Y2FjaGU6Z2V0IAFKAwECBGoJY2FjaGUu",
+            "R2V0kAEB0vMYBggBEAEgAdrzGDYIARIJY2FjaGVfZ2V0GgN1ZGIosOoBMANA",
+            "AUoFY2FjaGVQAVoRY2FjaGVOYW1lc3BhY2VHZXTy8xg8CgVjYWNoZRoFcmVk",
+            "aXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFS",
+            "R0VU+PMYAYLT5JMCHRIbL3YxL2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9EoQD",
+            "CgNTZXQSJi51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5TZXRSZXF1ZXN0",
+            "GicudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuU2V0UmVzcG9uc2UiqwLK",
+            "8xgmCAIaDXVkYjpjYWNoZTpzZXQgAUoDAQIEagljYWNoZS5TZXSQAQHS8xgG",
+            "CAEQASAB2vMYNggBEgljYWNoZV9zZXQaA3VkYiiw6gEwA0ABSgVjYWNoZVAB",
+            "WhFjYWNoZU5hbWVzcGFjZVNldOrzGE8KCWNhY2hlLlNldBIWdWRiLmNhY2hl",
+            "LmVudHJ5LnNldC52MRoJbmFtZXNwYWNlIghzdGFuZGFyZCoNYXRfbGVhc3Rf",
+            "b25jZTIGc3RhYmxl8vMYPAoFY2FjaGUaBXJlZGlzMhtVREJfTkFUSVZFX1NF",
+            "UlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAiAaGy92",
+            "MS9jYWNoZS97bmFtZXNwYWNlfS97a2V5fToBKhLlAgoJSW5jcmVtZW50Eiwu",
+            "dWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuSW5jcmVtZW50UmVxdWVzdBot",
+            "LnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkluY3JlbWVudFJlc3BvbnNl",
+            "IvoByvMYMggCGhN1ZGI6Y2FjaGU6aW5jcmVtZW50IAFKAwECBGoPY2FjaGUu",
+            "SW5jcmVtZW50kAEB0vMYBggBEAEgAdrzGEIIARIPY2FjaGVfaW5jcmVtZW50",
+            "GgN1ZGIosOoBMAFAAUoFY2FjaGVQAVoXY2FjaGVOYW1lc3BhY2VJbmNyZW1l",
+            "bnTy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5B",
+            "QkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCKiIlL3YxL2NhY2hlL3tu",
+            "YW1lc3BhY2V9L3trZXl9OmluY3JlbWVudDoBKhKdAwoGRGVsZXRlEikudWRi",
+            "LmNvcmUuY2FjaGUuc2VydmljZXMudjEuRGVsZXRlUmVxdWVzdBoqLnVkYi5j",
+            "b3JlLmNhY2hlLnNlcnZpY2VzLnYxLkRlbGV0ZVJlc3BvbnNlIrsCyvMYLAgC",
+            "GhB1ZGI6Y2FjaGU6ZGVsZXRlIAFKAwECBGoMY2FjaGUuRGVsZXRlkAEB0vMY",
+            "BggBEAEgAdrzGDwIARIMY2FjaGVfZGVsZXRlGgN1ZGIosOoBMANAAUoFY2Fj",
+            "aGVQAVoUY2FjaGVOYW1lc3BhY2VEZWxldGXq8xhWCgxjYWNoZS5EZWxldGUS",
+            "GnVkYi5jYWNoZS5lbnRyeS5kZWxldGVkLnYxGgluYW1lc3BhY2UiCHN0YW5k",
+            "YXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMy",
             "G1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU",
-            "+PMYAYLT5JMCKBImL3YxL2NhY2hlL25hbWVzcGFjZXMve25hbWVzcGFjZX0v",
-            "c3RhdHMaxQLK8BlRCgVjYWNoZRIFY2FjaGUaBWNhY2hlIgVDYWNoZSoFY2Fj",
-            "aGUwATgBQAFoAXoFY2FjaGWCAQVjYWNoZYoBBWNhY2hlkgEMbmF0aXZlLmNh",
-            "Y2hl0vAZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQAdrwGYUBCgVjYWNoZRIQ",
-            "dWRiL25hdGl2ZS9jYWNoZRobVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVE",
-            "Gg9VREJfR1JQQ19UQVJHRVQiF3VkYi5uYXRpdmUuY2FjaGUuY29uZmlnOgVj",
-            "YWNoZUoLVURCX0FQSV9LRVlaD3VkYiBuYXRpdmUgbGludOLwGUYKBWNhY2hl",
-            "Gghwb3N0Z3JlcxoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxF",
-            "RDIPVURCX0dSUENfVEFSR0VUQooCCh5jb20udWRiLmNvcmUuY2FjaGUuc2Vy",
-            "dmljZXMudjFCEUNhY2hlU2VydmljZVByb3RvUAFaSGdpdGh1Yi5jb20vZmFo",
-            "YXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvY2FjaGUvc2VydmljZXMv",
-            "djE7c2VydmljZXN2MaICBFVDQ1OqAhpVZGIuQ29yZS5DYWNoZS5TZXJ2aWNl",
-            "cy5WMcoCGlVkYlxDb3JlXENhY2hlXFNlcnZpY2VzXFYx4gImVWRiXEdQQk1l",
-            "dGFkYXRhXENvcmVcQ2FjaGVcU2VydmljZXNcVjHqAh5VZGI6OkNvcmU6OkNh",
-            "Y2hlOjpTZXJ2aWNlczo6VjFiBnByb3RvMw=="));
+            "+PMYAoLT5JMCHSobL3YxL2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9ErQCCgRT",
+            "Y2FuEicudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuU2NhblJlcXVlc3Qa",
+            "KC51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5TY2FuUmVzcG9uc2Ui2AHK",
+            "8xgoCAIaDnVkYjpjYWNoZTpzY2FuIAFKAwECBGoKY2FjaGUuU2NhbpABAdLz",
+            "GAYIARABIAHa8xg4CAESCmNhY2hlX3NjYW4aA3VkYiiw6gEwA0ABSgVjYWNo",
+            "ZVABWhJjYWNoZU5hbWVzcGFjZVNjYW7y8xg8CgVjYWNoZRoFcmVkaXMyG1VE",
+            "Ql9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMY",
+            "AYLT5JMCHBIaL3YxL2NhY2hlL3tuYW1lc3BhY2V9OnNjYW4S3QMKD0NyZWF0",
+            "ZU5hbWVzcGFjZRIyLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkNyZWF0",
+            "ZU5hbWVzcGFjZVJlcXVlc3QaMy51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52",
+            "MS5DcmVhdGVOYW1lc3BhY2VSZXNwb25zZSLgAsrzGD4IAhoadWRiOmNhY2hl",
+            "OmNyZWF0ZS1uYW1lc3BhY2UgAUoCAQJqFWNhY2hlLkNyZWF0ZU5hbWVzcGFj",
+            "ZZABAdLzGAYIARABIAHa8xhGCAESFmNyZWF0ZV9jYWNoZV9uYW1lc3BhY2Ua",
+            "A3VkYiiw6gEwA0ABSgVjYWNoZVABWhRjcmVhdGVDYWNoZU5hbWVzcGFjZerz",
+            "GGMKFWNhY2hlLkNyZWF0ZU5hbWVzcGFjZRIedWRiLmNhY2hlLm5hbWVzcGFj",
+            "ZS5jcmVhdGVkLnYxGgluYW1lc3BhY2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9v",
+            "bmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VS",
+            "VklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCGSIUL3Yx",
+            "L2NhY2hlL25hbWVzcGFjZXM6ASoS6QMKD0RlbGV0ZU5hbWVzcGFjZRIyLnVk",
+            "Yi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkRlbGV0ZU5hbWVzcGFjZVJlcXVl",
+            "c3QaMy51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5EZWxldGVOYW1lc3Bh",
+            "Y2VSZXNwb25zZSLsAsrzGD4IAhoadWRiOmNhY2hlOmRlbGV0ZS1uYW1lc3Bh",
+            "Y2UgAUoCAQJqFWNhY2hlLkRlbGV0ZU5hbWVzcGFjZZABAdLzGAYIARABIAHa",
+            "8xhGCAESFmRlbGV0ZV9jYWNoZV9uYW1lc3BhY2UaA3VkYiiw6gEwA0ABSgVj",
+            "YWNoZVABWhRkZWxldGVDYWNoZU5hbWVzcGFjZerzGF0KFWNhY2hlLkRlbGV0",
+            "ZU5hbWVzcGFjZRIYdWRiLmNhY2hlLmludmFsaWRhdGVkLnYxGgluYW1lc3Bh",
+            "Y2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8CgVjYWNo",
+            "ZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dS",
+            "UENfVEFSR0VU+PMYA4LT5JMCKyImL3YxL2NhY2hlL25hbWVzcGFjZXMve25h",
+            "bWVzcGFjZX06Zmx1c2g6ASoSlQMKEUdldE5hbWVzcGFjZVN0YXRzEjQudWRi",
+            "LmNvcmUuY2FjaGUuc2VydmljZXMudjEuR2V0TmFtZXNwYWNlU3RhdHNSZXF1",
+            "ZXN0GjUudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuR2V0TmFtZXNwYWNl",
+            "U3RhdHNSZXNwb25zZSKSAsrzGEMIAhoddWRiOmNhY2hlOmdldC1uYW1lc3Bh",
+            "Y2Utc3RhdHMgAUoCAQJqF2NhY2hlLkdldE5hbWVzcGFjZVN0YXRzkAEB0vMY",
+            "BggBEAEgAdrzGEsIARIZZ2V0X2NhY2hlX25hbWVzcGFjZV9zdGF0cxoDdWRi",
+            "KLDqATADQAFKBWNhY2hlUAFaFmdldENhY2hlTmFtZXNwYWNlU3RhdHPy8xg8",
+            "CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIP",
+            "VURCX0dSUENfVEFSR0VU+PMYAYLT5JMCKBImL3YxL2NhY2hlL25hbWVzcGFj",
+            "ZXMve25hbWVzcGFjZX0vc3RhdHMaxQLK8BlRCgVjYWNoZRIFY2FjaGUaBWNh",
+            "Y2hlIgVDYWNoZSoFY2FjaGUwATgBQAFoAXoFY2FjaGWCAQVjYWNoZYoBBWNh",
+            "Y2hlkgEMbmF0aXZlLmNhY2hl0vAZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQ",
+            "AdrwGYUBCgVjYWNoZRIQdWRiL25hdGl2ZS9jYWNoZRobVURCX05BVElWRV9T",
+            "RVJWSUNFU19FTkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiF3VkYi5uYXRpdmUu",
+            "Y2FjaGUuY29uZmlnOgVjYWNoZUoLVURCX0FQSV9LRVlaD3VkYiBuYXRpdmUg",
+            "bGludOLwGUYKBWNhY2hlGghwb3N0Z3JlcxoFcmVkaXMyG1VEQl9OQVRJVkVf",
+            "U0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VUQooCCh5jb20udWRi",
+            "LmNvcmUuY2FjaGUuc2VydmljZXMudjFCEUNhY2hlU2VydmljZVByb3RvUAFa",
+            "SGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUv",
+            "Y2FjaGUvc2VydmljZXMvdjE7c2VydmljZXN2MaICBFVDQ1OqAhpVZGIuQ29y",
+            "ZS5DYWNoZS5TZXJ2aWNlcy5WMcoCGlVkYlxDb3JlXENhY2hlXFNlcnZpY2Vz",
+            "XFYx4gImVWRiXEdQQk1ldGFkYXRhXENvcmVcQ2FjaGVcU2VydmljZXNcVjHq",
+            "Ah5VZGI6OkNvcmU6OkNhY2hlOjpTZXJ2aWNlczo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::Udb.Core.Common.V1.DtoReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.GetRequest), global::Udb.Core.Cache.Services.V1.GetRequest.Parser, new[]{ "TenantId", "Namespace", "Key" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.GetRequest), global::Udb.Core.Cache.Services.V1.GetRequest.Parser, new[]{ "TenantId", "Namespace", "Key", "Shared" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.GetResponse), global::Udb.Core.Cache.Services.V1.GetResponse.Parser, new[]{ "Found", "Value", "TtlRemainingSeconds", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.SetRequest), global::Udb.Core.Cache.Services.V1.SetRequest.Parser, new[]{ "TenantId", "Namespace", "Key", "Value", "TtlSeconds" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.SetRequest), global::Udb.Core.Cache.Services.V1.SetRequest.Parser, new[]{ "TenantId", "Namespace", "Key", "Value", "TtlSeconds", "Shared" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.SetResponse), global::Udb.Core.Cache.Services.V1.SetResponse.Parser, new[]{ "Stored", "UsedBytes", "MaxBytes", "Message", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.IncrementRequest), global::Udb.Core.Cache.Services.V1.IncrementRequest.Parser, new[]{ "TenantId", "Namespace", "Key", "Delta", "TtlSecondsIfCreated", "Max" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.IncrementRequest), global::Udb.Core.Cache.Services.V1.IncrementRequest.Parser, new[]{ "TenantId", "Namespace", "Key", "Delta", "TtlSecondsIfCreated", "Max", "Shared" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.IncrementResponse), global::Udb.Core.Cache.Services.V1.IncrementResponse.Parser, new[]{ "Value", "Created", "Refused", "TtlRemainingSeconds", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.DeleteRequest), global::Udb.Core.Cache.Services.V1.DeleteRequest.Parser, new[]{ "TenantId", "Namespace", "Key" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.DeleteRequest), global::Udb.Core.Cache.Services.V1.DeleteRequest.Parser, new[]{ "TenantId", "Namespace", "Key", "Shared" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.DeleteResponse), global::Udb.Core.Cache.Services.V1.DeleteResponse.Parser, new[]{ "Deleted", "UsedBytes", "Message", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.ScanRequest), global::Udb.Core.Cache.Services.V1.ScanRequest.Parser, new[]{ "TenantId", "Namespace", "KeyPrefix", "Limit", "PageToken" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.ScanRequest), global::Udb.Core.Cache.Services.V1.ScanRequest.Parser, new[]{ "TenantId", "Namespace", "KeyPrefix", "Limit", "PageToken", "Shared" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.ScanResponse), global::Udb.Core.Cache.Services.V1.ScanResponse.Parser, new[]{ "Items", "NextPageToken", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.CacheItem), global::Udb.Core.Cache.Services.V1.CacheItem.Parser, new[]{ "Key", "Value", "TtlRemainingSeconds" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest), global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest.Parser, new[]{ "TenantId", "Namespace", "MaxBytes", "DefaultTtlSeconds" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest), global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest.Parser, new[]{ "TenantId", "Namespace", "MaxBytes", "DefaultTtlSeconds", "Shared" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse), global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse.Parser, new[]{ "Namespace", "MaxBytes", "DefaultTtlSeconds", "Message", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest), global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest.Parser, new[]{ "TenantId", "Namespace", "ConfirmationToken" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest), global::Udb.Core.Cache.Services.V1.DeleteNamespaceRequest.Parser, new[]{ "TenantId", "Namespace", "ConfirmationToken", "Shared" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse), global::Udb.Core.Cache.Services.V1.DeleteNamespaceResponse.Parser, new[]{ "Namespace", "KeysDeleted", "Message", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest), global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest.Parser, new[]{ "TenantId", "Namespace" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest), global::Udb.Core.Cache.Services.V1.GetNamespaceStatsRequest.Parser, new[]{ "TenantId", "Namespace", "Shared" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse), global::Udb.Core.Cache.Services.V1.GetNamespaceStatsResponse.Parser, new[]{ "Namespace", "UsedBytes", "MaxBytes", "ItemCount", "Error" }, null, null, null, null)
           }));
     }
@@ -246,6 +250,7 @@ namespace Udb.Core.Cache.Services.V1 {
       tenantId_ = other.tenantId_;
       namespace_ = other.namespace_;
       key_ = other.key_;
+      shared_ = other.shared_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -294,6 +299,22 @@ namespace Udb.Core.Cache.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "shared" field.</summary>
+    public const int SharedFieldNumber = 4;
+    private bool shared_;
+    /// <summary>
+    /// Read the shared namespace (the reserved shared-tenant keyspace every
+    /// tenant reads) instead of the caller's tenant keyspace.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Shared {
+      get { return shared_; }
+      set {
+        shared_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -312,6 +333,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (TenantId != other.TenantId) return false;
       if (Namespace != other.Namespace) return false;
       if (Key != other.Key) return false;
+      if (Shared != other.Shared) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -322,6 +344,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
       if (Namespace.Length != 0) hash ^= Namespace.GetHashCode();
       if (Key.Length != 0) hash ^= Key.GetHashCode();
+      if (Shared != false) hash ^= Shared.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -352,6 +375,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(26);
         output.WriteString(Key);
       }
+      if (Shared != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -374,6 +401,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(26);
         output.WriteString(Key);
       }
+      if (Shared != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -392,6 +423,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (Key.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Key);
+      }
+      if (Shared != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -413,6 +447,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (other.Key.Length != 0) {
         Key = other.Key;
+      }
+      if (other.Shared != false) {
+        Shared = other.Shared;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -445,6 +482,10 @@ namespace Udb.Core.Cache.Services.V1 {
             Key = input.ReadString();
             break;
           }
+          case 32: {
+            Shared = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -474,6 +515,10 @@ namespace Udb.Core.Cache.Services.V1 {
           }
           case 26: {
             Key = input.ReadString();
+            break;
+          }
+          case 32: {
+            Shared = input.ReadBool();
             break;
           }
         }
@@ -844,6 +889,7 @@ namespace Udb.Core.Cache.Services.V1 {
       key_ = other.key_;
       value_ = other.value_;
       ttlSeconds_ = other.ttlSeconds_;
+      shared_ = other.shared_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -916,6 +962,23 @@ namespace Udb.Core.Cache.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "shared" field.</summary>
+    public const int SharedFieldNumber = 6;
+    private bool shared_;
+    /// <summary>
+    /// Write the shared namespace (the reserved shared-tenant keyspace every
+    /// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+    /// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Shared {
+      get { return shared_; }
+      set {
+        shared_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -936,6 +999,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (Key != other.Key) return false;
       if (Value != other.Value) return false;
       if (TtlSeconds != other.TtlSeconds) return false;
+      if (Shared != other.Shared) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -948,6 +1012,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (Key.Length != 0) hash ^= Key.GetHashCode();
       if (Value.Length != 0) hash ^= Value.GetHashCode();
       if (TtlSeconds != 0L) hash ^= TtlSeconds.GetHashCode();
+      if (Shared != false) hash ^= Shared.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -986,6 +1051,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(40);
         output.WriteInt64(TtlSeconds);
       }
+      if (Shared != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1016,6 +1085,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(40);
         output.WriteInt64(TtlSeconds);
       }
+      if (Shared != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1040,6 +1113,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (TtlSeconds != 0L) {
         size += 1 + pb::CodedOutputStream.ComputeInt64Size(TtlSeconds);
+      }
+      if (Shared != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1067,6 +1143,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (other.TtlSeconds != 0L) {
         TtlSeconds = other.TtlSeconds;
+      }
+      if (other.Shared != false) {
+        Shared = other.Shared;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1107,6 +1186,10 @@ namespace Udb.Core.Cache.Services.V1 {
             TtlSeconds = input.ReadInt64();
             break;
           }
+          case 48: {
+            Shared = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -1144,6 +1227,10 @@ namespace Udb.Core.Cache.Services.V1 {
           }
           case 40: {
             TtlSeconds = input.ReadInt64();
+            break;
+          }
+          case 48: {
+            Shared = input.ReadBool();
             break;
           }
         }
@@ -1552,6 +1639,7 @@ namespace Udb.Core.Cache.Services.V1 {
       delta_ = other.delta_;
       ttlSecondsIfCreated_ = other.ttlSecondsIfCreated_;
       max_ = other.max_;
+      shared_ = other.shared_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1645,6 +1733,23 @@ namespace Udb.Core.Cache.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "shared" field.</summary>
+    public const int SharedFieldNumber = 7;
+    private bool shared_;
+    /// <summary>
+    /// Write the shared namespace (the reserved shared-tenant keyspace every
+    /// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+    /// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Shared {
+      get { return shared_; }
+      set {
+        shared_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1666,6 +1771,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (Delta != other.Delta) return false;
       if (TtlSecondsIfCreated != other.TtlSecondsIfCreated) return false;
       if (Max != other.Max) return false;
+      if (Shared != other.Shared) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1679,6 +1785,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (Delta != 0L) hash ^= Delta.GetHashCode();
       if (TtlSecondsIfCreated != 0L) hash ^= TtlSecondsIfCreated.GetHashCode();
       if (Max != 0L) hash ^= Max.GetHashCode();
+      if (Shared != false) hash ^= Shared.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1721,6 +1828,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(48);
         output.WriteInt64(Max);
       }
+      if (Shared != false) {
+        output.WriteRawTag(56);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1755,6 +1866,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(48);
         output.WriteInt64(Max);
       }
+      if (Shared != false) {
+        output.WriteRawTag(56);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1782,6 +1897,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (Max != 0L) {
         size += 1 + pb::CodedOutputStream.ComputeInt64Size(Max);
+      }
+      if (Shared != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1812,6 +1930,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (other.Max != 0L) {
         Max = other.Max;
+      }
+      if (other.Shared != false) {
+        Shared = other.Shared;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1856,6 +1977,10 @@ namespace Udb.Core.Cache.Services.V1 {
             Max = input.ReadInt64();
             break;
           }
+          case 56: {
+            Shared = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -1897,6 +2022,10 @@ namespace Udb.Core.Cache.Services.V1 {
           }
           case 48: {
             Max = input.ReadInt64();
+            break;
+          }
+          case 56: {
+            Shared = input.ReadBool();
             break;
           }
         }
@@ -2316,6 +2445,7 @@ namespace Udb.Core.Cache.Services.V1 {
       tenantId_ = other.tenantId_;
       namespace_ = other.namespace_;
       key_ = other.key_;
+      shared_ = other.shared_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -2361,6 +2491,23 @@ namespace Udb.Core.Cache.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "shared" field.</summary>
+    public const int SharedFieldNumber = 4;
+    private bool shared_;
+    /// <summary>
+    /// Write the shared namespace (the reserved shared-tenant keyspace every
+    /// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+    /// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Shared {
+      get { return shared_; }
+      set {
+        shared_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -2379,6 +2526,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (TenantId != other.TenantId) return false;
       if (Namespace != other.Namespace) return false;
       if (Key != other.Key) return false;
+      if (Shared != other.Shared) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -2389,6 +2537,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
       if (Namespace.Length != 0) hash ^= Namespace.GetHashCode();
       if (Key.Length != 0) hash ^= Key.GetHashCode();
+      if (Shared != false) hash ^= Shared.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -2419,6 +2568,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(26);
         output.WriteString(Key);
       }
+      if (Shared != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -2441,6 +2594,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(26);
         output.WriteString(Key);
       }
+      if (Shared != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -2459,6 +2616,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (Key.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Key);
+      }
+      if (Shared != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2480,6 +2640,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (other.Key.Length != 0) {
         Key = other.Key;
+      }
+      if (other.Shared != false) {
+        Shared = other.Shared;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2512,6 +2675,10 @@ namespace Udb.Core.Cache.Services.V1 {
             Key = input.ReadString();
             break;
           }
+          case 32: {
+            Shared = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -2541,6 +2708,10 @@ namespace Udb.Core.Cache.Services.V1 {
           }
           case 26: {
             Key = input.ReadString();
+            break;
+          }
+          case 32: {
+            Shared = input.ReadBool();
             break;
           }
         }
@@ -2911,6 +3082,7 @@ namespace Udb.Core.Cache.Services.V1 {
       keyPrefix_ = other.keyPrefix_;
       limit_ = other.limit_;
       pageToken_ = other.pageToken_;
+      shared_ = other.shared_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -2987,6 +3159,22 @@ namespace Udb.Core.Cache.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "shared" field.</summary>
+    public const int SharedFieldNumber = 6;
+    private bool shared_;
+    /// <summary>
+    /// Read the shared namespace (the reserved shared-tenant keyspace every
+    /// tenant reads) instead of the caller's tenant keyspace.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Shared {
+      get { return shared_; }
+      set {
+        shared_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -3007,6 +3195,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (KeyPrefix != other.KeyPrefix) return false;
       if (Limit != other.Limit) return false;
       if (PageToken != other.PageToken) return false;
+      if (Shared != other.Shared) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -3019,6 +3208,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (KeyPrefix.Length != 0) hash ^= KeyPrefix.GetHashCode();
       if (Limit != 0) hash ^= Limit.GetHashCode();
       if (PageToken.Length != 0) hash ^= PageToken.GetHashCode();
+      if (Shared != false) hash ^= Shared.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3057,6 +3247,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(42);
         output.WriteString(PageToken);
       }
+      if (Shared != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3087,6 +3281,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(42);
         output.WriteString(PageToken);
       }
+      if (Shared != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -3111,6 +3309,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (PageToken.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(PageToken);
+      }
+      if (Shared != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -3138,6 +3339,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (other.PageToken.Length != 0) {
         PageToken = other.PageToken;
+      }
+      if (other.Shared != false) {
+        Shared = other.Shared;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -3178,6 +3382,10 @@ namespace Udb.Core.Cache.Services.V1 {
             PageToken = input.ReadString();
             break;
           }
+          case 48: {
+            Shared = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -3215,6 +3423,10 @@ namespace Udb.Core.Cache.Services.V1 {
           }
           case 42: {
             PageToken = input.ReadString();
+            break;
+          }
+          case 48: {
+            Shared = input.ReadBool();
             break;
           }
         }
@@ -3812,6 +4024,7 @@ namespace Udb.Core.Cache.Services.V1 {
       namespace_ = other.namespace_;
       maxBytes_ = other.maxBytes_;
       defaultTtlSeconds_ = other.defaultTtlSeconds_;
+      shared_ = other.shared_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -3876,6 +4089,23 @@ namespace Udb.Core.Cache.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "shared" field.</summary>
+    public const int SharedFieldNumber = 5;
+    private bool shared_;
+    /// <summary>
+    /// Write the shared namespace (the reserved shared-tenant keyspace every
+    /// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+    /// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Shared {
+      get { return shared_; }
+      set {
+        shared_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -3895,6 +4125,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (Namespace != other.Namespace) return false;
       if (MaxBytes != other.MaxBytes) return false;
       if (DefaultTtlSeconds != other.DefaultTtlSeconds) return false;
+      if (Shared != other.Shared) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -3906,6 +4137,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (Namespace.Length != 0) hash ^= Namespace.GetHashCode();
       if (MaxBytes != 0L) hash ^= MaxBytes.GetHashCode();
       if (DefaultTtlSeconds != 0L) hash ^= DefaultTtlSeconds.GetHashCode();
+      if (Shared != false) hash ^= Shared.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3940,6 +4172,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(32);
         output.WriteInt64(DefaultTtlSeconds);
       }
+      if (Shared != false) {
+        output.WriteRawTag(40);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3966,6 +4202,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(32);
         output.WriteInt64(DefaultTtlSeconds);
       }
+      if (Shared != false) {
+        output.WriteRawTag(40);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -3987,6 +4227,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (DefaultTtlSeconds != 0L) {
         size += 1 + pb::CodedOutputStream.ComputeInt64Size(DefaultTtlSeconds);
+      }
+      if (Shared != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -4011,6 +4254,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (other.DefaultTtlSeconds != 0L) {
         DefaultTtlSeconds = other.DefaultTtlSeconds;
+      }
+      if (other.Shared != false) {
+        Shared = other.Shared;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -4047,6 +4293,10 @@ namespace Udb.Core.Cache.Services.V1 {
             DefaultTtlSeconds = input.ReadInt64();
             break;
           }
+          case 40: {
+            Shared = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -4080,6 +4330,10 @@ namespace Udb.Core.Cache.Services.V1 {
           }
           case 32: {
             DefaultTtlSeconds = input.ReadInt64();
+            break;
+          }
+          case 40: {
+            Shared = input.ReadBool();
             break;
           }
         }
@@ -4485,6 +4739,7 @@ namespace Udb.Core.Cache.Services.V1 {
       tenantId_ = other.tenantId_;
       namespace_ = other.namespace_;
       confirmationToken_ = other.confirmationToken_;
+      shared_ = other.shared_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -4534,6 +4789,23 @@ namespace Udb.Core.Cache.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "shared" field.</summary>
+    public const int SharedFieldNumber = 4;
+    private bool shared_;
+    /// <summary>
+    /// Write the shared namespace (the reserved shared-tenant keyspace every
+    /// tenant reads) instead of the caller's tenant keyspace. Requires a platform
+    /// admin or the `udb:global:write` scope; otherwise PERMISSION_DENIED.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Shared {
+      get { return shared_; }
+      set {
+        shared_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -4552,6 +4824,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (TenantId != other.TenantId) return false;
       if (Namespace != other.Namespace) return false;
       if (ConfirmationToken != other.ConfirmationToken) return false;
+      if (Shared != other.Shared) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -4562,6 +4835,7 @@ namespace Udb.Core.Cache.Services.V1 {
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
       if (Namespace.Length != 0) hash ^= Namespace.GetHashCode();
       if (ConfirmationToken.Length != 0) hash ^= ConfirmationToken.GetHashCode();
+      if (Shared != false) hash ^= Shared.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -4592,6 +4866,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(26);
         output.WriteString(ConfirmationToken);
       }
+      if (Shared != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -4614,6 +4892,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(26);
         output.WriteString(ConfirmationToken);
       }
+      if (Shared != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -4632,6 +4914,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (ConfirmationToken.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(ConfirmationToken);
+      }
+      if (Shared != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -4653,6 +4938,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (other.ConfirmationToken.Length != 0) {
         ConfirmationToken = other.ConfirmationToken;
+      }
+      if (other.Shared != false) {
+        Shared = other.Shared;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -4685,6 +4973,10 @@ namespace Udb.Core.Cache.Services.V1 {
             ConfirmationToken = input.ReadString();
             break;
           }
+          case 32: {
+            Shared = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -4714,6 +5006,10 @@ namespace Udb.Core.Cache.Services.V1 {
           }
           case 26: {
             ConfirmationToken = input.ReadString();
+            break;
+          }
+          case 32: {
+            Shared = input.ReadBool();
             break;
           }
         }
@@ -5081,6 +5377,7 @@ namespace Udb.Core.Cache.Services.V1 {
     public GetNamespaceStatsRequest(GetNamespaceStatsRequest other) : this() {
       tenantId_ = other.tenantId_;
       namespace_ = other.namespace_;
+      shared_ = other.shared_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -5114,6 +5411,22 @@ namespace Udb.Core.Cache.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "shared" field.</summary>
+    public const int SharedFieldNumber = 3;
+    private bool shared_;
+    /// <summary>
+    /// Read the shared namespace (the reserved shared-tenant keyspace every
+    /// tenant reads) instead of the caller's tenant keyspace.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Shared {
+      get { return shared_; }
+      set {
+        shared_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -5131,6 +5444,7 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (TenantId != other.TenantId) return false;
       if (Namespace != other.Namespace) return false;
+      if (Shared != other.Shared) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -5140,6 +5454,7 @@ namespace Udb.Core.Cache.Services.V1 {
       int hash = 1;
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
       if (Namespace.Length != 0) hash ^= Namespace.GetHashCode();
+      if (Shared != false) hash ^= Shared.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -5166,6 +5481,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(18);
         output.WriteString(Namespace);
       }
+      if (Shared != false) {
+        output.WriteRawTag(24);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -5184,6 +5503,10 @@ namespace Udb.Core.Cache.Services.V1 {
         output.WriteRawTag(18);
         output.WriteString(Namespace);
       }
+      if (Shared != false) {
+        output.WriteRawTag(24);
+        output.WriteBool(Shared);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -5199,6 +5522,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (Namespace.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Namespace);
+      }
+      if (Shared != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -5217,6 +5543,9 @@ namespace Udb.Core.Cache.Services.V1 {
       }
       if (other.Namespace.Length != 0) {
         Namespace = other.Namespace;
+      }
+      if (other.Shared != false) {
+        Shared = other.Shared;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -5245,6 +5574,10 @@ namespace Udb.Core.Cache.Services.V1 {
             Namespace = input.ReadString();
             break;
           }
+          case 24: {
+            Shared = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -5270,6 +5603,10 @@ namespace Udb.Core.Cache.Services.V1 {
           }
           case 18: {
             Namespace = input.ReadString();
+            break;
+          }
+          case 24: {
+            Shared = input.ReadBool();
             break;
           }
         }

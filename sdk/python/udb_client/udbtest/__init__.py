@@ -4,9 +4,11 @@ shared typed-store contract (:mod:`udb_client.udbtest.conformance`).
 """
 
 from .embedded import EmbeddedBroker, start, start_pair
-from .fake import Event, Fake, Fault, Identity, Policy, load_policies, new, new_fake
+from .fake import DELETED_READ_SCOPE, DeletedRead, Event, Fake, Fault, Identity, Policy, load_policies, new, new_fake
 
 __all__ = [
+    "DELETED_READ_SCOPE",
+    "DeletedRead",
     "EmbeddedBroker",
     "Event",
     "Fake",

@@ -39,6 +39,10 @@ import { UdbExpect, checkBrokerHealth, configFromEnv, verifyPrincipal } from "./
 import { SessionFence, consistencyMetadata } from "./consistency";
 import { EntityHandle, EntityHandleOptions } from "./entity";
 import {
+  BulkLoadOptions,
+  BulkLoadResult,
+  BulkUpsertOptions,
+  BulkUpsertResponse,
   ConsumeOptions,
   ConsumedEvent,
   ManyRead,
@@ -47,6 +51,8 @@ import {
   TableOptions,
   TxOptions,
   TxScope,
+  bulkLoad,
+  bulkUpsert,
   consume,
   selectMany,
   tx,
@@ -1821,6 +1827,27 @@ export class UdbProject {
    *  the order of `reads`. See {@link selectMany}. */
   selectMany<T = Record<string, unknown>>(reads: ManyRead[], opts: { call?: CallOptions } = {}): Promise<ManyResult<T>[]> {
     return selectMany<T>(this.core, reads, opts);
+  }
+
+  /** Upsert `rows` of `messageType` as ONE batch in one transaction: every row is
+   *  written or none is, and the entity's CDC topic gets one event for the batch.
+   *  See {@link bulkUpsert}. */
+  bulkUpsert(
+    messageType: string,
+    rows: readonly Record<string, unknown>[],
+    opts: Omit<BulkUpsertOptions, "fence"> = {},
+  ): Promise<BulkUpsertResponse> {
+    return bulkUpsert(this.core, messageType, rows, { fence: this.fence, ...opts });
+  }
+
+  /** Load any number of rows of `messageType` in sequential BulkUpsert batches; the
+   *  first failure stops the load with a BulkLoadError. See {@link bulkLoad}. */
+  bulkLoad(
+    messageType: string,
+    rows: Iterable<Record<string, unknown>> | AsyncIterable<Record<string, unknown>>,
+    opts: Omit<BulkLoadOptions, "fence"> = {},
+  ): Promise<BulkLoadResult> {
+    return bulkLoad(this.core, messageType, rows, { fence: this.fence, ...opts });
   }
 
   /** Deliver events on `topicPattern` to `handle` as the durable consumer `name`,

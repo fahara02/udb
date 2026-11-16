@@ -133,6 +133,13 @@ pub struct ManifestTable {
     pub source_file: String,
     pub previous_table_name: String,
     pub allow_drop: bool,
+    /// `pg_table.cross_project_shared`: the physical table is deliberately
+    /// shared by every project whose catalog declares it. Catalog activation
+    /// refuses a table another project already declares on the same backend
+    /// unless both declarations set this (or both scope rows by project).
+    /// Serialized only when set, so existing manifests keep their checksum.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub cross_project_shared: bool,
     pub warnings: Vec<String>,
     /// NW-universal: proto3 `reserved <n>;` field numbers. Carried
     /// through to drift / migration safety checks — a NEW column
@@ -666,6 +673,7 @@ mod build;
 pub(crate) use build::*;
 mod check_expression;
 pub use check_expression::canonical_check_expression;
+pub mod projection_filter;
 
 #[cfg(test)]
 mod tests {

@@ -25,15 +25,15 @@ use crate::proto::{
     AdminAuditLogRecord, AdminAuditLogRequest, AdminAuditLogResponse, AdminAuditVerifyRequest,
     AdminAuditVerifyResponse, AdminBackendSummary, AdminCatalogSummary, AdminCdcSummary,
     AdminSagaSummary, AdminSummaryRequest, AdminSummaryResponse, BackendInstanceStatus,
-    BulkCasRequest, BulkCasResponse, CapabilitiesRequest, CapabilitiesResponse,
-    CatalogManifestRequest, CatalogManifestResponse, CatalogValidationResponse,
-    CatalogVersionListResponse, CatalogVersionRequest, CatalogVersionResponse, CdcControlRequest,
-    CdcEnvelope, CdcRedactionPreviewRequest, CdcRedactionPreviewResponse, CdcStatusResponse,
-    CdcSubscriptionRequest, Chunk, DeleteRequest, DlqActionRequest, DlqEventRecord,
-    DlqEventRequest, DlqEventResponse, DlqListRequest, DlqListResponse, EnqueueOutboxEventRequest,
-    EnqueueOutboxEventResponse, EnsureBaselineRequest, EnsureBaselineResponse,
-    EnsureProjectRequest, GenericDispatchRequest, GenericDispatchResponse, HealthReportRequest,
-    HealthReportResponse, MessageFieldDescriptor, MessageSchemaDescriptor,
+    BulkCasRequest, BulkCasResponse, BulkUpsertRequest, BulkUpsertResponse, CapabilitiesRequest,
+    CapabilitiesResponse, CatalogManifestRequest, CatalogManifestResponse,
+    CatalogValidationResponse, CatalogVersionListResponse, CatalogVersionRequest,
+    CatalogVersionResponse, CdcControlRequest, CdcEnvelope, CdcRedactionPreviewRequest,
+    CdcRedactionPreviewResponse, CdcStatusResponse, CdcSubscriptionRequest, Chunk, DeleteRequest,
+    DlqActionRequest, DlqEventRecord, DlqEventRequest, DlqEventResponse, DlqListRequest,
+    DlqListResponse, EnqueueOutboxEventRequest, EnqueueOutboxEventResponse, EnsureBaselineRequest,
+    EnsureBaselineResponse, EnsureProjectRequest, GenericDispatchRequest, GenericDispatchResponse,
+    HealthReportRequest, HealthReportResponse, MessageFieldDescriptor, MessageSchemaDescriptor,
     MessageSchemaListRequest, MessageSchemaListResponse, MessageSchemaLookupRequest,
     MessageSchemaLookupResponse, MigrationApplyRequest, MigrationPlanRequest,
     MigrationPlanResponse, MigrationRunListRequest, MigrationRunListResponse, MigrationRunRequest,
@@ -450,6 +450,7 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "Delete",
     "Update",
     "BulkCas",
+    "BulkUpsert",
     "VectorSearch",
     "VectorHybridSearch",
     "VectorUpsert",
@@ -2562,6 +2563,25 @@ pub async fn serve(
                     err.message()
                 ))
             })?;
+        // Physical tables carry no project prefix: say loudly when unlabeled
+        // backends serve several projects, and when ACTIVE catalogs already
+        // share a table (activated before activation refused it).
+        match service
+            .runtime_snapshot()
+            .project_storage_isolation_findings()
+            .await
+        {
+            Ok(findings) => {
+                for finding in findings {
+                    tracing::warn!(target: "udb::project_isolation", "{finding}");
+                }
+            }
+            Err(err) => tracing::warn!(
+                target: "udb::project_isolation",
+                error = %err.message(),
+                "could not check project storage isolation of the ACTIVE catalogs"
+            ),
+        }
         // Subscribe before catalog-dependent workers start or the service can
         // admit traffic. Otherwise hydration could mark authority fresh while
         // the listener task had not yet run (or had already failed to connect).
@@ -5039,6 +5059,13 @@ impl DataBroker for DataBrokerService {
         self.bulk_cas_inner(request).await
     }
 
+    async fn bulk_upsert(
+        &self,
+        request: Request<BulkUpsertRequest>,
+    ) -> Result<Response<BulkUpsertResponse>, Status> {
+        self.bulk_upsert_inner(request).await
+    }
+
     async fn generic_dispatch(
         &self,
         request: Request<GenericDispatchRequest>,
@@ -5595,10 +5622,23 @@ impl RateLimitHandle {
     ) -> Result<(), Status> {
         Ok(())
     }
+
+    pub(crate) async fn check_weighted(
+        &self,
+        _tenant_id: &str,
+        _operation: &str,
+        _principal_id: &str,
+        _per_key_per_minute: i64,
+        _subject: &str,
+        _cost: u64,
+    ) -> Result<(), Status> {
+        Ok(())
+    }
 }
 
 #[cfg(feature = "redis")]
 impl RateLimitHandle {
+    /// Charge one unit to the `(tenant, operation)` bucket.
     pub(crate) async fn check(
         &self,
         tenant_id: &str,
@@ -5607,6 +5647,33 @@ impl RateLimitHandle {
         per_key_per_minute: i64,
         subject: &str,
     ) -> Result<(), Status> {
+        self.check_weighted(
+            tenant_id,
+            operation,
+            principal_id,
+            per_key_per_minute,
+            subject,
+            1,
+        )
+        .await
+    }
+
+    /// Charge `cost` units to the bucket at once. A call whose charge takes
+    /// the bucket past its ceiling is refused like a unit call; the units stay
+    /// counted for the window, exactly as a refused unit call's one unit does.
+    /// `cost` 0 charges nothing and always passes.
+    pub(crate) async fn check_weighted(
+        &self,
+        tenant_id: &str,
+        operation: &str,
+        principal_id: &str,
+        per_key_per_minute: i64,
+        subject: &str,
+        cost: u64,
+    ) -> Result<(), Status> {
+        if cost == 0 {
+            return Ok(());
+        }
         let redis = self.runtime.redis_clone();
         let window_secs = self.runtime.config().service.rate_limit_window_secs.max(1);
         let per_key_enabled = self.runtime.config().service.rate_limit_per_key_enabled;
@@ -5661,6 +5728,7 @@ impl RateLimitHandle {
                     unix_epoch,
                     "no_backend",
                     subject,
+                    cost,
                 )
                 .await;
         };
@@ -5687,6 +5755,7 @@ impl RateLimitHandle {
                                 unix_epoch,
                                 status,
                                 subject,
+                                cost,
                             )
                             .await;
                     }
@@ -5707,13 +5776,16 @@ impl RateLimitHandle {
         //    limiter entirely). A rate limiter that silently stops limiting is
         //    worse than one that rejects on infra failure.
         // A single Lua eval does both atomically and propagates errors.
-        const RATE_LIMIT_LUA: &str = "local c = redis.call('INCR', KEYS[1]) \
-             if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end \
+        // INCRBY carries a weighted charge (a BulkUpsert batch); the key is new
+        // exactly when the post-increment count equals the charge.
+        const RATE_LIMIT_LUA: &str = "local c = redis.call('INCRBY', KEYS[1], ARGV[2]) \
+             if c == tonumber(ARGV[2]) then redis.call('EXPIRE', KEYS[1], ARGV[1]) end \
              return c";
         let script = redis::Script::new(RATE_LIMIT_LUA);
         let first_attempt: Result<u64, redis::RedisError> = script
             .key(&key)
             .arg(window_secs)
+            .arg(cost)
             .invoke_async(&mut conn)
             .await;
         let count: u64 = match first_attempt {
@@ -5742,6 +5814,7 @@ impl RateLimitHandle {
                         unix_epoch,
                         status,
                         subject,
+                        cost,
                     )
                     .await;
             }
@@ -5751,7 +5824,7 @@ impl RateLimitHandle {
             self.metrics.record_rate_limit_denied(operation);
             // The first refusal of a window logs, so a sustained overload writes one
             // line per bucket per window rather than one per request.
-            if count == u64::from(max_rps) + 1 {
+            if count.saturating_sub(cost) <= u64::from(max_rps) {
                 tracing::warn!(
                     tenant_id,
                     operation,
@@ -5810,6 +5883,7 @@ impl RateLimitHandle {
         unix_epoch: u64,
         degraded_label: &'static str,
         subject: &str,
+        cost: u64,
     ) -> Result<(), Status> {
         self.degraded
             .store(true, std::sync::atomic::Ordering::Relaxed);
@@ -5821,12 +5895,12 @@ impl RateLimitHandle {
             // currently-active keys.
             windows.retain(|_, (w, _)| *w == window);
             let entry = windows.entry(key.to_string()).or_insert((window, 0));
-            entry.1 += 1;
+            entry.1 += cost;
             entry.1
         };
         if count > u64::from(max_rps) {
             self.metrics.record_rate_limit_denied(operation);
-            if count == u64::from(max_rps) + 1 {
+            if count.saturating_sub(cost) <= u64::from(max_rps) {
                 tracing::warn!(
                     bucket = key,
                     operation,
@@ -5884,6 +5958,7 @@ impl RateLimitHandle {
         unix_epoch: u64,
         closed_status: Status,
         subject: &str,
+        cost: u64,
     ) -> Result<(), Status> {
         let mode = self
             .runtime
@@ -5901,6 +5976,7 @@ impl RateLimitHandle {
                     unix_epoch,
                     "local",
                     subject,
+                    cost,
                 )
                 .await
             }

@@ -20,6 +20,14 @@ option php_namespace = "Udb\\Core\\Backup\\Services\\V1";
 // skipped. A restore validates the cross-tenant movement scope, refuses to write
 // over a live (non-empty) target tenant, and rewrites the tenant column to the
 // target on insert.
+//
+// Shared (global) tables have no tenant column, so a tenant backup reports them
+// as excluded. A platform admin backs them up and restores them with
+// `scope: BACKUP_SCOPE_SHARED` on the same two RPCs: the same encrypted JSONL
+// artifacts, checksummed manifest, object storage and journal, carrying every
+// row of the active project catalog's shared tables instead of one tenant's
+// rows. A shared restore refuses to write into shared tables that already hold
+// rows, exactly as a tenant restore refuses a live target tenant.
 service BackupService {
   option (udb.core.common.v1.native_service) = {
     service_id: "backup"
@@ -63,7 +71,9 @@ service BackupService {
 
   // Start a logical backup of the calling tenant. Enumerates tenant-owned tables
   // via the shared resolver, encrypts each table's rows to object storage, and
-  // journals the run. Tenant-less tables are reported as excluded.
+  // journals the run. Tenant-less tables are reported as excluded. With
+  // `scope: BACKUP_SCOPE_SHARED` (platform admin only) it backs up the rows of
+  // the project's shared tables instead.
   rpc StartTenantBackup(StartTenantBackupRequest) returns (StartTenantBackupResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
@@ -114,6 +124,8 @@ service BackupService {
   // Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires
   // an explicit confirmation token, the cross-tenant movement scope check, and a
   // target tenant that holds no rows (restoring over a live tenant is refused).
+  // With `scope: BACKUP_SCOPE_SHARED` (platform admin only) it restores a shared
+  // backup into the project's shared tables, which must hold no rows.
   rpc RestoreTenant(RestoreTenantRequest) returns (RestoreTenantResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
@@ -408,6 +420,18 @@ service BackupService {
 
 // ── Shared detail messages ───────────────────────────────────────────────────
 
+// Which rows a backup or restore moves.
+enum BackupScope {
+  // Treated as BACKUP_SCOPE_TENANT.
+  BACKUP_SCOPE_UNSPECIFIED = 0;
+  // One tenant's rows in the tenant-owned tables (the default).
+  BACKUP_SCOPE_TENANT = 1;
+  // Every row of the active project catalog's shared (global) tables: tenant
+  // isolation declared none/global/disabled/off and no tenant column. Platform
+  // admin only; tenant-owned tables are reported as excluded.
+  BACKUP_SCOPE_SHARED = 2;
+}
+
 // One backed-up tenant table: where its encrypted JSONL artifact lives and its
 // integrity anchor.
 message BackupTableEntry {
@@ -419,8 +443,9 @@ message BackupTableEntry {
   string checksum_sha256 = 6;
 }
 
-// A table excluded from the backup because it has no resolvable tenant column.
-// Reported, never silently skipped.
+// A table excluded from the backup: in a tenant backup one with no resolvable
+// tenant column, in a shared backup one that is not a shared table. Reported,
+// never silently skipped.
 message BackupExcludedTable {
   string schema = 1;
   string table = 2;
@@ -444,6 +469,10 @@ message BackupRunSummary {
   int64 completed_at_unix = 13;
   // First-class project owner of this journal row.
   string project_id = 14;
+  // BACKUP_SCOPE_SHARED for a shared-table backup or restore (its
+  // source_tenant_id is the reserved shared marker `*shared*`), otherwise
+  // BACKUP_SCOPE_TENANT.
+  BackupScope scope = 15;
 }
 
 // A backup retention/schedule policy.
@@ -483,6 +512,10 @@ message StartTenantBackupRequest {
   string object_backend = 3;
   string object_bucket = 4;
   string metadata_json = 5;
+  // BACKUP_SCOPE_SHARED backs up the project's shared tables instead of the
+  // tenant's rows. Platform admin only (PERMISSION_DENIED otherwise); the run is
+  // journaled under `tenant_id`.
+  BackupScope scope = 6;
 }
 
 message StartTenantBackupResponse {
@@ -530,6 +563,13 @@ message RestoreTenantRequest {
   // restore needs explicit privileged approval (fail closed otherwise).
   bool allow_cross_tenant = 5;
   string metadata_json = 6;
+  // BACKUP_SCOPE_SHARED restores a shared backup into the project's shared
+  // tables. Platform admin only. `source_tenant_id` names the tenant whose
+  // journal holds the run (the `tenant_id` the shared backup was started with);
+  // `target_tenant_id` and `allow_cross_tenant` must be left empty, since shared
+  // rows belong to no tenant. A shared backup is never restored with the
+  // tenant scope, nor a tenant backup with the shared scope.
+  BackupScope scope = 7;
 }
 
 message RestoreTenantResponse {

@@ -335,9 +335,19 @@ type SelectRequest struct {
 	IncludeRevision bool `protobuf:"varint,9,opt,name=include_revision,json=includeRevision,proto3" json:"include_revision,omitempty"`
 	// Also count every matching row into `RecordSet.exact_total` (one extra
 	// COUNT over the same filter and scope; the read cache is skipped).
-	IncludeTotal  bool `protobuf:"varint,10,opt,name=include_total,json=includeTotal,proto3" json:"include_total,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	IncludeTotal bool `protobuf:"varint,10,opt,name=include_total,json=includeTotal,proto3" json:"include_total,omitempty"`
+	// Also return soft-deleted rows. Each returned row carries the entity's own
+	// soft-delete column (for example `deleted_at`), non-null on a deleted row,
+	// which the broker adds to an explicit `fields` list when it is missing.
+	// Needs scope `udb:deleted:read`; without it the read is refused with
+	// PERMISSION_DENIED and reason `UDB_DELETED_READ_SCOPE_MISSING`. An entity
+	// without soft delete refuses it with INVALID_ARGUMENT naming this field.
+	// Every such read is written to the audit log (tenant, actor, entity, row
+	// count) before its rows are returned; it stays inside the caller's tenant
+	// and project, and it is never answered from or stored in the read cache.
+	IncludeDeleted bool `protobuf:"varint,11,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *SelectRequest) Reset() {
@@ -436,6 +446,13 @@ func (x *SelectRequest) GetIncludeRevision() bool {
 func (x *SelectRequest) GetIncludeTotal() bool {
 	if x != nil {
 		return x.IncludeTotal
+	}
+	return false
+}
+
+func (x *SelectRequest) GetIncludeDeleted() bool {
+	if x != nil {
+		return x.IncludeDeleted
 	}
 	return false
 }
@@ -1289,6 +1306,256 @@ func (x *BulkCasResponse) GetResults() []*BulkCasItemResult {
 	return nil
 }
 
+// Audited bulk load: write a batch of whole rows to ONE table in ONE write
+// transaction — every row is stored or none is. Built for large reference
+// data (millions of rows sent as many batches). Each row goes through the
+// same validation, tenant/project scoping, encryption and RLS context as a
+// single Upsert; what changes is the cost per row:
+//   - rows are written with multi-row INSERT … ON CONFLICT statements
+//     (as many rows per statement as PostgreSQL's 65535-parameter limit
+//     allows), not one statement per row;
+//   - the batch emits ONE change event (operation `bulk_upsert`) that
+//     summarises it, not one event per row, and ONE audit record with the
+//     row count;
+//   - projection tasks for the batch's rows are enqueued with one statement;
+//   - the rate limiter charges ceil(rows / UDB_BULK_UPSERT_ROWS_PER_RATE_UNIT)
+//     units for the batch instead of one per row.
+//
+// Splitting a large load into batches is the client's job; the SDK bulk
+// helpers do it. See docs/integration.md "Loading large reference data".
+type BulkUpsertRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Context     *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	MessageType string                 `protobuf:"bytes,2,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
+	// One JSON object per row, in the exact form of UpsertRequest.record_json.
+	// Every row of a batch must carry the same set of fields (send null for an
+	// empty value); a row with a different set is refused with
+	// `UDB_BULK_ROW_SHAPE_MISMATCH`. Two rows with the same conflict key are
+	// refused with `UDB_BULK_DUPLICATE_KEY`. More rows than the broker's
+	// `UDB_BULK_UPSERT_MAX_ROWS` (default 10000) is refused with
+	// `UDB_BULK_BATCH_TOO_LARGE`. The whole request must also fit the gRPC
+	// message limit (`UDB_GRPC_MAX_MESSAGE_BYTES`, default 10 MiB).
+	RecordsJson [][]byte `protobuf:"bytes,3,rep,name=records_json,json=recordsJson,proto3" json:"records_json,omitempty"`
+	// Conflict target, as UpsertRequest.conflict_fields (empty = primary key).
+	ConflictFields []string `protobuf:"bytes,4,rep,name=conflict_fields,json=conflictFields,proto3" json:"conflict_fields,omitempty"`
+	// Optional whole-batch idempotency: a retry with the same key and the same
+	// batch returns the original response with was_duplicate=true and writes
+	// nothing; the same key with a different batch is refused with
+	// `UDB_IDEMPOTENCY_REUSE`.
+	IdempotencyKey string `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	// Optional caller label for the batch (for example
+	// "countries-2026-11/0007"), carried in the change event and the audit
+	// record. Empty = the broker assigns a UUID. At most 128 characters, no
+	// whitespace or control characters.
+	BatchId       string `protobuf:"bytes,6,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BulkUpsertRequest) Reset() {
+	*x = BulkUpsertRequest{}
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BulkUpsertRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BulkUpsertRequest) ProtoMessage() {}
+
+func (x *BulkUpsertRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BulkUpsertRequest.ProtoReflect.Descriptor instead.
+func (*BulkUpsertRequest) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_relational_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *BulkUpsertRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *BulkUpsertRequest) GetMessageType() string {
+	if x != nil {
+		return x.MessageType
+	}
+	return ""
+}
+
+func (x *BulkUpsertRequest) GetRecordsJson() [][]byte {
+	if x != nil {
+		return x.RecordsJson
+	}
+	return nil
+}
+
+func (x *BulkUpsertRequest) GetConflictFields() []string {
+	if x != nil {
+		return x.ConflictFields
+	}
+	return nil
+}
+
+func (x *BulkUpsertRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *BulkUpsertRequest) GetBatchId() string {
+	if x != nil {
+		return x.BatchId
+	}
+	return ""
+}
+
+type BulkUpsertResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The batch label: the request's batch_id, or the UUID the broker assigned.
+	BatchId string `protobuf:"bytes,1,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	// Rows in the request.
+	RowCount uint32 `protobuf:"varint,2,opt,name=row_count,json=rowCount,proto3" json:"row_count,omitempty"`
+	// Rows inserted or updated. Lower than row_count only when the table's
+	// conflict action is DO NOTHING and some rows were already present.
+	AffectedRows int64 `protobuf:"varint,3,opt,name=affected_rows,json=affectedRows,proto3" json:"affected_rows,omitempty"`
+	// SHA-256 (hex) over the batch's conflict keys in request order: the same
+	// value the change event and the audit record carry.
+	KeysSha256 string `protobuf:"bytes,4,opt,name=keys_sha256,json=keysSha256,proto3" json:"keys_sha256,omitempty"`
+	// First and last conflict key of the batch, in request order. Empty when a
+	// key column is PII, encrypted or masked in logs (only keys_sha256 is sent).
+	FirstKey string `protobuf:"bytes,5,opt,name=first_key,json=firstKey,proto3" json:"first_key,omitempty"`
+	LastKey  string `protobuf:"bytes,6,opt,name=last_key,json=lastKey,proto3" json:"last_key,omitempty"`
+	// JSON-encoded WriteReceipt for read-your-writes fencing over the batch.
+	WriteReceiptJson string `protobuf:"bytes,7,opt,name=write_receipt_json,json=writeReceiptJson,proto3" json:"write_receipt_json,omitempty"`
+	// SQL statements the broker ran inside the batch's transaction (row
+	// writes plus revision, projection, outbox and idempotency bookkeeping).
+	// Grows with ceil(rows * columns / 65535), not with rows.
+	StatementCount uint32 `protobuf:"varint,8,opt,name=statement_count,json=statementCount,proto3" json:"statement_count,omitempty"`
+	// Id of the batch's change event; empty when the table emits no change
+	// events (no cdc_topic, or CDC delivery disabled).
+	EventId string `protobuf:"bytes,9,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	// True when this response replays an earlier batch with the same
+	// idempotency_key; nothing was written by this call.
+	WasDuplicate  bool `protobuf:"varint,10,opt,name=was_duplicate,json=wasDuplicate,proto3" json:"was_duplicate,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BulkUpsertResponse) Reset() {
+	*x = BulkUpsertResponse{}
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BulkUpsertResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BulkUpsertResponse) ProtoMessage() {}
+
+func (x *BulkUpsertResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BulkUpsertResponse.ProtoReflect.Descriptor instead.
+func (*BulkUpsertResponse) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_relational_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *BulkUpsertResponse) GetBatchId() string {
+	if x != nil {
+		return x.BatchId
+	}
+	return ""
+}
+
+func (x *BulkUpsertResponse) GetRowCount() uint32 {
+	if x != nil {
+		return x.RowCount
+	}
+	return 0
+}
+
+func (x *BulkUpsertResponse) GetAffectedRows() int64 {
+	if x != nil {
+		return x.AffectedRows
+	}
+	return 0
+}
+
+func (x *BulkUpsertResponse) GetKeysSha256() string {
+	if x != nil {
+		return x.KeysSha256
+	}
+	return ""
+}
+
+func (x *BulkUpsertResponse) GetFirstKey() string {
+	if x != nil {
+		return x.FirstKey
+	}
+	return ""
+}
+
+func (x *BulkUpsertResponse) GetLastKey() string {
+	if x != nil {
+		return x.LastKey
+	}
+	return ""
+}
+
+func (x *BulkUpsertResponse) GetWriteReceiptJson() string {
+	if x != nil {
+		return x.WriteReceiptJson
+	}
+	return ""
+}
+
+func (x *BulkUpsertResponse) GetStatementCount() uint32 {
+	if x != nil {
+		return x.StatementCount
+	}
+	return 0
+}
+
+func (x *BulkUpsertResponse) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *BulkUpsertResponse) GetWasDuplicate() bool {
+	if x != nil {
+		return x.WasDuplicate
+	}
+	return false
+}
+
 // Atomic counter deltas compiled as `col = col + delta` in the same UPDATE
 // statement — no read-modify-write window (login_attempts, retry_count).
 type UpdateRequest_Increment struct {
@@ -1301,7 +1568,7 @@ type UpdateRequest_Increment struct {
 
 func (x *UpdateRequest_Increment) Reset() {
 	*x = UpdateRequest_Increment{}
-	mi := &file_udb_entity_v1_relational_proto_msgTypes[14]
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1313,7 +1580,7 @@ func (x *UpdateRequest_Increment) String() string {
 func (*UpdateRequest_Increment) ProtoMessage() {}
 
 func (x *UpdateRequest_Increment) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_relational_proto_msgTypes[14]
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1372,7 +1639,7 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"\bhas_more\x18\x06 \x01(\bR\ahasMore\x12\x1f\n" +
 	"\vexact_total\x18\a \x01(\x03R\n" +
 	"exactTotal\x12'\n" +
-	"\x0fredacted_fields\x18\b \x03(\tR\x0eredactedFieldsJ\x04\b\x04\x10\x05R\vtotal_count\"\x95\x03\n" +
+	"\x0fredacted_fields\x18\b \x03(\tR\x0eredactedFieldsJ\x04\b\x04\x10\x05R\vtotal_count\"\xbe\x03\n" +
 	"\rSelectRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12/\n" +
@@ -1385,7 +1652,8 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"\x05cache\x18\b \x01(\v2\x1b.udb.entity.v1.CacheOptionsR\x05cache\x12)\n" +
 	"\x10include_revision\x18\t \x01(\bR\x0fincludeRevision\x12#\n" +
 	"\rinclude_total\x18\n" +
-	" \x01(\bR\fincludeTotal\"\xe0\x03\n" +
+	" \x01(\bR\fincludeTotal\x12'\n" +
+	"\x0finclude_deleted\x18\v \x01(\bR\x0eincludeDeleted\"\xe0\x03\n" +
 	"\rUpsertRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12\x1f\n" +
@@ -1464,7 +1732,27 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"conflicted\x18\x03 \x01(\x05R\n" +
 	"conflicted\x12,\n" +
 	"\x12write_receipt_json\x18\x04 \x01(\tR\x10writeReceiptJson\x12:\n" +
-	"\aresults\x18\x05 \x03(\v2 .udb.entity.v1.BulkCasItemResultR\aresultsB\xb5\x01\n" +
+	"\aresults\x18\x05 \x03(\v2 .udb.entity.v1.BulkCasItemResultR\aresults\"\xff\x01\n" +
+	"\x11BulkUpsertRequest\x127\n" +
+	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
+	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12!\n" +
+	"\frecords_json\x18\x03 \x03(\fR\vrecordsJson\x12'\n" +
+	"\x0fconflict_fields\x18\x04 \x03(\tR\x0econflictFields\x12'\n" +
+	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\x12\x19\n" +
+	"\bbatch_id\x18\x06 \x01(\tR\abatchId\"\xe1\x02\n" +
+	"\x12BulkUpsertResponse\x12\x19\n" +
+	"\bbatch_id\x18\x01 \x01(\tR\abatchId\x12\x1b\n" +
+	"\trow_count\x18\x02 \x01(\rR\browCount\x12#\n" +
+	"\raffected_rows\x18\x03 \x01(\x03R\faffectedRows\x12\x1f\n" +
+	"\vkeys_sha256\x18\x04 \x01(\tR\n" +
+	"keysSha256\x12\x1b\n" +
+	"\tfirst_key\x18\x05 \x01(\tR\bfirstKey\x12\x19\n" +
+	"\blast_key\x18\x06 \x01(\tR\alastKey\x12,\n" +
+	"\x12write_receipt_json\x18\a \x01(\tR\x10writeReceiptJson\x12'\n" +
+	"\x0fstatement_count\x18\b \x01(\rR\x0estatementCount\x12\x19\n" +
+	"\bevent_id\x18\t \x01(\tR\aeventId\x12#\n" +
+	"\rwas_duplicate\x18\n" +
+	" \x01(\bR\fwasDuplicateB\xb5\x01\n" +
 	"\x11com.udb.entity.v1B\x0fRelationalProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3"
 
 var (
@@ -1479,7 +1767,7 @@ func file_udb_entity_v1_relational_proto_rawDescGZIP() []byte {
 	return file_udb_entity_v1_relational_proto_rawDescData
 }
 
-var file_udb_entity_v1_relational_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_udb_entity_v1_relational_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_udb_entity_v1_relational_proto_goTypes = []any{
 	(*Sort)(nil),                    // 0: udb.entity.v1.Sort
 	(*CacheOptions)(nil),            // 1: udb.entity.v1.CacheOptions
@@ -1494,45 +1782,48 @@ var file_udb_entity_v1_relational_proto_goTypes = []any{
 	(*BulkCasRequest)(nil),          // 10: udb.entity.v1.BulkCasRequest
 	(*BulkCasItemResult)(nil),       // 11: udb.entity.v1.BulkCasItemResult
 	(*BulkCasResponse)(nil),         // 12: udb.entity.v1.BulkCasResponse
-	nil,                             // 13: udb.entity.v1.Row.FieldsEntry
-	(*UpdateRequest_Increment)(nil), // 14: udb.entity.v1.UpdateRequest.Increment
-	(*RequestContext)(nil),          // 15: udb.entity.v1.RequestContext
-	(*structpb.Struct)(nil),         // 16: google.protobuf.Struct
-	(*structpb.Value)(nil),          // 17: google.protobuf.Value
+	(*BulkUpsertRequest)(nil),       // 13: udb.entity.v1.BulkUpsertRequest
+	(*BulkUpsertResponse)(nil),      // 14: udb.entity.v1.BulkUpsertResponse
+	nil,                             // 15: udb.entity.v1.Row.FieldsEntry
+	(*UpdateRequest_Increment)(nil), // 16: udb.entity.v1.UpdateRequest.Increment
+	(*RequestContext)(nil),          // 17: udb.entity.v1.RequestContext
+	(*structpb.Struct)(nil),         // 18: google.protobuf.Struct
+	(*structpb.Value)(nil),          // 19: google.protobuf.Value
 }
 var file_udb_entity_v1_relational_proto_depIdxs = []int32{
-	13, // 0: udb.entity.v1.Row.fields:type_name -> udb.entity.v1.Row.FieldsEntry
+	15, // 0: udb.entity.v1.Row.fields:type_name -> udb.entity.v1.Row.FieldsEntry
 	2,  // 1: udb.entity.v1.RecordSet.rows:type_name -> udb.entity.v1.Row
-	15, // 2: udb.entity.v1.SelectRequest.context:type_name -> udb.entity.v1.RequestContext
-	16, // 3: udb.entity.v1.SelectRequest.filter:type_name -> google.protobuf.Struct
+	17, // 2: udb.entity.v1.SelectRequest.context:type_name -> udb.entity.v1.RequestContext
+	18, // 3: udb.entity.v1.SelectRequest.filter:type_name -> google.protobuf.Struct
 	0,  // 4: udb.entity.v1.SelectRequest.sort:type_name -> udb.entity.v1.Sort
 	1,  // 5: udb.entity.v1.SelectRequest.cache:type_name -> udb.entity.v1.CacheOptions
-	15, // 6: udb.entity.v1.UpsertRequest.context:type_name -> udb.entity.v1.RequestContext
-	16, // 7: udb.entity.v1.UpsertRequest.payload:type_name -> google.protobuf.Struct
+	17, // 6: udb.entity.v1.UpsertRequest.context:type_name -> udb.entity.v1.RequestContext
+	18, // 7: udb.entity.v1.UpsertRequest.payload:type_name -> google.protobuf.Struct
 	1,  // 8: udb.entity.v1.UpsertRequest.cache:type_name -> udb.entity.v1.CacheOptions
-	16, // 9: udb.entity.v1.UpsertRequest.expected:type_name -> google.protobuf.Struct
-	15, // 10: udb.entity.v1.DeleteRequest.context:type_name -> udb.entity.v1.RequestContext
-	16, // 11: udb.entity.v1.DeleteRequest.filter:type_name -> google.protobuf.Struct
-	16, // 12: udb.entity.v1.DeleteRequest.expected:type_name -> google.protobuf.Struct
-	15, // 13: udb.entity.v1.UpdateRequest.context:type_name -> udb.entity.v1.RequestContext
-	16, // 14: udb.entity.v1.UpdateRequest.filter:type_name -> google.protobuf.Struct
-	16, // 15: udb.entity.v1.UpdateRequest.changes:type_name -> google.protobuf.Struct
-	16, // 16: udb.entity.v1.UpdateRequest.expected:type_name -> google.protobuf.Struct
-	14, // 17: udb.entity.v1.UpdateRequest.increments:type_name -> udb.entity.v1.UpdateRequest.Increment
-	15, // 18: udb.entity.v1.ViewDefinition.context:type_name -> udb.entity.v1.RequestContext
-	16, // 19: udb.entity.v1.BulkCasItem.filter:type_name -> google.protobuf.Struct
-	16, // 20: udb.entity.v1.BulkCasItem.changes:type_name -> google.protobuf.Struct
-	16, // 21: udb.entity.v1.BulkCasItem.expected:type_name -> google.protobuf.Struct
-	14, // 22: udb.entity.v1.BulkCasItem.increments:type_name -> udb.entity.v1.UpdateRequest.Increment
-	15, // 23: udb.entity.v1.BulkCasRequest.context:type_name -> udb.entity.v1.RequestContext
+	18, // 9: udb.entity.v1.UpsertRequest.expected:type_name -> google.protobuf.Struct
+	17, // 10: udb.entity.v1.DeleteRequest.context:type_name -> udb.entity.v1.RequestContext
+	18, // 11: udb.entity.v1.DeleteRequest.filter:type_name -> google.protobuf.Struct
+	18, // 12: udb.entity.v1.DeleteRequest.expected:type_name -> google.protobuf.Struct
+	17, // 13: udb.entity.v1.UpdateRequest.context:type_name -> udb.entity.v1.RequestContext
+	18, // 14: udb.entity.v1.UpdateRequest.filter:type_name -> google.protobuf.Struct
+	18, // 15: udb.entity.v1.UpdateRequest.changes:type_name -> google.protobuf.Struct
+	18, // 16: udb.entity.v1.UpdateRequest.expected:type_name -> google.protobuf.Struct
+	16, // 17: udb.entity.v1.UpdateRequest.increments:type_name -> udb.entity.v1.UpdateRequest.Increment
+	17, // 18: udb.entity.v1.ViewDefinition.context:type_name -> udb.entity.v1.RequestContext
+	18, // 19: udb.entity.v1.BulkCasItem.filter:type_name -> google.protobuf.Struct
+	18, // 20: udb.entity.v1.BulkCasItem.changes:type_name -> google.protobuf.Struct
+	18, // 21: udb.entity.v1.BulkCasItem.expected:type_name -> google.protobuf.Struct
+	16, // 22: udb.entity.v1.BulkCasItem.increments:type_name -> udb.entity.v1.UpdateRequest.Increment
+	17, // 23: udb.entity.v1.BulkCasRequest.context:type_name -> udb.entity.v1.RequestContext
 	9,  // 24: udb.entity.v1.BulkCasRequest.items:type_name -> udb.entity.v1.BulkCasItem
 	11, // 25: udb.entity.v1.BulkCasResponse.results:type_name -> udb.entity.v1.BulkCasItemResult
-	17, // 26: udb.entity.v1.Row.FieldsEntry.value:type_name -> google.protobuf.Value
-	27, // [27:27] is the sub-list for method output_type
-	27, // [27:27] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	17, // 26: udb.entity.v1.BulkUpsertRequest.context:type_name -> udb.entity.v1.RequestContext
+	19, // 27: udb.entity.v1.Row.FieldsEntry.value:type_name -> google.protobuf.Value
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_relational_proto_init() }
@@ -1547,7 +1838,7 @@ func file_udb_entity_v1_relational_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_relational_proto_rawDesc), len(file_udb_entity_v1_relational_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

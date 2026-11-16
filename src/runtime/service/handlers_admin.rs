@@ -727,6 +727,7 @@ impl DataBrokerService {
                             kind: match row.kind {
                                 crate::runtime::drift_reconciliation::DivergenceKind::MissingOnTarget => "missing_on_target",
                                 crate::runtime::drift_reconciliation::DivergenceKind::ChecksumMismatch => "checksum_mismatch",
+                                crate::runtime::drift_reconciliation::DivergenceKind::PresentOutsideFilter => "present_outside_filter",
                             }
                             .to_string(),
                         })

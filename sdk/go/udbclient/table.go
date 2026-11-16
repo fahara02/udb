@@ -99,6 +99,11 @@ type SelectOptions struct {
 	IncludeTotal bool
 	// Fields restricts the columns read (empty = every non-PII column).
 	Fields []string
+	// IncludeDeleted also returns soft-deleted rows; a deleted row has its
+	// soft-delete column (for example DeletedAt) set. It needs scope
+	// udb:deleted:read (CodeScopeMissing without it), works only on an entity
+	// with soft delete (CodeInvalid otherwise), and every such read is audited.
+	IncludeDeleted bool
 }
 
 // TablePage is one page of typed rows.
@@ -165,12 +170,13 @@ func (t *Table[T]) selectRecords(ctx context.Context, where Filter, opts SelectO
 		return TablePage[T]{}, nil, fmt.Errorf("udb: %s filter: %w", t.messageType, err)
 	}
 	req := &entityv1.SelectRequest{
-		MessageType:  t.messageType,
-		Filter:       filter,
-		Limit:        int32(opts.Limit),
-		PageToken:    opts.PageToken,
-		IncludeTotal: opts.IncludeTotal,
-		Fields:       opts.Fields,
+		MessageType:    t.messageType,
+		Filter:         filter,
+		Limit:          int32(opts.Limit),
+		PageToken:      opts.PageToken,
+		IncludeTotal:   opts.IncludeTotal,
+		Fields:         opts.Fields,
+		IncludeDeleted: opts.IncludeDeleted,
 	}
 	for _, column := range opts.OrderBy {
 		desc := len(column) > 0 && column[0] == '-'

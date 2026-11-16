@@ -80,6 +80,27 @@ impl UdbError {
         (!c.is_empty()).then_some(c)
     }
 
+    /// The broker's typed refusal reason (`ErrorDetail.reason`, e.g.
+    /// `UDB_TOKEN_EXPIRED`), when it sent one. Branch on this, never on the
+    /// message text.
+    pub fn reason(&self) -> Option<&str> {
+        let r = self.detail.as_ref()?.reason.as_str();
+        (!r.is_empty()).then_some(r)
+    }
+
+    /// The broker refused the bearer because it expired (`UDB_TOKEN_EXPIRED`):
+    /// refresh it or sign in again. A delegated job token cannot be refreshed:
+    /// the job exchanges a fresh user token or stops.
+    pub fn is_token_expired(&self) -> bool {
+        self.reason() == Some("UDB_TOKEN_EXPIRED")
+    }
+
+    /// The broker refused the bearer because it was revoked or is no longer
+    /// backed by live state (`UDB_TOKEN_REVOKED`): do not retry with it.
+    pub fn is_token_revoked(&self) -> bool {
+        self.reason() == Some("UDB_TOKEN_REVOKED")
+    }
+
     /// Per-field rejections, for a validation failure.
     pub fn field_violations(&self) -> &[crate::proto::udb::entity::v1::ErrorFieldViolation] {
         self.detail
@@ -292,6 +313,38 @@ mod tests {
         assert_eq!(err.retry_after(), Some(Duration::from_millis(250)));
         assert_eq!(err.capability_required(), Some("postgres_backend"));
         assert_eq!(err.correlation_id(), Some("corr-9"));
+    }
+
+    fn refusal(reason: &str) -> UdbError {
+        let detail = ErrorDetail {
+            reason: reason.into(),
+            ..Default::default()
+        };
+        let mut status = Status::new(Code::Unauthenticated, "refused");
+        let mut buf = Vec::new();
+        prost::Message::encode(&detail, &mut buf).expect("encode");
+        status.metadata_mut().insert_bin(
+            ERROR_DETAIL_TRAILER,
+            tonic::metadata::MetadataValue::from_bytes(&buf),
+        );
+        UdbError::from_status(status)
+    }
+
+    #[test]
+    fn expired_and_revoked_bearers_are_told_apart() {
+        let expired = refusal("UDB_TOKEN_EXPIRED");
+        let revoked = refusal("UDB_TOKEN_REVOKED");
+        assert_eq!(expired.code(), Code::Unauthenticated);
+        assert_eq!(expired.reason(), Some("UDB_TOKEN_EXPIRED"));
+        assert!(expired.is_token_expired() && !expired.is_token_revoked());
+        assert!(revoked.is_token_revoked() && !revoked.is_token_expired());
+        assert!(!refusal("UDB_AUTHENTICATION_FAILED").is_token_expired());
+        let text_only = UdbError::from_status(Status::unauthenticated("UDB_TOKEN_EXPIRED"));
+        assert!(
+            !text_only.is_token_expired(),
+            "the message text is never matched"
+        );
+        assert_eq!(text_only.reason(), None);
     }
 
     #[test]

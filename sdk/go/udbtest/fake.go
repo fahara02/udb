@@ -62,11 +62,15 @@ type Fake struct {
 	rows   map[string]map[string]map[string]map[string]any
 	events []Event
 	// cursors: tenant + project + consumer + topic pattern → verified owner and position.
-	cursors   map[string]consumerCursor
-	dlq       map[string]*fakeDlq
-	receipts  map[mutationKey]mutationReceipt
-	revisions map[revisionKey]int64
-	emitted   int
+	cursors  map[string]consumerCursor
+	dlq      map[string]*fakeDlq
+	receipts map[mutationKey]mutationReceipt
+	// bulkReceipts: BulkUpsert idempotency receipts (see bulk.go).
+	bulkReceipts map[mutationKey]bulkReceipt
+	revisions    map[revisionKey]int64
+	emitted      int
+	// deletedReads: the audit record of every include_deleted read.
+	deletedReads []DeletedRead
 }
 
 type entity struct {
@@ -85,6 +89,12 @@ type entity struct {
 	softDelete    string
 	tableName     string
 	schemaError   string
+	// The join-fusion read's view of the table: its short message name (the
+	// fused column prefix), schema, required scope and foreign keys.
+	shortName     string
+	schemaName    string
+	requiredScope string
+	foreignKeys   []foreignKey
 }
 
 // New starts a fake serving the given entity messages (their udb column
@@ -196,15 +206,30 @@ func (f *Fake) entity(messageType string) (*entity, error) {
 
 // Select reads rows like the broker: scoped to the caller's tenant, ordered by
 // the sort then the primary key, paged with has_more and an optional total.
+// include_deleted (scope udb:deleted:read, soft-delete entities only) also
+// returns soft-deleted rows, each carrying its soft-delete column, and is
+// recorded in DeletedReads.
 func (f *Fake) Select(ctx context.Context, req *entityv1.SelectRequest) (*entityv1.RecordSet, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if len(joinMessageTypes(req.GetMessageType())) > 1 {
+		if req.GetIncludeDeleted() {
+			return nil, includeDeletedJoinRefusal()
+		}
+		return f.selectJoin(ctx, req)
+	}
 	e, err := f.entity(req.GetMessageType())
 	if err != nil {
 		return nil, err
 	}
 	identity := callerIdentity(ctx)
 	tenant := identity.TenantID
+	includeDeleted := req.GetIncludeDeleted()
+	if includeDeleted {
+		if err := e.admitIncludeDeleted(identity); err != nil {
+			return nil, err
+		}
+	}
 	filter, err := e.queryFilter(req.GetFilter().AsMap())
 	if err != nil {
 		return nil, err
@@ -221,9 +246,12 @@ func (f *Fake) Select(ctx context.Context, req *entityv1.SelectRequest) (*entity
 			selected[column] = true
 		}
 	}
+	if includeDeleted {
+		selected[e.softDelete] = true
+	}
 	var matched []map[string]any
 	for _, row := range f.rows[e.messageType][tenant] {
-		if !e.live(row) || !e.visibleTo(row, identity) {
+		if (!includeDeleted && !e.live(row)) || !e.visibleTo(row, identity) {
 			continue
 		}
 		ok, err := matches(row, filter)
@@ -323,6 +351,9 @@ func (f *Fake) Select(ctx context.Context, req *entityv1.SelectRequest) (*entity
 	out.HasMore = len(out.RecordsJson) >= limit
 	if out.HasMore && end < len(matched) {
 		out.NextPageToken = base64.RawURLEncoding.EncodeToString([]byte(strconv.Itoa(end)))
+	}
+	if includeDeleted {
+		f.recordDeletedRead(identity, e, len(out.RecordsJson))
 	}
 	return out, nil
 }

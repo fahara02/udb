@@ -1502,6 +1502,22 @@ class UdbProject {
             ...opts,
         });
     }
+    /** Run several reads, across tables, in ONE broker call; results come back in
+     *  the order of `reads`. See {@link selectMany}. */
+    selectMany(reads, opts = {}) {
+        return (0, stores_1.selectMany)(this.core, reads, opts);
+    }
+    /** Upsert `rows` of `messageType` as ONE batch in one transaction: every row is
+     *  written or none is, and the entity's CDC topic gets one event for the batch.
+     *  See {@link bulkUpsert}. */
+    bulkUpsert(messageType, rows, opts = {}) {
+        return (0, stores_1.bulkUpsert)(this.core, messageType, rows, { fence: this.fence, ...opts });
+    }
+    /** Load any number of rows of `messageType` in sequential BulkUpsert batches; the
+     *  first failure stops the load with a BulkLoadError. See {@link bulkLoad}. */
+    bulkLoad(messageType, rows, opts = {}) {
+        return (0, stores_1.bulkLoad)(this.core, messageType, rows, { fence: this.fence, ...opts });
+    }
     /** Deliver events on `topicPattern` to `handle` as the durable consumer `name`,
      *  resuming where it left off. See {@link consume}. */
     consume(name, topicPattern, handle, opts = {}) {
