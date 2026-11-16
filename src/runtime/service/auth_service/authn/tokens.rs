@@ -133,6 +133,103 @@ impl AuthnServiceImpl {
         }
     }
 
+    /// Test hook: put one token's jti on the durable revocation deny list, as
+    /// a single-token revoke would.
+    #[cfg(test)]
+    pub(crate) async fn revoke_jti_for_test(
+        &self,
+        jti: &str,
+        tenant_id: &str,
+        expires_at_unix: u64,
+    ) -> Result<(), Status> {
+        self.revoke_token_jti(jti, "jwt_access", tenant_id, expires_at_unix, "", "test")
+            .await?;
+        // A served revoke publishes an auth event, which drops remembered
+        // verdicts on this node; do the same.
+        verdict_cache::invalidate();
+        Ok(())
+    }
+
+    /// Longest lifetime of a delegated job token (`UDB_DELEGATED_TOKEN_MAX_TTL`).
+    pub(crate) fn delegated_token_max_ttl_secs(&self) -> u64 {
+        self.security.delegated_token_max_ttl_secs.max(1)
+    }
+
+    /// Verify the user's token presented to `ExchangeTokenForJob`: signature,
+    /// `exp`, `nbf`, issuer, audience, as for any bearer. Live state (user,
+    /// revocation) is checked by the caller. Every refusal is
+    /// PERMISSION_DENIED: the caller (the service) is authenticated, it is the
+    /// token it presents that cannot be used.
+    pub(crate) fn verify_delegation_subject_token(
+        &self,
+        token: &str,
+    ) -> Result<crate::runtime::security::SecurityClaims, Status> {
+        validate_bearer_token(&self.security, token).map_err(|error| {
+            let expired =
+                crate::runtime::security::bearer_refusal_reason(&error).is_some_and(|reason| {
+                    reason.code == crate::runtime::error_reasons::TOKEN_EXPIRED.code
+                });
+            let (decision, message) = if expired {
+                (
+                    "delegated_token_subject_expired",
+                    "subject_token has expired; the user must sign in or refresh first",
+                )
+            } else {
+                (
+                    "delegated_token_subject_invalid",
+                    "subject_token is not a valid access token",
+                )
+            };
+            crate::runtime::executor_utils::policy_status_with_code(
+                tonic::Code::PermissionDenied,
+                "exchange_token_for_job",
+                decision,
+                message,
+            )
+        })
+    }
+
+    /// Mint a delegated job token (`ExchangeTokenForJob`) for
+    /// `delegation.subject`, acting as `delegation.actor_*`. `ttl_secs` is
+    /// already bounded by the caller. A missing signing key is a capability
+    /// error (there is no session fallback for a delegated token).
+    pub(crate) fn issue_delegated_access_token(
+        &self,
+        delegation: &super::super::delegated_tokens::DelegatedTokenClaims,
+        project_id: &str,
+        scopes: &[String],
+        account_kind: i32,
+        now: u64,
+        ttl_secs: u64,
+    ) -> Result<(String, i64), Status> {
+        let actor_account_id = delegation.actor_account_id.to_string();
+        match crate::runtime::security::sign_delegated_access_token(
+            &self.security,
+            &delegation.subject,
+            &delegation.tenant_id,
+            project_id,
+            scopes,
+            &delegation.jti,
+            account_kind,
+            now,
+            ttl_secs,
+            crate::runtime::security::DelegationClaims {
+                actor_service_identity: &delegation.actor_service_identity,
+                actor_account_id: &actor_account_id,
+                job_id: &delegation.job_id,
+                purpose: &delegation.purpose,
+            },
+        ) {
+            Ok(Some(signed)) => Ok(signed),
+            Ok(None) => Err(authn_capability_status(
+                "exchange_token_for_job",
+                "jwt_signing_key",
+                "minting a delegated job token requires a configured JWT signing key",
+            )),
+            Err(err) => Err(authn_internal_status("exchange_token_for_job_sign", err)),
+        }
+    }
+
     pub(super) fn issue_access_token(
         &self,
         subject: &str,
@@ -444,12 +541,9 @@ impl AuthnServiceImpl {
             .filter(|u| !u.trim().is_empty())
         {
             // The operator delegated JWKS hosting — proxy it as the source of truth.
-            if let Ok(resp) = reqwest::Client::new().get(url.trim()).send().await {
-                if let Ok(body) = resp.text().await {
-                    return Ok(body);
-                }
-            }
-            return Ok(EMPTY.to_string());
+            return Ok(fetch_delegated_jwks(url.trim())
+                .await
+                .unwrap_or_else(|| EMPTY.to_string()));
         }
         if let Some(pem) = self.security.jwt_public_pem() {
             if let Some(jwk) = rsa_jwk_from_pem(&pem) {
@@ -606,6 +700,109 @@ pub(super) fn rsa_jwk_value_from_pem(pem: &str, kid: &str, alg: &str) -> Option<
         "n": n,
         "e": e,
     }))
+}
+
+/// Fetch the operator's delegated JWKS document for republication.
+///
+/// The document decides which keys verify tokens, so it must not be readable
+/// or rewritable on the way: a plaintext http:// URL to a non-loopback host is
+/// refused when UDB_OUTBOUND_TLS_REQUIRED is on. The fetch has bounded connect
+/// and request timeouts (a hung host used to hold the JWKS RPC open
+/// indefinitely), follows no redirects, and republishes only a 2xx answer
+/// whose body is a JWKS document. Anything else returns `None`, which the
+/// caller turns into an empty key set (nothing verifies) rather than
+/// republishing an error page.
+#[cfg(feature = "http-client")]
+async fn fetch_delegated_jwks(url: &str) -> Option<String> {
+    if let Err(reason) = crate::runtime::transport_policy::check_secret_url(url, "jwt_jwks_url") {
+        tracing::warn!(%reason, "delegated JWKS not fetched");
+        return None;
+    }
+    let client = crate::runtime::security::outbound_secret_http_client_with_timeout(
+        url,
+        std::time::Duration::from_secs(10),
+    )
+    .map_err(|error| tracing::warn!(%error, "delegated JWKS not fetched"))
+    .ok()?;
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|error| tracing::warn!(%error, "delegated JWKS fetch failed"))
+        .ok()?;
+    if !response.status().is_success() {
+        tracing::warn!(status = %response.status(), "delegated JWKS host refused the fetch");
+        return None;
+    }
+    let body = response.text().await.ok()?;
+    is_jwks_document(&body).then_some(body)
+}
+
+/// Whether `body` is a JWKS document: a JSON object with a `keys` array.
+#[cfg(feature = "http-client")]
+fn is_jwks_document(body: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(body)
+        .ok()
+        .and_then(|value| value.get("keys").map(serde_json::Value::is_array))
+        .unwrap_or(false)
+}
+
+#[cfg(all(test, feature = "http-client"))]
+mod delegated_jwks_tests {
+    use super::{fetch_delegated_jwks, is_jwks_document};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    async fn one_shot_host(response: String) -> String {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind loopback host");
+        let address = listener.local_addr().expect("host address");
+        tokio::spawn(async move {
+            if let Ok((mut socket, _)) = listener.accept().await {
+                let mut buffer = vec![0u8; 16 * 1024];
+                let _ = socket.read(&mut buffer).await;
+                let _ = socket.write_all(response.as_bytes()).await;
+                let _ = socket.shutdown().await;
+            }
+        });
+        format!("http://{address}/jwks.json")
+    }
+
+    fn http_response(status: &str, extra_headers: &str, body: &str) -> String {
+        format!(
+            "HTTP/1.1 {status}\r\n{extra_headers}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        )
+    }
+
+    #[test]
+    fn only_a_keys_array_is_a_jwks_document() {
+        assert!(is_jwks_document(r#"{"keys":[]}"#));
+        assert!(!is_jwks_document(r#"{"error":"not found"}"#));
+        assert!(!is_jwks_document("<html>gateway error</html>"));
+    }
+
+    #[tokio::test]
+    async fn delegated_jwks_republishes_only_a_successful_jwks_answer() {
+        let ok = one_shot_host(http_response("200 OK", "", r#"{"keys":[]}"#)).await;
+        assert_eq!(
+            fetch_delegated_jwks(&ok).await.as_deref(),
+            Some(r#"{"keys":[]}"#)
+        );
+
+        let error_page =
+            one_shot_host(http_response("500 Internal Server Error", "", "oops")).await;
+        assert_eq!(fetch_delegated_jwks(&error_page).await, None);
+
+        // A redirect is not followed, so its target is never republished.
+        let redirect = one_shot_host(http_response(
+            "302 Found",
+            "Location: http://192.0.2.1/attacker-jwks.json\r\n",
+            "",
+        ))
+        .await;
+        assert_eq!(fetch_delegated_jwks(&redirect).await, None);
+    }
 }
 
 #[cfg(test)]

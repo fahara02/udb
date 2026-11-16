@@ -22,6 +22,7 @@ use crate::ir::operations::{
 };
 use crate::ir::value::LogicalValue;
 
+use super::util::TenantMatch;
 use super::{CompileContext, CompileError, CompiledRendering, Compiler, HttpMethod};
 
 /// Qdrant vector-store compiler.
@@ -156,18 +157,30 @@ impl QdrantCompiler {
     /// so the tenant + project predicate ANDs together with the user
     /// filter. Tenant boundary is enforced at protocol level — a
     /// Qdrant search can no longer leak points across tenants.
+    ///
+    /// `tenant_match` decides the tenant condition: reads use
+    /// `match.any = [tid, "*shared*"]` so points projected from a shared
+    /// (global) table are visible to every tenant; deletes keep the exact
+    /// `match.value`.
     fn and_with_context(
         &self,
         user_filter: Json,
         table: &ManifestTable,
         ctx: &CompileContext<'_>,
+        tenant_match: TenantMatch,
     ) -> Json {
         let mut ctx_must: Vec<Json> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
             && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            ctx_must.push(json!({"key": column, "match": {"value": tid}}));
+            ctx_must.push(match tenant_match {
+                TenantMatch::Exact => json!({"key": column, "match": {"value": tid}}),
+                TenantMatch::CallerOrShared => json!({
+                    "key": column,
+                    "match": {"any": super::util::shared_read_tenants(tid)},
+                }),
+            });
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
@@ -205,7 +218,7 @@ impl Compiler for QdrantCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => Json::Object(Map::new()),
         };
-        let merged = self.and_with_context(user_rendered, table, ctx);
+        let merged = self.and_with_context(user_rendered, table, ctx, TenantMatch::CallerOrShared);
         if !merged.as_object().is_some_and(|m| m.is_empty()) {
             body.insert("filter".into(), merged);
         }
@@ -256,7 +269,7 @@ impl Compiler for QdrantCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => Json::Object(Map::new()),
         };
-        let merged = self.and_with_context(user_rendered, table, ctx);
+        let merged = self.and_with_context(user_rendered, table, ctx, TenantMatch::CallerOrShared);
         if !merged.as_object().is_some_and(|m| m.is_empty()) {
             body["filter"] = merged;
         }
@@ -279,6 +292,7 @@ impl Compiler for QdrantCompiler {
             });
         }
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Qdrant)?;
         if table.primary_key.is_empty() {
             return Err(CompileError::Malformed {
                 reason: format!(
@@ -351,6 +365,7 @@ impl Compiler for QdrantCompiler {
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Qdrant)?;
         let user_filter = self.render_filter(&op.filter, table, &op.message_type)?;
         if user_filter.as_object().is_some_and(|m| m.is_empty()) {
             return Err(CompileError::Malformed {
@@ -359,7 +374,7 @@ impl Compiler for QdrantCompiler {
         }
         // C7/C8: tenant AND so a permissive user filter can't delete
         // another tenant's points.
-        let filter = self.and_with_context(user_filter, table, ctx);
+        let filter = self.and_with_context(user_filter, table, ctx, TenantMatch::Exact);
         Ok(CompiledRendering::Json {
             backend: BackendKind::Qdrant,
             method: HttpMethod::Post,
@@ -528,7 +543,11 @@ mod tests {
                 // No user filter, so must = [ctx_tenant, ctx_project].
                 assert_eq!(must.len(), 2);
                 assert_eq!(must[0]["key"], "_tenant_id");
-                assert_eq!(must[0]["match"]["value"], "acme");
+                // Reads match the caller's own tenant OR the shared marker.
+                assert_eq!(
+                    must[0]["match"]["any"],
+                    json!(["acme", crate::broker::SHARED_TENANT_MARKER])
+                );
                 assert_eq!(must[1]["key"], "_project_id");
                 assert_eq!(must[1]["match"]["value"], "p1");
             }
@@ -582,5 +601,34 @@ mod tests {
                 .compile_search(&search, &CompileContext::new(&m))
                 .is_ok()
         );
+    }
+    /// Deletes keep the exact caller tenant, and the shared marker can never
+    /// be a write or delete scope.
+    #[test]
+    fn delete_keeps_exact_tenant_and_marker_cannot_write() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m).with_tenant("acme");
+        let del = LogicalDelete {
+            message_type: "acme.docs.v1.Doc".into(),
+            filter: LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("d1".into()),
+            },
+            return_fields: vec![],
+        };
+        match QdrantCompiler.compile_delete(&del, &ctx).unwrap() {
+            CompiledRendering::Json { body, .. } => {
+                let rendered = body["filter"].to_string();
+                assert!(
+                    rendered.contains(r#""match":{"value":"acme"}"#),
+                    "{rendered}"
+                );
+                assert!(!rendered.contains("any"), "{rendered}");
+            }
+            other => panic!("expected Json, got {other:?}"),
+        }
+        let marker = CompileContext::new(&m).with_tenant(crate::broker::SHARED_TENANT_MARKER);
+        assert!(QdrantCompiler.compile_delete(&del, &marker).is_err());
     }
 }

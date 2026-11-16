@@ -100,6 +100,11 @@ impl BackendDeployConfig {
     ///
     /// Cloud mode requires TLS unless explicitly overridden.
     /// Self-hosted mode defaults to no TLS.
+    ///
+    /// Enforced at startup by `runtime::transport_policy`: a backend for which
+    /// this is true must have an encrypted DSN (for PostgreSQL at least
+    /// `sslmode=require`; `rediss://`; `https://`), or the broker refuses to
+    /// start. `UDB_<BACKEND>_DEPLOY_MODE=cloud` is therefore no longer a warning.
     pub fn tls_required(&self) -> bool {
         match self.tls_override {
             Some(v) => v,

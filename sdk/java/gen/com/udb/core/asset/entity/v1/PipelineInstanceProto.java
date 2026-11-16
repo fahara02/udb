@@ -46,7 +46,7 @@ public final class PipelineInstanceProto {
       "common/v1/db.proto\032!udb/core/common/v1/s" +
       "ecurity.proto\032\036udb/core/common/v1/types." +
       "proto\032$udb/core/asset/entity/v1/enums.pr" +
-      "oto\"\324\014\n\020PipelineInstance\022O\n\013instance_id\030" +
+      "oto\"\341\014\n\020PipelineInstance\022O\n\013instance_id\030" +
       "\001 \001(\tB.\202\267\030*\n\013instance_id\022\004UUID\030\001(\001:\021gen_" +
       "random_uuid()R\ninstanceId\022@\n\rdefinition_" +
       "id\030\002 \001(\tB\033\202\267\030\027\n\rdefinition_id\022\004UUID\030\001R\014d" +
@@ -71,29 +71,29 @@ public final class PipelineInstanceProto {
       "MPTZR\013completedAt\022\202\001\n\naudit_info\030\013 \001(\0132\035" +
       ".udb.core.common.v1.AuditInfoBD\202\267\030@\n\naud" +
       "it_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audit tra" +
-      "il stored as JSONx\001R\tauditInfo:\321\004\372\266\030\267\003\n\022" +
+      "il stored as JSONx\001R\tauditInfo:\336\004\372\266\030\304\003\n\022" +
       "pipeline_instances\022\tudb_asset\030\003 \001*?Pipel" +
       "ine execution instances tracking per-ass" +
-      "et processing runs8\001@\001b\243\001\n#pipeline_inst" +
-      "ances_tenant_isolation\032z(tenant_id::text" +
-      " = current_setting(\'app.current_tenant_i" +
-      "d\', true) OR current_setting(\'app.platfo" +
-      "rm_admin\', true) = \'true\')(\001h\001\212\001C\n(idx_p" +
-      "ipeline_instance_correlation_unique\022\005BTR" +
-      "EE\030\001Z\016correlation_id\212\001.\n\033idx_pipeline_in" +
-      "stance_asset\022\005BTREEZ\010asset_id\362\001 udb.asse" +
-      "t.pipeline_instances.cdc\372\001\nasset:read\212\262\031" +
-      "\220\001\n\006tenant\032\ttenant_id*4tenant_id = curre" +
-      "nt_setting(\'app.current_tenant_id\')2\004non" +
-      "e:\021asset.operational@\373\023H\002R\006tenantZ\010stand" +
-      "ardr\025tenant.data_residencyB\200\002\n\034com.udb.c" +
-      "ore.asset.entity.v1B\025PipelineInstancePro" +
-      "toP\001ZDgithub.com/fahara02/udb/sdk/go/gen" +
-      "/udb/core/asset/entity/v1;entityv1\242\002\004UCA" +
-      "E\252\002\030Udb.Core.Asset.Entity.V1\312\002\030Udb\\Core\\" +
-      "Asset\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\A" +
-      "sset\\Entity\\V1\352\002\034Udb::Core::Asset::Entit" +
-      "y::V1b\006proto3"
+      "et processing runs8\001@\001b\260\001\n#pipeline_inst" +
+      "ances_tenant_isolation\032\206\001(tenant_id = NU" +
+      "LLIF(current_setting(\'app.current_tenant" +
+      "_id\', true), \'\')::uuid OR current_settin" +
+      "g(\'app.platform_admin\', true) = \'true\')(" +
+      "\001h\001\212\001C\n(idx_pipeline_instance_correlatio" +
+      "n_unique\022\005BTREE\030\001Z\016correlation_id\212\001.\n\033id" +
+      "x_pipeline_instance_asset\022\005BTREEZ\010asset_" +
+      "id\362\001 udb.asset.pipeline_instances.cdc\372\001\n" +
+      "asset:read\212\262\031\220\001\n\006tenant\032\ttenant_id*4tena" +
+      "nt_id = current_setting(\'app.current_ten" +
+      "ant_id\')2\004none:\021asset.operational@\373\023H\002R\006" +
+      "tenantZ\010standardr\025tenant.data_residencyB" +
+      "\200\002\n\034com.udb.core.asset.entity.v1B\025Pipeli" +
+      "neInstanceProtoP\001ZDgithub.com/fahara02/u" +
+      "db/sdk/go/gen/udb/core/asset/entity/v1;e" +
+      "ntityv1\242\002\004UCAE\252\002\030Udb.Core.Asset.Entity.V" +
+      "1\312\002\030Udb\\Core\\Asset\\Entity\\V1\342\002$Udb\\GPBMe" +
+      "tadata\\Core\\Asset\\Entity\\V1\352\002\034Udb::Core:" +
+      ":Asset::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

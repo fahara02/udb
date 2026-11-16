@@ -45,7 +45,7 @@ public final class AssetProto {
       "f/timestamp.proto\032\033udb/core/common/v1/db" +
       ".proto\032!udb/core/common/v1/security.prot" +
       "o\032\036udb/core/common/v1/types.proto\032$udb/c" +
-      "ore/asset/entity/v1/enums.proto\"\272\013\n\005Asse" +
+      "ore/asset/entity/v1/enums.proto\"\307\013\n\005Asse" +
       "t\022F\n\010asset_id\030\001 \001(\tB+\202\267\030\'\n\010asset_id\022\004UUI" +
       "D\030\001(\001:\021gen_random_uuid()R\007assetId\0227\n\tten" +
       "ant_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002\001" +
@@ -69,26 +69,27 @@ public final class AssetProto {
       "0\n\ndeleted_at\022\013TIMESTAMPTZZ\025Soft delete " +
       "timestampR\tdeletedAt\022H\n\ndeleted_by\030\013 \001(\t" +
       "B)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft delete ac" +
-      "torR\tdeletedBy:\213\004\372\266\030\352\002\n\006assets\022\tudb_asse" +
+      "torR\tdeletedBy:\230\004\372\266\030\367\002\n\006assets\022\tudb_asse" +
       "t\030\001 \001*?Managed assets wrapping storage f" +
-      "iles with processing lifecycle0\0018\001@\001b\227\001\n" +
-      "\027assets_tenant_isolation\032z(tenant_id::te" +
-      "xt = current_setting(\'app.current_tenant" +
-      "_id\', true) OR current_setting(\'app.plat" +
-      "form_admin\', true) = \'true\')(\001h\001\212\001%\n\021idx" +
-      "_assets_tenant\022\005BTREEZ\ttenant_id\212\001!\n\017idx" +
-      "_assets_file\022\005BTREEZ\007file_id\362\001\024udb.asset" +
-      ".assets.cdc\372\001\nasset:read\212\262\031\227\001\n\006tenant\032\tt" +
-      "enant_id*4tenant_id = current_setting(\'a" +
-      "pp.current_tenant_id\')2\013soft_delete:\021ass" +
-      "et.operational@\373\023H\002R\006tenantZ\010standardr\025t" +
-      "enant.data_residencyB\365\001\n\034com.udb.core.as" +
-      "set.entity.v1B\nAssetProtoP\001ZDgithub.com/" +
-      "fahara02/udb/sdk/go/gen/udb/core/asset/e" +
-      "ntity/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Asse" +
-      "t.Entity.V1\312\002\030Udb\\Core\\Asset\\Entity\\V1\342\002" +
-      "$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\352\002\034" +
-      "Udb::Core::Asset::Entity::V1b\006proto3"
+      "iles with processing lifecycle0\0018\001@\001b\244\001\n" +
+      "\027assets_tenant_isolation\032\206\001(tenant_id = " +
+      "NULLIF(current_setting(\'app.current_tena" +
+      "nt_id\', true), \'\')::uuid OR current_sett" +
+      "ing(\'app.platform_admin\', true) = \'true\'" +
+      ")(\001h\001\212\001%\n\021idx_assets_tenant\022\005BTREEZ\ttena" +
+      "nt_id\212\001!\n\017idx_assets_file\022\005BTREEZ\007file_i" +
+      "d\362\001\024udb.asset.assets.cdc\372\001\nasset:read\212\262\031" +
+      "\227\001\n\006tenant\032\ttenant_id*4tenant_id = curre" +
+      "nt_setting(\'app.current_tenant_id\')2\013sof" +
+      "t_delete:\021asset.operational@\373\023H\002R\006tenant" +
+      "Z\010standardr\025tenant.data_residencyB\365\001\n\034co" +
+      "m.udb.core.asset.entity.v1B\nAssetProtoP\001" +
+      "ZDgithub.com/fahara02/udb/sdk/go/gen/udb" +
+      "/core/asset/entity/v1;entityv1\242\002\004UCAE\252\002\030" +
+      "Udb.Core.Asset.Entity.V1\312\002\030Udb\\Core\\Asse" +
+      "t\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Asset" +
+      "\\Entity\\V1\352\002\034Udb::Core::Asset::Entity::V" +
+      "1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

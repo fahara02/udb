@@ -232,7 +232,7 @@ var File_udb_core_workflow_entity_v1_workflow_instance_proto protoreflect.FileDe
 
 const file_udb_core_workflow_entity_v1_workflow_instance_proto_rawDesc = "" +
 	"\n" +
-	"3udb/core/workflow/entity/v1/workflow_instance.proto\x12\x1budb.core.workflow.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a'udb/core/workflow/entity/v1/enums.proto\"\xad\x12\n" +
+	"3udb/core/workflow/entity/v1/workflow_instance.proto\x12\x1budb.core.workflow.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a'udb/core/workflow/entity/v1/enums.proto\"\xba\x12\n" +
 	"\x10WorkflowInstance\x12O\n" +
 	"\vworkflow_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vworkflow_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -283,9 +283,9 @@ const file_udb_core_workflow_entity_v1_workflow_instance_proto_rawDesc = "" +
 	"\n" +
 	"deleted_by\x18\x12 \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xec\x04\xfa\xb6\x18\xc8\x03\n" +
-	"\x12workflow_instances\x12\fudb_workflow\x18\x01 \x01*WDurable multi-step workflow/saga instances advanced by the leader-elected workflow tick0\x018\x01@\x01b\x99\x01\n" +
-	"\x19workflow_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x011\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xf9\x04\xfa\xb6\x18\xd5\x03\n" +
+	"\x12workflow_instances\x12\fudb_workflow\x18\x01 \x01*WDurable multi-step workflow/saga instances advanced by the leader-elected workflow tick0\x018\x01@\x01b\xa6\x01\n" +
+	"\x19workflow_tenant_isolation\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x011\n" +
 	"\x1didx_workflow_instances_tenant\x12\x05BTREEZ\ttenant_id\x8a\x018\n" +
 	"\x1aidx_workflow_instances_due\x12\x05BTREEZ\x06statusZ\vnext_run_at\xf2\x01#udb.workflow.workflow_instances.cdc\xfa\x01\rworkflow:read\x8a\xb2\x19\x9a\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x14workflow.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x92\x02\n" +

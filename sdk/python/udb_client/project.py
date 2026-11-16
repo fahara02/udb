@@ -1661,9 +1661,24 @@ class UdbProject(_ProjectSurface):
         """Table-shaped alias of :meth:`entity`."""
         return self.data.table(name, key=key)
 
-    def tx(self, fn: Any, *, metadata: Metadata | None = None, timeout: float | None = None) -> None:
-        """Commit everything ``fn(tx)`` collects atomically; see :meth:`UdbClient.tx`."""
-        self.data.tx(fn, metadata=metadata, timeout=timeout)
+    def tx(
+        self,
+        fn: Any,
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+        replay_key: str | None = None,
+    ) -> None:
+        """Commit everything ``fn(tx)`` collects atomically; see :meth:`UdbClient.tx`.
+        ``replay_key`` makes a retry after a lost response commit once."""
+        self.data.tx(fn, metadata=metadata, timeout=timeout, replay_key=replay_key)
+
+    def select_many(
+        self, requests: Sequence[Any], *, metadata: Metadata | None = None, timeout: float | None = None
+    ) -> list[Any]:
+        """Run several reads, across tables, in ONE broker call; results come back in
+        the order of ``requests``. See :meth:`UdbClient.select_many`."""
+        return self.data.select_many(requests, metadata=metadata, timeout=timeout)
 
     def bind_metadata(self, metadata: Metadata) -> None:
         """Rebind the shared metadata across every sub-client."""
@@ -2522,9 +2537,23 @@ class UdbAsyncProject(_AsyncProjectSurface):
         """Table-shaped alias of :meth:`entity`."""
         return self.data.table(name, key=key)
 
-    async def tx(self, fn: Any, *, metadata: Metadata | None = None, timeout: float | None = None) -> None:
-        """Commit everything ``fn(tx)`` collects atomically; ``fn`` may be sync or async."""
-        await self.data.tx(fn, metadata=metadata, timeout=timeout)
+    async def tx(
+        self,
+        fn: Any,
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+        replay_key: str | None = None,
+    ) -> None:
+        """Commit everything ``fn(tx)`` collects atomically; ``fn`` may be sync or async.
+        ``replay_key`` makes a retry after a lost response commit once; see :meth:`UdbClient.tx`."""
+        await self.data.tx(fn, metadata=metadata, timeout=timeout, replay_key=replay_key)
+
+    async def select_many(
+        self, requests: Sequence[Any], *, metadata: Metadata | None = None, timeout: float | None = None
+    ) -> list[Any]:
+        """See :meth:`UdbProject.select_many`."""
+        return await self.data.select_many(requests, metadata=metadata, timeout=timeout)
 
     def sync_project(self) -> UdbProject:
         """A sync :class:`UdbProject` sharing this config (auth/control plane)."""

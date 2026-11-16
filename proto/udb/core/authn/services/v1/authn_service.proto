@@ -3262,6 +3262,79 @@ service AuthnService {
     };
   }
 
+  // Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+  // a user's current access token for a token a durable async job uses to act
+  // for that user. The caller is a service account's own bearer whose ACTIVE
+  // grant holds udb:token:delegate, in the SAME tenant as the user's token.
+  // The user's token must be a valid, unexpired, unrevoked USER access token
+  // (not a service, membership or delegated token). The minted token's
+  // subject, tenant and project are the user's; its RFC 8693 `act` claim
+  // names the service; it carries the requested purpose (signed, so the
+  // purpose counts as verified), the job_id and `delegated: true`; its scopes
+  // are those both the user's token and the service's grant allow (never
+  // udb:token:delegate). Lifetime: ttl_seconds, at most
+  // UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+  // exchanged again. Every use re-checks that the user is active and not
+  // revoked, that the jti is not revoked, and that the service still holds an
+  // ACTIVE grant with udb:token:delegate. Every mint and use is audited
+  // (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+  rpc ExchangeTokenForJob(ExchangeTokenForJobRequest) returns (ExchangeTokenForJobResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:token:delegate"
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "authn.ExchangeTokenForJob"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "exchange_token_for_job" rest_operation_id: "exchangeTokenForJob"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.exchange_token_for_job.boilerplate"
+      route_name: "exchange_token_for_job"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ExchangeTokenForJob"
+      outbox_topic: "authn.events"
+      partition_key_field: "job_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/tokens:exchangeForJob"
+      body: "*"
+    };
+  }
+
   // ── 0.6.6 passwordless login + tenant auth policy RPCs [PASSWORDLESS] ──
 
   // Replace the tenant's sign-in policy: whether passwords are required, the
@@ -4693,4 +4766,55 @@ message ExchangeServiceTokenForTenantResponse {
   string message = 7;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 8;
+}
+
+message ExchangeTokenForJobRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // The user's current access token (with or without a "Bearer " prefix).
+  string subject_token = 1;
+  // Why the job acts for the user, e.g. "export". Signed into the token.
+  string purpose = 2;
+  // The job the token is for; required, at most 200 bytes.
+  string job_id = 3;
+  // Requested lifetime in seconds; 0 = the maximum. Capped by
+  // UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default).
+  int64 ttl_seconds = 4;
+}
+
+message ExchangeTokenForJobResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // The delegated job token (no refresh token is issued).
+  string access_token = 1;
+  // The token's id; revoking it stops the token.
+  string jti = 2;
+  int64 expires_at_unix = 3;
+  // The user the token acts for (its `sub`).
+  string subject = 4;
+  // The acting service's identity (its RFC 8693 `act.sub`).
+  string actor = 5;
+  string purpose = 6;
+  string job_id = 7;
+  // The scopes both the user's token and the service's grant allow.
+  repeated string scopes = 8;
+  string tenant_id = 9;
+  string project_id = 10;
+  string message = 11;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 12;
 }

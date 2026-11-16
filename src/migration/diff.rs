@@ -7,7 +7,7 @@ use crate::generation::manifest::{
     ManifestIndex, ManifestMaterializedView, ManifestPolicy, ManifestSqlArtifact, ManifestTable,
     ManifestTrigger, check_key, column_default_key, fk_key, index_key,
 };
-use crate::generation::sql::validate_enum_value;
+use crate::generation::sql::{column_uses_enum_type, enum_type_base_name, validate_enum_value};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ChangeKind {
@@ -189,8 +189,10 @@ pub fn diff_manifests(
             // classification as enum additions on an existing table: unsafe values
             // are Blocked, otherwise SafeAuto. Without this, a fresh-bootstrap
             // (old = None) path would emit unvalidated CREATE TYPE ... AS ENUM DDL.
+            // Only a column whose SQL type IS the derived enum type needs one; a
+            // VARCHAR/TEXT column with enum_values has its CHECK alone.
             for col in &table.columns {
-                if !col.enum_values.is_empty() {
+                if column_uses_enum_type(table, col) {
                     let (safety, blocked_reason) = enum_create_safety(&col.enum_values);
                     ops.push(op(
                         ChangeKind::CreateEnum,
@@ -877,7 +879,7 @@ fn diff_columns(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOp
             diff_column(new, old_col, new_col, ops);
             continue;
         }
-        if !new_col.enum_values.is_empty() {
+        if column_uses_enum_type(new, new_col) {
             let (safety, blocked_reason) = enum_create_safety(&new_col.enum_values);
             ops.push(op(
                 ChangeKind::CreateEnum,
@@ -1490,11 +1492,17 @@ fn diff_enum_values(
     new: &ManifestColumn,
     ops: &mut Vec<ChangeOperation>,
 ) {
+    // Enum type operations exist only for a column whose SQL type is its
+    // derived enum type. A VARCHAR/TEXT column's enum_values change only its
+    // CHECK, which the check diff migrates.
+    let uses_type = column_uses_enum_type(table, new);
     let old_values = old.enum_values.iter().cloned().collect::<BTreeSet<_>>();
     let new_values = new.enum_values.iter().cloned().collect::<BTreeSet<_>>();
     let enum_name = enum_type_name(table, &new.column_name);
 
-    if old_values.is_empty() && !new_values.is_empty() {
+    // A column that did not use the type before (no values, or another SQL
+    // type) has none yet: create it whole.
+    if uses_type && !column_uses_enum_type(table, old) {
         let (safety, blocked_reason) = enum_create_safety(&new.enum_values);
         ops.push(op(
             ChangeKind::CreateEnum,
@@ -1509,7 +1517,7 @@ fn diff_enum_values(
         return;
     }
 
-    for value in new_values.difference(&old_values) {
+    for value in new_values.difference(&old_values).filter(|_| uses_type) {
         let safety = if validate_enum_value(value).is_ok() {
             ChangeSafety::RequiresReview
         } else {
@@ -1532,7 +1540,7 @@ fn diff_enum_values(
         ));
     }
 
-    if old_values.difference(&new_values).next().is_some() {
+    if uses_type && old_values.difference(&new_values).next().is_some() {
         ops.push(op(
             ChangeKind::DropEnum,
             ChangeSafety::Blocked,
@@ -2092,7 +2100,7 @@ fn is_manifest_partitioned(table: &ManifestTable) -> bool {
 }
 
 fn enum_type_name(table: &ManifestTable, column_name: &str) -> String {
-    format!("{}_{}_enum", table.table, column_name)
+    enum_type_base_name(&table.table, column_name)
 }
 
 fn rename_sources(tables: &[ManifestTable]) -> BTreeSet<String> {
@@ -3439,6 +3447,73 @@ mod tests {
                 && change.object_name == "patients_status_enum"
                 && change.column == "paused"
         }));
+    }
+
+    /// A VARCHAR column with enum_values uses no enum type: its CHECK carries
+    /// the values, so no CREATE TYPE (bootstrap or added column) and no
+    /// ALTER TYPE … ADD VALUE when a value is added. Moving the column onto
+    /// its derived enum type creates the type whole.
+    #[test]
+    fn diff_emits_no_enum_type_ops_for_a_varchar_enum_column() {
+        let mut status = column("status", "VARCHAR(32)");
+        status.enum_values = vec!["active".to_string()];
+        let type_ops = |changes: &[ChangeOperation]| {
+            changes
+                .iter()
+                .filter(|change| {
+                    matches!(
+                        change.kind,
+                        ChangeKind::CreateEnum
+                            | ChangeKind::AlterEnumAddValue
+                            | ChangeKind::DropEnum
+                    )
+                })
+                .count()
+        };
+
+        let fresh = manifest(table(vec![status.clone()]), "new", "new-table");
+        assert_eq!(type_ops(&diff_manifests(None, &fresh)), 0, "bootstrap");
+
+        let mut grown = status.clone();
+        grown.enum_values.push("paused".to_string());
+        let old_manifest = manifest(table(vec![status.clone()]), "old", "old-table");
+        let new_manifest = manifest(table(vec![grown.clone()]), "new", "new-table");
+        assert_eq!(
+            type_ops(&diff_manifests(Some(&old_manifest), &new_manifest)),
+            0,
+            "an added value changes only the CHECK"
+        );
+
+        let without = manifest(table(vec![column("id", "UUID")]), "old", "old-table");
+        let added = manifest(
+            table(vec![column("id", "UUID"), status.clone()]),
+            "new",
+            "new-table",
+        );
+        assert_eq!(
+            type_ops(&diff_manifests(Some(&without), &added)),
+            0,
+            "an added VARCHAR enum column"
+        );
+
+        let mut typed = grown.clone();
+        typed.sql_type = "patients_status_enum".to_string();
+        // Its own checksums: identical ones mean "unchanged" and skip the diff.
+        let typed_manifest = manifest(table(vec![typed]), "typed", "typed-table");
+        let changes = diff_manifests(Some(&new_manifest), &typed_manifest);
+        assert!(
+            changes
+                .iter()
+                .any(|change| change.kind == ChangeKind::CreateEnum
+                    && change.object_name == "patients_status_enum"),
+            "a column moved onto its enum type gets the type, got: {changes:?}"
+        );
+        assert!(
+            !changes
+                .iter()
+                .any(|change| change.kind == ChangeKind::AlterEnumAddValue),
+            "the type is created whole, not added to"
+        );
     }
 
     #[test]

@@ -1681,6 +1681,34 @@ function phpRequiresServiceAccountPerfIdentity(string $serviceName, string $meth
     ], true);
 }
 
+// ExchangeTokenForJob is callable only by a service account presenting its own
+// bearer whose ACTIVE grant holds udb:token:delegate, in the tenant of the user
+// token it exchanges (the benchmark user's `token` seed).
+function phpRequiresDelegatingServicePerfIdentity(string $serviceName, string $methodName): bool
+{
+    return strtolower($serviceName).'/'.rpcSnake($methodName) === 'authnservice/exchange_token_for_job';
+}
+
+// Log in the prepared bench-tenant delegating service (delegate_service_username,
+// password UDB_LIVE_PASSWORD) exactly as phpServiceAccountPerfCaller logs in the
+// home-tenant account. Returns [GeneratedClient, UdbMetadata], or null (logged)
+// when the fixture is absent or the login fails; the row is then measured with
+// the ordinary client and fails honestly.
+function phpDelegatingServicePerfCaller(PerfFixturesPhp $fix, string $benchTenant, string $benchProject): ?array
+{
+    // Exact key: lookup() suffix-matches, so `delegate_service_username` would
+    // otherwise fall back to the seeded human `username`.
+    $username = $fix->exact('delegate_service_username');
+    if ($username === null || $username === '') {
+        fwrite(STDERR, "delegating-service bench caller: prepared fixture delegate_service_username is absent; measuring with the tenant admin\n");
+
+        return null;
+    }
+    $project = (string) ($fix->exact('delegate_service_project_id') ?? '');
+
+    return phpPerfCallerLogin($username, $benchTenant, $project !== '' ? $project : $benchProject, 'php-sdk-perf-delegating-service', 'delegating-service');
+}
+
 // Log in the prepared home-tenant service account (membership_exchange_username,
 // password UDB_LIVE_PASSWORD) and build a client whose metadata carries its
 // verified principal. Returns [GeneratedClient, UdbMetadata], or null (logged)
@@ -1699,6 +1727,15 @@ function phpServiceAccountPerfCaller(PerfFixturesPhp $fix): ?array
     }
     $homeTenant = (string) ($fix->exact('membership_home_tenant_id') ?? '');
     $homeProject = (string) ($fix->exact('membership_exchange_project_id') ?? '');
+
+    return phpPerfCallerLogin($username, $homeTenant, $homeProject, 'php-sdk-perf-service-account', 'service-account');
+}
+
+// Log a prepared service account in (password UDB_LIVE_PASSWORD) with the given
+// tenant/project hints, verify its bearer and build a client whose metadata
+// carries that principal. Null (logged) when the login fails.
+function phpPerfCallerLogin(string $username, string $homeTenant, string $homeProject, string $device, string $label): ?array
+{
     $authTarget = liveEnv('UDB_AUTH_GRPC_TARGET', liveEnv('UDB_GRPC_TARGET'));
     try {
         $base = liveMeta('', $homeTenant);
@@ -1720,7 +1757,7 @@ function phpServiceAccountPerfCaller(PerfFixturesPhp $fix): ?array
                 ->setPassword(liveEnv('UDB_LIVE_PASSWORD'))
                 ->setTenantHint($homeTenant)
                 ->setProjectHint($homeProject)
-                ->setDeviceName('php-sdk-perf-service-account'),
+                ->setDeviceName($device),
             $homeMeta,
         );
         $verifier = new UdbAuthClient(['endpoint' => $authTarget, 'deadline_ms' => 10_000]);
@@ -1749,7 +1786,7 @@ function phpServiceAccountPerfCaller(PerfFixturesPhp $fix): ?array
 
         return [$client, $saMeta];
     } catch (\Throwable $e) {
-        fwrite(STDERR, "service-account bench caller: login failed: {$e->getMessage()}\n");
+        fwrite(STDERR, "{$label} bench caller: login failed: {$e->getMessage()}\n");
 
         return null;
     }
@@ -3722,6 +3759,18 @@ it('routes only the tenant token exchange and own-membership list to the service
         ->and(phpRequiresServiceAccountPerfIdentity('DataBroker', 'ListProjects'))->toBeFalse();
 });
 
+it('routes only ExchangeTokenForJob to the delegating-service identity', function () {
+    expect(phpRequiresDelegatingServicePerfIdentity('AuthnService', 'ExchangeTokenForJob'))->toBeTrue()
+        ->and(phpRequiresDelegatingServicePerfIdentity('AuthnService', 'exchange_token_for_job'))->toBeTrue()
+        ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'ExchangeTokenForJob'))->toBeFalse()
+        ->and(phpRequiresPlatformPerfIdentity('AuthnService', 'ExchangeTokenForJob'))->toBeFalse()
+        ->and(phpRequiresDelegatingServicePerfIdentity('AuthnService', 'ExchangeServiceTokenForTenant'))->toBeFalse()
+        ->and(phpRequiresDelegatingServicePerfIdentity('AuthnService', 'ListOwnTenantMemberships'))->toBeFalse()
+        ->and(phpRequiresDelegatingServicePerfIdentity('AuthnService', 'CreateServiceAccountGrant'))->toBeFalse()
+        ->and(phpRequiresDelegatingServicePerfIdentity('AuthnService', 'Login'))->toBeFalse()
+        ->and(phpRequiresDelegatingServicePerfIdentity('DataBroker', 'ExchangeTokenForJob'))->toBeFalse();
+});
+
 it('derives PHP authz attribution from the verified caller without changing target IDs', function () {
     $caller = 'caller@example.test';
     $target = '039c134f-e3ad-4b01-bd0e-aea4849df619';
@@ -4094,6 +4143,13 @@ function perfSeedPhp(array $s): array
         // every harness. No credential is ever in the prepared file: the
         // exchange account's password is UDB_LIVE_PASSWORD.
         foreach (['membership_user_id', 'membership_home_tenant_id', 'membership_expires_at', 'membership_id', 'membership_exchange_username', 'membership_exchange_project_id'] as $key) {
+            $value = $prepared['fixtures'][$key] ?? null;
+            if (is_string($value) && $value !== '') $fix->set($key, $value);
+        }
+        // The bench-tenant delegating service for ExchangeTokenForJob; absent
+        // when the prepared fixtures predate delegated job tokens. Same list in
+        // every harness; its password is UDB_LIVE_PASSWORD, never in the file.
+        foreach (['delegate_service_username', 'delegate_service_project_id'] as $key) {
             $value = $prepared['fixtures'][$key] ?? null;
             if (is_string($value) && $value !== '') $fix->set($key, $value);
         }
@@ -5445,6 +5501,7 @@ it('measures per-RPC latency', function () {
                 'name' => $method->getName(),
                 'platform' => $usePlatform,
                 'service_account' => phpRequiresServiceAccountPerfIdentity($svc, $method->getName()),
+                'delegating_service' => phpRequiresDelegatingServicePerfIdentity($svc, $method->getName()),
                 'ordinal' => count($units),
             ];
         }
@@ -5487,6 +5544,9 @@ it('measures per-RPC latency', function () {
     // home-tenant service-account bearer is fresh.
     $serviceAccountCaller = null;
     $serviceAccountResolved = false;
+    // The bench-tenant delegating service (ExchangeTokenForJob), built the same way.
+    $delegatingServiceCaller = null;
+    $delegatingServiceResolved = false;
     foreach ($units as $u) {
         {
             $stub = $u['stub']; $sdkClient = $u['client']; $svc = $u['svc']; $method = $u['method'];
@@ -5528,6 +5588,16 @@ it('measures per-RPC latency', function () {
                 }
                 if ($serviceAccountCaller !== null) {
                     [$sdkClient, $callMeta] = $serviceAccountCaller;
+                    $stub = $sdkClient->AuthnServiceStub();
+                    $bodyMeta = $authedMeta;
+                }
+            } elseif ($u['delegating_service']) {
+                if (! $delegatingServiceResolved) {
+                    $delegatingServiceResolved = true;
+                    $delegatingServiceCaller = phpDelegatingServicePerfCaller($fix, $authedMeta->tenantId, $authedMeta->projectId);
+                }
+                if ($delegatingServiceCaller !== null) {
+                    [$sdkClient, $callMeta] = $delegatingServiceCaller;
                     $stub = $sdkClient->AuthnServiceStub();
                     $bodyMeta = $authedMeta;
                 }

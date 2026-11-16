@@ -128,7 +128,11 @@ func encodeColumn(pr protoreflect.Message, fd protoreflect.FieldDescriptor, c *u
 		return nil
 	}
 	if fd.Kind() == protoreflect.EnumKind && textColumn(c) {
-		rec[name] = enumTokens(fd.Enum(), rec[name])
+		text, err := enumColumnText(fd, c, messageTableName(pr.Descriptor()), rec[name])
+		if err != nil {
+			return err
+		}
+		rec[name] = text
 		return nil
 	}
 	s, ok := rec[name].(string)
@@ -257,8 +261,7 @@ func exactInts(v any) any {
 }
 
 // textColumn reports whether an enum column stores text (udb's convention for
-// enums in VARCHAR/TEXT/CHAR columns: the value's short token, e.g. ACTIVE for
-// USER_STATUS_ACTIVE) rather than the enum number.
+// enums in VARCHAR/TEXT/CHAR columns; see EnumStoredText) rather than the enum number.
 func textColumn(c *udbcommonv1.ColumnOptions) bool {
 	t := strings.ToUpper(strings.TrimSpace(c.GetSqlType()))
 	for _, prefix := range []string{"VARCHAR", "CHARACTER VARYING", "TEXT", "CHAR", "CITEXT"} {
@@ -295,9 +298,107 @@ func enumCommonPrefix(ed protoreflect.EnumDescriptor) string {
 	return ""
 }
 
-// enumTokens turns protojson enum numbers (singular or repeated) into short tokens.
-func enumTokens(ed protoreflect.EnumDescriptor, v any) any {
+// EnumStoredText is the text a text enum column stores for an enum value (a full
+// name or a short token), given the enum's common prefix and the values the
+// column's CHECK allows (its enum_values). With no declared values the column
+// stores the short token, the name without the prefix. With declared values it
+// stores the entry that matches the value's full name or its short token, so the
+// write passes the CHECK in whichever form the list was written. ok is false when
+// the list does not hold the value: the broker would refuse the write.
+func EnumStoredText(value, prefix string, allowed []string) (stored string, ok bool) {
+	short := value
+	if prefix != "" {
+		short = strings.TrimPrefix(value, prefix)
+	}
+	if len(allowed) == 0 {
+		return short, true
+	}
+	full := prefix + short
+	for _, entry := range allowed {
+		if entry == full || entry == short {
+			return entry, true
+		}
+	}
+	return "", false
+}
+
+// EnumText is EnumStoredText for generated mappers: a value outside allowed is an
+// error naming the CHECK it breaks.
+func EnumText(value, prefix string, allowed []string) (string, error) {
+	stored, ok := EnumStoredText(value, prefix, allowed)
+	if !ok {
+		return "", fmt.Errorf("udb: enum value %s is not in the column's enum_values (%s); the value breaks its CHECK constraint", value, strings.Join(allowed, ", "))
+	}
+	return stored, nil
+}
+
+// EnumKeyText is EnumStoredText for a key lookup: a value outside allowed is
+// returned unchanged, so it matches no stored row.
+func EnumKeyText(value, prefix string, allowed []string) string {
+	if stored, ok := EnumStoredText(value, prefix, allowed); ok {
+		return stored
+	}
+	return value
+}
+
+// EnumCheckName is the constraint the generated DDL names for a text enum
+// column's CHECK.
+func EnumCheckName(table, column string) string {
+	return "chk_" + table + "_" + column + "_enum"
+}
+
+// EnumCheckViolation reports the CHECK constraint a written enum value (a
+// number, full name or short token; singular or repeated) would break, or ""
+// when it passes. Only a text enum column that declares enum_values has that
+// CHECK; a text naming no value of the enum breaks it. table names the
+// constraint.
+func EnumCheckViolation(fd protoreflect.FieldDescriptor, c *udbcommonv1.ColumnOptions, table string, value any) string {
+	allowed := c.GetEnumValues()
+	if fd.Kind() != protoreflect.EnumKind || !textColumn(c) || len(allowed) == 0 {
+		return ""
+	}
+	ed := fd.Enum()
 	prefix := enumCommonPrefix(ed)
+	items := []any{value}
+	if list, ok := value.([]any); ok {
+		items = list
+	}
+	for _, item := range items {
+		name := ""
+		switch v := item.(type) {
+		case string:
+			if full := enumFullName(ed, strings.TrimSpace(v)); ed.Values().ByName(protoreflect.Name(full)) != nil {
+				name = full
+			}
+		case json.Number, float64, int, int32, int64:
+			number, err := strconv.ParseInt(fmt.Sprint(v), 10, 32)
+			if err == nil {
+				if found := ed.Values().ByNumber(protoreflect.EnumNumber(number)); found != nil {
+					name = string(found.Name())
+				}
+			}
+		default:
+			continue
+		}
+		if _, ok := EnumStoredText(name, prefix, allowed); name == "" || !ok {
+			column := c.GetColumnName()
+			if column == "" {
+				column = string(fd.Name())
+			}
+			return EnumCheckName(table, column)
+		}
+	}
+	return ""
+}
+
+// enumColumnText turns protojson enum numbers (singular or repeated) into the
+// text the column stores (see EnumStoredText). A value outside the column's
+// enum_values is an error.
+func enumColumnText(fd protoreflect.FieldDescriptor, c *udbcommonv1.ColumnOptions, table string, v any) (any, error) {
+	ed := fd.Enum()
+	prefix := enumCommonPrefix(ed)
+	allowed := c.GetEnumValues()
+	var refused error
 	token := func(n any) any {
 		num, ok := n.(json.Number)
 		if !ok {
@@ -311,15 +412,24 @@ func enumTokens(ed protoreflect.EnumDescriptor, v any) any {
 		if value == nil {
 			return n
 		}
-		return strings.TrimPrefix(string(value.Name()), prefix)
+		stored, ok := EnumStoredText(string(value.Name()), prefix, allowed)
+		if !ok {
+			column := c.GetColumnName()
+			if column == "" {
+				column = string(fd.Name())
+			}
+			refused = fmt.Errorf("%s: %s is not in the column's enum_values; the value breaks constraint %s", fd.FullName(), value.Name(), EnumCheckName(table, column))
+		}
+		return stored
 	}
 	if list, ok := v.([]any); ok {
 		for i, e := range list {
 			list[i] = token(e)
 		}
-		return list
+		return list, refused
 	}
-	return token(v)
+	out := token(v)
+	return out, refused
 }
 
 // enumListFullNames resolves every text element of a JSON enum array.
@@ -616,4 +726,13 @@ func ParseTimestamp(s string) (time.Time, error) {
 		return time.Time{}, nil
 	}
 	return time.Parse(time.RFC3339Nano, s)
+}
+
+// messageTableName is the table a message maps to: its table_name, or the
+// message name.
+func messageTableName(md protoreflect.MessageDescriptor) string {
+	if name := protoschema.Table(md).GetTableName(); name != "" {
+		return name
+	}
+	return string(md.Name())
 }

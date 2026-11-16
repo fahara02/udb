@@ -383,7 +383,7 @@ var File_udb_core_notification_entity_v1_notification_log_proto protoreflect.Fil
 
 const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"\n" +
-	"6udb/core/notification/entity/v1/notification_log.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xd9\x17\n" +
+	"6udb/core/notification/entity/v1/notification_log.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x93\x18\n" +
 	"\x0fNotificationLog\x12@\n" +
 	"\x06log_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06log_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05logId\x12\xc3\x01\n" +
@@ -444,10 +444,10 @@ const file_udb_core_notification_entity_v1_notification_log_proto_rawDesc = "" +
 	"\x10rendered_subject\x18\x14 \x01(\tB\x1c\x82\xb7\x18\x18\n" +
 	"\x10rendered_subject\x12\x04TEXTR\x0frenderedSubject\x12>\n" +
 	"\rrendered_body\x18\x15 \x01(\tB\x19\x82\xb7\x18\x15\n" +
-	"\rrendered_body\x12\x04TEXTR\frenderedBody:\xb9\x05\xfa\xb6\x18\xc9\x03\n" +
+	"\rrendered_body\x12\x04TEXTR\frenderedBody:\xf3\x05\xfa\xb6\x18\x83\x04\n" +
 	"\x11notification_logs\x12\x10udb_notification\x18\x02 \x01*<Delivery audit log for every notification sent by the system@\x01H\x03R\n" +
-	"created_atXZb\xb4\x01\n" +
-	"\x18tenant_project_isolation\x1a\x95\x01(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)(\x01h\x01\x8a\x01W\n" +
+	"created_atXZb\xee\x01\n" +
+	"\x18tenant_project_isolation\x1a\xcf\x01((tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01W\n" +
 	"&idx_nlog_tenant_project_channel_status\x12\x05BTREEZ\ttenant_idZ\n" +
 	"project_idZ\achannelZ\x06status\x8a\x01!\n" +
 	"\x10idx_nlog_sent_at\x12\x04BRINZ\asent_at\xf2\x01\x16notification.failed.v1\x8a\xb2\x19\xe6\x01\n" +

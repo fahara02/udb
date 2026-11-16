@@ -79,6 +79,15 @@ impl DataBrokerService {
                 )
             })?;
 
+        // Each delete filters on an owner column, and its affected-row count
+        // tells the caller whether rows with that value exist, exactly as a
+        // Delete filter does. So the same filter export rule applies: an owner
+        // column that is PII, encrypted or masked needs `udb:pii:read` (or a
+        // verified privileged purpose). Checked for every table BEFORE any row
+        // is deleted, so a refusal never leaves a half-done erasure, and on a
+        // dry run too, so the dry run predicts the refusal.
+        enforce_purge_filter_export_controls(manifest, security, &subject)?;
+
         let mut tables = Vec::new();
         let mut total = 0i64;
         let mut not_covered: Vec<String> = NOT_COVERED.iter().map(|s| s.to_string()).collect();
@@ -248,4 +257,101 @@ async fn hard_delete_tombstones(
         crate::runtime::executor_utils::internal_status("PurgeSubject", "commit", err.to_string())
     })?;
     Ok(result.rows_affected() as i64)
+}
+
+/// Apply the Delete filter export rule to every owner-column filter the purge
+/// will run: `{<owner field>: <subject>}` per covered table. The tables the
+/// loop skips (no tenant column) run no delete and are not checked.
+fn enforce_purge_filter_export_controls(
+    manifest: &crate::generation::CatalogManifest,
+    security: &SecurityContext,
+    subject: &str,
+) -> Result<(), Status> {
+    for table in &manifest.tables {
+        if crate::runtime::postgres_helpers::tenant_column_ref(table).is_none() {
+            continue;
+        }
+        for owner in table
+            .columns
+            .iter()
+            .filter(|column| column.security.owner_field)
+        {
+            let filter = prost_types::Struct {
+                fields: std::iter::once((
+                    owner.field_name.clone(),
+                    prost_types::Value {
+                        kind: Some(prost_types::value::Kind::StringValue(subject.to_string())),
+                    },
+                ))
+                .collect(),
+            };
+            crate::runtime::security::enforce_write_predicate_export_controls(
+                manifest,
+                security,
+                &table.message_fqn(),
+                Some(&filter),
+                None,
+            )?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod purge_filter_export_tests {
+    use super::*;
+
+    fn manifest(owner_is_pii: bool) -> crate::generation::CatalogManifest {
+        let column = |name: &str| crate::generation::ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            ..crate::generation::ManifestColumn::default()
+        };
+        let mut owner = column("owner_email");
+        owner.security.owner_field = true;
+        owner.security.is_pii = owner_is_pii;
+        let table = crate::generation::ManifestTable {
+            schema: "crm".to_string(),
+            table: "contacts".to_string(),
+            message_name: "Contact".to_string(),
+            columns: vec![column("id"), column("tenant_id"), owner],
+            ..crate::generation::ManifestTable::default()
+        };
+        crate::generation::CatalogManifest {
+            tables: vec![table],
+            ..crate::generation::CatalogManifest::default()
+        }
+    }
+
+    fn admin(scopes: &[&str]) -> SecurityContext {
+        SecurityContext {
+            tenant_id: "tenant-a".to_string(),
+            scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
+            ..SecurityContext::default()
+        }
+    }
+
+    // A purge filters on the owner column the same way a Delete does, so a
+    // PII owner column needs `udb:pii:read`, like a Delete filter on it.
+    #[test]
+    fn purge_on_a_pii_owner_column_follows_the_delete_filter_rule() {
+        let pii = manifest(true);
+        assert!(
+            crate::runtime::postgres_helpers::tenant_column_ref(&pii.tables[0]).is_some(),
+            "fixture table must be covered by the purge"
+        );
+        let error = enforce_purge_filter_export_controls(&pii, &admin(&["udb:admin"]), "a@x.test")
+            .expect_err("an admin without udb:pii:read must not filter on a PII owner");
+        assert_eq!(error.code(), tonic::Code::PermissionDenied);
+
+        enforce_purge_filter_export_controls(
+            &pii,
+            &admin(&["udb:admin", "udb:pii:read"]),
+            "a@x.test",
+        )
+        .expect("udb:pii:read allows the owner filter");
+
+        enforce_purge_filter_export_controls(&manifest(false), &admin(&["udb:admin"]), "user-1")
+            .expect("a plain owner column needs no PII scope");
+    }
 }

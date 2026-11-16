@@ -45,7 +45,7 @@ public final class PeerProto {
       "uf/timestamp.proto\032\033udb/core/common/v1/d" +
       "b.proto\032!udb/core/common/v1/security.pro" +
       "to\032\036udb/core/common/v1/types.proto\032%udb/" +
-      "core/webrtc/entity/v1/enums.proto\"\214\014\n\004Pe" +
+      "core/webrtc/entity/v1/enums.proto\"\231\014\n\004Pe" +
       "er\022C\n\007peer_id\030\001 \001(\tB*\202\267\030&\n\007peer_id\022\004UUID" +
       "\030\001(\001:\021gen_random_uuid()R\006peerId\022.\n\007room_" +
       "id\030\002 \001(\tB\025\202\267\030\021\n\007room_id\022\004UUID\030\001R\006roomId\022" +
@@ -72,26 +72,26 @@ public final class PeerProto {
       "TIMESTAMPTZZ\025Soft delete timestampR\tdele" +
       "tedAt\022H\n\ndeleted_by\030\014 \001(\tB)\202\267\030%\n\ndeleted" +
       "_by\022\004UUIDZ\021Soft delete actorR\tdeletedBy:" +
-      "\366\003\372\266\030\324\002\n\005peers\022\nudb_webrtc\030\002 \001*+WebRTC p" +
+      "\203\004\372\266\030\341\002\n\005peers\022\nudb_webrtc\030\002 \001*+WebRTC p" +
       "eer connections (room participants)0\0018\001@" +
-      "\001b\226\001\n\026peers_tenant_isolation\032z(tenant_id" +
-      "::text = current_setting(\'app.current_te" +
-      "nant_id\', true) OR current_setting(\'app." +
-      "platform_admin\', true) = \'true\')(\001h\001\212\001 \n" +
-      "\016idx_peers_room\022\005BTREEZ\007room_id\212\001$\n\020idx_" +
-      "peers_tenant\022\005BTREEZ\ttenant_id\362\001\024udb.web" +
-      "rtc.peers.cdc\372\001\013webrtc:read\212\262\031\230\001\n\006tenant" +
-      "\032\ttenant_id*4tenant_id = current_setting" +
-      "(\'app.current_tenant_id\')2\013soft_delete:\022" +
-      "webrtc.operational@\373\023H\002R\006tenantZ\010standar" +
-      "dr\025tenant.data_residencyB\372\001\n\035com.udb.cor" +
-      "e.webrtc.entity.v1B\tPeerProtoP\001ZEgithub." +
-      "com/fahara02/udb/sdk/go/gen/udb/core/web" +
-      "rtc/entity/v1;entityv1\242\002\004UCWE\252\002\031Udb.Core" +
-      ".Webrtc.Entity.V1\312\002\031Udb\\Core\\Webrtc\\Enti" +
-      "ty\\V1\342\002%Udb\\GPBMetadata\\Core\\Webrtc\\Enti" +
-      "ty\\V1\352\002\035Udb::Core::Webrtc::Entity::V1b\006p" +
-      "roto3"
+      "\001b\243\001\n\026peers_tenant_isolation\032\206\001(tenant_i" +
+      "d = NULLIF(current_setting(\'app.current_" +
+      "tenant_id\', true), \'\')::uuid OR current_" +
+      "setting(\'app.platform_admin\', true) = \'t" +
+      "rue\')(\001h\001\212\001 \n\016idx_peers_room\022\005BTREEZ\007roo" +
+      "m_id\212\001$\n\020idx_peers_tenant\022\005BTREEZ\ttenant" +
+      "_id\362\001\024udb.webrtc.peers.cdc\372\001\013webrtc:read" +
+      "\212\262\031\230\001\n\006tenant\032\ttenant_id*4tenant_id = cu" +
+      "rrent_setting(\'app.current_tenant_id\')2\013" +
+      "soft_delete:\022webrtc.operational@\373\023H\002R\006te" +
+      "nantZ\010standardr\025tenant.data_residencyB\372\001" +
+      "\n\035com.udb.core.webrtc.entity.v1B\tPeerPro" +
+      "toP\001ZEgithub.com/fahara02/udb/sdk/go/gen" +
+      "/udb/core/webrtc/entity/v1;entityv1\242\002\004UC" +
+      "WE\252\002\031Udb.Core.Webrtc.Entity.V1\312\002\031Udb\\Cor" +
+      "e\\Webrtc\\Entity\\V1\342\002%Udb\\GPBMetadata\\Cor" +
+      "e\\Webrtc\\Entity\\V1\352\002\035Udb::Core::Webrtc::" +
+      "Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

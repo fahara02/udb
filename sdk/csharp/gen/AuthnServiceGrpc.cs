@@ -322,6 +322,10 @@ namespace Udb.Core.Authn.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse> __Marshaller_udb_core_authn_services_v1_ExchangeServiceTokenForTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest> __Marshaller_udb_core_authn_services_v1_ExchangeTokenForJobRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse> __Marshaller_udb_core_authn_services_v1_ExchangeTokenForJobResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest> __Marshaller_udb_core_authn_services_v1_PutTenantAuthPolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse> __Marshaller_udb_core_authn_services_v1_PutTenantAuthPolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse.Parser));
@@ -909,6 +913,14 @@ namespace Udb.Core.Authn.Services.V1 {
         "ExchangeServiceTokenForTenant",
         __Marshaller_udb_core_authn_services_v1_ExchangeServiceTokenForTenantRequest,
         __Marshaller_udb_core_authn_services_v1_ExchangeServiceTokenForTenantResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest, global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse> __Method_ExchangeTokenForJob = new grpc::Method<global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest, global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ExchangeTokenForJob",
+        __Marshaller_udb_core_authn_services_v1_ExchangeTokenForJobRequest,
+        __Marshaller_udb_core_authn_services_v1_ExchangeTokenForJobResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse> __Method_PutTenantAuthPolicy = new grpc::Method<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse>(
@@ -1707,6 +1719,33 @@ namespace Udb.Core.Authn.Services.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse> ExchangeServiceTokenForTenant(global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+      /// a user's current access token for a token a durable async job uses to act
+      /// for that user. The caller is a service account's own bearer whose ACTIVE
+      /// grant holds udb:token:delegate, in the SAME tenant as the user's token.
+      /// The user's token must be a valid, unexpired, unrevoked USER access token
+      /// (not a service, membership or delegated token). The minted token's
+      /// subject, tenant and project are the user's; its RFC 8693 `act` claim
+      /// names the service; it carries the requested purpose (signed, so the
+      /// purpose counts as verified), the job_id and `delegated: true`; its scopes
+      /// are those both the user's token and the service's grant allow (never
+      /// udb:token:delegate). Lifetime: ttl_seconds, at most
+      /// UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+      /// exchanged again. Every use re-checks that the user is active and not
+      /// revoked, that the jti is not revoked, and that the service still holds an
+      /// ACTIVE grant with udb:token:delegate. Every mint and use is audited
+      /// (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse> ExchangeTokenForJob(global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -4519,6 +4558,114 @@ namespace Udb.Core.Authn.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_ExchangeServiceTokenForTenant, null, options, request);
       }
       /// <summary>
+      /// Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+      /// a user's current access token for a token a durable async job uses to act
+      /// for that user. The caller is a service account's own bearer whose ACTIVE
+      /// grant holds udb:token:delegate, in the SAME tenant as the user's token.
+      /// The user's token must be a valid, unexpired, unrevoked USER access token
+      /// (not a service, membership or delegated token). The minted token's
+      /// subject, tenant and project are the user's; its RFC 8693 `act` claim
+      /// names the service; it carries the requested purpose (signed, so the
+      /// purpose counts as verified), the job_id and `delegated: true`; its scopes
+      /// are those both the user's token and the service's grant allow (never
+      /// udb:token:delegate). Lifetime: ttl_seconds, at most
+      /// UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+      /// exchanged again. Every use re-checks that the user is active and not
+      /// revoked, that the jti is not revoked, and that the service still holds an
+      /// ACTIVE grant with udb:token:delegate. Every mint and use is audited
+      /// (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse ExchangeTokenForJob(global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ExchangeTokenForJob(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+      /// a user's current access token for a token a durable async job uses to act
+      /// for that user. The caller is a service account's own bearer whose ACTIVE
+      /// grant holds udb:token:delegate, in the SAME tenant as the user's token.
+      /// The user's token must be a valid, unexpired, unrevoked USER access token
+      /// (not a service, membership or delegated token). The minted token's
+      /// subject, tenant and project are the user's; its RFC 8693 `act` claim
+      /// names the service; it carries the requested purpose (signed, so the
+      /// purpose counts as verified), the job_id and `delegated: true`; its scopes
+      /// are those both the user's token and the service's grant allow (never
+      /// udb:token:delegate). Lifetime: ttl_seconds, at most
+      /// UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+      /// exchanged again. Every use re-checks that the user is active and not
+      /// revoked, that the jti is not revoked, and that the service still holds an
+      /// ACTIVE grant with udb:token:delegate. Every mint and use is audited
+      /// (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse ExchangeTokenForJob(global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ExchangeTokenForJob, null, options, request);
+      }
+      /// <summary>
+      /// Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+      /// a user's current access token for a token a durable async job uses to act
+      /// for that user. The caller is a service account's own bearer whose ACTIVE
+      /// grant holds udb:token:delegate, in the SAME tenant as the user's token.
+      /// The user's token must be a valid, unexpired, unrevoked USER access token
+      /// (not a service, membership or delegated token). The minted token's
+      /// subject, tenant and project are the user's; its RFC 8693 `act` claim
+      /// names the service; it carries the requested purpose (signed, so the
+      /// purpose counts as verified), the job_id and `delegated: true`; its scopes
+      /// are those both the user's token and the service's grant allow (never
+      /// udb:token:delegate). Lifetime: ttl_seconds, at most
+      /// UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+      /// exchanged again. Every use re-checks that the user is active and not
+      /// revoked, that the jti is not revoked, and that the service still holds an
+      /// ACTIVE grant with udb:token:delegate. Every mint and use is audited
+      /// (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse> ExchangeTokenForJobAsync(global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ExchangeTokenForJobAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+      /// a user's current access token for a token a durable async job uses to act
+      /// for that user. The caller is a service account's own bearer whose ACTIVE
+      /// grant holds udb:token:delegate, in the SAME tenant as the user's token.
+      /// The user's token must be a valid, unexpired, unrevoked USER access token
+      /// (not a service, membership or delegated token). The minted token's
+      /// subject, tenant and project are the user's; its RFC 8693 `act` claim
+      /// names the service; it carries the requested purpose (signed, so the
+      /// purpose counts as verified), the job_id and `delegated: true`; its scopes
+      /// are those both the user's token and the service's grant allow (never
+      /// udb:token:delegate). Lifetime: ttl_seconds, at most
+      /// UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+      /// exchanged again. Every use re-checks that the user is active and not
+      /// revoked, that the jti is not revoked, and that the service still holds an
+      /// ACTIVE grant with udb:token:delegate. Every mint and use is audited
+      /// (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse> ExchangeTokenForJobAsync(global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ExchangeTokenForJob, null, options, request);
+      }
+      /// <summary>
       /// Replace the tenant's sign-in policy: whether passwords are required, the
       /// channels sign-in codes may go over, the magic-link page and the step-up
       /// rules. Only an administrator of that tenant (or a cross-tenant admin).
@@ -5446,6 +5593,7 @@ namespace Udb.Core.Authn.Services.V1 {
           .AddMethod(__Method_RevokeServiceAccountTenantMembership, serviceImpl.RevokeServiceAccountTenantMembership)
           .AddMethod(__Method_ListOwnTenantMemberships, serviceImpl.ListOwnTenantMemberships)
           .AddMethod(__Method_ExchangeServiceTokenForTenant, serviceImpl.ExchangeServiceTokenForTenant)
+          .AddMethod(__Method_ExchangeTokenForJob, serviceImpl.ExchangeTokenForJob)
           .AddMethod(__Method_PutTenantAuthPolicy, serviceImpl.PutTenantAuthPolicy)
           .AddMethod(__Method_GetTenantAuthPolicy, serviceImpl.GetTenantAuthPolicy)
           .AddMethod(__Method_SendLoginOtp, serviceImpl.SendLoginOtp)
@@ -5536,6 +5684,7 @@ namespace Udb.Core.Authn.Services.V1 {
       serviceBinder.AddMethod(__Method_RevokeServiceAccountTenantMembership, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.RevokeServiceAccountTenantMembershipRequest, global::Udb.Core.Authn.Services.V1.RevokeServiceAccountTenantMembershipResponse>(serviceImpl.RevokeServiceAccountTenantMembership));
       serviceBinder.AddMethod(__Method_ListOwnTenantMemberships, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsRequest, global::Udb.Core.Authn.Services.V1.ListOwnTenantMembershipsResponse>(serviceImpl.ListOwnTenantMemberships));
       serviceBinder.AddMethod(__Method_ExchangeServiceTokenForTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse>(serviceImpl.ExchangeServiceTokenForTenant));
+      serviceBinder.AddMethod(__Method_ExchangeTokenForJob, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobRequest, global::Udb.Core.Authn.Services.V1.ExchangeTokenForJobResponse>(serviceImpl.ExchangeTokenForJob));
       serviceBinder.AddMethod(__Method_PutTenantAuthPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse>(serviceImpl.PutTenantAuthPolicy));
       serviceBinder.AddMethod(__Method_GetTenantAuthPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse>(serviceImpl.GetTenantAuthPolicy));
       serviceBinder.AddMethod(__Method_SendLoginOtp, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest, global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse>(serviceImpl.SendLoginOtp));

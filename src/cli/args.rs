@@ -284,13 +284,18 @@ pub(crate) enum Command {
     /// proto RPC manifest (descriptor set = source of truth) and the editable
     /// `sdk-templates/<lang>/` templates. `manifest` dumps the RPC surface as
     /// JSON; `list-langs` prints which template dirs are available.
-    /// W9 (0.4.23 tip 5): rewrite persisted enum values to the generator's
-    /// short-token convention, batched + idempotent, with a dry-run histogram.
+    /// Rewrite persisted enum values in a text column to one stored form,
+    /// batched + idempotent, with a dry-run histogram. `--to full` (the default)
+    /// rewrites short tokens to full proto value names, for a column whose
+    /// enum_values (and so its CHECK) list full names; `--to short` rewrites to
+    /// the value without the enum's common prefix.
     MigrateEnumTokens {
         entity: String,
         column: String,
         dry_run: bool,
         batch: i64,
+        /// `true` for `--to short`; `false` (the default) rewrites to full names.
+        to_short: bool,
     },
     Sdk {
         action: SdkAction,
@@ -1514,6 +1519,11 @@ pub(crate) const VALUE_FLAGS: &[&str] = &[
     "--cleanup-interval",
     "--cleanup-batch",
     "--cleanup-max-size",
+    "--cleanup-app-retention",
+    "--cleanup-sweep-interval",
+    "--cleanup-keep-versions",
+    "--cleanup-statement-timeout",
+    "--cleanup-sweep-pages",
     "--delegated-allow-audit-window",
     "--delegated-allow-audit-max-tracked",
     "--cdc-journal-retention",
@@ -2093,14 +2103,22 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         //    [--strict-server-capabilities]`
         Some("migrate-enum-tokens") => {
             offset = 1;
-            Command::MigrateEnumTokens {
-                entity: flag_value("--entity").unwrap_or_default(),
-                column: flag_value("--column").unwrap_or_default(),
-                dry_run: has_flag("--dry-run"),
-                batch: flag_value("--batch")
-                    .and_then(|value| value.parse::<i64>().ok())
-                    .unwrap_or(5000)
-                    .max(1),
+            match flag_value("--to").as_deref() {
+                None | Some("full") | Some("short") => Command::MigrateEnumTokens {
+                    entity: flag_value("--entity").unwrap_or_default(),
+                    column: flag_value("--column").unwrap_or_default(),
+                    dry_run: has_flag("--dry-run"),
+                    batch: flag_value("--batch")
+                        .and_then(|value| value.parse::<i64>().ok())
+                        .unwrap_or(5000)
+                        .max(1),
+                    to_short: flag_value("--to").as_deref() == Some("short"),
+                },
+                Some(other) => Command::InvalidUsage {
+                    message: format!(
+                        "udb migrate-enum-tokens: --to must be full or short, got {other:?}"
+                    ),
+                },
             }
         }
         Some("messaging") => {
@@ -2432,6 +2450,14 @@ pub const SETTING_FLAGS: &[(&str, &str)] = &[
     ("--cleanup-interval", "UDB_CLEANUP_INTERVAL"),
     ("--cleanup-batch", "UDB_CLEANUP_BATCH"),
     ("--cleanup-max-size", "UDB_CLEANUP_MAX_SIZE"),
+    ("--cleanup-app-retention", "UDB_CLEANUP_APP_RETENTION"),
+    ("--cleanup-sweep-interval", "UDB_CLEANUP_SWEEP_INTERVAL"),
+    ("--cleanup-keep-versions", "UDB_CLEANUP_KEEP_VERSIONS"),
+    (
+        "--cleanup-statement-timeout",
+        "UDB_CLEANUP_STATEMENT_TIMEOUT",
+    ),
+    ("--cleanup-sweep-pages", "UDB_CLEANUP_SWEEP_PAGES"),
     (
         "--delegated-allow-audit-window",
         "UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW",
@@ -2468,4 +2494,46 @@ pub fn setting_flag_values(args: &[String]) -> Vec<(&'static str, String)> {
         }
     }
     values
+}
+
+#[cfg(test)]
+mod migrate_enum_tokens_tests {
+    use super::*;
+
+    fn parse(words: &[&str]) -> Command {
+        let args: Vec<String> = words.iter().map(|word| word.to_string()).collect();
+        parse_args(&args).0
+    }
+
+    #[test]
+    fn migrate_enum_tokens_rewrites_to_full_names_unless_asked_for_short() {
+        let base = [
+            "migrate-enum-tokens",
+            "--entity",
+            "Order",
+            "--column",
+            "status",
+        ];
+        match parse(&base) {
+            Command::MigrateEnumTokens {
+                to_short, entity, ..
+            } => assert!(!to_short && entity == "Order", "full names are the default"),
+            _ => panic!("migrate-enum-tokens must parse"),
+        }
+        let full = [&base[..], &["--to", "full"]].concat();
+        assert!(matches!(
+            parse(&full),
+            Command::MigrateEnumTokens {
+                to_short: false,
+                ..
+            }
+        ));
+        let short = [&base[..], &["--to", "short"]].concat();
+        assert!(matches!(
+            parse(&short),
+            Command::MigrateEnumTokens { to_short: true, .. }
+        ));
+        let bad = [&base[..], &["--to", "medium"]].concat();
+        assert!(matches!(parse(&bad), Command::InvalidUsage { .. }));
+    }
 }

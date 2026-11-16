@@ -32,3 +32,26 @@ func TestTypedReasonsControlCASRetryDespiteMessage(t *testing.T) {
 		}
 	}
 }
+
+func TestTokenExpiredAndRevokedReasonsStayUnauthenticated(t *testing.T) {
+	for reason, want := range map[string][2]bool{
+		"UDB_TOKEN_EXPIRED":         {true, false},
+		"UDB_TOKEN_REVOKED":         {false, true},
+		"UDB_AUTHENTICATION_FAILED": {false, false},
+	} {
+		detail, err := proto.Marshal(&entityv1.ErrorDetail{Reason: reason, Kind: entityv1.ErrorKind_ERROR_KIND_POLICY})
+		if err != nil {
+			t.Fatal(err)
+		}
+		call := &Error{Code: codes.Unauthenticated, Message: "opaque text", DetailBin: detail}
+		if CodeOf(call) != CodeUnauthenticated {
+			t.Fatalf("%s: CodeOf = %s, want unauthenticated", reason, CodeOf(call))
+		}
+		if IsTokenExpired(call) != want[0] || IsTokenRevoked(call) != want[1] {
+			t.Fatalf("%s: IsTokenExpired=%v IsTokenRevoked=%v, want %v", reason, IsTokenExpired(call), IsTokenRevoked(call), want)
+		}
+	}
+	if IsTokenExpired(errors.New("UDB_TOKEN_EXPIRED")) {
+		t.Fatal("message text must never classify an error")
+	}
+}

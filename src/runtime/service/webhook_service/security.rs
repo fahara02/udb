@@ -272,7 +272,8 @@ pub(crate) fn topic_matches_pattern(pattern: &str, topic: &str) -> bool {
 
 /// The fail-closed delivery gate: an event is delivered to an endpoint ONLY when
 /// (1) the event payload's `tenant_id` is non-empty and equals the endpoint's
-/// verified `endpoint_tenant`, and (2) the topic matches the endpoint's
+/// verified `endpoint_tenant` (or is the shared marker of a shared-table
+/// change, which every tenant may receive), and (2) the topic matches the endpoint's
 /// subscription pattern. The subscription is BOUND to the endpoint tenant — it is
 /// never pattern-only — so a tenant-less event or a cross-tenant event is dropped,
 /// mirroring `engine_tail::payload_value_matches_stream_scope` (#8).
@@ -292,8 +293,12 @@ pub(crate) fn webhook_event_matches_endpoint_scope(
         .unwrap_or_default()
         .trim();
     // Tenant BOUND to the endpoint: a tenant-less or foreign-tenant event is
-    // never delivered (no pattern-only fan-out — the fail-open trap).
-    if event_tenant.is_empty() || event_tenant != endpoint_tenant {
+    // never delivered (no pattern-only fan-out — the fail-open trap). The one
+    // exception is the reserved shared marker: a change to a shared (global)
+    // table belongs to no tenant and is readable by every tenant, so it
+    // reaches every tenant's matching endpoint.
+    let shared_event = crate::broker::is_shared_tenant_marker(event_tenant);
+    if event_tenant.is_empty() || (event_tenant != endpoint_tenant && !shared_event) {
         return false;
     }
     topic_matches_pattern(endpoint_pattern, topic)

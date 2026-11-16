@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.20 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.21 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,7 +18,7 @@ version-matched `udb` CLI from a project that installed the package.
 ## Install
 
 ```bash
-npm i @udb_plus/sdk@0.6.20
+npm i @udb_plus/sdk@0.6.21
 ```
 
 Runtime: Node 18+
@@ -243,12 +243,26 @@ const unpaid = await invoices.count(InvoiceWhere.paidAt.isNull());
 await invoices.delete({ invoiceId });
 ```
 
+Several reads, across tables, in one broker call (one `BatchSelect` stream; the broker runs
+them concurrently and returns them in request order):
+
+```ts
+const [visit, drafts, review] = await u.selectMany([
+  { messageType: "acme.visits.entity.v1.Visit", where: { visitId }, limit: 1 },
+  { messageType: "acme.visits.entity.v1.Draft", where: { visitId }, orderBy: ["-updatedAt"] },
+  { messageType: "acme.visits.entity.v1.Review", where: { visitId }, orderBy: ["-createdAt"], limit: 1 },
+]);
+console.log(visit.rows[0], drafts.rows.length, review.rows[0]);
+```
+
 - Row properties are protobuf JSON names (`amountCents`); the mappers convert to
   and from the proto field names the broker uses. A JSON or JSONB value is passed
   through unchanged, nested keys included.
 - A column that is NULL is absent from the row, not `null` or a zero value. Match it
   with `InvoiceWhere.paidAt.isNull()`; a filter of `{ paidAt: null }` is refused.
-- A text-stored enum uses its full value name, such as `INVOICE_STATUS_OPEN`.
+- A text-stored enum uses its full value name, such as `INVOICE_STATUS_OPEN`. The
+  generator emits a named const and type per proto enum, so write
+  `InvoiceStatus.OPEN` (its value is `"INVOICE_STATUS_OPEN"`) instead of the string.
 - A 64-bit integer stored as `BIGINT` reads as a number when it is exact and as a
   decimal string past `Number.MAX_SAFE_INTEGER`, so it never loses digits.
 - A property the table does not have is refused, never silently dropped.
@@ -450,6 +464,32 @@ UDB_REQUIRE_MLS_WASM=1 npm run test:mls   # in-process suite; the Rust<->TypeScr
                                           # UDB_AUTH_GRPC_TARGET, UDB_LIVE_* and
                                           # UDB_RUST_MESSAGING_PEER
 ```
+
+## Testing with the real embedded broker
+
+`start(t, protoRoot, policyFile)` from the `udbtest` module starts an installed
+embedded-capable UDB binary with PostgreSQL, logs in as its bootstrapped
+administrator and returns an authenticated client; everything stops when `t`
+ends. `startPair` adds a second, independently provisioned tenant. Set
+`UDB_TEST_BINARY` to select a CI build; otherwise `udb` on PATH is used.
+
+A fresh cluster can hold migration work the broker marks review-required, and
+the broker refuses to run it without an approved plan
+(`migration.require_approval_plan`). Pass `{ approveReviewRequired: true }` as
+the fourth argument to approve it for the test: the helper runs
+`udb plan --emit-approval-plan <project>/approval.json` with the same binary and
+proto root before `dev up`, and passes the file to the broker as
+`UDB_MIGRATION_APPROVAL_PLAN`. It is off by default, so a test sees the refusal
+a production deploy would.
+
+```ts
+const u = await start(t, "./proto", undefined, { approveReviewRequired: true });
+```
+
+The in-memory fake (`createFake`, `createDescriptorFake`) enforces partial
+unique indexes whose predicate is an `AND` of `col IS [NOT] NULL` and
+`col = | <> | != 'literal'` terms; any other predicate is refused, so use
+`start()` for it.
 
 ## Performance
 

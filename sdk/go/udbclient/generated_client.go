@@ -25,8 +25,8 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 426 RPCs across 29 services
-// (UDB v0.6.20, wire protocol 1.0.0).
+// Covers 427 RPCs across 29 services
+// (UDB v0.6.21, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.6.20"
+const SDKVersion = "0.6.21"
 
 // VersionMismatchError reports an absent, malformed, or incompatible broker
 // release header. Compatibility requires the same major and minor release;
@@ -1100,6 +1100,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/EmergencyRevoke", Name: "EmergencyRevoke", APIAlias: "emergency_revoke", OperationID: "emergencyRevoke", HTTPMethod: "post", HTTPPath: "/v1/auth/admin:emergencyRevoke", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:emergency-revoke"}, CredentialTypes: []string{"bearer_jwt", "session"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/EnrollMFA", Name: "EnrollMFA", APIAlias: "enroll_mfa", OperationID: "enrollMfa", HTTPMethod: "post", HTTPPath: "/v1/auth/users/{user_id}/mfa:enroll", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:enroll-mfa"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant", Name: "ExchangeServiceTokenForTenant", APIAlias: "exchange_service_token_for_tenant", OperationID: "exchangeServiceTokenForTenant", HTTPMethod: "post", HTTPPath: "/v1/auth/service-tokens:exchangeForTenant", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:exchange-tenant-token"}, CredentialTypes: []string{"service_account"}},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob", Name: "ExchangeTokenForJob", APIAlias: "exchange_token_for_job", OperationID: "exchangeTokenForJob", HTTPMethod: "post", HTTPPath: "/v1/auth/tokens:exchangeForJob", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:token:delegate"}, CredentialTypes: []string{"service_account"}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/FinishOidcLogin", Name: "FinishOidcLogin", APIAlias: "finish_oidc_login", OperationID: "finishOidcLogin", HTTPMethod: "post", HTTPPath: "/v1/auth/sessions:finishOidcLogin", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "public", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication", Name: "FinishWebAuthnAuthentication", APIAlias: "finish_web_authn_authentication", OperationID: "finishWebAuthnAuthentication", HTTPMethod: "post", HTTPPath: "/v1/auth/webauthn/authentication:finish", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "public", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration", Name: "FinishWebAuthnRegistration", APIAlias: "finish_web_authn_registration", OperationID: "finishWebAuthnRegistration", HTTPMethod: "post", HTTPPath: "/v1/auth/webauthn/registration:finish", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:authn:finish-web-authn-registration"}, CredentialTypes: []string{"bearer_jwt", "session"}},
@@ -1487,7 +1488,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.analytics.services.v1.AnalyticsService": 7,
 	"udb.core.apikey.services.v1.ApiKeyService": 9,
 	"udb.core.asset.services.v1.AssetService": 8,
-	"udb.core.authn.services.v1.AuthnService": 81,
+	"udb.core.authn.services.v1.AuthnService": 82,
 	"udb.core.authz.services.v1.AuthzService": 41,
 	"udb.core.backup.services.v1.BackupService": 8,
 	"udb.core.cache.services.v1.CacheService": 8,

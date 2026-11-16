@@ -45,7 +45,7 @@ public final class FileProto {
       "obuf/timestamp.proto\032\033udb/core/common/v1" +
       "/db.proto\032!udb/core/common/v1/security.p" +
       "roto\032\036udb/core/common/v1/types.proto\032&ud" +
-      "b/core/storage/entity/v1/enums.proto\"\327\026\n" +
+      "b/core/storage/entity/v1/enums.proto\"\344\026\n" +
       "\004File\022C\n\007file_id\030\001 \001(\tB*\202\267\030&\n\007file_id\022\004U" +
       "UID\030\001(\001:\021gen_random_uuid()R\006fileId\0227\n\tte" +
       "nant_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002" +
@@ -103,29 +103,29 @@ public final class FileProto {
       " verdictR\tscannedBy\022s\n\013scan_detail\030\032 \001(\t" +
       "BR\202\267\030N\n\013scan_detail\022\004TEXTZ9Signature nam" +
       "e or failure reason from the scanning en" +
-      "gineR\nscanDetail:\333\004\372\266\030\270\003\n\005files\022\013udb_sto" +
+      "gineR\nscanDetail:\350\004\372\266\030\305\003\n\005files\022\013udb_sto" +
       "rage\030\001 \001*BObject-storage file metadata f" +
       "or uploads, downloads, and lifecycle0\0018\001" +
-      "@\001b\230\001\n\030storage_tenant_isolation\032z(tenant" +
-      "_id::text = current_setting(\'app.current" +
-      "_tenant_id\', true) OR current_setting(\'a" +
-      "pp.platform_admin\', true) = \'true\')(\001h\001\212" +
-      "\001$\n\020idx_files_tenant\022\005BTREEZ\ttenant_id\212\001" +
-      ":\n\023idx_files_reference\022\005BTREEZ\014reference" +
-      "_idZ\016reference_type\212\001+\n\025idx_files_upload" +
-      "ed_by\022\005BTREEZ\013uploaded_by\362\001\025udb.storage." +
-      "files.cdc\372\001\014storage:read\212\262\031\231\001\n\006tenant\032\tt" +
-      "enant_id*4tenant_id = current_setting(\'a" +
-      "pp.current_tenant_id\')2\013soft_delete:\023sto" +
-      "rage.operational@\373\023H\002R\006tenantZ\010standardr" +
-      "\025tenant.data_residencyB\200\002\n\036com.udb.core." +
-      "storage.entity.v1B\tFileProtoP\001ZFgithub.c" +
-      "om/fahara02/udb/sdk/go/gen/udb/core/stor" +
-      "age/entity/v1;entityv1\242\002\004UCSE\252\002\032Udb.Core" +
-      ".Storage.Entity.V1\312\002\032Udb\\Core\\Storage\\En" +
-      "tity\\V1\342\002&Udb\\GPBMetadata\\Core\\Storage\\E" +
-      "ntity\\V1\352\002\036Udb::Core::Storage::Entity::V" +
-      "1b\006proto3"
+      "@\001b\245\001\n\030storage_tenant_isolation\032\206\001(tenan" +
+      "t_id = NULLIF(current_setting(\'app.curre" +
+      "nt_tenant_id\', true), \'\')::uuid OR curre" +
+      "nt_setting(\'app.platform_admin\', true) =" +
+      " \'true\')(\001h\001\212\001$\n\020idx_files_tenant\022\005BTREE" +
+      "Z\ttenant_id\212\001:\n\023idx_files_reference\022\005BTR" +
+      "EEZ\014reference_idZ\016reference_type\212\001+\n\025idx" +
+      "_files_uploaded_by\022\005BTREEZ\013uploaded_by\362\001" +
+      "\025udb.storage.files.cdc\372\001\014storage:read\212\262\031" +
+      "\231\001\n\006tenant\032\ttenant_id*4tenant_id = curre" +
+      "nt_setting(\'app.current_tenant_id\')2\013sof" +
+      "t_delete:\023storage.operational@\373\023H\002R\006tena" +
+      "ntZ\010standardr\025tenant.data_residencyB\200\002\n\036" +
+      "com.udb.core.storage.entity.v1B\tFileProt" +
+      "oP\001ZFgithub.com/fahara02/udb/sdk/go/gen/" +
+      "udb/core/storage/entity/v1;entityv1\242\002\004UC" +
+      "SE\252\002\032Udb.Core.Storage.Entity.V1\312\002\032Udb\\Co" +
+      "re\\Storage\\Entity\\V1\342\002&Udb\\GPBMetadata\\C" +
+      "ore\\Storage\\Entity\\V1\352\002\036Udb::Core::Stora" +
+      "ge::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -3,8 +3,8 @@
 
 Completion and acknowledgement consume state. Give them independent fixtures
 instead of timing a nonexistent upload or a workflow changed by SignalWorkflow.
-The JSON contains reference IDs, ETags and one service-account username, never
-passwords or signed URLs (that account's password is the environment's
+The JSON contains reference IDs, ETags and two service-account usernames, never
+passwords or signed URLs (those accounts' password is the environment's
 UDB_LIVE_PASSWORD). The identity-flow fixtures add single-use proofs for
 disposable targets (one-time codes, invitation accept tokens, one step-up
 token); none of them is a password, an access token or a refresh token.
@@ -216,6 +216,54 @@ def seed_memberships(channel, bench_headers, bench_tenant: str, bench_project: s
         "membership_id": revoke_membership_id,
         "membership_exchange_username": exchange_username,
         "membership_exchange_project_id": home_project,
+    }
+
+
+#: The delegating service's grant: `udb:read` (the scope the delegated token
+#: carries; the benchmark user's token allows it) and the scope
+#: ExchangeTokenForJob requires.
+DELEGATE_GRANT_SCOPES = ("udb:read", "udb:token:delegate")
+
+
+def seed_delegate_service(channel, bench_headers, bench_tenant: str, bench_project: str) -> dict[str, str]:
+    """A service account in the BENCH tenant whose ACTIVE grant holds
+    `udb:token:delegate`, for the ExchangeTokenForJob row. The harnesses log in
+    AS it (password `UDB_LIVE_PASSWORD`, never written here) and send the
+    benchmark user's current access token as `subject_token`, so the service
+    and the user share the tenant.
+
+    - `delegate_service_username`: the account's username;
+    - `delegate_service_project_id`: the project its grant and login use.
+
+    Empty when the broker serves no service-account grants."""
+    password = required_env("UDB_LIVE_PASSWORD")
+    authn = authn_grpc.AuthnServiceStub(channel)
+    suffix = uuid.uuid4().hex[:12]
+    username = f"sdk-perf-delegate-{suffix}"
+    try:
+        user_id = authn.CreateUser(authn_pb.CreateUserRequest(
+            username=username, email=f"{username}@example.invalid", password=password,
+            tenant_id=bench_tenant, project_id=bench_project, full_name="SDK perf delegating service",
+            account_kind=authn_enums.ACCOUNT_KIND_SERVICE_ACCOUNT),
+            metadata=bench_headers, timeout=20.0).user.user_id
+        authn.ChangeUserStatus(authn_pb.ChangeUserStatusRequest(
+            user_id=user_id, new_status=authn_enums.USER_STATUS_ACTIVE,
+            reason="benchmark delegated-token fixture"), metadata=bench_headers, timeout=20.0)
+        grant = authn.CreateServiceAccountGrant(authn_service_pb.CreateServiceAccountGrantRequest(
+            tenant_id=bench_tenant, user_id=user_id,
+            service_identity=f"spiffe://bench/delegate-{suffix}", project_id=bench_project,
+            approved_scopes=list(DELEGATE_GRANT_SCOPES), reason="benchmark delegated-token fixture"),
+            metadata=bench_headers, timeout=20.0).grant
+    except grpc.RpcError as exc:
+        if exc.code() != grpc.StatusCode.UNIMPLEMENTED:
+            raise
+        print("delegated-token fixture skipped: the broker serves no service-account grants", flush=True)
+        return {}
+    if grant.status != "ACTIVE":
+        raise RuntimeError("benchmark delegated-token grant is not ACTIVE")
+    return {
+        "delegate_service_username": username,
+        "delegate_service_project_id": bench_project,
     }
 
 
@@ -482,6 +530,8 @@ def main() -> int:
             native_channel, headers, principal.tenant_id, principal.subject)
         membership_fixtures = seed_memberships(
             native_channel, headers, principal.tenant_id, principal.project_id)
+        delegate_fixtures = seed_delegate_service(
+            native_channel, headers, principal.tenant_id, principal.project_id)
         identity_fixtures = seed_identity_flows(
             native_channel, headers, principal.tenant_id, principal.project_id, principal.subject)
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -494,12 +544,14 @@ def main() -> int:
                 "cdc_ack_event_id": ack_event_id, "cdc_ack_topic": ack_topic,
                 **messaging_fixtures,
                 **membership_fixtures,
+                **delegate_fixtures,
                 **identity_fixtures,
             },
         }, sort_keys=True) + "\n", encoding="utf-8")
-    print("Prepared real CDC event, multipart, dispatched workflow, messaging, tenant-membership"
-          f" and identity-flow benchmark fixtures ({len(messaging_fixtures)} MLS values, "
-          f"{len(membership_fixtures)} membership values, {len(identity_fixtures)} identity values)")
+    print("Prepared real CDC event, multipart, dispatched workflow, messaging, tenant-membership,"
+          " delegated-token and identity-flow benchmark fixtures"
+          f" ({len(messaging_fixtures)} MLS values, {len(membership_fixtures)} membership values, "
+          f"{len(delegate_fixtures)} delegated-token values, {len(identity_fixtures)} identity values)")
     return 0
 
 

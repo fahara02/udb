@@ -163,8 +163,12 @@ fn same_logical_read_compiles_to_postgres_and_mongo() {
             assert_eq!(inner_and.len(), 2);
             assert_eq!(inner_and[0]["tenant_id"]["$eq"], "acme-1");
             assert_eq!(inner_and[1]["email"]["$eq"], "alice@acme.com");
-            // [1] is the context-injected tenant predicate.
-            assert_eq!(outer_and[1]["tenant_id"], "acme-1");
+            // [1] is the context-injected tenant predicate: a read matches
+            // the caller's rows and shared reference rows.
+            assert_eq!(
+                outer_and[1]["tenant_id"]["$in"],
+                serde_json::json!(["acme-1", "*shared*"])
+            );
             // Projection sets both fields to 1.
             assert_eq!(body["projection"]["id"], 1);
             assert_eq!(body["projection"]["name"], 1);

@@ -134,7 +134,10 @@ impl ProjectionPlan {
                         resource_name: p.resource_name.clone(),
                         write_policy: p.write_policy.clone(),
                         fanout_policy: p.fanout_policy.clone(),
-                        options: with_tenant_field(&p.options, tenant_column),
+                        options: with_derived_scope_options(
+                            with_tenant_field(&p.options, tenant_column),
+                            table,
+                        ),
                     })
                     .collect();
                 if targets.is_empty() {
@@ -202,6 +205,117 @@ fn with_tenant_field(
     options
 }
 
+/// Target option the plan builder sets on every target of a shared (global)
+/// table: its projected records are stamped with the shared tenant marker.
+/// Only the builder sets it; a declared value is dropped, so a tenant table can
+/// never opt into the shared marker.
+const SHARED_SCOPE_OPTION: &str = "shared_scope";
+
+/// Target option naming (comma-separated) the columns a projected record's
+/// stored payload leaves out: the table's PII and encrypted columns, unless the
+/// target lists them in `payload_fields`.
+const EXCLUDE_FIELDS_OPTION: &str = "exclude_fields";
+
+/// Add the options the worker needs to scope and redact a target's records:
+/// [`SHARED_SCOPE_OPTION`] for a shared table, and [`EXCLUDE_FIELDS_OPTION`]
+/// with the sensitive columns the target did not ask for explicitly.
+fn with_derived_scope_options(
+    options: Vec<ManifestStoreOption>,
+    table: &crate::generation::manifest::ManifestTable,
+) -> Vec<ManifestStoreOption> {
+    let mut options = options;
+    options.retain(|o| !o.key.eq_ignore_ascii_case(SHARED_SCOPE_OPTION));
+    if crate::broker::is_global_table(table) {
+        options.push(ManifestStoreOption {
+            key: SHARED_SCOPE_OPTION.to_string(),
+            value: "true".to_string(),
+        });
+    }
+    let excluded = sensitive_columns_left_out(table, &options);
+    if !excluded.is_empty() {
+        let declared = options
+            .iter()
+            .filter(|o| o.key.eq_ignore_ascii_case(EXCLUDE_FIELDS_OPTION))
+            .flat_map(|o| o.value.split(','))
+            .map(|name| name.trim().to_string())
+            .filter(|name| !name.is_empty())
+            .collect::<Vec<_>>();
+        let mut merged = declared;
+        for column in excluded {
+            if !merged.iter().any(|name| name.eq_ignore_ascii_case(&column)) {
+                merged.push(column);
+            }
+        }
+        options.retain(|o| !o.key.eq_ignore_ascii_case(EXCLUDE_FIELDS_OPTION));
+        options.push(ManifestStoreOption {
+            key: EXCLUDE_FIELDS_OPTION.to_string(),
+            value: merged.join(","),
+        });
+    }
+    options
+}
+
+/// The table's PII / encrypted columns a target's stored payload leaves out.
+/// A column stays in when the target lists it in `payload_fields` (by proto
+/// field or column name), and identity columns always stay (primary key, the
+/// declared id / tenant / vector fields) because the projection cannot address
+/// or scope its record without them.
+fn sensitive_columns_left_out(
+    table: &crate::generation::manifest::ManifestTable,
+    options: &[ManifestStoreOption],
+) -> Vec<String> {
+    let option = |key: &str| {
+        options
+            .iter()
+            .filter(|o| o.key.eq_ignore_ascii_case(key))
+            .flat_map(|o| o.value.split(','))
+            .map(|name| name.trim().to_ascii_lowercase())
+            .filter(|name| !name.is_empty())
+            .collect::<Vec<_>>()
+    };
+    let mut kept = option("payload_fields");
+    for key in ROW_IDENTITY_OPTION_KEYS
+        .iter()
+        .chain(["tenant_field", "vector_field", "embedding_field"].iter())
+    {
+        kept.extend(option(key));
+    }
+    kept.extend(table.primary_key.iter().map(|pk| pk.to_ascii_lowercase()));
+    table
+        .columns
+        .iter()
+        .filter(|column| column.security.is_pii || column.security.is_encrypted || column.encrypted)
+        .filter(|column| {
+            let physical = column.column_name.to_ascii_lowercase();
+            let proto = column.field_name.to_ascii_lowercase();
+            !kept.iter().any(|name| *name == physical || *name == proto)
+        })
+        .map(|column| column.column_name.clone())
+        .collect()
+}
+
+/// `payload` without the target's [`EXCLUDE_FIELDS_OPTION`] columns (matched
+/// case-insensitively). Used for the record a target STORES, never for a
+/// delete filter: dropping a predicate from a filter would widen the delete.
+fn without_excluded_fields(
+    target_options: &serde_json::Value,
+    payload: &serde_json::Value,
+) -> serde_json::Value {
+    let excluded = option_list(target_options, EXCLUDE_FIELDS_OPTION);
+    if excluded.is_empty() {
+        return payload.clone();
+    }
+    match payload {
+        serde_json::Value::Object(map) => serde_json::Value::Object(
+            map.iter()
+                .filter(|(key, _)| !excluded.iter().any(|name| name.eq_ignore_ascii_case(key)))
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
+}
+
 /// The project a projection task belongs to: the writer's project, with an
 /// empty one resolved to the default project the same way catalog lookup does.
 /// The worker validates and routes each task by this value, and stamps it on
@@ -234,16 +348,31 @@ impl ProjectionScope {
         target_options: &serde_json::Value,
         source_payload: &serde_json::Value,
     ) -> Self {
+        let project_id = Some(project_id.trim().to_string()).filter(|p| !p.is_empty());
+        // A shared (global) table's records belong to no tenant: they carry the
+        // reserved shared marker every tenant's reads match.
+        if option_value(target_options, SHARED_SCOPE_OPTION)
+            .is_some_and(|value| value.trim().eq_ignore_ascii_case("true"))
+        {
+            return Self {
+                tenant_id: Some(crate::broker::SHARED_TENANT_MARKER.to_string()),
+                project_id,
+                unresolved_tenant_field: None,
+            };
+        }
         let tenant_field = option_value(target_options, "tenant_field")
             .map(|field| field.trim().to_string())
             .filter(|field| !field.is_empty());
+        // A tenant row can never carry the shared marker: treat it as having no
+        // usable tenant, which refuses the write instead of publishing the row
+        // to every tenant.
         let tenant_id = tenant_field
             .as_deref()
             .and_then(|field| source_payload.get(field))
             .filter(|value| value.is_string() || value.is_number())
             .map(json_scalar_to_string)
-            .filter(|value| !value.trim().is_empty());
-        let project_id = Some(project_id.trim().to_string()).filter(|p| !p.is_empty());
+            .filter(|value| !value.trim().is_empty())
+            .filter(|value| !crate::broker::is_shared_tenant_marker(value));
         Self {
             unresolved_tenant_field: tenant_field.filter(|_| tenant_id.is_none()),
             tenant_id,
@@ -1437,6 +1566,17 @@ impl ProjectionWorker {
         scope.require_tenant(&format!(
             "{normalized_backend} projection '{resource_name}'"
         ))?;
+        // PII and encrypted columns are not copied to a projection target unless
+        // the target lists them in `payload_fields`. Only the stored record is
+        // trimmed: a delete carries a filter, and dropping one of its
+        // predicates would widen the delete.
+        let stored_payload;
+        let source_payload = if operation.eq_ignore_ascii_case("delete") {
+            source_payload
+        } else {
+            stored_payload = without_excluded_fields(target_options, source_payload);
+            &stored_payload
+        };
         if normalized_backend == "redis" || projection_kind.eq_ignore_ascii_case("cache") {
             return self
                 .execute_redis_projection(
@@ -2787,6 +2927,100 @@ mod tests {
             key: key.to_string(),
             value: value.to_string(),
         }
+    }
+
+    fn column(name: &str) -> crate::generation::manifest::ManifestColumn {
+        crate::generation::manifest::ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            sql_type: "TEXT".to_string(),
+            ..Default::default()
+        }
+    }
+
+    fn concept_table(
+        mode: &str,
+        extra: Vec<crate::generation::manifest::ManifestColumn>,
+    ) -> ManifestTable {
+        let mut ssn = column("ssn");
+        ssn.security.is_pii = true;
+        let mut secret = column("secret");
+        secret.security.is_encrypted = true;
+        let mut legacy = column("legacy_secret");
+        legacy.encrypted = true;
+        let mut columns = vec![column("id"), column("label"), ssn, secret, legacy];
+        columns.extend(extra);
+        ManifestTable {
+            primary_key: vec!["id".to_string()],
+            table_security: crate::generation::manifest::ManifestTableSecurity {
+                tenant_isolation_mode: mode.to_string(),
+                ..Default::default()
+            },
+            columns,
+            ..ManifestTable::default()
+        }
+    }
+
+    #[test]
+    fn shared_table_projections_carry_the_shared_marker() {
+        let options = with_derived_scope_options(Vec::new(), &concept_table("global", Vec::new()));
+        let options = serde_json::to_value(&options).unwrap();
+        let payload = json!({"id": "c1", "label": "Fever"});
+        let scope = ProjectionScope::resolve("proj-a", &options, &payload);
+        assert!(scope.require_tenant("upsert").is_ok());
+        let stamped = scope.stamp(&payload);
+        assert_eq!(stamped["_tenant_id"], crate::broker::SHARED_TENANT_MARKER);
+        assert_eq!(stamped["_project_id"], "proj-a");
+    }
+
+    #[test]
+    fn a_tenant_table_cannot_claim_the_shared_marker() {
+        // A declared shared_scope on a tenant table is dropped by the builder.
+        let mut tenant = column("tenant_id");
+        tenant.is_tenant_column = true;
+        let table = concept_table("tenant", vec![tenant]);
+        let options = with_derived_scope_options(
+            with_tenant_field(&[opt(SHARED_SCOPE_OPTION, "true")], Some("tenant_id")),
+            &table,
+        );
+        assert!(
+            !options
+                .iter()
+                .any(|o| o.key.eq_ignore_ascii_case(SHARED_SCOPE_OPTION))
+        );
+        // A row whose tenant column holds the marker is refused, not published.
+        let options = serde_json::to_value(&options).unwrap();
+        let forged = json!({"id": "c1", "tenant_id": crate::broker::SHARED_TENANT_MARKER});
+        let scope = ProjectionScope::resolve("proj-a", &options, &forged);
+        assert!(scope.require_tenant("upsert").is_err());
+    }
+
+    #[test]
+    fn projections_leave_out_pii_and_encrypted_columns_unless_listed() {
+        let table = concept_table("global", Vec::new());
+        let options = with_derived_scope_options(Vec::new(), &table);
+        let options = serde_json::to_value(&options).unwrap();
+        let row = json!({
+            "id": "c1", "label": "Fever", "ssn": "123", "secret": "x", "legacy_secret": "y"
+        });
+        assert_eq!(
+            without_excluded_fields(&options, &row),
+            json!({"id": "c1", "label": "Fever"})
+        );
+
+        // Listing a sensitive column in payload_fields keeps it.
+        let listed = with_derived_scope_options(vec![opt("payload_fields", "label,SSN")], &table);
+        let listed = serde_json::to_value(&listed).unwrap();
+        let kept = without_excluded_fields(&listed, &row);
+        assert_eq!(kept["ssn"], "123");
+        assert!(kept.get("secret").is_none());
+
+        // A table with no sensitive column gets no exclusion option at all.
+        let plain = ManifestTable {
+            columns: vec![column("id"), column("label")],
+            ..ManifestTable::default()
+        };
+        assert!(with_derived_scope_options(Vec::new(), &plain).is_empty());
     }
 
     #[test]

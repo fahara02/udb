@@ -927,15 +927,61 @@ pub(crate) fn enforce_deferred_public_limits(
     })
 }
 
+/// Per-minute request counters keyed by `(bucket, caller, minute)`. A counter
+/// only expires when its minute is more than two minutes old, so the map is
+/// swept once each time the minute moves on, not on every call: the full scan
+/// under the global lock runs at most once a minute instead of once per request.
+#[derive(Default)]
+struct MinuteBuckets {
+    counts: HashMap<(String, String, u64), u32>,
+    /// The minute of the last sweep.
+    swept_minute: u64,
+}
+
+impl MinuteBuckets {
+    /// Count one request in `key`'s bucket and return the bucket's count.
+    fn count(&mut self, key: (String, String, u64)) -> u32 {
+        let minute = key.2;
+        if minute != self.swept_minute {
+            self.counts
+                .retain(|(_, _, bucket_minute), _| *bucket_minute + 2 >= minute);
+            self.swept_minute = minute;
+        }
+        let count = self.counts.entry(key).or_insert(0);
+        *count = count.saturating_add(1);
+        *count
+    }
+}
+
+#[cfg(test)]
+mod minute_bucket_tests {
+    use super::MinuteBuckets;
+
+    #[test]
+    fn buckets_count_per_minute_and_are_swept_when_the_minute_moves() {
+        let mut buckets = MinuteBuckets::default();
+        let key = |minute: u64| ("bucket".to_string(), "caller".to_string(), minute);
+        assert_eq!(buckets.count(key(10)), 1);
+        assert_eq!(buckets.count(key(10)), 2);
+        assert_eq!(buckets.count(key(11)), 1);
+        assert_eq!(buckets.counts.len(), 2, "no sweep inside the window");
+        // Minute 13: minute 10 is more than two minutes old and goes.
+        assert_eq!(buckets.count(key(13)), 1);
+        assert!(!buckets.counts.contains_key(&key(10)));
+        assert!(buckets.counts.contains_key(&key(11)));
+        assert_eq!(buckets.swept_minute, 13);
+    }
+}
+
 fn check_public_bootstrap_rate_limit(
     path: &str,
     headers: &http::HeaderMap,
     peer: &TransportPeer,
     policy_ref: Option<&str>,
 ) -> Result<(), (Status, &'static str)> {
-    static BUCKETS: OnceLock<Mutex<HashMap<(String, String, u64), u32>>> = OnceLock::new();
+    static BUCKETS: OnceLock<Mutex<MinuteBuckets>> = OnceLock::new();
     let key = public_rate_limit_key(path, headers, peer, policy_ref);
-    let buckets = BUCKETS.get_or_init(|| Mutex::new(HashMap::new()));
+    let buckets = BUCKETS.get_or_init(|| Mutex::new(MinuteBuckets::default()));
     let mut guard = buckets.lock().map_err(|_| {
         (
             crate::runtime::executor_utils::quota_status(
@@ -947,14 +993,11 @@ fn check_public_bootstrap_rate_limit(
             deny_reason::PUBLIC_RATE_LIMIT,
         )
     })?;
-    let current_minute = key.2;
     let bucket = key.0.clone();
     let caller = key.1.clone();
-    guard.retain(|(_, _, minute), _| *minute + 2 >= current_minute);
-    let count = guard.entry(key).or_insert(0);
-    *count = count.saturating_add(1);
+    let count = guard.count(key);
     let limit = public_bootstrap_rate_limit_for(policy_ref);
-    if *count > limit {
+    if count > limit {
         return Err((
             crate::runtime::error_reasons::annotate_with(
                 crate::runtime::executor_utils::quota_status(
@@ -1016,9 +1059,9 @@ fn check_abuse_policy(
     headers: &http::HeaderMap,
     peer: &TransportPeer,
 ) -> Result<(), (Status, &'static str)> {
-    static BUCKETS: OnceLock<Mutex<HashMap<(String, String, u64), u32>>> = OnceLock::new();
+    static BUCKETS: OnceLock<Mutex<MinuteBuckets>> = OnceLock::new();
     let (_, caller, minute) = public_rate_limit_key("", headers, peer, None);
-    let buckets = BUCKETS.get_or_init(|| Mutex::new(HashMap::new()));
+    let buckets = BUCKETS.get_or_init(|| Mutex::new(MinuteBuckets::default()));
     let mut guard = buckets.lock().map_err(|_| {
         (
             crate::runtime::executor_utils::quota_status(
@@ -1030,13 +1073,11 @@ fn check_abuse_policy(
             deny_reason::ABUSE_POLICY,
         )
     })?;
-    guard.retain(|(_, _, bucket_minute), _| *bucket_minute + 2 >= minute);
-    let count = guard
-        .entry((reference.to_string(), caller, minute))
-        .or_insert(0);
-    *count = count.saturating_add(1);
+    let count = guard.count((reference.to_string(), caller, minute));
+    // Release the bucket lock before reading the policy limit (its own lock).
+    drop(guard);
     let limit = abuse_policy_limit(reference);
-    if *count > limit {
+    if count > limit {
         return Err((
             crate::runtime::error_reasons::annotate_with(
                 crate::runtime::executor_utils::quota_status(
@@ -1748,14 +1789,28 @@ fn enforce(
                 if status.code() == tonic::Code::Unavailable {
                     return Err((status, deny_reason::STORE_UNAVAILABLE));
                 }
+                // An expired or revoked token says so (UDB_TOKEN_EXPIRED /
+                // UDB_TOKEN_REVOKED); any other refusal stays generic.
                 return Err((
-                    Status::unauthenticated("invalid bearer token"),
+                    crate::runtime::security::bearer_refusal_status(
+                        "invalid_bearer_token",
+                        reason,
+                        "invalid bearer token",
+                    ),
                     deny_reason::INVALID_BEARER,
                 ));
             }
             None => {
-                let claims = validate_bearer_token(security, token)
-                    .map_err(|e| (Status::unauthenticated(e), deny_reason::INVALID_BEARER))?;
+                let claims = validate_bearer_token(security, token).map_err(|e| {
+                    (
+                        crate::runtime::security::bearer_refusal_status(
+                            "bearer_verification_failed",
+                            &e,
+                            &e,
+                        ),
+                        deny_reason::INVALID_BEARER,
+                    )
+                })?;
                 let principal =
                     crate::runtime::credential_layer::VerifiedPrincipal::from_verified_bearer_claims(
                         &claims,
@@ -2896,6 +2951,9 @@ mod tests {
             account_kind: None,
             home_tenant_id: None,
             mbr: None,
+            act: None,
+            job_id: None,
+            delegated: None,
         }
     }
 

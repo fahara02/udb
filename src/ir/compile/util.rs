@@ -217,6 +217,49 @@ pub(super) fn require_tenant_scope(
     Ok(())
 }
 
+/// Which tenant values a schemaless-store operation matches on the tenant
+/// system field.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum TenantMatch {
+    /// Writes and deletes: only the caller's own tenant. A caller never
+    /// touches shared rows through its own tenant scope.
+    Exact,
+    /// Reads, aggregates and searches: the caller's own tenant OR the shared
+    /// marker that rows derived from a shared (global) table carry. Another
+    /// tenant's rows still never match.
+    CallerOrShared,
+}
+
+/// The tenant values a READ matches: the caller's own tenant first, then the
+/// reserved shared marker. A tenant table never holds the marker (writes
+/// refuse it), so adding it only ever reveals shared reference rows.
+pub(super) fn shared_read_tenants(tenant_id: &str) -> [&str; 2] {
+    [tenant_id, crate::broker::SHARED_TENANT_MARKER]
+}
+
+/// Refuse a write or delete compiled under the reserved shared tenant marker.
+/// Shared rows are stamped only by the projection path; a request scope that
+/// carries the marker as its tenant must never write (or delete) through it,
+/// or one tenant could publish rows to every tenant.
+pub(super) fn reject_shared_marker_write(
+    ctx: &CompileContext<'_>,
+    backend: crate::backend::BackendKind,
+) -> Result<(), CompileError> {
+    if ctx
+        .tenant_id
+        .is_some_and(crate::broker::is_shared_tenant_marker)
+    {
+        return Err(CompileError::BackendSpecific {
+            backend,
+            message: format!(
+                "permission denied: tenant id '{}' is reserved for shared data and cannot write",
+                crate::broker::SHARED_TENANT_MARKER
+            ),
+        });
+    }
+    Ok(())
+}
+
 /// Project system-field counterpart of [`tenant_system_field`]; falls back to
 /// `_project_id`.
 pub(super) fn project_system_field(table: &ManifestTable) -> &str {
@@ -506,4 +549,35 @@ fn is_safe_relation_name(value: &str) -> bool {
     let mut chars = value.chars();
     matches!(chars.next(), Some(ch) if ch.is_ascii_alphabetic() || ch == '_')
         && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shared_read_tenants_lists_caller_then_marker() {
+        assert_eq!(
+            shared_read_tenants("acme"),
+            ["acme", crate::broker::SHARED_TENANT_MARKER]
+        );
+    }
+
+    #[test]
+    fn writes_under_the_shared_marker_are_refused() {
+        let manifest = CatalogManifest::default();
+        let marker =
+            CompileContext::new(&manifest).with_tenant(crate::broker::SHARED_TENANT_MARKER);
+        let err = reject_shared_marker_write(&marker, crate::backend::BackendKind::Mongodb)
+            .expect_err("the shared marker must never write");
+        assert!(
+            err.to_string().contains("reserved for shared data"),
+            "{err}"
+        );
+
+        let own = CompileContext::new(&manifest).with_tenant("acme");
+        assert!(reject_shared_marker_write(&own, crate::backend::BackendKind::Mongodb).is_ok());
+        let none = CompileContext::new(&manifest);
+        assert!(reject_shared_marker_write(&none, crate::backend::BackendKind::Mongodb).is_ok());
+    }
 }

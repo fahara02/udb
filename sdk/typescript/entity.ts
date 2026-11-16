@@ -9,6 +9,7 @@
 // from the generated ENTITY_REGISTRY by `UdbProject.entity`).
 
 import type { SessionFence } from "./consistency";
+import { enumStoredText } from "./recordCodec";
 import type { CallOptions, UdbCore } from "./generatedClient";
 
 const DATABROKER = "udb.services.v1.DataBroker";
@@ -898,6 +899,7 @@ export class UdbColumn<T> {
   constructor(
     readonly field: string,
     private readonly enumPrefix: string = "",
+    private readonly enumAllowed: readonly string[] = [],
   ) {}
 
   private value(v: T): unknown {
@@ -909,7 +911,7 @@ export class UdbColumn<T> {
         `udb: predicate ${this.field}: integer exceeds the exact filter number range; pass it as a string`,
       );
     }
-    return this.enumPrefix ? udbEnumToText(v, this.enumPrefix) : v;
+    return this.enumPrefix || this.enumAllowed.length ? udbEnumToText(v, this.enumPrefix, this.enumAllowed) : v;
   }
 
   private compare(op: string, v: T): Filter {
@@ -930,12 +932,21 @@ export class UdbColumn<T> {
   notNull(): Filter { return { [this.field]: { $not_null: true } }; }
 }
 
-/** Stored text of an enum value: the value name without the common prefix. */
-export function udbEnumToText(value: unknown, prefix: string): unknown {
-  return typeof value === "string" && value.startsWith(prefix) ? value.slice(prefix.length) : value;
+/** Stored text of an enum value (a full name or a short token). With `allowed` (the
+ *  column's enum_values, which its CHECK lists) it is the matching list entry, and a value
+ *  outside the list throws; without, it is the short token (the name without the common
+ *  prefix). */
+export function udbEnumToText(value: unknown, prefix: string, allowed: readonly string[] = []): unknown {
+  if (typeof value !== "string") return value;
+  const stored = enumStoredText(value, prefix, allowed);
+  if (stored === undefined) {
+    throw new Error(`udb: enum value ${value} is not in the column's enum_values (${allowed.join(", ")}); the value breaks its CHECK constraint`);
+  }
+  return stored;
 }
 
-/** The enum value name for stored text. */
+/** The enum value name for stored text. Rows written by older SDKs may hold the short
+ *  token; it reads back as the full name. */
 export function udbEnumFromText(value: unknown, prefix: string): unknown {
   return typeof value === "string" && !value.startsWith(prefix) ? prefix + value : value;
 }

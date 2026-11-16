@@ -184,7 +184,16 @@ pub(super) fn key(claims: &SecurityClaims) -> Key {
     let iat = claims.iat.map(|v| v.to_string()).unwrap_or_default();
     let exp = claims.exp.map(|v| v.to_string()).unwrap_or_default();
     let joined_scopes = scopes.join(" ");
-    let parts: [&str; 11] = [
+    let actor = claims.act.as_ref();
+    let delegated = if claims.is_delegated() { "1" } else { "" };
+    let parts: [&str; 16] = [
+        actor.and_then(|act| act.sub.as_deref()).unwrap_or_default(),
+        actor
+            .and_then(|act| act.account_id.as_deref())
+            .unwrap_or_default(),
+        claims.job_id.as_deref().unwrap_or_default(),
+        claims.purpose.as_deref().unwrap_or_default(),
+        delegated,
         claims.sub.as_deref().unwrap_or_default(),
         claims.tenant_id.as_deref().unwrap_or_default(),
         claims.project_id.as_deref().unwrap_or_default(),
@@ -297,6 +306,21 @@ mod tests {
         let mut scoped = claims("33333333-3333-3333-3333-333333333333", "sess_c");
         scoped.scopes = Some(vec!["udb:read".to_string()]);
         assert_ne!(a, key(&scoped), "scopes are part of the key");
+        // A delegated token's actor and job are part of the key too.
+        let mut delegated = claims("33333333-3333-3333-3333-333333333333", "sess_c");
+        delegated.delegated = Some(true);
+        delegated.job_id = Some("export-1".to_string());
+        delegated.act = Some(crate::runtime::security::ActorClaim {
+            sub: Some("spiffe://acme/exporter".to_string()),
+            account_id: Some("55555555-5555-5555-5555-555555555555".to_string()),
+        });
+        assert_ne!(a, key(&delegated));
+        let mut other_actor = delegated.clone();
+        other_actor.act = Some(crate::runtime::security::ActorClaim {
+            sub: Some("spiffe://acme/other".to_string()),
+            account_id: Some("55555555-5555-5555-5555-555555555555".to_string()),
+        });
+        assert_ne!(key(&delegated), key(&other_actor));
     }
 
     #[test]

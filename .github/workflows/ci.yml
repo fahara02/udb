@@ -1810,11 +1810,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          go test ./udbclient -run '^TestLiveServiceAccountDelegationConformance$' -count=1 -v 2>&1 | tee /tmp/go-service-accounts.log
+          go test ./udbclient -run '^(TestLiveServiceAccountDelegationConformance|TestLiveDelegatedJobToken)$' -count=1 -v 2>&1 | tee /tmp/go-service-accounts.log
           grep -q -- '--- PASS: TestLiveServiceAccountDelegationConformance' /tmp/go-service-accounts.log
+          grep -q -- '--- PASS: TestLiveDelegatedJobToken' /tmp/go-service-accounts.log
       - name: Python SDK service accounts
         working-directory: sdk/python
-        run: python -m pytest -v tests/test_live_service_accounts.py
+        run: python -m pytest -v tests/test_live_service_accounts.py tests/test_live_delegated_job_token.py
       - name: TypeScript SDK service accounts
         working-directory: sdk/typescript
         shell: bash
@@ -1823,7 +1824,7 @@ jobs:
           npm ci --no-audit --no-fund
           npm run bundle-proto
           npx tsc -p tsconfig.test.json
-          node --test dist-test/live-service-accounts.test.js
+          node --test dist-test/live-service-accounts.test.js dist-test/live-delegated-job-token.test.js
       - name: PHP SDK service accounts
         working-directory: sdk/php
         run: |

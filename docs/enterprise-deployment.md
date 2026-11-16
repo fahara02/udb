@@ -38,6 +38,7 @@ the auth/session/encryption/authz/redis subset.
 | `UDB_SERVICE_IDENTITY_REQUIRED=true` | Require a verified service identity (forced on in production). |
 | `REDIS_URL` (or `UDB_REDIS_DSN`) | Redis for the distributed rate limiter / sessions. Without it each broker process enforces the budget on its own, unless `UDB_RATE_LIMIT_FAILURE_MODE=open`. |
 | `UDB_RATE_LIMIT_MAX_PER_WINDOW=10000` | **The data-plane budget.** Max DataBroker requests per `(tenant, operation)` bucket per window (default `10000`). This is the knob that governs `Select`/`Upsert`/… — raise it for high-throughput tenants. Short alias: `UDB_RATE_LIMIT_MAX`. |
+| `UDB_BATCH_SELECT_CONCURRENCY=8` | How many reads of one `BatchSelect` call (SDK `selectMany`) run at once, 1 to 64 (default `8`). Results keep request order; each read is still admitted, quota-charged and authorized on its own, so every read counts against `UDB_RATE_LIMIT_MAX_PER_WINDOW`. |
 | `UDB_RATE_LIMIT_WINDOW_SECS=60` | Fixed-window length in seconds (default `60`). Short alias: `UDB_RATE_LIMIT_WINDOW`. |
 | `UDB_RATE_LIMIT_ENABLED=true` | Master switch for the data-plane limiter (default on). Set `false` to disable entirely. |
 | `UDB_RATE_LIMIT_PER_KEY=false` | Opt-in **per-key** limiting (default off). When on, each credential gets its own window bucket and a key's `api_keys.rate_limit_per_minute` column **raises** its budget above the tenant default (raise-only — never lowers below it). Off = one shared `(tenant, operation)` bucket. |
@@ -196,7 +197,9 @@ or `UDB_ENV=production`), in any `UDB_ENV`:
 | Gate | Effect |
 |---|---|
 | TLS and mTLS forced on | `UDB_REQUIRE_SECURE_TRANSPORT`, `UDB_MTLS_REQUIRED` and both internal mTLS flags are forced on, overriding an explicit `false`. |
-| TLS defaults | `UDB_TLS_REQUIRED`, `UDB_PG_TLS_REQUIRED`, `UDB_REDIS_TLS_REQUIRED`, `UDB_KAFKA_TLS_REQUIRED` and `UDB_SERVICE_IDENTITY_REQUIRED` default to `true` (an explicit value still wins). |
+| TLS defaults | `UDB_TLS_REQUIRED`, `UDB_PG_TLS_REQUIRED`, `UDB_REDIS_TLS_REQUIRED`, `UDB_OUTBOUND_TLS_REQUIRED`, `UDB_KAFKA_TLS_REQUIRED` and `UDB_SERVICE_IDENTITY_REQUIRED` default to `true` (an explicit value still wins). |
+| Outbound transport gate | Startup aborts when any outbound connection is plaintext or does not verify the server certificate: PostgreSQL needs `sslmode=verify-ca`/`verify-full`, Redis `rediss://`, everything else `https://` or its verified TLS mode. Loopback and unix sockets are exempt. Each refusal names the backend, the DSN parameter to set and the flag that turns it off. See [Outbound connections](operations.md#outbound-connections). |
+| Insecure dev overrides refused | `UDB_DEV_MODE` no longer lets `UDB_VAULT_ADDR` use `http://` to a non-loopback host, and `UDB_LIVEKIT_ALLOW_INSECURE` aborts startup. |
 | Encryption required at config load | `UDB_OBJECT_NATIVE_STATE_ENCRYPTION_REQUIRED` is forced on, so config validation fails without a key source. |
 | Default-allow refused | `UDB_ABAC_DEFAULT_ALLOW` aborts startup and fails auth readiness. Under fail-closed alone it is reported, not refused, because CI smoke and staging rely on it. |
 | Private OAuth token URL refused | `UDB_VAULT_OAUTH_ALLOW_PRIVATE_TOKEN_URL` is ignored. |

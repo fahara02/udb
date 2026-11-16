@@ -85,6 +85,7 @@ const (
 	AuthnService_RevokeServiceAccountTenantMembership_FullMethodName = "/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountTenantMembership"
 	AuthnService_ListOwnTenantMemberships_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/ListOwnTenantMemberships"
 	AuthnService_ExchangeServiceTokenForTenant_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"
+	AuthnService_ExchangeTokenForJob_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob"
 	AuthnService_PutTenantAuthPolicy_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/PutTenantAuthPolicy"
 	AuthnService_GetTenantAuthPolicy_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy"
 	AuthnService_SendLoginOtp_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/SendLoginOtp"
@@ -806,6 +807,31 @@ type AuthnServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	ExchangeServiceTokenForTenant(ctx context.Context, in *ExchangeServiceTokenForTenantRequest, opts ...grpc.CallOption) (*ExchangeServiceTokenForTenantResponse, error)
+	// Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+	// a user's current access token for a token a durable async job uses to act
+	// for that user. The caller is a service account's own bearer whose ACTIVE
+	// grant holds udb:token:delegate, in the SAME tenant as the user's token.
+	// The user's token must be a valid, unexpired, unrevoked USER access token
+	// (not a service, membership or delegated token). The minted token's
+	// subject, tenant and project are the user's; its RFC 8693 `act` claim
+	// names the service; it carries the requested purpose (signed, so the
+	// purpose counts as verified), the job_id and `delegated: true`; its scopes
+	// are those both the user's token and the service's grant allow (never
+	// udb:token:delegate). Lifetime: ttl_seconds, at most
+	// UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+	// exchanged again. Every use re-checks that the user is active and not
+	// revoked, that the jti is not revoked, and that the service still holds an
+	// ACTIVE grant with udb:token:delegate. Every mint and use is audited
+	// (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob
+	// Listener: control plane.
+	// Scopes: udb:token:delegate.
+	// Credential types: SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	ExchangeTokenForJob(ctx context.Context, in *ExchangeTokenForJobRequest, opts ...grpc.CallOption) (*ExchangeTokenForJobResponse, error)
 	// Replace the tenant's sign-in policy: whether passwords are required, the
 	// channels sign-in codes may go over, the magic-link page and the step-up
 	// rules. Only an administrator of that tenant (or a cross-tenant admin).
@@ -1670,6 +1696,16 @@ func (c *authnServiceClient) ExchangeServiceTokenForTenant(ctx context.Context, 
 	return out, nil
 }
 
+func (c *authnServiceClient) ExchangeTokenForJob(ctx context.Context, in *ExchangeTokenForJobRequest, opts ...grpc.CallOption) (*ExchangeTokenForJobResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExchangeTokenForJobResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ExchangeTokenForJob_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authnServiceClient) PutTenantAuthPolicy(ctx context.Context, in *PutTenantAuthPolicyRequest, opts ...grpc.CallOption) (*PutTenantAuthPolicyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PutTenantAuthPolicyResponse)
@@ -1996,6 +2032,23 @@ type AuthnServiceServer interface {
 	// scope as ExchangeServiceTokenForTenant, so a service can learn where to exchange.
 	ListOwnTenantMemberships(context.Context, *ListOwnTenantMembershipsRequest) (*ListOwnTenantMembershipsResponse, error)
 	ExchangeServiceTokenForTenant(context.Context, *ExchangeServiceTokenForTenantRequest) (*ExchangeServiceTokenForTenantResponse, error)
+	// Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+	// a user's current access token for a token a durable async job uses to act
+	// for that user. The caller is a service account's own bearer whose ACTIVE
+	// grant holds udb:token:delegate, in the SAME tenant as the user's token.
+	// The user's token must be a valid, unexpired, unrevoked USER access token
+	// (not a service, membership or delegated token). The minted token's
+	// subject, tenant and project are the user's; its RFC 8693 `act` claim
+	// names the service; it carries the requested purpose (signed, so the
+	// purpose counts as verified), the job_id and `delegated: true`; its scopes
+	// are those both the user's token and the service's grant allow (never
+	// udb:token:delegate). Lifetime: ttl_seconds, at most
+	// UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+	// exchanged again. Every use re-checks that the user is active and not
+	// revoked, that the jti is not revoked, and that the service still holds an
+	// ACTIVE grant with udb:token:delegate. Every mint and use is audited
+	// (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+	ExchangeTokenForJob(context.Context, *ExchangeTokenForJobRequest) (*ExchangeTokenForJobResponse, error)
 	// Replace the tenant's sign-in policy: whether passwords are required, the
 	// channels sign-in codes may go over, the magic-link page and the step-up
 	// rules. Only an administrator of that tenant (or a cross-tenant admin).
@@ -2276,6 +2329,9 @@ func (UnimplementedAuthnServiceServer) ListOwnTenantMemberships(context.Context,
 }
 func (UnimplementedAuthnServiceServer) ExchangeServiceTokenForTenant(context.Context, *ExchangeServiceTokenForTenantRequest) (*ExchangeServiceTokenForTenantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExchangeServiceTokenForTenant not implemented")
+}
+func (UnimplementedAuthnServiceServer) ExchangeTokenForJob(context.Context, *ExchangeTokenForJobRequest) (*ExchangeTokenForJobResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExchangeTokenForJob not implemented")
 }
 func (UnimplementedAuthnServiceServer) PutTenantAuthPolicy(context.Context, *PutTenantAuthPolicyRequest) (*PutTenantAuthPolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PutTenantAuthPolicy not implemented")
@@ -3530,6 +3586,24 @@ func _AuthnService_ExchangeServiceTokenForTenant_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthnService_ExchangeTokenForJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExchangeTokenForJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ExchangeTokenForJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ExchangeTokenForJob_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ExchangeTokenForJob(ctx, req.(*ExchangeTokenForJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthnService_PutTenantAuthPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PutTenantAuthPolicyRequest)
 	if err := dec(in); err != nil {
@@ -4070,6 +4144,10 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExchangeServiceTokenForTenant",
 			Handler:    _AuthnService_ExchangeServiceTokenForTenant_Handler,
+		},
+		{
+			MethodName: "ExchangeTokenForJob",
+			Handler:    _AuthnService_ExchangeTokenForJob_Handler,
 		},
 		{
 			MethodName: "PutTenantAuthPolicy",

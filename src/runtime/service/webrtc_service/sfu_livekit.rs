@@ -55,6 +55,19 @@ fn is_false(value: &bool) -> bool {
     !*value
 }
 
+/// UDB_LIVEKIT_ALLOW_INSECURE is a local-test escape hatch: production refuses
+/// it so a plaintext LiveKit URL (which carries signed room tokens) cannot ship.
+fn refuse_insecure_in_production(allow_insecure: bool, production: bool) -> Result<(), String> {
+    if allow_insecure && production {
+        return Err(
+            "UDB_LIVEKIT_ALLOW_INSECURE is refused under UDB_ENV=production; use an https:// or \
+             wss:// UDB_LIVEKIT_URL and unset UDB_LIVEKIT_ALLOW_INSECURE"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
 impl LiveKitSfuBridge {
     pub(crate) fn from_env() -> Result<Option<Self>, String> {
         let url = std::env::var("UDB_LIVEKIT_URL").ok();
@@ -70,6 +83,10 @@ impl LiveKitSfuBridge {
         let url = required("UDB_LIVEKIT_URL", url)?;
         let api_key = required("UDB_LIVEKIT_API_KEY", api_key)?;
         let api_secret = required("UDB_LIVEKIT_API_SECRET", api_secret)?;
+        refuse_insecure_in_production(
+            allow_insecure,
+            crate::runtime::security::udb_env_is_production(),
+        )?;
         Self::new_with_insecure(url, api_key, api_secret, allow_insecure).map(Some)
     }
 
@@ -407,6 +424,14 @@ mod tests {
 
         let bridge = LiveKitSfuBridge::for_test_insecure("ws://livekit:7880", "devkey", "secret");
         assert_eq!(bridge.url, "ws://livekit:7880");
+    }
+
+    #[test]
+    fn insecure_livekit_override_is_refused_in_production() {
+        let err = refuse_insecure_in_production(true, true).expect_err("production refuses");
+        assert!(err.contains("UDB_LIVEKIT_ALLOW_INSECURE"));
+        assert!(refuse_insecure_in_production(true, false).is_ok());
+        assert!(refuse_insecure_in_production(false, true).is_ok());
     }
 
     #[cfg(feature = "http-client")]

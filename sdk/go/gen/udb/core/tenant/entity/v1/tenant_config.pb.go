@@ -119,7 +119,7 @@ var File_udb_core_tenant_entity_v1_tenant_config_proto protoreflect.FileDescript
 
 const file_udb_core_tenant_entity_v1_tenant_config_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/tenant/entity/v1/tenant_config.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xad\v\n" +
+	"-udb/core/tenant/entity/v1/tenant_config.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xc5\v\n" +
 	"\fTenantConfig\x12<\n" +
 	"\x02id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tconfig_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x02id\x12\x82\x01\n" +
@@ -141,10 +141,10 @@ const file_udb_core_tenant_entity_v1_tenant_config_proto_rawDesc = "" +
 	"\n" +
 	"audit_info\x18\a \x01(\v2\x1d.udb.core.common.v1.AuditInfoBD\x82\xb7\x18@\n" +
 	"\n" +
-	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xa4\x06\xfa\xb6\x18\x89\x05\n" +
+	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xbc\x06\xfa\xb6\x18\xa1\x05\n" +
 	"\x0etenant_configs\x12\n" +
-	"udb_tenant\x18\x02 \x01*\x1eTenant-specific configurations8\x01@\x01b\x9c\x01\n" +
-	"\x10tenant_isolation\x1aB(tenant_id::text = current_setting('app.current_tenant_id', true))\"B(tenant_id::text = current_setting('app.current_tenant_id', true))(\x01h\x01\x8a\x018\n" +
+	"udb_tenant\x18\x02 \x01*\x1eTenant-specific configurations8\x01@\x01b\xb4\x01\n" +
+	"\x10tenant_isolation\x1aN(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)\"N(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)(\x01h\x01\x8a\x018\n" +
 	"\x16idx_tenant_configs_key\x12\x05BTREE\x18\x01Z\ttenant_idZ\n" +
 	"config_key\xaa\x01Y\n" +
 	"#trg_tenant_configs_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"\x1dudb_tenant.touch_updated_at()*\x03ROW\xc2\x01\xdb\x01\n" +

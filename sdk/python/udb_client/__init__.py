@@ -20,6 +20,8 @@ from .error_code import (
     is_cas_conflict,
     is_conflict,
     is_not_found,
+    is_token_expired,
+    is_token_revoked,
     is_unique,
     missing_scope,
 )
@@ -89,6 +91,7 @@ try:  # pragma: no cover - presence depends on codegen having run
     from .auth import (
         POLICY_BUNDLE_ALGORITHM,
         AuthzCache,
+        DelegatedJobToken,
         InMemoryTokenStore,
         StoredToken,
         TokenSession,
@@ -166,6 +169,8 @@ __all__ = [
     "is_cas_conflict",
     "is_conflict",
     "is_not_found",
+    "is_token_expired",
+    "is_token_revoked",
     "is_unique",
     "message_type",
     "missing_scope",
@@ -212,6 +217,7 @@ if _HAS_AUTH:
         "POLICY_BUNDLE_ALGORITHM",
         "AssetFacade",
         "AuthzCache",
+        "DelegatedJobToken",
         "InMemoryTokenStore",
         "StorageFacade",
         "WebRtcFacade",

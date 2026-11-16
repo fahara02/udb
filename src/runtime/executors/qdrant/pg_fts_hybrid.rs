@@ -281,7 +281,12 @@ pub(crate) fn build_text_leg_query(
     let mut binds = vec![source.fts_config.clone(), text_query.to_string()];
     let mut predicates = vec![format!("{tsvector} @@ {tsquery}")];
 
+    // A shared (global) table has no tenant column and every tenant reads all
+    // of its rows, so its text leg carries no tenant predicate; the dense leg
+    // still matches the caller's own tenant OR the shared marker.
+    let shared_table = crate::broker::is_global_table(table);
     match crate::generation::sql::resolve_tenant_column_ref(table) {
+        _ if shared_table => {}
         Some(column) => {
             let tenant = context.tenant_id.trim();
             if tenant.is_empty() {
@@ -736,6 +741,24 @@ mod tests {
     #[test]
     fn text_leg_refuses_a_tenant_table_without_a_verified_tenant() {
         assert!(build_text_leg_query(&source(), &context("  ", ""), "q", 10).is_err());
+    }
+
+    /// A shared (global) source table has no tenant column: the text leg reads
+    /// every row with no tenant predicate, for any caller tenant.
+    #[test]
+    fn text_leg_over_a_shared_table_has_no_tenant_predicate() {
+        let mut source = source();
+        source
+            .table
+            .columns
+            .retain(|column| column.column_name != "tenant_id");
+        source.table.table_security.tenant_column = String::new();
+        source.table.table_security.tenant_isolation_mode = "global".to_string();
+        assert!(crate::broker::is_global_table(&source.table));
+        let query = build_text_leg_query(&source, &context("t1", ""), "q", 10).unwrap();
+        assert_eq!(query.binds, vec!["simple", "q"]);
+        assert!(!query.sql.contains("tenant"), "{}", query.sql);
+        assert!(!query.sql.contains("$3"), "{}", query.sql);
     }
 
     #[test]

@@ -369,3 +369,43 @@ class ExchangeServiceTokenForTenantResponse(_message.Message):
     message: str
     error: _dto_pb2.ApiError
     def __init__(self, access_token: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., membership_id: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class ExchangeTokenForJobRequest(_message.Message):
+    __slots__ = ("subject_token", "purpose", "job_id", "ttl_seconds")
+    SUBJECT_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    PURPOSE_FIELD_NUMBER: _ClassVar[int]
+    JOB_ID_FIELD_NUMBER: _ClassVar[int]
+    TTL_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    subject_token: str
+    purpose: str
+    job_id: str
+    ttl_seconds: int
+    def __init__(self, subject_token: _Optional[str] = ..., purpose: _Optional[str] = ..., job_id: _Optional[str] = ..., ttl_seconds: _Optional[int] = ...) -> None: ...
+
+class ExchangeTokenForJobResponse(_message.Message):
+    __slots__ = ("access_token", "jti", "expires_at_unix", "subject", "actor", "purpose", "job_id", "scopes", "tenant_id", "project_id", "message", "error")
+    ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    JTI_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_FIELD_NUMBER: _ClassVar[int]
+    ACTOR_FIELD_NUMBER: _ClassVar[int]
+    PURPOSE_FIELD_NUMBER: _ClassVar[int]
+    JOB_ID_FIELD_NUMBER: _ClassVar[int]
+    SCOPES_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    access_token: str
+    jti: str
+    expires_at_unix: int
+    subject: str
+    actor: str
+    purpose: str
+    job_id: str
+    scopes: _containers.RepeatedScalarFieldContainer[str]
+    tenant_id: str
+    project_id: str
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, access_token: _Optional[str] = ..., jti: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., subject: _Optional[str] = ..., actor: _Optional[str] = ..., purpose: _Optional[str] = ..., job_id: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...

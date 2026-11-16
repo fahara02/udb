@@ -15,6 +15,12 @@ use crate::runtime::authz::{AuthzPolicy, Effect};
 pub struct SecurityContext {
     pub tenant_id: String,
     pub purpose: String,
+    /// True only when `purpose` came from the verified credential (a signed
+    /// token claim). A purpose taken from the `x-purpose` request header is the
+    /// caller's own statement: it is recorded and audited, but it never unlocks
+    /// PII or encrypted columns.
+    #[serde(default)]
+    pub purpose_verified: bool,
     pub correlation_id: String,
     pub user_id: String,
     pub scopes: Vec<String>,
@@ -108,6 +114,10 @@ pub struct SecurityConfig {
     /// Lifetime of UDB-issued access tokens in seconds
     /// (`UDB_JWT_ACCESS_TTL_SECONDS`). Defaults to 900 (15 minutes).
     pub jwt_access_ttl_secs: u64,
+    /// Longest lifetime a delegated job token (`ExchangeTokenForJob`) may have,
+    /// in seconds (`UDB_DELEGATED_TOKEN_MAX_TTL`: plain seconds or a number
+    /// with an `s`/`m`/`h`/`d` suffix). Defaults to 86400 (24 hours).
+    pub delegated_token_max_ttl_secs: u64,
 }
 
 // Manual `Debug` redacting the inline RSA `jwt_private_key` UDB signs tokens
@@ -143,6 +153,10 @@ impl std::fmt::Debug for SecurityConfig {
                 &self.jwt_private_key.as_ref().map(|_| "[redacted]"),
             )
             .field("jwt_access_ttl_secs", &self.jwt_access_ttl_secs)
+            .field(
+                "delegated_token_max_ttl_secs",
+                &self.delegated_token_max_ttl_secs,
+            )
             .finish()
     }
 }
@@ -190,6 +204,7 @@ impl Default for SecurityConfig {
             jwt_jwks_cache_ttl_secs: 300,
             jwt_private_key: None,
             jwt_access_ttl_secs: 900,
+            delegated_token_max_ttl_secs: DEFAULT_DELEGATED_TOKEN_MAX_TTL_SECS,
         }
     }
 }
@@ -316,6 +331,8 @@ impl SecurityConfig {
                 .and_then(|v| v.parse::<u64>().ok())
                 .filter(|v| *v > 0)
                 .unwrap_or(900),
+            delegated_token_max_ttl_secs: delegated_token_max_ttl_from_env()
+                .unwrap_or(DEFAULT_DELEGATED_TOKEN_MAX_TTL_SECS),
         }
     }
 
@@ -412,6 +429,9 @@ impl SecurityConfig {
             && secs > 0
         {
             self.jwt_access_ttl_secs = secs;
+        }
+        if let Some(secs) = delegated_token_max_ttl_from_env() {
+            self.delegated_token_max_ttl_secs = secs;
         }
     }
 
@@ -937,9 +957,39 @@ pub struct SecurityClaims {
     /// that membership is ACTIVE at exactly that revision.
     #[serde(default)]
     pub mbr: Option<String>,
+    /// Delegated job tokens only (`ExchangeTokenForJob`): the RFC 8693 actor
+    /// claim naming the service that acts for `sub`.
+    #[serde(default)]
+    pub act: Option<ActorClaim>,
+    /// Delegated job tokens only: the job the token was minted for.
+    #[serde(default)]
+    pub job_id: Option<String>,
+    /// Delegated job tokens only: always `true`. Such a token is never
+    /// refreshed and never exchanged again.
+    #[serde(default)]
+    pub delegated: Option<bool>,
+}
+
+/// The RFC 8693 `act` (actor) claim of a delegated job token: the service
+/// acting for the token's subject. `sub` is the service identity of the
+/// service's typed grant and `account_id` the service account holding it.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+pub struct ActorClaim {
+    #[serde(default)]
+    pub sub: Option<String>,
+    #[serde(default)]
+    pub account_id: Option<String>,
 }
 
 impl SecurityClaims {
+    /// Whether the token carries ANY delegation marker (`delegated`, `act` or
+    /// `job_id`). Every such token is treated as a delegated job token: it is
+    /// validated as one, and it is never accepted where a user's own token is
+    /// required.
+    pub fn is_delegated(&self) -> bool {
+        self.delegated.unwrap_or(false) || self.act.is_some() || self.job_id.is_some()
+    }
+
     /// Resolve scopes from either the array `scopes` claim or the OAuth2
     /// singular `scope` string (space/comma-separated). The array form wins when
     /// both are present.
@@ -1365,6 +1415,7 @@ pub fn sign_access_token_with_key(
         kid,
         config.jwt_access_ttl_secs.max(1),
         None,
+        None,
     )
 }
 
@@ -1429,6 +1480,75 @@ pub fn sign_membership_access_token(
         &kid,
         ttl_secs.max(1),
         Some(pin),
+        None,
+    )
+    .map(Some)
+}
+
+/// The `auth_method` claim of every delegated job token.
+pub const DELEGATED_TOKEN_AUTH_METHOD: &str = "delegated_job";
+
+/// What a delegated job token (`ExchangeTokenForJob`) states beyond an
+/// ordinary access token: the acting service (the RFC 8693 `act` claim), the
+/// job, the signed purpose, and the `delegated` marker.
+#[derive(Debug, Clone, Copy)]
+pub struct DelegationClaims<'a> {
+    /// The acting service's grant service identity (`act.sub`).
+    pub actor_service_identity: &'a str,
+    /// The service account holding that grant (`act.account_id`).
+    pub actor_account_id: &'a str,
+    pub job_id: &'a str,
+    pub purpose: &'a str,
+}
+
+/// Sign a delegated job token (RS256, the ACTIVE registry key else the env
+/// key, like every UDB access token). The subject, tenant, project, scopes and
+/// account kind are the user's; the token carries no roles and no service
+/// identity, so it is validated as a user bearer plus the delegation checks.
+/// `ttl_secs` is already bounded by the caller. `Ok(None)` when no signing key
+/// is configured.
+#[allow(clippy::too_many_arguments)]
+pub fn sign_delegated_access_token(
+    config: &SecurityConfig,
+    subject: &str,
+    tenant_id: &str,
+    project_id: &str,
+    scopes: &[String],
+    jti: &str,
+    account_kind: i32,
+    now_unix: u64,
+    ttl_secs: u64,
+    delegation: DelegationClaims<'_>,
+) -> Result<Option<(String, i64)>, String> {
+    let (kid, private_pem) = match active_signing_key() {
+        Some(active) => active,
+        None => {
+            let Some(key_src) = config.jwt_private_key.clone() else {
+                return Ok(None);
+            };
+            let Some(pem) = SecurityConfig::resolve_pem(&key_src)? else {
+                return Ok(None);
+            };
+            (UDB_RS256_KID.to_string(), pem)
+        }
+    };
+    sign_access_token_claims(
+        config,
+        subject,
+        tenant_id,
+        project_id,
+        scopes,
+        &[],
+        "",
+        jti,
+        DELEGATED_TOKEN_AUTH_METHOD,
+        account_kind,
+        now_unix,
+        &private_pem,
+        &kid,
+        ttl_secs.max(1),
+        None,
+        Some(delegation),
     )
     .map(Some)
 }
@@ -1585,6 +1705,7 @@ fn sign_access_token_claims(
     kid: &str,
     ttl: u64,
     membership: Option<MembershipPin<'_>>,
+    delegation: Option<DelegationClaims<'_>>,
 ) -> Result<(String, i64), String> {
     use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
     use serde_json::json;
@@ -1622,6 +1743,18 @@ fn sign_access_token_claims(
     if let Some(pin) = membership {
         claims.insert("home_tenant_id".into(), json!(pin.home_tenant_id));
         claims.insert("mbr".into(), json!(pin.membership));
+    }
+    if let Some(delegation) = delegation {
+        claims.insert(
+            "act".into(),
+            json!({
+                "sub": delegation.actor_service_identity,
+                "account_id": delegation.actor_account_id,
+            }),
+        );
+        claims.insert("job_id".into(), json!(delegation.job_id));
+        claims.insert("purpose".into(), json!(delegation.purpose));
+        claims.insert("delegated".into(), json!(true));
     }
     if !auth_method.is_empty() {
         claims.insert("auth_method".into(), json!(auth_method));
@@ -1848,7 +1981,69 @@ fn decode_verified_jwt_payload(
     }
     decode::<serde_json::Value>(token, &decoding_key, &validation)
         .map(|data| data.claims)
-        .map_err(|e| format!("invalid JWT token: {e}"))
+        .map_err(|e| match e.kind() {
+            jsonwebtoken::errors::ErrorKind::ExpiredSignature => {
+                format!("{BEARER_EXPIRED_MESSAGE}: its exp has passed")
+            }
+            _ => format!("invalid JWT token: {e}"),
+        })
+}
+
+/// Start of every bearer refusal message that means "the token expired".
+/// [`bearer_refusal_reason`] maps it to `UDB_TOKEN_EXPIRED`.
+pub const BEARER_EXPIRED_MESSAGE: &str = "bearer token expired";
+
+/// Start of every bearer refusal message that means "the token is no longer
+/// backed by live state" (revoked jti, session or family; inactive or revoked
+/// user or tenant; a delegated token's actor no longer allowed).
+/// [`bearer_refusal_reason`] maps it to `UDB_TOKEN_REVOKED`.
+pub const BEARER_REVOKED_MESSAGE: &str = "bearer token revoked";
+
+/// The stable reason a bearer refusal message stands for, if any: expired →
+/// `UDB_TOKEN_EXPIRED`, revoked → `UDB_TOKEN_REVOKED`. Any other refusal (bad
+/// signature, wrong issuer, malformed) has no specific reason and keeps the
+/// generic authentication-failed one.
+pub(crate) fn bearer_refusal_reason(
+    message: &str,
+) -> Option<crate::runtime::error_reasons::ErrorReason> {
+    let message = message.trim_start();
+    if message.starts_with(BEARER_EXPIRED_MESSAGE) {
+        Some(crate::runtime::error_reasons::TOKEN_EXPIRED)
+    } else if message.starts_with(BEARER_REVOKED_MESSAGE) {
+        Some(crate::runtime::error_reasons::TOKEN_REVOKED)
+    } else {
+        None
+    }
+}
+
+/// The Unauthenticated status for a refused bearer whose refusal message is
+/// `message`: an expired or revoked token carries `UDB_TOKEN_EXPIRED` /
+/// `UDB_TOKEN_REVOKED` (and says so in its message); anything else keeps
+/// `fallback_message` and the generic reason. `decision_id` is the
+/// `policy_decision_id` the refusal records.
+pub(crate) fn bearer_refusal_status(
+    decision_id: &str,
+    message: &str,
+    fallback_message: &str,
+) -> tonic::Status {
+    match bearer_refusal_reason(message) {
+        Some(reason) => {
+            let public = if reason.code == crate::runtime::error_reasons::TOKEN_EXPIRED.code {
+                "bearer token expired; refresh it or sign in again"
+            } else {
+                "bearer token revoked or no longer valid; sign in again"
+            };
+            crate::runtime::error_reasons::annotate(
+                crate::runtime::executor_utils::unauthenticated_status(decision_id, public),
+                reason,
+                None,
+                None,
+            )
+        }
+        None => {
+            crate::runtime::executor_utils::unauthenticated_status(decision_id, fallback_message)
+        }
+    }
 }
 
 // ── Data-plane token-validation cache ─────────────────────────────────────────
@@ -1956,6 +2151,9 @@ pub(crate) fn claims_from_verified_principal(
         exp: (principal.expires_at_unix > 0).then_some(principal.expires_at_unix),
         account_kind: principal.account_kind,
         acr: principal.acr.clone(),
+        // The signed token's purpose claim, so the served path marks it
+        // verified exactly like the direct JWT path does.
+        purpose: principal.purpose.clone(),
         ..Default::default()
     }
 }
@@ -2311,6 +2509,7 @@ fn resolve_request_security<T>(
                             SecurityContext {
                                 tenant_id: principal.tenant_id,
                                 purpose: header("x-purpose"),
+                                purpose_verified: false,
                                 correlation_id: correlation_id.clone(),
                                 user_id: principal.subject,
                                 scopes: principal.scopes,
@@ -2391,6 +2590,7 @@ fn resolve_request_security<T>(
                     SecurityContext {
                         tenant_id: principal.tenant_id,
                         purpose: header("x-purpose"),
+                        purpose_verified: false,
                         correlation_id: correlation_id.clone(),
                         user_id: principal.subject,
                         scopes: principal.scopes,
@@ -2439,18 +2639,17 @@ fn resolve_request_security<T>(
                 if status.code() == tonic::Code::Unavailable {
                     return Err(status);
                 }
-                return Err(crate::runtime::executor_utils::unauthenticated_status(
+                // An expired or revoked token says so (UDB_TOKEN_EXPIRED /
+                // UDB_TOKEN_REVOKED); any other refusal stays generic.
+                return Err(bearer_refusal_status(
                     "invalid_bearer_token",
+                    reason,
                     "invalid bearer token",
                 ));
             }
             None => {
-                let claims = validate_bearer_token_cached(&config, token).map_err(|e| {
-                    crate::runtime::executor_utils::unauthenticated_status(
-                        "bearer_verification_failed",
-                        e.to_string(),
-                    )
-                })?;
+                let claims = validate_bearer_token_cached(&config, token)
+                    .map_err(|e| bearer_refusal_status("bearer_verification_failed", &e, &e))?;
                 let principal =
                     crate::runtime::credential_layer::VerifiedPrincipal::from_verified_bearer_claims(
                         &claims,
@@ -2539,12 +2738,20 @@ fn resolve_request_security<T>(
         // Compute before the struct literal: the literal partially moves `claims`.
         let resolved_scopes = claims.resolved_scopes();
         let expires_at_unix = claims.exp.unwrap_or_default();
+        // A purpose the signed token carries is verified; one only the
+        // `x-purpose` header carries is not.
+        let claim_purpose = claims
+            .purpose
+            .clone()
+            .filter(|purpose| !purpose.trim().is_empty());
+        let purpose_verified = claim_purpose.is_some();
 
         let verified_principal = retain_principal.then(|| bearer_lineage.clone());
         return Ok((
             SecurityContext {
                 tenant_id: claim_tenant.to_string(),
-                purpose: claims.purpose.unwrap_or_else(|| header("x-purpose")),
+                purpose: claim_purpose.unwrap_or_else(|| header("x-purpose")),
+                purpose_verified,
                 correlation_id,
                 user_id,
                 scopes: resolved_scopes,
@@ -2615,6 +2822,7 @@ fn resolve_request_security<T>(
             SecurityContext {
                 tenant_id: header("x-tenant-id"),
                 purpose: header("x-purpose"),
+                purpose_verified: false,
                 correlation_id,
                 user_id,
                 scopes,
@@ -2711,6 +2919,7 @@ fn resolve_request_security<T>(
         SecurityContext {
             tenant_id,
             purpose: header("x-purpose"),
+            purpose_verified: false,
             correlation_id,
             user_id,
             scopes,
@@ -2818,19 +3027,32 @@ pub fn certificate_selectors_from_der(der: &[u8]) -> CertificateSelectors {
     selectors
 }
 
+/// Whether the caller's purpose is one of the privileged purposes (export,
+/// verification, audit) AND was asserted by its verified credential. A purpose
+/// the caller only states in the `x-purpose` header is recorded for policy and
+/// audit, but it never unlocks PII or encrypted columns: anyone can send a
+/// header.
+pub fn privileged_purpose(context: &SecurityContext) -> bool {
+    context.purpose_verified
+        && matches!(
+            context.purpose.as_str(),
+            "export" | "verification" | "audit"
+        )
+}
+
+/// Whether the caller may read PII and encrypted column values: scope
+/// `udb:pii:read`, or a privileged purpose its credential asserts.
+pub fn may_read_protected_columns(context: &SecurityContext) -> bool {
+    context.has_scope("udb:pii:read") || privileged_purpose(context)
+}
+
 pub fn enforce_select_export_controls(
     manifest: &CatalogManifest,
     context: &SecurityContext,
     message_type: &str,
     selected_fields: &[String],
 ) -> Result<(), Status> {
-    if context.has_scope("udb:pii:read") {
-        return Ok(());
-    }
-    if matches!(
-        context.purpose.as_str(),
-        "export" | "verification" | "audit"
-    ) {
+    if may_read_protected_columns(context) {
         return Ok(());
     }
     let message_types = message_type
@@ -2839,18 +3061,29 @@ pub fn enforce_select_export_controls(
         .filter(|part| !part.is_empty())
         .collect::<Vec<_>>();
     if message_types.len() > 1 {
-        for nested in message_types {
+        for (index, nested) in message_types.iter().enumerate() {
+            let Ok(table) = resolve_table_for_message(manifest, nested) else {
+                // Recurse so the unknown type is reported as on a single read.
+                enforce_select_export_controls(manifest, context, nested, &[])?;
+                continue;
+            };
+            let qualifiers = table_qualifiers(nested, table);
+            // A joined field names its table as `<type>.<column>` (the short
+            // or the full message name); an unqualified field belongs to the
+            // first table, as the join planner reads it.
             let nested_fields = selected_fields
                 .iter()
-                .filter_map(|field| {
-                    let (prefix, column) = field.split_once('.')?;
-                    if prefix.eq_ignore_ascii_case(nested) {
-                        Some(column.to_string())
-                    } else {
-                        None
-                    }
+                .filter_map(|field| match strip_table_qualifier(field, &qualifiers) {
+                    Some(column) => Some(column.to_string()),
+                    None if index == 0 && !field.contains('.') => Some(field.clone()),
+                    None => None,
                 })
                 .collect::<Vec<_>>();
+            // A join's default projection leaves out every PII and encrypted
+            // column (it cannot decrypt), so only named fields need the check.
+            if nested_fields.is_empty() {
+                continue;
+            }
             enforce_select_export_controls(manifest, context, nested, &nested_fields)?;
         }
         return Ok(());
@@ -2913,6 +3146,194 @@ pub fn enforce_select_export_controls(
     }
 }
 
+/// Filtering or sorting on a PII or encrypted column reads it: a caller who
+/// may not see the value could still test guesses (`national_id = X` matches
+/// a row or not). So a filter or sort naming such a column needs the same
+/// `udb:pii:read` scope (or purpose export, verification or audit asserted by
+/// the verified credential) as selecting it. Blind-index equality lookups on
+/// an encrypted column are included: they answer the same question. So are
+/// `mask_in_logs` columns, which a read returns masked.
+pub fn enforce_filter_export_controls(
+    manifest: &CatalogManifest,
+    context: &SecurityContext,
+    message_type: &str,
+    filter: Option<&prost_types::Struct>,
+    sort_fields: &[String],
+) -> Result<(), Status> {
+    if may_read_protected_columns(context) {
+        return Ok(());
+    }
+    let mut keys: Vec<String> = sort_fields.to_vec();
+    fn collect(value: &prost_types::Value, keys: &mut Vec<String>) {
+        use prost_types::value::Kind;
+        match &value.kind {
+            Some(Kind::StructValue(nested)) => collect_struct(nested, keys),
+            Some(Kind::ListValue(list)) => {
+                for item in &list.values {
+                    collect(item, keys);
+                }
+            }
+            _ => {}
+        }
+    }
+    fn collect_struct(filter: &prost_types::Struct, keys: &mut Vec<String>) {
+        for (key, value) in &filter.fields {
+            keys.push(key.clone());
+            collect(value, keys);
+        }
+    }
+    if let Some(filter) = filter {
+        collect_struct(filter, &mut keys);
+    }
+    match first_protected_column_named(manifest, message_type, &keys) {
+        Some(column) => Err(crate::runtime::error_reasons::annotate_with(
+            export_control_policy_status(
+                "pii_filter_scope_required",
+                "filtering or sorting on a PII/encrypted field requires purpose export, \
+                 verification, or audit, or scope udb:pii:read",
+            ),
+            crate::runtime::error_reasons::SCOPE_MISSING,
+            Some(&column),
+            None,
+            &[("scope", "udb:pii:read")],
+        )),
+        None => Ok(()),
+    }
+}
+
+/// A write that asserts an `expected` field map (compare-and-swap) reads those
+/// columns: a refused write tells the caller its guess differs from the stored
+/// value, a matched one that it equals it. Naming a PII or encrypted column
+/// there needs the same scope as filtering on it. The write's row filter goes
+/// through [`enforce_filter_export_controls`].
+pub fn enforce_expected_export_controls(
+    manifest: &CatalogManifest,
+    context: &SecurityContext,
+    message_type: &str,
+    expected: Option<&prost_types::Struct>,
+) -> Result<(), Status> {
+    if may_read_protected_columns(context) {
+        return Ok(());
+    }
+    let Some(expected) = expected else {
+        return Ok(());
+    };
+    let keys: Vec<String> = expected.fields.keys().cloned().collect();
+    match first_protected_column_named(manifest, message_type, &keys) {
+        Some(column) => Err(crate::runtime::error_reasons::annotate_with(
+            export_control_policy_status(
+                "pii_cas_scope_required",
+                "an expected (compare-and-swap) value on a PII/encrypted field requires \
+                 purpose export, verification, or audit, or scope udb:pii:read",
+            ),
+            crate::runtime::error_reasons::SCOPE_MISSING,
+            Some(&column),
+            None,
+            &[("scope", "udb:pii:read")],
+        )),
+        None => Ok(()),
+    }
+}
+
+/// Filter or sort on a write: the row filter and the `expected` map of an
+/// Update, Delete, BulkCas item or transactional mutation. Both read the
+/// columns they name, so both follow the read rule.
+pub fn enforce_write_predicate_export_controls(
+    manifest: &CatalogManifest,
+    context: &SecurityContext,
+    message_type: &str,
+    filter: Option<&prost_types::Struct>,
+    expected: Option<&prost_types::Struct>,
+) -> Result<(), Status> {
+    enforce_filter_export_controls(manifest, context, message_type, filter, &[])?;
+    enforce_expected_export_controls(manifest, context, message_type, expected)
+}
+
+/// The spellings a key may use to qualify a column with its table: the message
+/// type as the caller wrote it, the short message name, and the
+/// package-qualified name. A joined read written `pkg.v1.A,pkg.v1.B` filters on
+/// `A.email`, so the short name must match as well as the full one.
+fn table_qualifiers(part: &str, table: &crate::generation::ManifestTable) -> Vec<String> {
+    let mut names = vec![part.to_string(), table.message_name.clone()];
+    for written in [part, table.message_name.as_str()] {
+        if let Some((_, short)) = written.rsplit_once('.') {
+            names.push(short.to_string());
+        }
+    }
+    names.push(table.message_fqn());
+    names.retain(|name| !name.trim().is_empty());
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// The rest of `key` after a `<qualifier>.` prefix naming this table, if any.
+/// The longest matching qualifier wins, so `pkg.v1.A.email` strips the whole
+/// package-qualified name rather than stopping at `pkg`.
+fn strip_table_qualifier<'k>(key: &'k str, qualifiers: &[String]) -> Option<&'k str> {
+    qualifiers
+        .iter()
+        .filter_map(|qualifier| {
+            let head = key.get(..qualifier.len())?;
+            let rest = key.get(qualifier.len()..)?.strip_prefix('.')?;
+            head.eq_ignore_ascii_case(qualifier).then_some(rest)
+        })
+        .min_by_key(|rest| rest.len())
+}
+
+/// The first PII, encrypted or masked column that `keys` (filter keys, sort
+/// fields, `expected` keys) name in `message_type`, which may be a joined
+/// `A,B` read. A dotted remainder is a path into a JSON column, whose first
+/// segment names the column.
+fn first_protected_column_named(
+    manifest: &CatalogManifest,
+    message_type: &str,
+    keys: &[String],
+) -> Option<String> {
+    if keys.is_empty() {
+        return None;
+    }
+    let message_types = message_type
+        .split([',', '+'])
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>();
+    let joined = message_types.len() > 1;
+    for part in message_types {
+        let Ok(table) = resolve_table_for_message(manifest, part) else {
+            // The read or write path reports an unknown message type itself.
+            continue;
+        };
+        let qualifiers = table_qualifiers(part, table);
+        let resolver = crate::planning::broker::column_resolver(table);
+        let mut named: Vec<String> = Vec::new();
+        for key in keys {
+            let column_part = match strip_table_qualifier(key, &qualifiers) {
+                Some(rest) => rest,
+                // A joined read names other tables' columns as `<type>.<column>`.
+                None if joined && key.contains('.') => continue,
+                None => key.as_str(),
+            };
+            named.push(crate::planning::broker::resolve_column(
+                &resolver,
+                column_part,
+            ));
+            if let Some((head, _)) = column_part.split_once('.') {
+                named.push(crate::planning::broker::resolve_column(&resolver, head));
+            }
+        }
+        if let Some(column) = table
+            .columns
+            .iter()
+            .filter(|column| named.iter().any(|name| name == &column.column_name))
+            .find(|column| is_filter_protected_column(column))
+        {
+            return Some(column.column_name.clone());
+        }
+    }
+    None
+}
+
 fn export_control_policy_status(
     policy_decision_id: impl Into<String>,
     message: impl Into<String>,
@@ -2929,6 +3350,14 @@ fn is_aead_or_pii_column(column: &ManifestColumn) -> bool {
     column.encrypted || column.security.is_encrypted || column.security.is_pii
 }
 
+/// A column a caller without `udb:pii:read` may not filter, sort or
+/// compare-and-swap on. Wider than [`is_aead_or_pii_column`]: a `mask_in_logs`
+/// column may be selected, because the read hands it back masked, but a filter
+/// on it would answer the question the mask hides.
+fn is_filter_protected_column(column: &ManifestColumn) -> bool {
+    is_aead_or_pii_column(column) || column.security.mask_in_logs
+}
+
 fn non_empty(value: String) -> Option<String> {
     if value.trim().is_empty() {
         None
@@ -2940,6 +3369,40 @@ fn non_empty(value: String) -> Option<String> {
 /// Read an env var, returning `None` when unset or blank.
 fn non_empty_env(key: &str) -> Option<String> {
     std::env::var(key).ok().and_then(non_empty)
+}
+
+/// Default for [`SecurityConfig::delegated_token_max_ttl_secs`]: 24 hours.
+pub const DEFAULT_DELEGATED_TOKEN_MAX_TTL_SECS: u64 = 24 * 60 * 60;
+
+/// Parse a lifetime setting: plain seconds (`3600`) or a positive number with
+/// an `s`, `m`, `h` or `d` suffix (`90m`, `24h`, `2d`). `None` for anything
+/// else, including zero.
+pub fn parse_ttl_setting(raw: &str) -> Option<u64> {
+    let raw = raw.trim().to_ascii_lowercase();
+    let (digits, unit) = match raw.char_indices().last()? {
+        (index, 's') => (&raw[..index], 1),
+        (index, 'm') => (&raw[..index], 60),
+        (index, 'h') => (&raw[..index], 60 * 60),
+        (index, 'd') => (&raw[..index], 24 * 60 * 60),
+        _ => (raw.as_str(), 1),
+    };
+    let value = digits.trim().parse::<u64>().ok()?;
+    value.checked_mul(unit).filter(|secs| *secs > 0)
+}
+
+/// `UDB_DELEGATED_TOKEN_MAX_TTL`, parsed. An unset variable is `None`; a set
+/// but unparseable one is reported and ignored, so the default stays in force.
+fn delegated_token_max_ttl_from_env() -> Option<u64> {
+    let raw = non_empty_env("UDB_DELEGATED_TOKEN_MAX_TTL")?;
+    let parsed = parse_ttl_setting(&raw);
+    if parsed.is_none() {
+        tracing::warn!(
+            value = %raw,
+            "UDB_DELEGATED_TOKEN_MAX_TTL is not a positive duration (seconds, or a number with \
+             s/m/h/d); the default of 24h applies"
+        );
+    }
+    parsed
 }
 
 /// Read a comma-separated env var into a trimmed, non-empty `Vec<String>`.
@@ -3143,20 +3606,35 @@ pub async fn send_audit_log(config: &SecurityConfig, entry: AuditLogEntry) -> Re
     // so the slim postgres-only build can still be deployed without `reqwest`.
     #[cfg(feature = "http-client")]
     {
-        let client = reqwest::Client::new();
+        // Audit entries name actors, tenants and operations, so the sink gets
+        // the same transport rule as any client that sends a secret: plaintext
+        // http:// to a non-loopback host is refused when
+        // UDB_OUTBOUND_TLS_REQUIRED is on.
+        crate::runtime::transport_policy::check_secret_url(
+            &config.audit_sink_url,
+            "UDB_AUDIT_SINK_URL",
+        )?;
+        let client = audit_sink_client(&config.audit_sink_url)?;
         let masked_entry = if config.pii_safe_logging {
             entry.mask_pii()
         } else {
             entry
         };
 
-        client
+        let response = client
             .post(&config.audit_sink_url)
             .json(&masked_entry)
-            .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
             .map_err(|e| format!("failed to send audit log: {}", e))?;
+        // Redirects are not followed, so a 3xx is a delivery failure, as is
+        // any other non-success status: the sink did not accept the entry.
+        if !response.status().is_success() {
+            return Err(format!(
+                "audit sink refused the audit log entry: HTTP {}",
+                response.status()
+            ));
+        }
 
         return Ok(());
     }
@@ -3171,6 +3649,55 @@ pub async fn send_audit_log(config: &SecurityConfig, entry: AuditLogEntry) -> Re
         );
         Ok(())
     }
+}
+
+/// The audit sink's HTTP client, built once per sink URL and reused (a new
+/// client per entry reloaded the TLS roots and opened a fresh connection every
+/// time). Bounded request and connect timeouts so a hung sink cannot hold a
+/// request; no redirects, so a sink cannot bounce entries to another host or
+/// down to http://; https-only when the URL is https, or when the outbound TLS
+/// rule applies to a non-loopback host.
+#[cfg(feature = "http-client")]
+fn audit_sink_client(url: &str) -> Result<reqwest::Client, String> {
+    static CLIENT: OnceLock<std::sync::Mutex<Option<(String, reqwest::Client)>>> = OnceLock::new();
+    let cell = CLIENT.get_or_init(|| std::sync::Mutex::new(None));
+    let mut guard = cell.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some((cached_url, client)) = guard.as_ref()
+        && cached_url == url
+    {
+        return Ok(client.clone());
+    }
+    let client = outbound_secret_http_client(url)?;
+    *guard = Some((url.to_string(), client.clone()));
+    Ok(client)
+}
+
+/// An HTTP client for an endpoint that receives secrets or sensitive records:
+/// a connect timeout (at most 5 s) and the given whole-request timeout, no
+/// redirects, and https-only per
+/// [`crate::runtime::transport_policy::https_only_for`]. Callers must also run
+/// [`crate::runtime::transport_policy::check_secret_url`] so a plaintext
+/// non-loopback URL is refused with a named setting rather than a bare
+/// transport error.
+#[cfg(feature = "http-client")]
+pub(crate) fn outbound_secret_http_client_with_timeout(
+    url: &str,
+    timeout: std::time::Duration,
+) -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .timeout(timeout)
+        .connect_timeout(timeout.min(std::time::Duration::from_secs(5)))
+        .redirect(reqwest::redirect::Policy::none())
+        .https_only(crate::runtime::transport_policy::https_only_for(url, true))
+        .build()
+        .map_err(|err| format!("outbound HTTP client could not be built: {err}"))
+}
+
+/// [`outbound_secret_http_client_with_timeout`] with the audit sink's 5 s
+/// request timeout.
+#[cfg(feature = "http-client")]
+fn outbound_secret_http_client(url: &str) -> Result<reqwest::Client, String> {
+    outbound_secret_http_client_with_timeout(url, std::time::Duration::from_secs(5))
 }
 
 fn is_pii_field_name(field: &str) -> bool {
@@ -4042,10 +4569,327 @@ mod tests {
     }
 
     #[test]
+    fn filtering_or_sorting_on_a_pii_column_needs_the_pii_scope() {
+        use prost_types::{ListValue, Struct, Value, value::Kind};
+        let manifest = pii_manifest();
+        let reader = SecurityContext {
+            purpose: "billing".to_string(),
+            scopes: vec!["udb:read".to_string()],
+            ..SecurityContext::default()
+        };
+        let text = |value: &str| Value {
+            kind: Some(Kind::StringValue(value.to_string())),
+        };
+        let filter = |key: &str, value: Value| Struct {
+            fields: [(key.to_string(), value)].into_iter().collect(),
+        };
+        // A filter on a column that is not PII is fine, and so is no filter.
+        enforce_filter_export_controls(&manifest, &reader, "Customer", None, &[])
+            .expect("no filter, no sort");
+        enforce_filter_export_controls(
+            &manifest,
+            &reader,
+            "Customer",
+            Some(&filter("id", text("c-1"))),
+            &["id".to_string()],
+        )
+        .expect("a filter on a column that is not PII");
+        // Probing the PII column: directly, through an operator, inside $or,
+        // or by sorting on it.
+        let direct = filter("email", text("a@example.com"));
+        let operator = filter(
+            "EMAIL",
+            Value {
+                kind: Some(Kind::StructValue(filter("$eq", text("a@example.com")))),
+            },
+        );
+        let nested = filter(
+            "$or",
+            Value {
+                kind: Some(Kind::ListValue(ListValue {
+                    values: vec![
+                        Value {
+                            kind: Some(Kind::StructValue(filter("id", text("c-1")))),
+                        },
+                        Value {
+                            kind: Some(Kind::StructValue(direct.clone())),
+                        },
+                    ],
+                })),
+            },
+        );
+        for probe in [&direct, &operator, &nested] {
+            let err =
+                enforce_filter_export_controls(&manifest, &reader, "Customer", Some(probe), &[])
+                    .expect_err("a filter on a PII column needs the scope");
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            let detail = decode_detail(&err);
+            assert_eq!(detail.reason, "UDB_SCOPE_MISSING");
+            assert_eq!(detail.column, "email");
+        }
+        enforce_filter_export_controls(
+            &manifest,
+            &reader,
+            "Customer",
+            None,
+            &["email".to_string()],
+        )
+        .expect_err("sorting on a PII column needs the scope");
+        // The scope, or an export/verification/audit purpose, allows it.
+        let scoped = SecurityContext {
+            scopes: vec!["udb:read".to_string(), "udb:pii:read".to_string()],
+            ..reader.clone()
+        };
+        enforce_filter_export_controls(&manifest, &scoped, "Customer", Some(&direct), &[])
+            .expect("udb:pii:read may filter on PII");
+        let verification = SecurityContext {
+            purpose: "verification".to_string(),
+            purpose_verified: true,
+            ..reader.clone()
+        };
+        enforce_filter_export_controls(&manifest, &verification, "Customer", Some(&direct), &[])
+            .expect("a verification purpose the credential asserts may filter on PII");
+        // The same purpose sent only as the `x-purpose` header unlocks nothing.
+        let header_verification = SecurityContext {
+            purpose: "verification".to_string(),
+            purpose_verified: false,
+            ..reader
+        };
+        enforce_filter_export_controls(
+            &manifest,
+            &header_verification,
+            "Customer",
+            Some(&direct),
+            &[],
+        )
+        .expect_err("a self-declared purpose must not unlock a PII filter");
+    }
+
+    #[test]
+    fn a_header_purpose_never_unlocks_pii_or_encrypted_columns() {
+        let manifest = pii_manifest();
+        for purpose in ["export", "verification", "audit"] {
+            let header_only = SecurityContext {
+                purpose: purpose.to_string(),
+                scopes: vec!["udb:read".to_string()],
+                ..SecurityContext::default()
+            };
+            assert!(!privileged_purpose(&header_only));
+            enforce_select_export_controls(
+                &manifest,
+                &header_only,
+                "Customer",
+                &["email".to_string()],
+            )
+            .expect_err("a purpose from a request header is the caller's own claim");
+            let from_token = SecurityContext {
+                purpose_verified: true,
+                ..header_only
+            };
+            assert!(privileged_purpose(&from_token));
+            enforce_select_export_controls(
+                &manifest,
+                &from_token,
+                "Customer",
+                &["email".to_string()],
+            )
+            .expect("a privileged purpose the token asserts may read PII");
+        }
+        // A verified but ordinary purpose is not privileged.
+        let billing = SecurityContext {
+            purpose: "billing".to_string(),
+            purpose_verified: true,
+            ..SecurityContext::default()
+        };
+        assert!(!privileged_purpose(&billing));
+    }
+
+    #[test]
+    fn a_joined_filter_names_its_table_by_the_short_message_name() {
+        use prost_types::{Struct, Value, value::Kind};
+        let column = |name: &str, pii: bool| ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            proto_type: "string".to_string(),
+            sql_type: "TEXT".to_string(),
+            security: crate::generation::ManifestColumnSecurity {
+                is_pii: pii,
+                ..crate::generation::ManifestColumnSecurity::default()
+            },
+            ..ManifestColumn::default()
+        };
+        let manifest = CatalogManifest {
+            tables: vec![
+                crate::generation::ManifestTable {
+                    message_name: "A".to_string(),
+                    proto_package: "pkg.v1".to_string(),
+                    schema: "pkg".to_string(),
+                    table: "a".to_string(),
+                    columns: vec![column("id", false), column("email", true)],
+                    ..crate::generation::ManifestTable::default()
+                },
+                crate::generation::ManifestTable {
+                    message_name: "B".to_string(),
+                    proto_package: "pkg.v1".to_string(),
+                    schema: "pkg".to_string(),
+                    table: "b".to_string(),
+                    columns: vec![column("id", false), column("a_id", false)],
+                    ..crate::generation::ManifestTable::default()
+                },
+            ],
+            ..CatalogManifest::default()
+        };
+        let reader = SecurityContext {
+            purpose: "billing".to_string(),
+            scopes: vec!["udb:read".to_string()],
+            ..SecurityContext::default()
+        };
+        let filter = |key: &str| Struct {
+            fields: [(
+                key.to_string(),
+                Value {
+                    kind: Some(Kind::StringValue("x".to_string())),
+                },
+            )]
+            .into_iter()
+            .collect(),
+        };
+        for key in ["A.email", "a.EMAIL", "pkg.v1.A.email"] {
+            let err = enforce_filter_export_controls(
+                &manifest,
+                &reader,
+                "pkg.v1.A,pkg.v1.B",
+                Some(&filter(key)),
+                &[],
+            )
+            .expect_err("a joined filter on A's PII column needs the scope");
+            assert_eq!(decode_detail(&err).column, "email", "{key}");
+        }
+        enforce_filter_export_controls(
+            &manifest,
+            &reader,
+            "pkg.v1.A,pkg.v1.B",
+            Some(&filter("B.a_id")),
+            &["A.id".to_string()],
+        )
+        .expect("a joined filter on plain columns");
+        // A joined select of A's PII column by its short name is checked too.
+        enforce_select_export_controls(
+            &manifest,
+            &reader,
+            "pkg.v1.A,pkg.v1.B",
+            &["A.email".to_string()],
+        )
+        .expect_err("a joined select of A's PII column needs the scope");
+        enforce_select_export_controls(&manifest, &reader, "pkg.v1.A,pkg.v1.B", &[])
+            .expect("a join's default projection leaves PII out");
+    }
+
+    #[test]
+    fn filters_and_expected_values_cover_masked_and_encrypted_columns() {
+        use prost_types::{Struct, Value, value::Kind};
+        let mut manifest = pii_manifest();
+        manifest.tables[0].columns.push(ManifestColumn {
+            field_name: "phone".to_string(),
+            column_name: "phone".to_string(),
+            proto_type: "string".to_string(),
+            sql_type: "TEXT".to_string(),
+            security: crate::generation::ManifestColumnSecurity {
+                mask_in_logs: true,
+                ..crate::generation::ManifestColumnSecurity::default()
+            },
+            ..ManifestColumn::default()
+        });
+        manifest.tables[0].columns.push(ManifestColumn {
+            field_name: "national_id".to_string(),
+            column_name: "national_id".to_string(),
+            proto_type: "string".to_string(),
+            sql_type: "TEXT".to_string(),
+            encrypted: true,
+            ..ManifestColumn::default()
+        });
+        let writer = SecurityContext {
+            purpose: "billing".to_string(),
+            scopes: vec!["udb:write".to_string()],
+            ..SecurityContext::default()
+        };
+        let on = |key: &str| Struct {
+            fields: [(
+                key.to_string(),
+                Value {
+                    kind: Some(Kind::StringValue("x".to_string())),
+                },
+            )]
+            .into_iter()
+            .collect(),
+        };
+        // A mask_in_logs column may be selected (the read masks it) but not
+        // filtered or sorted on.
+        enforce_select_export_controls(&manifest, &writer, "Customer", &["phone".to_string()])
+            .expect("a masked column is returned masked");
+        enforce_filter_export_controls(&manifest, &writer, "Customer", Some(&on("phone")), &[])
+            .expect_err("a filter on a masked column answers what the mask hides");
+        // A JSON path into a protected column names that column.
+        enforce_filter_export_controls(
+            &manifest,
+            &writer,
+            "Customer",
+            Some(&on("email.domain")),
+            &[],
+        )
+        .expect_err("a path into a PII column reads it");
+        // A write's filter and its compare-and-swap `expected` map.
+        for key in ["email", "phone", "national_id"] {
+            enforce_write_predicate_export_controls(
+                &manifest,
+                &writer,
+                "Customer",
+                Some(&on(key)),
+                None,
+            )
+            .expect_err("a write filter on a protected column needs the scope");
+            let err = enforce_write_predicate_export_controls(
+                &manifest,
+                &writer,
+                "Customer",
+                Some(&on("id")),
+                Some(&on(key)),
+            )
+            .expect_err("an expected value on a protected column needs the scope");
+            assert_eq!(
+                decode_detail(&err).policy_decision_id,
+                "pii_cas_scope_required"
+            );
+        }
+        enforce_write_predicate_export_controls(
+            &manifest,
+            &writer,
+            "Customer",
+            Some(&on("id")),
+            Some(&on("id")),
+        )
+        .expect("plain columns need no PII scope");
+        let scoped = SecurityContext {
+            scopes: vec!["udb:write".to_string(), "udb:pii:read".to_string()],
+            ..writer
+        };
+        enforce_write_predicate_export_controls(
+            &manifest,
+            &scoped,
+            "Customer",
+            Some(&on("email")),
+            Some(&on("national_id")),
+        )
+        .expect("udb:pii:read may name protected columns");
+    }
+
+    #[test]
     fn select_export_controls_allow_export_purpose_or_pii_scope() {
         let manifest = pii_manifest();
         let export_context = SecurityContext {
             purpose: "export".to_string(),
+            // Asserted by the verified token, not a request header.
+            purpose_verified: true,
             scopes: vec!["udb:read".to_string()],
             ..SecurityContext::default()
         };
@@ -4662,8 +5506,104 @@ mod tests {
         let err = validate_bearer_token(&jwt_verify_config(), &token)
             .expect_err("an expired token must be rejected");
         assert!(
-            err.contains("invalid JWT token"),
+            err.starts_with(BEARER_EXPIRED_MESSAGE),
             "unexpected error for expired token: {err}"
+        );
+        // Served refusals of it carry UDB_TOKEN_EXPIRED and stay Unauthenticated.
+        let status = bearer_refusal_status("invalid_bearer_token", &err, "invalid bearer token");
+        assert_eq!(status.code(), tonic::Code::Unauthenticated);
+        assert_eq!(
+            crate::runtime::error_reasons::reason_of(&status).as_deref(),
+            Some("UDB_TOKEN_EXPIRED")
+        );
+    }
+
+    #[test]
+    fn bearer_refusals_name_expired_and_revoked_tokens_and_nothing_else() {
+        let revoked = bearer_refusal_status(
+            "invalid_bearer_token",
+            &format!("{BEARER_REVOKED_MESSAGE}: the session ended"),
+            "invalid bearer token",
+        );
+        assert_eq!(revoked.code(), tonic::Code::Unauthenticated);
+        assert_eq!(
+            crate::runtime::error_reasons::reason_of(&revoked).as_deref(),
+            Some("UDB_TOKEN_REVOKED")
+        );
+        // A bad signature is neither: the generic authentication reason, and
+        // the caller's own message.
+        let other = bearer_refusal_status(
+            "invalid_bearer_token",
+            "invalid JWT token: InvalidSignature",
+            "invalid bearer token",
+        );
+        assert_eq!(other.code(), tonic::Code::Unauthenticated);
+        assert_eq!(other.message(), "invalid bearer token");
+        assert_eq!(
+            crate::runtime::error_reasons::reason_of(&other).as_deref(),
+            Some("UDB_AUTHENTICATION_FAILED")
+        );
+    }
+
+    #[test]
+    fn delegated_token_ttl_setting_accepts_seconds_and_suffixes() {
+        assert_eq!(parse_ttl_setting("3600"), Some(3600));
+        assert_eq!(parse_ttl_setting("90m"), Some(5400));
+        assert_eq!(parse_ttl_setting(" 24h "), Some(86_400));
+        assert_eq!(parse_ttl_setting("2d"), Some(172_800));
+        assert_eq!(parse_ttl_setting("45s"), Some(45));
+        for bad in ["", "0", "0h", "-5", "h", "1w", "ten"] {
+            assert_eq!(parse_ttl_setting(bad), None, "{bad:?}");
+        }
+        assert_eq!(
+            SecurityConfig::default().delegated_token_max_ttl_secs,
+            DEFAULT_DELEGATED_TOKEN_MAX_TTL_SECS
+        );
+    }
+
+    #[test]
+    fn a_delegated_token_carries_actor_job_purpose_and_marker() {
+        let cfg = SecurityConfig {
+            jwt_private_key: Some(TEST_JWT_PRIVATE_PEM.to_string()),
+            ..jwt_verify_config()
+        };
+        let now = unix_now() as u64;
+        let (token, exp) = sign_delegated_access_token(
+            &cfg,
+            "7d1f3c2a-4b5e-4f60-8a71-9b8c7d6e5f40",
+            "acme",
+            "billing",
+            &["udb:read".to_string()],
+            "dlg_abc",
+            1,
+            now,
+            600,
+            DelegationClaims {
+                actor_service_identity: "spiffe://acme/exporter",
+                actor_account_id: "0b3c5d7e-1f2a-4b6c-8d9e-0a1b2c3d4e5f",
+                job_id: "export-42",
+                purpose: "export",
+            },
+        )
+        .expect("sign")
+        .expect("a signing key is configured");
+        assert_eq!(exp, (now + 600) as i64);
+        let claims = validate_bearer_token(&cfg, &token).expect("verifies");
+        assert!(claims.is_delegated());
+        assert_eq!(claims.delegated, Some(true));
+        assert_eq!(claims.job_id.as_deref(), Some("export-42"));
+        assert_eq!(claims.purpose.as_deref(), Some("export"));
+        assert_eq!(claims.service_identity, None);
+        assert_eq!(claims.roles, None);
+        assert_eq!(
+            claims.auth_method.as_deref(),
+            Some(DELEGATED_TOKEN_AUTH_METHOD)
+        );
+        let act = claims.act.expect("act claim");
+        assert_eq!(act.sub.as_deref(), Some("spiffe://acme/exporter"));
+        assert_eq!(
+            act.account_id.as_deref(),
+            Some("0b3c5d7e-1f2a-4b6c-8d9e-0a1b2c3d4e5f")
         );
     }
 
@@ -4921,6 +5861,7 @@ mod tests {
             rate_limit_per_minute: 0,
             account_kind: None,
             acr: None,
+            purpose: None,
         }
     }
 
@@ -5099,6 +6040,123 @@ mod tests {
         assert_eq!(safe.credential_type, 1);
         assert_eq!(safe.credential_id, "jwt-a");
         assert_eq!(safe.auth_method, "password");
+    }
+
+    #[test]
+    fn verified_bearer_purpose_claim_survives_the_served_path() {
+        // The token's signed purpose rides the verified principal into the
+        // context and counts as verified; a header cannot override it.
+        let mut principal = bearer_principal_fixture();
+        principal.purpose = Some("audit".to_string());
+        let mut request = request_with_verified_bearer(principal);
+        request
+            .metadata_mut()
+            .insert("x-purpose", "export".parse().unwrap());
+        let context = security_from_request(&request).expect("verified bearer");
+        assert_eq!(context.purpose, "audit");
+        assert!(context.purpose_verified);
+        assert!(privileged_purpose(&context));
+        assert!(may_read_protected_columns(&context));
+
+        // Without a purpose claim the header purpose is recorded but stays
+        // unverified, so it unlocks nothing.
+        let mut request = request_with_verified_bearer(bearer_principal_fixture());
+        request
+            .metadata_mut()
+            .insert("x-purpose", "export".parse().unwrap());
+        let context = security_from_request(&request).expect("verified bearer");
+        assert_eq!(context.purpose, "export");
+        assert!(!context.purpose_verified);
+        assert!(!privileged_purpose(&context));
+        assert!(!may_read_protected_columns(&context));
+    }
+
+    /// The audit sink client does not follow redirects: a sink answering 302
+    /// is a failed delivery, never a silent hop to another host (or down to
+    /// http://). A 2xx answer is a delivery.
+    #[cfg(feature = "http-client")]
+    #[tokio::test]
+    async fn audit_sink_refuses_redirects_and_reports_non_success() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        async fn one_shot_sink(response: &'static str) -> String {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+                .await
+                .expect("bind loopback sink");
+            let address = listener.local_addr().expect("sink address");
+            tokio::spawn(async move {
+                if let Ok((mut socket, _)) = listener.accept().await {
+                    let mut buffer = vec![0u8; 16 * 1024];
+                    let _ = socket.read(&mut buffer).await;
+                    let _ = socket.write_all(response.as_bytes()).await;
+                    let _ = socket.shutdown().await;
+                }
+            });
+            format!("http://{address}/audit")
+        }
+        let entry = || {
+            AuditLogEntry::new(
+                &SecurityContext::default(),
+                "select",
+                "acme.data.v1.Invoice",
+                serde_json::json!({}),
+            )
+        };
+
+        let redirecting = SecurityConfig {
+            audit_sink_url: one_shot_sink(
+                "HTTP/1.1 302 Found\r\nLocation: http://192.0.2.1/elsewhere\r\n\
+                 Content-Length: 0\r\nConnection: close\r\n\r\n",
+            )
+            .await,
+            ..SecurityConfig::default()
+        };
+        let error = send_audit_log(&redirecting, entry())
+            .await
+            .expect_err("a redirect is not a delivery");
+        assert!(error.contains("302"), "{error}");
+
+        let accepting = SecurityConfig {
+            audit_sink_url: one_shot_sink(
+                "HTTP/1.1 204 No Content\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+            )
+            .await,
+            ..SecurityConfig::default()
+        };
+        send_audit_log(&accepting, entry())
+            .await
+            .expect("a 2xx answer is a delivery");
+    }
+
+    #[test]
+    fn verified_principal_carries_the_signed_purpose_claim() {
+        let claims = SecurityClaims {
+            sub: Some("user-a".to_string()),
+            tenant_id: Some("tenant-a".to_string()),
+            purpose: Some("verification".to_string()),
+            ..Default::default()
+        };
+        let principal =
+            crate::runtime::credential_layer::VerifiedPrincipal::from_verified_bearer_claims(
+                &claims,
+            );
+        assert_eq!(principal.purpose.as_deref(), Some("verification"));
+        assert_eq!(
+            claims_from_verified_principal(&principal)
+                .purpose
+                .as_deref(),
+            Some("verification")
+        );
+        let blank = SecurityClaims {
+            purpose: Some("  ".to_string()),
+            ..claims
+        };
+        assert_eq!(
+            crate::runtime::credential_layer::VerifiedPrincipal::from_verified_bearer_claims(
+                &blank
+            )
+            .purpose,
+            None
+        );
     }
 
     #[test]

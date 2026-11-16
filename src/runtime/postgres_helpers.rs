@@ -585,7 +585,13 @@ fn join_select_list(
                 table
                     .columns
                     .iter()
-                    .filter(|column| !column.security.is_pii && !column.security.is_encrypted)
+                    // Every encrypted column is left out, including one marked
+                    // only by the legacy `encrypted` flag: a join has no table
+                    // to decrypt against, so it would ship raw ciphertext.
+                    .filter(|column| {
+                        !column.security.is_pii
+                            && !crate::runtime::executor_utils::is_encrypted_column(column)
+                    })
                     .map(move |column| {
                         format!(
                             "{}.{} AS {}",
@@ -641,17 +647,38 @@ fn parse_join_field(
     field: &str,
     message_types: &[String],
 ) -> Result<(usize, String), tonic::Status> {
-    if let Some((message_type, column)) = field.split_once('.') {
-        let idx = message_types
+    if field.contains('.') {
+        // The prefix may be the message type as written (`pkg.v1.A`) or its
+        // short name (`A`); the longest matching prefix wins, so
+        // `pkg.v1.A.email` is not cut at `pkg`.
+        let matched = message_types
             .iter()
-            .position(|candidate| candidate.eq_ignore_ascii_case(message_type))
-            .ok_or_else(|| {
-                postgres_invalid_field(
-                    "field",
-                    "prefix must match one of the joined message types",
-                    format!("unknown join field prefix {message_type}"),
-                )
-            })?;
+            .enumerate()
+            .flat_map(|(idx, candidate)| {
+                let short = candidate.rsplit_once('.').map(|(_, short)| short);
+                std::iter::once(candidate.as_str())
+                    .chain(short)
+                    .map(move |prefix| (idx, prefix))
+            })
+            .filter_map(|(idx, prefix)| {
+                let head = field.get(..prefix.len())?;
+                let column = field.get(prefix.len()..)?.strip_prefix('.')?;
+                (!prefix.is_empty() && head.eq_ignore_ascii_case(prefix)).then_some((
+                    idx,
+                    prefix.len(),
+                    column,
+                ))
+            })
+            .max_by_key(|(_, prefix_len, _)| *prefix_len);
+        let Some((idx, _, column)) = matched else {
+            // The first dotted segment names the message type the caller meant.
+            let message_type = field.split_once('.').map_or(field, |(head, _)| head);
+            return Err(postgres_invalid_field(
+                "field",
+                "prefix must match one of the joined message types",
+                format!("unknown join field prefix {message_type}"),
+            ));
+        };
         return Ok((idx, column.to_ascii_lowercase()));
     }
     Ok((0, field.to_ascii_lowercase()))
@@ -1819,6 +1846,47 @@ mod tests {
         assert_eq!(plan.bindings.len(), 2);
         assert_eq!(plan.bindings[0].1, JsonValue::String("acme".to_string()));
         assert_eq!(plan.bindings[1].1, JsonValue::String("acme".to_string()));
+    }
+
+    #[test]
+    fn join_field_prefix_accepts_the_short_or_full_message_name() {
+        let types = vec!["pkg.v1.A".to_string(), "pkg.v1.B".to_string()];
+        assert_eq!(
+            parse_join_field("A.Email", &types).unwrap(),
+            (0, "email".to_string())
+        );
+        assert_eq!(
+            parse_join_field("pkg.v1.B.email", &types).unwrap(),
+            (1, "email".to_string())
+        );
+        assert_eq!(
+            parse_join_field("email", &types).unwrap(),
+            (0, "email".to_string())
+        );
+        assert!(parse_join_field("C.email", &types).is_err());
+        assert!(parse_join_field("pkg.email", &types).is_err());
+    }
+
+    #[test]
+    fn join_default_projection_leaves_out_every_encrypted_column() {
+        let mut legacy = col("legacy_secret");
+        legacy.encrypted = true;
+        let mut pii = col("email");
+        pii.security.is_pii = true;
+        let left = table(
+            "Left",
+            "lefts",
+            vec![col("id"), col("right_id"), legacy, pii],
+        );
+        let right = table("Right", "rights", vec![col("id")]);
+        let manifest = join_manifest(left, right);
+
+        let plan =
+            build_join_fusion_sql(&manifest, &join_request(), &ctx(), &JsonValue::Null).unwrap();
+
+        assert!(!plan.sql.contains("legacy_secret"), "{}", plan.sql);
+        assert!(!plan.sql.contains("email"), "{}", plan.sql);
+        assert!(plan.sql.contains("right_id"), "{}", plan.sql);
     }
 
     #[test]

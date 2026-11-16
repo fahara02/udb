@@ -80,6 +80,8 @@ const REASON_CODES: Record<string, ErrorCode> = {
   UDB_DECODE_FAILED: ErrorCode.Internal,
   UDB_UNKNOWN_MESSAGE_TYPE: ErrorCode.Invalid,
   UDB_ENVELOPE_VERSION_UNSUPPORTED: ErrorCode.Precondition,
+  UDB_TOKEN_EXPIRED: ErrorCode.Unauthenticated,
+  UDB_TOKEN_REVOKED: ErrorCode.Unauthenticated,
 };
 
 /** Wire values of `udb.entity.v1.ErrorKind` (proto/udb/entity/v1/error.proto). */
@@ -224,6 +226,15 @@ export function missingScope(err: unknown): string {
   const info = inspect(err);
   return info.code === ErrorCode.ScopeMissing ? info.missing?.scope ?? "" : "";
 }
+
+/** Whether the broker refused `err`'s bearer because it expired
+ *  (`UDB_TOKEN_EXPIRED`): refresh it or sign in again. A delegated job token
+ *  cannot be refreshed; mint a new one from a fresh user token. */
+export const isTokenExpired = (err: unknown): boolean => inspect(err).reason === "UDB_TOKEN_EXPIRED";
+
+/** Whether the broker refused `err`'s bearer because it is revoked or no longer
+ *  backed by live state (`UDB_TOKEN_REVOKED`): do not retry with it. */
+export const isTokenRevoked = (err: unknown): boolean => inspect(err).reason === "UDB_TOKEN_REVOKED";
 
 /** Whether `err` is a compare-and-swap precondition failure: the target row was
  *  absent or a field no longer matched. Check it after a write with `expected` to
@@ -864,6 +875,73 @@ export async function tx(
     stream.write({ tx_id: txId, commit: true });
     stream.end();
   });
+}
+
+// ── Many reads in one call ──────────────────────────────────────────────────
+
+/** One read of a `selectMany` call. */
+export interface ManyRead {
+  /** The entity to read, by message type (`meddesk.visits.entity.v1.Visit`). */
+  messageType: string;
+  where?: Record<string, unknown>;
+  fields?: string[];
+  limit?: number;
+  /** Columns to order by; a leading `-` sorts descending. */
+  orderBy?: string[];
+}
+
+/** The result of one read of a `selectMany` call. */
+export interface ManyResult<T = Record<string, unknown>> {
+  rows: T[];
+  hasMore: boolean;
+  next: string;
+  redacted: string[];
+}
+
+/** Run several reads, across tables, in ONE broker call (`BatchSelect`): every
+ *  read is authorized, quota-charged and PII-checked on its own, the broker runs
+ *  them concurrently, and the results come back in the order of `reads`. One
+ *  failing read rejects the whole call with that read's error. */
+export async function selectMany<T = Record<string, unknown>>(
+  plane: StorePlane,
+  reads: ManyRead[],
+  opts: { call?: CallOptions } = {},
+): Promise<ManyResult<T>[]> {
+  if (reads.length === 0) return [];
+  if (!plane.bidiStream) throw new Error("udb: this transport does not support selectMany");
+  const deadlineMs = opts.call?.deadlineMs ?? plane.opts?.deadlineMs;
+  const stream = plane.bidiStream(DATABROKER, "BatchSelect", deadlineMs ? { ...opts.call, deadlineMs } : opts.call);
+  const responses = await new Promise<any[]>((resolve, reject) => {
+    const out: any[] = [];
+    stream.on("data", (response: any) => out.push(response));
+    stream.on("error", (err: unknown) => reject(classify((err as any)?.udb ?? err)));
+    stream.on("end", () => resolve(out));
+    for (const read of reads) {
+      const request: Record<string, unknown> = {
+        message_type: read.messageType,
+        filter: structMap(read.where ?? {}),
+        limit: read.limit ?? 0,
+      };
+      if (read.fields?.length) request.fields = [...read.fields];
+      if (read.orderBy?.length) {
+        request.sort = read.orderBy.map((column) => ({
+          field: column.startsWith("-") ? column.slice(1) : column,
+          descending: column.startsWith("-"),
+        }));
+      }
+      stream.write(request);
+    }
+    stream.end();
+  });
+  if (responses.length !== reads.length) {
+    throw new Error(`udb: selectMany sent ${reads.length} read(s) and received ${responses.length} result(s)`);
+  }
+  return responses.map((response) => ({
+    rows: decodeRows<T>(response),
+    hasMore: Boolean(response?.has_more),
+    next: String(response?.next_page_token ?? ""),
+    redacted: Array.isArray(response?.redacted_fields) ? response.redacted_fields : [],
+  }));
 }
 
 // ── Durable consumers ───────────────────────────────────────────────────────

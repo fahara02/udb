@@ -355,6 +355,11 @@ class AuthnServiceStub(object):
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantResponse.FromString,
                 _registered_method=True)
+        self.ExchangeTokenForJob = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeTokenForJobRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeTokenForJobResponse.FromString,
+                _registered_method=True)
         self.PutTenantAuthPolicy = channel.unary_unary(
                 '/udb.core.authn.services.v1.AuthnService/PutTenantAuthPolicy',
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutTenantAuthPolicyRequest.SerializeToString,
@@ -936,6 +941,28 @@ class AuthnServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ExchangeTokenForJob(self, request, context):
+        """Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+        a user's current access token for a token a durable async job uses to act
+        for that user. The caller is a service account's own bearer whose ACTIVE
+        grant holds udb:token:delegate, in the SAME tenant as the user's token.
+        The user's token must be a valid, unexpired, unrevoked USER access token
+        (not a service, membership or delegated token). The minted token's
+        subject, tenant and project are the user's; its RFC 8693 `act` claim
+        names the service; it carries the requested purpose (signed, so the
+        purpose counts as verified), the job_id and `delegated: true`; its scopes
+        are those both the user's token and the service's grant allow (never
+        udb:token:delegate). Lifetime: ttl_seconds, at most
+        UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+        exchanged again. Every use re-checks that the user is active and not
+        revoked, that the jti is not revoked, and that the service still holds an
+        ACTIVE grant with udb:token:delegate. Every mint and use is audited
+        (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def PutTenantAuthPolicy(self, request, context):
         """── 0.6.6 passwordless login + tenant auth policy RPCs [PASSWORDLESS] ──
 
@@ -1424,6 +1451,11 @@ def add_AuthnServiceServicer_to_server(servicer, server):
                     servicer.ExchangeServiceTokenForTenant,
                     request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantRequest.FromString,
                     response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantResponse.SerializeToString,
+            ),
+            'ExchangeTokenForJob': grpc.unary_unary_rpc_method_handler(
+                    servicer.ExchangeTokenForJob,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeTokenForJobRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeTokenForJobResponse.SerializeToString,
             ),
             'PutTenantAuthPolicy': grpc.unary_unary_rpc_method_handler(
                     servicer.PutTenantAuthPolicy,
@@ -3293,6 +3325,33 @@ class AuthnService(object):
             '/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant',
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantRequest.SerializeToString,
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ExchangeTokenForJob(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeTokenForJobRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeTokenForJobResponse.FromString,
             options,
             channel_credentials,
             insecure,

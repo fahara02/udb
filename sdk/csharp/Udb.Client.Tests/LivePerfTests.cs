@@ -338,6 +338,12 @@ public sealed class LivePerfTests
     private Identity? _serviceAccount;
     private DateTime _serviceAccountMintedAt;
     private bool _serviceAccountFailed;
+    // The plan's delegating service (bench tenant, grant holding
+    // udb:token:delegate) for ExchangeTokenForJob, minted the same way.
+    private JsonObject? _delegatingServiceCaller;
+    private Identity? _delegatingService;
+    private DateTime _delegatingServiceMintedAt;
+    private bool _delegatingServiceFailed;
 
     private void Bind(Credentials credentials)
     {
@@ -386,26 +392,8 @@ public sealed class LivePerfTests
         var username = _serviceAccountCaller["username"]?.GetValue<string>() ?? "";
         try
         {
-            var hints = _user.Copy();
-            hints.Tenant = _serviceAccountCaller["tenant_id"]!.GetValue<string>();
-            hints.Project = _serviceAccountCaller["project_id"]!.GetValue<string>();
-            hints.Bearer = "";
-            var credentials = await Login(hints, username, Env("UDB_LIVE_PASSWORD"), "csharp-sdk-perf-service-account")
+            _serviceAccount = await MintPlanCaller(_serviceAccountCaller, "csharp-sdk-perf-service-account")
                 .ConfigureAwait(false);
-            var who = await Principal(hints, credentials.Access).ConfigureAwait(false);
-            var minted = hints.Copy();
-            var whoTenant = Text(who, "tenant_id");
-            var whoProject = Text(who, "project_id");
-            if (whoTenant.Length > 0)
-            {
-                minted.Tenant = whoTenant;
-            }
-            if (whoProject.Length > 0)
-            {
-                minted.Project = whoProject;
-            }
-            minted.Bearer = credentials.Access;
-            _serviceAccount = minted;
             _serviceAccountMintedAt = DateTime.UtcNow;
         }
         catch (Exception error)
@@ -414,6 +402,57 @@ public sealed class LivePerfTests
             _serviceAccount = null;
             _serviceAccountFailed = true;
         }
+    }
+
+    private async Task EnsureDelegatingService()
+    {
+        if (_delegatingServiceCaller is null || _delegatingServiceFailed)
+        {
+            return;
+        }
+        if (_delegatingService is not null && DateTime.UtcNow - _delegatingServiceMintedAt < TimeSpan.FromSeconds(180))
+        {
+            return;
+        }
+        var username = _delegatingServiceCaller["username"]?.GetValue<string>() ?? "";
+        try
+        {
+            _delegatingService = await MintPlanCaller(_delegatingServiceCaller, "csharp-sdk-perf-delegating-service")
+                .ConfigureAwait(false);
+            _delegatingServiceMintedAt = DateTime.UtcNow;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine($"[PERF-DELEGATING-SERVICE] login as {username} failed; its rows run under the default identity: {error.Message}");
+            _delegatingService = null;
+            _delegatingServiceFailed = true;
+        }
+    }
+
+    // Log a plan-named service account in (password UDB_LIVE_PASSWORD, never in
+    // the plan) and build its identity from the verified principal.
+    private async Task<Identity> MintPlanCaller(JsonObject caller, string device)
+    {
+        var username = caller["username"]?.GetValue<string>() ?? "";
+        var hints = _user.Copy();
+        hints.Tenant = caller["tenant_id"]!.GetValue<string>();
+        hints.Project = caller["project_id"]!.GetValue<string>();
+        hints.Bearer = "";
+        var credentials = await Login(hints, username, Env("UDB_LIVE_PASSWORD"), device).ConfigureAwait(false);
+        var who = await Principal(hints, credentials.Access).ConfigureAwait(false);
+        var minted = hints.Copy();
+        var whoTenant = Text(who, "tenant_id");
+        var whoProject = Text(who, "project_id");
+        if (whoTenant.Length > 0)
+        {
+            minted.Tenant = whoTenant;
+        }
+        if (whoProject.Length > 0)
+        {
+            minted.Project = whoProject;
+        }
+        minted.Bearer = credentials.Access;
+        return minted;
     }
 
     private async Task<Outcome> CdcFirstEvent(JsonObject cdc, Identity identity)
@@ -478,9 +517,16 @@ public sealed class LivePerfTests
         {
             await EnsureServiceAccount().ConfigureAwait(false);
         }
+        var asDelegatingService = rpc["delegating_service"]?.GetValue<bool>() == true;
+        if (asDelegatingService)
+        {
+            await EnsureDelegatingService().ConfigureAwait(false);
+        }
         var identity = asServiceAccount && _serviceAccount is { } serviceAccount
             ? serviceAccount
-            : rpc["platform"]!.GetValue<bool>() ? _platform : _user;
+            : asDelegatingService && _delegatingService is { } delegatingService
+                ? delegatingService
+                : rpc["platform"]!.GetValue<bool>() ? _platform : _user;
         var clock = System.Diagnostics.Stopwatch.StartNew();
         if (rpc["kind"]!.GetValue<string>() == "cdc_first_event")
         {
@@ -595,6 +641,7 @@ public sealed class LivePerfTests
             _platform.Project = _user.Project;
             _platform.Bearer = platformLogin.Access;
             _serviceAccountCaller = plan["service_account_caller"] as JsonObject;
+            _delegatingServiceCaller = plan["delegating_service_caller"] as JsonObject;
             var token = await Login(_user, username, password, "csharp-sdk-perf-token");
             var refresh = await Login(_user, username, password, "csharp-sdk-perf-refresh");
             var session = await Login(_user, username, password, "csharp-sdk-perf-session");

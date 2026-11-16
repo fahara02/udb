@@ -599,13 +599,65 @@ function exactInts(value: unknown): unknown {
   return value;
 }
 
-function enumTokens(field: FieldSchema, value: unknown): unknown {
+/**
+ * The text a text enum column stores for an enum value, given the enum's common prefix
+ * and the values the column's CHECK allows (`enum_values`). With no declared values the
+ * column stores the short token (the name without the prefix). With declared values it
+ * stores the list entry that matches the value's full name or its short token, so the
+ * write passes the CHECK in whichever form the list was written. `undefined` means the
+ * list does not hold the value: the broker would refuse the write.
+ */
+export function enumStoredText(value: string, prefix: string, allowed: readonly string[] = []): string | undefined {
+  const short = prefix && value.startsWith(prefix) ? value.slice(prefix.length) : value;
+  if (allowed.length === 0) return short;
+  const full = prefix + short;
+  return allowed.find((entry) => entry === full || entry === short);
+}
+
+/** The constraint the generated DDL names for a text enum column's CHECK. */
+export function enumCheckName(table: string, column: string): string {
+  return `chk_${table}_${column}_enum`;
+}
+
+/** The CHECK constraint a written enum value (number, full name or short token; singular
+ *  or repeated) would break, or `undefined` when it passes. Only a text enum column that
+ *  declares enum_values has that CHECK. A text that names no value of the enum breaks it. */
+export function enumCheckViolation(schema: MessageSchema, field: FieldSchema, value: unknown): string | undefined {
+  const allowed = field.column?.enum_values ?? [];
+  if (field.kind !== "enum" || !textColumn(field) || allowed.length === 0) return undefined;
   const prefix = enumCommonPrefix(field);
-  const token = (number: unknown) => {
+  for (const item of Array.isArray(value) ? value : [value]) {
+    let name: string | undefined;
+    if (typeof item === "number") {
+      name = enumName(field, item);
+    } else if (typeof item === "string") {
+      const full = enumFullName(field, item.trim());
+      name = full in field.enumType!.values ? full : undefined;
+    } else {
+      continue;
+    }
+    if (name === undefined || enumStoredText(name, prefix, allowed) === undefined) {
+      return enumCheckName(schema.table.table_name || schema.type.name, field.column?.column_name || field.name);
+    }
+  }
+  return undefined;
+}
+
+/** Enum numbers (singular or repeated) as the text the column stores (see enumStoredText). */
+function enumColumnText(schema: MessageSchema, field: FieldSchema, value: unknown): unknown {
+  const prefix = enumCommonPrefix(field);
+  const allowed = field.column?.enum_values ?? [];
+  const text = (number: unknown) => {
     const name = typeof number === "number" ? enumName(field, number) : undefined;
-    return name === undefined ? number : name.startsWith(prefix) ? name.slice(prefix.length) : name;
+    if (name === undefined) return number;
+    const stored = enumStoredText(name, prefix, allowed);
+    if (stored === undefined) {
+      const constraint = enumCheckName(schema.table.table_name || schema.type.name, field.column?.column_name || field.name);
+      throw new Error(`udb: encode ${schema.fullName}.${field.name}: ${name} is not in the column's enum_values; the value breaks constraint ${constraint}`);
+    }
+    return stored;
   };
-  return Array.isArray(value) ? value.map(token) : token(value);
+  return Array.isArray(value) ? value.map(text) : text(value);
 }
 
 /** Apply the column rules to `record[field.name]`, which holds proto JSON. */
@@ -637,7 +689,7 @@ function encodeColumn(schema: MessageSchema, field: FieldSchema, isSet: boolean,
     return;
   }
   if (field.kind === "enum" && textColumn(field)) {
-    record[name] = enumTokens(field, record[name]);
+    record[name] = enumColumnText(schema, field, record[name]);
     return;
   }
   const text = record[name];
@@ -659,7 +711,9 @@ function encodeColumn(schema: MessageSchema, field: FieldSchema, isSet: boolean,
  *  its column annotations:
  *   - fields without a column annotation, generated columns and the columns `mode`
  *     excludes are dropped;
- *   - enums are numbers, or short tokens in a text column; 64-bit integers are exact;
+ *   - enums are numbers; in a text column, the entry of the column's enum_values that
+ *     matches the value (full name or short token), or the short token when the column
+ *     declares none; a value outside enum_values throws. 64-bit integers are exact;
  *   - an unset PII or encrypted column is dropped, because a default read does not return it;
  *   - an unset field with presence is NULL, or dropped when its column is NOT NULL;
  *   - an empty string without presence in a nullable column is NULL; in a NOT NULL
@@ -732,6 +786,8 @@ function parseBool(text: string): boolean {
   throw new Error(`"${text}" is not a boolean`);
 }
 
+/** The full value name for stored text: rows written by older SDKs may hold the short
+ *  token (the name without the common prefix). */
 function enumFullName(field: FieldSchema, token: string): string {
   const values = field.enumType!.values;
   if (token in values) return token;

@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.6.20",
+    "version": "0.6.21",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -12972,6 +12972,149 @@
         "x-udb-sdk-alias": "put_mfa_policy",
         "x-udb-scope": [
           "udb:authn:put-mfa-policy"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/auth/tokens:exchangeForJob": {
+      "post": {
+        "summary": "Delegated job tokens (RFC 8693-style token exchange): a service exchanges\na user's current access token for a token a durable async job uses to act\nfor that user. The caller is a service account's own bearer whose ACTIVE\ngrant holds udb:token:delegate, in the SAME tenant as the user's token.\nThe user's token must be a valid, unexpired, unrevoked USER access token\n(not a service, membership or delegated token). The minted token's\nsubject, tenant and project are the user's; its RFC 8693 `act` claim\nnames the service; it carries the requested purpose (signed, so the\npurpose counts as verified), the job_id and `delegated: true`; its scopes\nare those both the user's token and the service's grant allow (never\nudb:token:delegate). Lifetime: ttl_seconds, at most\nUDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never\nexchanged again. Every use re-checks that the user is active and not\nrevoked, that the jti is not revoked, and that the service still holds an\nACTIVE grant with udb:token:delegate. Every mint and use is audited\n(udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).",
+        "operationId": "exchangeTokenForJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeTokenForJobResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeTokenForJobRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ],
+        "x-udb-sdk-alias": "exchange_token_for_job",
+        "x-udb-scope": [
+          "udb:token:delegate"
         ],
         "x-udb-retry-safe": false,
         "x-udb-idempotency": {
@@ -58447,6 +58590,79 @@
         "membershipId": {
           "type": "string",
           "description": "The membership the token is pinned to."
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
+        }
+      }
+    },
+    "v1ExchangeTokenForJobRequest": {
+      "type": "object",
+      "properties": {
+        "subjectToken": {
+          "type": "string",
+          "description": "The user's current access token (with or without a \"Bearer \" prefix)."
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Why the job acts for the user, e.g. \"export\". Signed into the token."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "The job the token is for; required, at most 200 bytes."
+        },
+        "ttlSeconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "Requested lifetime in seconds; 0 = the maximum. Capped by\nUDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default)."
+        }
+      }
+    },
+    "v1ExchangeTokenForJobResponse": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string",
+          "description": "The delegated job token (no refresh token is issued)."
+        },
+        "jti": {
+          "type": "string",
+          "description": "The token's id; revoking it stops the token."
+        },
+        "expiresAtUnix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "subject": {
+          "type": "string",
+          "description": "The user the token acts for (its `sub`)."
+        },
+        "actor": {
+          "type": "string",
+          "description": "The acting service's identity (its RFC 8693 `act.sub`)."
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The scopes both the user's token and the service's grant allow."
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
         },
         "message": {
           "type": "string"

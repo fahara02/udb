@@ -4,8 +4,8 @@ import { randomUUID } from "node:crypto";
 import { status as codes } from "@grpc/grpc-js";
 
 import { FieldSchema, IndexOptions, MessageSchema, ProtoSchemas } from "../protoSchema";
-import { RawJson, decodeField, encodeField, parseExactJson, recordToJson } from "../recordCodec";
-import { Row, equal, validateFilter } from "./filter";
+import { RawJson, decodeField, encodeField, enumCheckViolation, parseExactJson, recordToJson } from "../recordCodec";
+import { ARRAY_OPERATORS, JSON_CONTAINED_BY, JSON_CONTAINS, Row, equal, validateFilter } from "./filter";
 import { refuse } from "./refusal";
 
 /** A broker-verified identity, provisioned with an API key. Request headers cannot
@@ -85,6 +85,75 @@ function defaultValue(expression: string): unknown {
   }
   if (/^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(base)) return Number(base);
   throw new Error(`unsupported SQL default "${expression}"; use start() for database expressions`);
+}
+
+/** Split a predicate on the keyword AND (any case) where it stands outside a quoted literal. */
+function splitOnAnd(where: string): string[] {
+  const parts: string[] = [];
+  let quoted = false;
+  let start = 0;
+  for (let i = 0; i < where.length; i++) {
+    const ch = where[i];
+    if (ch === "'") {
+      quoted = !quoted;
+      continue;
+    }
+    if (quoted || !/\s/.test(ch)) continue;
+    const word = where.slice(i + 1, i + 4);
+    if (word.toUpperCase() === "AND" && i + 4 < where.length && /\s/.test(where[i + 4])) {
+      parts.push(where.slice(start, i));
+      start = i + 4;
+      i += 3;
+    }
+  }
+  parts.push(where.slice(start));
+  return parts.map((part) => part.trim());
+}
+
+const NULL_TEST = /^"?([A-Za-z_][A-Za-z0-9_]*)"?\s+IS\s+(NOT\s+)?NULL$/i;
+const LITERAL_TEST = /^"?([A-Za-z_][A-Za-z0-9_]*)"?\s*(=|<>|!=)\s*'((?:[^']|'')*)'$/;
+
+/** The stored value as SQL compares it with a text literal. */
+function literalText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+/**
+ * Read a partial unique-index predicate into a row test. The fake understands a
+ * conjunction of `col IS [NOT] NULL` and `col = | <> | != 'literal'` terms. As in SQL,
+ * a NULL value makes `=` and `<>` false. Anything else (OR, parentheses, functions)
+ * is refused, so a predicate is never silently dropped; such SQL needs start().
+ */
+export function uniquePredicate(where: string, resolve: (column: string) => string | undefined): (row: Row) => boolean {
+  const unsupported = () => new Error(`udbtest: unsupported unique-index predicate "${where}"; use start() for SQL expressions`);
+  const tests: Array<(row: Row) => boolean> = [];
+  for (const part of splitOnAnd(where.trim())) {
+    const nullTest = NULL_TEST.exec(part);
+    if (nullTest) {
+      const name = resolve(nullTest[1].toLowerCase());
+      if (!name) throw unsupported();
+      const wantNull = !nullTest[2];
+      tests.push((row) => (row[name] === null || row[name] === undefined) === wantNull);
+      continue;
+    }
+    const literalTest = LITERAL_TEST.exec(part);
+    if (literalTest) {
+      const name = resolve(literalTest[1].toLowerCase());
+      if (!name) throw unsupported();
+      const equalTo = literalTest[2] === "=";
+      const literal = literalTest[3].replace(/''/g, "'");
+      tests.push((row) => {
+        const value = row[name];
+        if (value === null || value === undefined) return false;
+        return (literalText(value) === literal) === equalTo;
+      });
+      continue;
+    }
+    throw unsupported();
+  }
+  return (row) => tests.every((test) => test(row));
 }
 
 /** Copy a stored value so a caller or later write cannot alias it. */
@@ -167,8 +236,8 @@ export class EntityRules {
       columns,
       where: (index.where_clause ?? "").trim(),
     };
-    // A fake must never silently drop a partial uniqueness predicate. The common
-    // soft-delete predicates are supported; other SQL needs start().
+    // A fake must never silently drop a partial uniqueness predicate. Conjunctions
+    // of IS [NOT] NULL and literal comparisons are supported; other SQL needs start().
     if (key.where) {
       try {
         this.inUnique(key, {});
@@ -182,13 +251,7 @@ export class EntityRules {
 
   inUnique(key: UniqueKey, row: Row): boolean {
     if (!key.where) return true;
-    const parts = key.where.split(/\s+/);
-    const isNot = parts.length === 4 && parts[2].toUpperCase() === "NOT";
-    if ((parts.length === 3 || isNot) && parts[1].toUpperCase() === "IS" && parts[parts.length - 1].toUpperCase() === "NULL") {
-      const name = this.aliases.get(parts[0].replace(/"/g, ""));
-      if (name) return (row[name] === null || row[name] === undefined) === !isNot;
-    }
-    throw new Error(`udbtest: unsupported unique-index predicate "${key.where}"; use start() for SQL expressions`);
+    return uniquePredicate(key.where, (column) => this.aliases.get(column))(row);
   }
 
   /** Coerce a record through the SDK's own codec, so a value the codec refuses is
@@ -220,6 +283,17 @@ export class EntityRules {
         continue;
       }
       const message: Row = {};
+      // A text enum column that declares enum_values has a CHECK; the broker refuses a
+      // value outside it with the database's check violation.
+      const constraint = enumCheckViolation(this.schema, field, value);
+      if (constraint) {
+        throw refuse(codes.FAILED_PRECONDITION, "", `the value breaks constraint ${constraint}`, {
+          kind: "ERROR_KIND_SCHEMA",
+          backend: "database",
+          operation: "check_constraint",
+          capability_required: "check_violation",
+        });
+      }
       let encoded: { value: unknown; present: boolean };
       try {
         decodeField(this.messageType, message, name, value, this.schemas);
@@ -285,20 +359,42 @@ export class EntityRules {
       const column = this.aliases.get(name);
       if (!column) throw refuse(codes.INVALID_ARGUMENT, "", `unknown filter column ${field}`);
       if (column in out) throw refuse(codes.INVALID_ARGUMENT, "", `filter column supplied through two aliases: ${column}`);
-      out[column] = this.canonicalOperators(condition);
+      out[column] = this.canonicalOperators(condition, column);
     }
     return out;
   }
 
-  private canonicalOperators(value: unknown): unknown {
+  private canonicalOperators(value: unknown, column: string): unknown {
     if (typeof value !== "object" || value === null || Array.isArray(value)) return copyValue(value);
     const out: Row = {};
     for (const [op, arg] of Object.entries(value)) {
-      const name = op.toLowerCase();
+      let name = op.toLowerCase();
+      if (ARRAY_OPERATORS.has(name)) name = this.arrayOperator(name, column, arg);
       if (name in out) throw refuse(codes.INVALID_ARGUMENT, "", `filter operator supplied through two aliases: ${name}`);
-      out[name] = name === "$not" ? this.canonicalOperators(arg) : copyValue(arg);
+      out[name] = name === "$not" ? this.canonicalOperators(arg, column) : copyValue(arg);
     }
     return out;
+  }
+
+  /** The broker's `$contains`/`$contained_by`/`$overlaps` (`@>`/`<@`/`&&`): a JSON
+   *  column takes JSON containment, an array (repeated) column SQL array semantics with
+   *  an array value; any other column has no such operator. */
+  private arrayOperator(name: string, column: string, arg: unknown): string {
+    const field = this.columns.get(column);
+    const canonical = name === "$overlap" ? "$overlaps" : name;
+    if (field && jsonColumn(field)) {
+      if (canonical === "$overlaps") {
+        throw refuse(codes.INVALID_ARGUMENT, "", `filter operator ${name} needs an array column; ${column} is JSON (use $contains)`);
+      }
+      return canonical === "$contains" ? JSON_CONTAINS : JSON_CONTAINED_BY;
+    }
+    if (!field?.repeated) {
+      throw refuse(codes.INVALID_ARGUMENT, "", `filter operator ${name} needs an array (repeated) or JSON column; ${column} is neither`);
+    }
+    if (arg !== null && arg !== undefined && !Array.isArray(arg)) {
+      throw refuse(codes.INVALID_ARGUMENT, "", `filter operator ${name} on array column ${column} requires an array value`);
+    }
+    return canonical;
   }
 
   expectedColumns(values: Row): Row {

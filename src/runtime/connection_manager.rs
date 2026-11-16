@@ -1615,6 +1615,9 @@ mod tests {
             "src/runtime/security.rs",
             "src/runtime/signalling/",
             "src/runtime/singleton.rs",
+            // Outbound transport policy reads its TLS flags and the DSNs outside
+            // `UdbConfig` once, in the startup gate; per-request helpers use the cache.
+            "src/runtime/transport_policy.rs",
             "src/runtime/service/mod.rs",
             "src/runtime/service/asset_service/",
             // Auth service handlers construct config via `AuthnConfig::from_env`

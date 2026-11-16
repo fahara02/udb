@@ -38,7 +38,19 @@ import { UdbMetadata, metadata as buildMetadata } from "./client";
 import { UdbExpect, checkBrokerHealth, configFromEnv, verifyPrincipal } from "./connectEnv";
 import { SessionFence, consistencyMetadata } from "./consistency";
 import { EntityHandle, EntityHandleOptions } from "./entity";
-import { ConsumeOptions, ConsumedEvent, Table, TableOptions, TxOptions, TxScope, consume, tx } from "./stores";
+import {
+  ConsumeOptions,
+  ConsumedEvent,
+  ManyRead,
+  ManyResult,
+  Table,
+  TableOptions,
+  TxOptions,
+  TxScope,
+  consume,
+  selectMany,
+  tx,
+} from "./stores";
 import { FlagsFacade, LockFacade, UserSession, asUserCall, validateSessionOn } from "./facades";
 import { TenantState } from "./tenantState";
 import {
@@ -1803,6 +1815,12 @@ export class UdbProject {
       fence: this.fence,
       ...opts,
     });
+  }
+
+  /** Run several reads, across tables, in ONE broker call; results come back in
+   *  the order of `reads`. See {@link selectMany}. */
+  selectMany<T = Record<string, unknown>>(reads: ManyRead[], opts: { call?: CallOptions } = {}): Promise<ManyResult<T>[]> {
+    return selectMany<T>(this.core, reads, opts);
   }
 
   /** Deliver events on `topicPattern` to `handle` as the durable consumer `name`,

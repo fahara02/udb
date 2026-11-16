@@ -41,6 +41,12 @@ impl EmbeddingServiceImpl {
     /// manifest using the SHARED catalog resolver (no duplicate). Returns the
     /// column name + the source CDC topic, or a fail-closed error when the source
     /// is unknown or not tenant-isolated. Mirrors `search_service`.
+    ///
+    /// A shared (global) table (`broker::is_global_table`: isolation declared
+    /// off and no tenant column) resolves to an EMPTY tenant column: its rows
+    /// are read by every tenant, so its vectors carry the shared marker
+    /// instead of a tenant. Registering such a source is gated separately by
+    /// [`require_global_source_authority`].
     pub(crate) fn resolve_source_tenant_column(
         &self,
         project_id: &str,
@@ -57,14 +63,62 @@ impl EmbeddingServiceImpl {
                     error.to_string(),
                 )
             })?;
+        let cdc_topic = table.cdc_topic.clone();
+        if crate::broker::is_global_table(table) {
+            return Ok((String::new(), cdc_topic));
+        }
         // SHARED resolver: same `util::resolve_tenant_column` family behind
         // `native_catalog::NativeModel::tenant_column`.
         let resolved = crate::runtime::postgres_helpers::tenant_column_ref(table)
             .map(|column| column.column_name.clone());
         let tenant_column = require_source_tenant_column(resolved, source_message_type)?;
-        let cdc_topic = table.cdc_topic.clone();
         Ok((tenant_column, cdc_topic))
     }
+}
+
+/// Gate for an embedding source over a shared (global) table. Registering,
+/// backfilling or deleting one writes vectors every tenant reads, so it takes
+/// the same authority as writing the table itself
+/// (`broker::global_table_write_error`): a platform admin or a holder of
+/// `udb:global:write`. A trusted in-process caller (no verified claim context
+/// installed; every over-the-wire request has one) is let through, like the
+/// other native handler guards.
+pub(crate) fn require_global_source_authority(operation: &'static str) -> Result<(), Status> {
+    use crate::runtime::service::method_security::{claim_context_present, current_claim_context};
+    if !claim_context_present() {
+        return Ok(());
+    }
+    global_source_authority_from_claim(&current_claim_context(), operation)
+}
+
+/// The decision behind [`require_global_source_authority`] for one verified
+/// claim. Pure: unit-tested without a task-local claim context.
+pub(crate) fn global_source_authority_from_claim(
+    claim: &crate::runtime::service::method_security::VerifiedClaimContext,
+    operation: &'static str,
+) -> Result<(), Status> {
+    let context = crate::RequestContext {
+        tenant_id: claim.tenant_id.clone(),
+        project_id: claim.project_id.clone(),
+        scopes: claim.scopes.clone(),
+        ..crate::RequestContext::default()
+    };
+    let allowed = claim.authenticated
+        && !crate::broker::is_shared_tenant_marker(&claim.tenant_id)
+        && (claim.is_cross_tenant_admin() || crate::broker::may_write_global_table(&context));
+    if allowed {
+        return Ok(());
+    }
+    Err(super::errors::embedding_policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        operation,
+        "shared_table_write_denied",
+        format!(
+            "permission denied: an embedding source over a shared table requires a platform \
+             admin or scope {}",
+            crate::broker::GLOBAL_WRITE_SCOPE
+        ),
+    ))
 }
 
 /// Parse a gRPC `grpc-timeout` header value (`<digits><unit>`, units
@@ -143,9 +197,14 @@ pub(crate) async fn register_source(
     let context = project_scoped_native_service_context(&metadata, &tenant_id);
 
     // FAIL CLOSED: resolve the source table's tenant column via the shared
-    // catalog resolver. No tenant column ⇒ no source registration.
+    // catalog resolver. No tenant column ⇒ no source registration, unless the
+    // table is a shared (global) table and the caller may write shared data.
     let (tenant_column, source_cdc_topic) =
         svc.resolve_source_tenant_column(&context.project_id, &source_message_type)?;
+    // An empty tenant column means a shared (global) source table.
+    if tenant_column.is_empty() {
+        require_global_source_authority("embedding_register_source")?;
+    }
 
     // Per-tenant source quota (only a brand-new source counts).
     let existing = runtime
@@ -453,6 +512,9 @@ pub(crate) async fn delete_source(
             error: None,
         }));
     };
+    if stored.is_global() {
+        require_global_source_authority("embedding_delete_source")?;
+    }
     let model = runtime
         .native_entity_read_for_service(
             "embedding",
@@ -476,11 +538,14 @@ pub(crate) async fn delete_source(
     // emitted work-event point ids, and deletes them per collection through
     // the shared vector seam, then marks the event done with a
     // `teardown.completed` marker (see `process_embedding_teardown_job`).
+    // `shared` tells the teardown pass the vectors carry the shared marker
+    // (a global source), so it deletes by that marker, not the tenant.
     let event_extra = serde_json::json!({
         "target_collection": stored.target_collection,
         "model_id": model.model_id,
         "vector_backend": model.vector_backend,
         "vector_instance": model.vector_instance,
+        "shared": stored.is_global(),
     });
     let event_op = svc.source_event_transaction_op(
         TOPIC_SOURCE_DELETED,
@@ -571,6 +636,9 @@ pub(crate) async fn backfill(
         .map(stored_source_from_json)
         .filter(|source| source.status == STATUS_ACTIVE)
         .ok_or_else(|| embedding_source_not_found_status("backfill"))?;
+    if stored.is_global() {
+        require_global_source_authority("embedding_backfill")?;
+    }
 
     // Emit only the backfill-request control event from the admitting RPC. The
     // leader-spawned work emitter enumerates the source's existing rows through
@@ -635,4 +703,46 @@ pub(crate) async fn backfill(
         message: "embedding backfill requested".to_string(),
         error: None,
     }))
+}
+
+#[cfg(test)]
+mod shared_source_authority_tests {
+    use super::global_source_authority_from_claim;
+    use crate::runtime::service::method_security::VerifiedClaimContext;
+
+    fn claim(scopes: &[&str], authenticated: bool) -> VerifiedClaimContext {
+        VerifiedClaimContext {
+            tenant_id: "acme".to_string(),
+            project_id: "default".to_string(),
+            scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
+            authenticated,
+            ..VerifiedClaimContext::default()
+        }
+    }
+
+    #[test]
+    fn global_sources_need_platform_admin_or_global_write_scope() {
+        for scopes in [
+            &[crate::broker::GLOBAL_WRITE_SCOPE][..],
+            &["udb:platform_admin"][..],
+        ] {
+            assert!(
+                global_source_authority_from_claim(&claim(scopes, true), "op").is_ok(),
+                "{scopes:?}"
+            );
+        }
+        for (scopes, authenticated) in [
+            (&["udb:read", "udb:write"][..], true),
+            (&[crate::broker::GLOBAL_WRITE_SCOPE][..], false),
+        ] {
+            let err = global_source_authority_from_claim(&claim(scopes, authenticated), "op")
+                .expect_err("a plain tenant may not write shared vectors");
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            assert!(err.message().contains(crate::broker::GLOBAL_WRITE_SCOPE));
+        }
+        // The shared marker is never a caller identity, whatever it holds.
+        let mut marker = claim(&[crate::broker::GLOBAL_WRITE_SCOPE], true);
+        marker.tenant_id = crate::broker::SHARED_TENANT_MARKER.to_string();
+        assert!(global_source_authority_from_claim(&marker, "op").is_err());
+    }
 }

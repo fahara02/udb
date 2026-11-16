@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.20 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.21 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,7 +18,7 @@ version-matched CLI launcher.
 ## Install
 
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.6.20
+go get github.com/fahara02/udb/sdk/go@v0.6.21
 ```
 
 Supported Go versions: 1.22 (the `go.mod` floor) through 1.27. CI vets, builds
@@ -27,7 +27,7 @@ and tests the SDK on both ends of that range.
 Install the `udb` CLI launcher:
 
 ```bash
-go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.6.20
+go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.6.21
 ```
 
 The launcher finds or downloads the matching UDB release binary, then forwards
@@ -104,6 +104,19 @@ _, _ = allowed, decision
 if err != nil {
     panic(err)
 }
+```
+
+### Several reads in one call
+
+`SelectMany` sends several reads, across tables, over one `BatchSelect` stream. The
+broker runs them concurrently and returns the results in request order; one failing
+read fails the call.
+
+```go
+sets, err := client.SelectMany(ctx, []*entityv1.SelectRequest{
+	{MessageType: "acme.visits.entity.v1.Visit", Filter: visitFilter, Limit: 1},
+	{MessageType: "acme.visits.entity.v1.Draft", Filter: visitFilter},
+})
 ```
 
 ## TLS, A Private CA, And Mutual TLS
@@ -307,8 +320,9 @@ targets `Authenticate` to exercise credential refresh failures. `SetRateLimit`
 returns typed rate-limit errors, and `SetTokenLifetime` controls newly issued
 bearers. Named CDC consumers retain verified ownership and monotonic cursors;
 failed events use the ordinary DLQ operator APIs. Use the embedded tier for
-SQL default expressions or partial unique-index predicates beyond `IS NULL`
-and `IS NOT NULL`; the fake refuses unsupported schema behavior explicitly.
+SQL default expressions or partial unique-index predicates beyond an `AND` of
+`col IS [NOT] NULL` and `col = | <> | != 'literal'` terms; the fake refuses
+unsupported schema behavior explicitly.
 
 ## Testing with the real embedded broker
 
@@ -331,6 +345,19 @@ does not build a broker binary. The Linux and Windows embedded CI lane runs the
 same table conformance suite used by `NewFake` and the external live broker.
 `StartPair` provisions two real tenant identities on one isolated broker so
 the suite includes cross-tenant isolation in all three modes.
+
+A fresh cluster can hold migration work the broker marks review-required, and
+the broker refuses to run it without an approved plan
+(`migration.require_approval_plan`). Pass
+`udbtest.StartOptions{ApproveReviewRequired: true}` to approve it for the test:
+the helper runs `udb plan --emit-approval-plan <project>/approval.json` with the
+same binary and proto root before `dev up`, and passes the file to the broker as
+`UDB_MIGRATION_APPROVAL_PLAN`. It is off by default, so a test sees the refusal
+a production deploy would.
+
+```go
+u := udbtest.Start(t, "./proto", "", udbtest.StartOptions{ApproveReviewRequired: true})
+```
 
 ## Notes For Users
 

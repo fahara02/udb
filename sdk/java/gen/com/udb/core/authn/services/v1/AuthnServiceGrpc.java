@@ -2068,6 +2068,37 @@ public final class AuthnServiceGrpc {
     return getExchangeServiceTokenForTenantMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ExchangeTokenForJobRequest,
+      com.udb.core.authn.services.v1.ExchangeTokenForJobResponse> getExchangeTokenForJobMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ExchangeTokenForJob",
+      requestType = com.udb.core.authn.services.v1.ExchangeTokenForJobRequest.class,
+      responseType = com.udb.core.authn.services.v1.ExchangeTokenForJobResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ExchangeTokenForJobRequest,
+      com.udb.core.authn.services.v1.ExchangeTokenForJobResponse> getExchangeTokenForJobMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ExchangeTokenForJobRequest, com.udb.core.authn.services.v1.ExchangeTokenForJobResponse> getExchangeTokenForJobMethod;
+    if ((getExchangeTokenForJobMethod = AuthnServiceGrpc.getExchangeTokenForJobMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getExchangeTokenForJobMethod = AuthnServiceGrpc.getExchangeTokenForJobMethod) == null) {
+          AuthnServiceGrpc.getExchangeTokenForJobMethod = getExchangeTokenForJobMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ExchangeTokenForJobRequest, com.udb.core.authn.services.v1.ExchangeTokenForJobResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ExchangeTokenForJob"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ExchangeTokenForJobRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ExchangeTokenForJobResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ExchangeTokenForJob"))
+              .build();
+        }
+      }
+    }
+    return getExchangeTokenForJobMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest,
       com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse> getPutTenantAuthPolicyMethod;
 
@@ -3237,6 +3268,31 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+     * a user's current access token for a token a durable async job uses to act
+     * for that user. The caller is a service account's own bearer whose ACTIVE
+     * grant holds udb:token:delegate, in the SAME tenant as the user's token.
+     * The user's token must be a valid, unexpired, unrevoked USER access token
+     * (not a service, membership or delegated token). The minted token's
+     * subject, tenant and project are the user's; its RFC 8693 `act` claim
+     * names the service; it carries the requested purpose (signed, so the
+     * purpose counts as verified), the job_id and `delegated: true`; its scopes
+     * are those both the user's token and the service's grant allow (never
+     * udb:token:delegate). Lifetime: ttl_seconds, at most
+     * UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+     * exchanged again. Every use re-checks that the user is active and not
+     * revoked, that the jti is not revoked, and that the service still holds an
+     * ACTIVE grant with udb:token:delegate. Every mint and use is audited
+     * (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+     * </pre>
+     */
+    default void exchangeTokenForJob(com.udb.core.authn.services.v1.ExchangeTokenForJobRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeTokenForJobResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getExchangeTokenForJobMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Replace the tenant's sign-in policy: whether passwords are required, the
      * channels sign-in codes may go over, the magic-link page and the step-up
      * rules. Only an administrator of that tenant (or a cross-tenant admin).
@@ -4170,6 +4226,32 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+     * a user's current access token for a token a durable async job uses to act
+     * for that user. The caller is a service account's own bearer whose ACTIVE
+     * grant holds udb:token:delegate, in the SAME tenant as the user's token.
+     * The user's token must be a valid, unexpired, unrevoked USER access token
+     * (not a service, membership or delegated token). The minted token's
+     * subject, tenant and project are the user's; its RFC 8693 `act` claim
+     * names the service; it carries the requested purpose (signed, so the
+     * purpose counts as verified), the job_id and `delegated: true`; its scopes
+     * are those both the user's token and the service's grant allow (never
+     * udb:token:delegate). Lifetime: ttl_seconds, at most
+     * UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+     * exchanged again. Every use re-checks that the user is active and not
+     * revoked, that the jti is not revoked, and that the service still holds an
+     * ACTIVE grant with udb:token:delegate. Every mint and use is audited
+     * (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+     * </pre>
+     */
+    public void exchangeTokenForJob(com.udb.core.authn.services.v1.ExchangeTokenForJobRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeTokenForJobResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getExchangeTokenForJobMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * Replace the tenant's sign-in policy: whether passwords are required, the
      * channels sign-in codes may go over, the magic-link page and the step-up
      * rules. Only an administrator of that tenant (or a cross-tenant admin).
@@ -5031,6 +5113,31 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+     * a user's current access token for a token a durable async job uses to act
+     * for that user. The caller is a service account's own bearer whose ACTIVE
+     * grant holds udb:token:delegate, in the SAME tenant as the user's token.
+     * The user's token must be a valid, unexpired, unrevoked USER access token
+     * (not a service, membership or delegated token). The minted token's
+     * subject, tenant and project are the user's; its RFC 8693 `act` claim
+     * names the service; it carries the requested purpose (signed, so the
+     * purpose counts as verified), the job_id and `delegated: true`; its scopes
+     * are those both the user's token and the service's grant allow (never
+     * udb:token:delegate). Lifetime: ttl_seconds, at most
+     * UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+     * exchanged again. Every use re-checks that the user is active and not
+     * revoked, that the jti is not revoked, and that the service still holds an
+     * ACTIVE grant with udb:token:delegate. Every mint and use is audited
+     * (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ExchangeTokenForJobResponse exchangeTokenForJob(com.udb.core.authn.services.v1.ExchangeTokenForJobRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getExchangeTokenForJobMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * Replace the tenant's sign-in policy: whether passwords are required, the
      * channels sign-in codes may go over, the magic-link page and the step-up
      * rules. Only an administrator of that tenant (or a cross-tenant admin).
@@ -5873,6 +5980,31 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getExchangeServiceTokenForTenantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+     * a user's current access token for a token a durable async job uses to act
+     * for that user. The caller is a service account's own bearer whose ACTIVE
+     * grant holds udb:token:delegate, in the SAME tenant as the user's token.
+     * The user's token must be a valid, unexpired, unrevoked USER access token
+     * (not a service, membership or delegated token). The minted token's
+     * subject, tenant and project are the user's; its RFC 8693 `act` claim
+     * names the service; it carries the requested purpose (signed, so the
+     * purpose counts as verified), the job_id and `delegated: true`; its scopes
+     * are those both the user's token and the service's grant allow (never
+     * udb:token:delegate). Lifetime: ttl_seconds, at most
+     * UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+     * exchanged again. Every use re-checks that the user is active and not
+     * revoked, that the jti is not revoked, and that the service still holds an
+     * ACTIVE grant with udb:token:delegate. Every mint and use is audited
+     * (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ExchangeTokenForJobResponse exchangeTokenForJob(com.udb.core.authn.services.v1.ExchangeTokenForJobRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getExchangeTokenForJobMethod(), getCallOptions(), request);
     }
 
     /**
@@ -6789,6 +6921,32 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+     * a user's current access token for a token a durable async job uses to act
+     * for that user. The caller is a service account's own bearer whose ACTIVE
+     * grant holds udb:token:delegate, in the SAME tenant as the user's token.
+     * The user's token must be a valid, unexpired, unrevoked USER access token
+     * (not a service, membership or delegated token). The minted token's
+     * subject, tenant and project are the user's; its RFC 8693 `act` claim
+     * names the service; it carries the requested purpose (signed, so the
+     * purpose counts as verified), the job_id and `delegated: true`; its scopes
+     * are those both the user's token and the service's grant allow (never
+     * udb:token:delegate). Lifetime: ttl_seconds, at most
+     * UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+     * exchanged again. Every use re-checks that the user is active and not
+     * revoked, that the jti is not revoked, and that the service still holds an
+     * ACTIVE grant with udb:token:delegate. Every mint and use is audited
+     * (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ExchangeTokenForJobResponse> exchangeTokenForJob(
+        com.udb.core.authn.services.v1.ExchangeTokenForJobRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getExchangeTokenForJobMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * Replace the tenant's sign-in policy: whether passwords are required, the
      * channels sign-in codes may go over, the magic-link page and the step-up
      * rules. Only an administrator of that tenant (or a cross-tenant admin).
@@ -7059,21 +7217,22 @@ public final class AuthnServiceGrpc {
   private static final int METHODID_REVOKE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP = 63;
   private static final int METHODID_LIST_OWN_TENANT_MEMBERSHIPS = 64;
   private static final int METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT = 65;
-  private static final int METHODID_PUT_TENANT_AUTH_POLICY = 66;
-  private static final int METHODID_GET_TENANT_AUTH_POLICY = 67;
-  private static final int METHODID_SEND_LOGIN_OTP = 68;
-  private static final int METHODID_LOGIN_WITH_OTP = 69;
-  private static final int METHODID_START_OIDC_LOGIN = 70;
-  private static final int METHODID_FINISH_OIDC_LOGIN = 71;
-  private static final int METHODID_LOGIN_WITH_OIDC_ID_TOKEN = 72;
-  private static final int METHODID_CREATE_INVITATION = 73;
-  private static final int METHODID_LIST_INVITATIONS = 74;
-  private static final int METHODID_REVOKE_INVITATION = 75;
-  private static final int METHODID_RESEND_INVITATION = 76;
-  private static final int METHODID_GET_INVITATION = 77;
-  private static final int METHODID_START_INVITATION_ACCEPTANCE = 78;
-  private static final int METHODID_ACCEPT_INVITATION = 79;
-  private static final int METHODID_CHECK_STEP_UP = 80;
+  private static final int METHODID_EXCHANGE_TOKEN_FOR_JOB = 66;
+  private static final int METHODID_PUT_TENANT_AUTH_POLICY = 67;
+  private static final int METHODID_GET_TENANT_AUTH_POLICY = 68;
+  private static final int METHODID_SEND_LOGIN_OTP = 69;
+  private static final int METHODID_LOGIN_WITH_OTP = 70;
+  private static final int METHODID_START_OIDC_LOGIN = 71;
+  private static final int METHODID_FINISH_OIDC_LOGIN = 72;
+  private static final int METHODID_LOGIN_WITH_OIDC_ID_TOKEN = 73;
+  private static final int METHODID_CREATE_INVITATION = 74;
+  private static final int METHODID_LIST_INVITATIONS = 75;
+  private static final int METHODID_REVOKE_INVITATION = 76;
+  private static final int METHODID_RESEND_INVITATION = 77;
+  private static final int METHODID_GET_INVITATION = 78;
+  private static final int METHODID_START_INVITATION_ACCEPTANCE = 79;
+  private static final int METHODID_ACCEPT_INVITATION = 80;
+  private static final int METHODID_CHECK_STEP_UP = 81;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -7355,6 +7514,10 @@ public final class AuthnServiceGrpc {
         case METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT:
           serviceImpl.exchangeServiceTokenForTenant((com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>) responseObserver);
+          break;
+        case METHODID_EXCHANGE_TOKEN_FOR_JOB:
+          serviceImpl.exchangeTokenForJob((com.udb.core.authn.services.v1.ExchangeTokenForJobRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeTokenForJobResponse>) responseObserver);
           break;
         case METHODID_PUT_TENANT_AUTH_POLICY:
           serviceImpl.putTenantAuthPolicy((com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest) request,
@@ -7896,6 +8059,13 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest,
               com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>(
                 service, METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT)))
+        .<com.udb.core.authn.services.v1.ExchangeTokenForJobRequest, com.udb.core.authn.services.v1.ExchangeTokenForJobResponse>addMethod(
+          getExchangeTokenForJobMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ExchangeTokenForJobRequest, com.udb.core.authn.services.v1.ExchangeTokenForJobResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ExchangeTokenForJobRequest,
+              com.udb.core.authn.services.v1.ExchangeTokenForJobResponse>(
+                service, METHODID_EXCHANGE_TOKEN_FOR_JOB)))
         .<com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest, com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse>addMethod(
           getPutTenantAuthPolicyMethod(),
           io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest, com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse>asyncUnaryCall(
@@ -8115,6 +8285,7 @@ public final class AuthnServiceGrpc {
               .addMethod(getRevokeServiceAccountTenantMembershipMethod())
               .addMethod(getListOwnTenantMembershipsMethod())
               .addMethod(getExchangeServiceTokenForTenantMethod())
+              .addMethod(getExchangeTokenForJobMethod())
               .addMethod(getPutTenantAuthPolicyMethod())
               .addMethod(getGetTenantAuthPolicyMethod())
               .addMethod(getSendLoginOtpMethod())

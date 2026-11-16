@@ -12,7 +12,7 @@ resolver = "2"
 
 [package]
 name = "udb"
-version = "0.6.20"
+version = "0.6.21"
 edition = "2024"
 rust-version = "1.88"
 description = "Universal Data Broker — a Rust gRPC broker over multiple databases (Postgres, MySQL, SQLite, MongoDB, ClickHouse, Cassandra, MSSQL, Redis, Qdrant, S3, Neo4j, …) with per-tenant RLS, 2PC, sagas, and CDC."
@@ -179,7 +179,10 @@ ed25519-dalek = "2.2.0"
 casbin = "2"
 chrono = { version = "0.4", features = ["serde"] }
 opentelemetry = { version = "0.27", optional = true }
-opentelemetry-otlp = { version = "0.27", optional = true }
+# `tls-roots` compiles tonic TLS in (with the system root store) so an
+# https:// OTLP collector can be reached; without it the gRPC exporter has no
+# TLS and only plaintext collectors work.
+opentelemetry-otlp = { version = "0.27", features = ["tls-roots"], optional = true }
 # OTLP exporter + tracer-provider builder (gated by `otel`). Pinned to the same
 # 0.27 line as `opentelemetry`/`opentelemetry-otlp`; the OTLP crate already pulls
 # it transitively, declared here so `init_otel` can name it directly.
@@ -190,12 +193,17 @@ prost = "0.13"
 prost-types = "0.13"
 rcgen = "0.13"
 rdkafka = { version = "0.36", default-features = false, features = ["cmake-build", "tokio", "curl-static"], optional = true }
-redis = { version = "0.27", features = ["tokio-comp", "connection-manager"], optional = true }
+# `tokio-rustls-comp` compiles rustls TLS in so `rediss://` URLs connect
+# (verified against the system root store); without it they fail at connect.
+redis = { version = "0.27", features = ["tokio-comp", "tokio-rustls-comp", "connection-manager"], optional = true }
 mongodb-driver = { package = "mongodb", version = "3.7", optional = true }
 # Memcached binary-protocol client. The sync API is wrapped in
 # `tokio::task::spawn_blocking` by the executor so the async runtime does not
-# block. `default-features = false` avoids pulling native TLS/OpenSSL.
-memcache = { version = "0.17", default-features = false, optional = true }
+# block. `default-features = false` avoids pulling native TLS/OpenSSL, so this
+# build has no Memcached TLS: `memcache+tls://` is refused at connect, and the
+# outbound transport gate accepts Memcached only on a loopback address (a TLS
+# tunnel) unless UDB_OUTBOUND_TLS_REQUIRED=false.
+memcache ={ version = "0.17", default-features = false, optional = true }
 # Microsoft SQL Server driver over TDS. Default features are disabled to avoid
 # the driver's chrono shim; enable the SQL Server 2008+ wire format and rustls.
 tiberius = { version = "0.12", default-features = false, features = ["tds73", "rustls", "chrono"], optional = true }
@@ -237,7 +245,7 @@ openmls_rust_crypto = "0.5.1"
 # The MLS client crate, for `udb messaging bench-fixture`: the benchmark's MLS
 # objects are minted by the same code the SDKs run. Published before `udb`
 # (release-crates.yml), so the packaged crate resolves it from crates.io.
-udb-mls = { path = "crates/udb-mls", version = "0.6.20" }
+udb-mls = { path = "crates/udb-mls", version = "0.6.21" }
 # SHA-1 is required only for RFC 6238 TOTP (the de-facto authenticator-app HMAC)
 # and legacy SAML RSA-SHA1 signature verification. (No `oid` feature needed: the
 # SAML verify path prepends the DigestInfo prefix itself — see idp/saml.rs.)

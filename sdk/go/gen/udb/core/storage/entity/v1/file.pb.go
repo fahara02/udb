@@ -288,7 +288,7 @@ var File_udb_core_storage_entity_v1_file_proto protoreflect.FileDescriptor
 
 const file_udb_core_storage_entity_v1_file_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/storage/entity/v1/file.proto\x12\x1audb.core.storage.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a&udb/core/storage/entity/v1/enums.proto\"\xd7\x16\n" +
+	"%udb/core/storage/entity/v1/file.proto\x12\x1audb.core.storage.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a&udb/core/storage/entity/v1/enums.proto\"\xe4\x16\n" +
 	"\x04File\x12C\n" +
 	"\afile_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\afile_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06fileId\x127\n" +
@@ -365,9 +365,9 @@ const file_udb_core_storage_entity_v1_file_proto_rawDesc = "" +
 	"scanned_by\x12\fVARCHAR(200)Z3Verified scanner identity that recorded the verdictR\tscannedBy\x12s\n" +
 	"\vscan_detail\x18\x1a \x01(\tBR\x82\xb7\x18N\n" +
 	"\vscan_detail\x12\x04TEXTZ9Signature name or failure reason from the scanning engineR\n" +
-	"scanDetail:\xdb\x04\xfa\xb6\x18\xb8\x03\n" +
-	"\x05files\x12\vudb_storage\x18\x01 \x01*BObject-storage file metadata for uploads, downloads, and lifecycle0\x018\x01@\x01b\x98\x01\n" +
-	"\x18storage_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01$\n" +
+	"scanDetail:\xe8\x04\xfa\xb6\x18\xc5\x03\n" +
+	"\x05files\x12\vudb_storage\x18\x01 \x01*BObject-storage file metadata for uploads, downloads, and lifecycle0\x018\x01@\x01b\xa5\x01\n" +
+	"\x18storage_tenant_isolation\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01$\n" +
 	"\x10idx_files_tenant\x12\x05BTREEZ\ttenant_id\x8a\x01:\n" +
 	"\x13idx_files_reference\x12\x05BTREEZ\freference_idZ\x0ereference_type\x8a\x01+\n" +
 	"\x15idx_files_uploaded_by\x12\x05BTREEZ\vuploaded_by\xf2\x01\x15udb.storage.files.cdc\xfa\x01\fstorage:read\x8a\xb2\x19\x99\x01\n" +

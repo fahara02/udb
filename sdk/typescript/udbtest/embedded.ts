@@ -60,7 +60,39 @@ function isListening(address: string): Promise<boolean> {
   });
 }
 
-async function startBroker(t: TestHooks, protoRootArg: string | undefined, policyFileArg: string | undefined, withPeer: boolean): Promise<[UdbProject, UdbProject | undefined]> {
+/** Options for start() and startPair(). */
+export interface StartOptions {
+  /** Approve the migration work the broker marks review-required, so a fresh cluster
+   *  starts: `udb plan --emit-approval-plan` writes the plan before `dev up`, and the
+   *  broker reads it through UDB_MIGRATION_APPROVAL_PLAN. Off by default: a test that
+   *  does not ask for it sees the same refusal a production deploy would. */
+  approveReviewRequired?: boolean;
+}
+
+/** The `udb` arguments that write the approval plan for the current schema. */
+export function approvalPlanArgs(planFile: string): string[] {
+  return ["plan", "--emit-approval-plan", planFile];
+}
+
+/** The child environment: the caller's environment without another project's
+ *  listeners, database DSNs or credentials (every UDB_* variable and DATABASE_URL), then
+ *  the acquisition settings an isolated broker may share, the proto root and, when
+ *  given, the approval plan. */
+export function embeddedEnvironment(source: NodeJS.ProcessEnv, protoRoot: string, approvalPlan?: string): NodeJS.ProcessEnv {
+  const environment: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(source)) {
+    const upper = key.toUpperCase();
+    if (!upper.startsWith("UDB_") && upper !== "DATABASE_URL") environment[key] = value;
+  }
+  for (const key of ["UDB_HOME", "UDB_POSTGRES_BINARIES_URL", "UDB_EMBEDDED_PG_ARCHIVE"]) {
+    if (source[key] !== undefined) environment[key] = source[key];
+  }
+  environment.UDB_PROTO_ROOT = protoRoot;
+  if (approvalPlan) environment.UDB_MIGRATION_APPROVAL_PLAN = approvalPlan;
+  return environment;
+}
+
+async function startBroker(t: TestHooks, protoRootArg: string | undefined, policyFileArg: string | undefined, withPeer: boolean, options: StartOptions = {}): Promise<[UdbProject, UdbProject | undefined]> {
   const binary = path.resolve(process.env.UDB_TEST_BINARY || findOnPath("udb") || "");
   if (!process.env.UDB_TEST_BINARY && !findOnPath("udb")) {
     throw new Error("udbtest.start: install an embedded-capable udb or set UDB_TEST_BINARY");
@@ -73,17 +105,8 @@ async function startBroker(t: TestHooks, protoRootArg: string | undefined, polic
   }
   protoRoot = path.resolve(protoRoot);
   const policyFile = policyFileArg ? path.resolve(policyFileArg) : undefined;
-  // Avoid inheriting another project's listeners, database DSNs or credentials.
-  // Acquisition settings alone may be shared between isolated test brokers.
-  const environment: NodeJS.ProcessEnv = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    const upper = key.toUpperCase();
-    if (!upper.startsWith("UDB_") && upper !== "DATABASE_URL") environment[key] = value;
-  }
-  for (const key of ["UDB_HOME", "UDB_POSTGRES_BINARIES_URL", "UDB_EMBEDDED_PG_ARCHIVE"]) {
-    if (process.env[key] !== undefined) environment[key] = process.env[key];
-  }
-  environment.UDB_PROTO_ROOT = protoRoot;
+  const approvalPlan = options.approveReviewRequired ? path.join(project, "approval.json") : undefined;
+  const environment = embeddedEnvironment(process.env, protoRoot, approvalPlan);
   // Hold reservations until every port is selected, so listeners in the same child
   // cannot receive the same ephemeral port.
   const reservations: net.Server[] = [];
@@ -96,6 +119,17 @@ async function startBroker(t: TestHooks, protoRootArg: string | undefined, polic
   }
   const logPath = path.join(project, "broker.log");
   const log = fs.openSync(logPath, "wx", 0o600);
+  if (approvalPlan) {
+    // A fresh cluster can hold review-required work, which the broker runs only under
+    // an approved plan. Write that plan with the same binary and proto root, before
+    // the broker that reads it starts.
+    const planEnv = { ...environment, UDB_MIGRATION_APPROVAL_PLAN: undefined };
+    const planned = run(binary, approvalPlanArgs(approvalPlan), { cwd: project, env: planEnv, log, timeoutMs: 120_000 });
+    if (!planned.ok) {
+      fs.closeSync(log);
+      throw new Error(`udbtest.start: write the approval plan: ${planned.error} (private log: ${logPath})`);
+    }
+  }
   await Promise.all(reservations.map((server) => new Promise((resolve) => server.close(resolve))));
   const child = spawn(binary, ["dev", "up", "--embedded", "--pg-port", pgPort], {
     cwd: project,
@@ -205,14 +239,15 @@ async function startBroker(t: TestHooks, protoRootArg: string | undefined, polic
  *
  *  `protoRoot` names the application's proto directory; omitted, an empty project
  *  serves only the broker's native models. `policyFile` (JSON or YAML) is applied
- *  through the real `udb policy apply` command. */
-export async function start(t: TestHooks, protoRoot?: string, policyFile?: string): Promise<UdbProject> {
-  return (await startBroker(t, protoRoot, policyFile, false))[0];
+ *  through the real `udb policy apply` command. `options.approveReviewRequired`
+ *  approves review-required migration work (see StartOptions). */
+export async function start(t: TestHooks, protoRoot?: string, policyFile?: string, options: StartOptions = {}): Promise<UdbProject> {
+  return (await startBroker(t, protoRoot, policyFile, false, options))[0];
 }
 
 /** One isolated embedded broker with two independently provisioned tenant
  *  administrators, for the full shared isolation contract. */
-export async function startPair(t: TestHooks, protoRoot?: string, policyFile?: string): Promise<[UdbProject, UdbProject]> {
-  const [first, second] = await startBroker(t, protoRoot, policyFile, true);
+export async function startPair(t: TestHooks, protoRoot?: string, policyFile?: string, options: StartOptions = {}): Promise<[UdbProject, UdbProject]> {
+  const [first, second] = await startBroker(t, protoRoot, policyFile, true, options);
   return [first, second!];
 }

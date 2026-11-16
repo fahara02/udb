@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.20 | protocol v1.0.0                                          │
+│    crate v0.6.21 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This page explains how UDB keeps data safe: who a request is, what it's allowed
@@ -74,6 +74,7 @@ For production, configure identity with these settings:
 | `UDB_JWT_AUDIENCE` | Expected audience |
 | `UDB_JWT_PUBLIC_KEY` / `UDB_JWT_JWKS_URL` | JWT validation keys |
 | `UDB_JWT_PRIVATE_KEY` | UDB-issued token signing |
+| `UDB_DELEGATED_TOKEN_MAX_TTL` | Longest lifetime of a delegated job token (default `24h`) |
 | `UDB_AUTH_GRPC_ADDR` | Native auth/control listener |
 
 A few habits keep tokens safe: use short token TTLs (time-to-live) for
@@ -85,6 +86,90 @@ plus a typed grant that caps its scopes. Its bearer carries the roles bound to
 it, minus every admin-class role a workload may never hold. To ask whether one
 of your users may do something, to act in a second tenant, or to read who a
 token belongs to, see [service-accounts.md](service-accounts.md).
+
+### Delegated job tokens
+
+A durable job (an export, a report, a nightly sync) often runs long after the
+user who started it signed out, and after their 15-minute access token
+expired. A delegated job token lets the job act for that user without keeping
+the user's own credentials around. It follows the RFC 8693 token-exchange
+model: the user's token is the subject, the service is the actor.
+
+The flow:
+
+1. The user starts the job in your app. While their access token is still
+   valid, your backend service calls `AuthnService.ExchangeTokenForJob` with its
+   OWN service-account bearer and the request fields `subject_token` (the
+   user's access token), `purpose` (for example `export`), `job_id` and
+   `ttl_seconds`.
+2. The broker checks the caller and the user's token, then returns
+   `access_token`, `jti`, `expires_at_unix`, `subject` (the user), `actor` (the
+   service's identity), `purpose`, `job_id` and `scopes`.
+3. The job stores the token with the job and calls UDB with it. Each call
+   runs as the user.
+
+Who may mint one: a service account's own bearer whose ACTIVE typed grant holds
+the scope `udb:token:delegate`, in the same tenant as the user's token. A
+person's bearer, a raw API key (exchange it for a service bearer with
+`Authenticate` first), a tenant-membership token or a delegated token is refused
+with `PERMISSION_DENIED`, even when it holds the scope. A role cannot
+confer `udb:token:delegate`; only a service grant can.
+
+What the user's token must be: a valid, unexpired, unrevoked access token of
+an active user. A service token, a tenant-membership token or another delegated
+token is refused (a delegated token is never exchanged again), as is a token of
+another tenant. These refusals are `PERMISSION_DENIED` and name the cause.
+
+What the minted token carries:
+
+| Claim | Value |
+|---|---|
+| `sub`, `tenant_id`, `project_id` | The user's, from their token |
+| `act` | `{ "sub": <service identity>, "account_id": <service account> }` |
+| `purpose` | The requested purpose, signed, so it counts as a verified purpose (it relaxes the PII rules for `export`, `verification` and `audit` as a signed purpose does) |
+| `job_id` | The requested job id |
+| `jti` | `dlg_` followed by a new UUID |
+| `scopes` | The scopes both the user's token and the service's grant allow; never `udb:token:delegate` or `udb:authn:exchange-tenant-token` |
+| `delegated` | `true`: no refresh token is issued, and the token cannot be exchanged again |
+| `exp` | now + `ttl_seconds` (0 asks for the maximum), at most `UDB_DELEGATED_TOKEN_MAX_TTL` |
+
+`UDB_DELEGATED_TOKEN_MAX_TTL` takes seconds or a number with an `s`, `m`, `h`
+or `d` suffix. The default is `24h`.
+
+Every use re-checks the token's live state through the same check (and the same
+short verdict cache) as every other UDB token: the user is active and not
+revoked, the `jti` and the tenant are not revoked, and the service still has an
+ACTIVE grant holding `udb:token:delegate` on an ACTIVE service account. Removing
+the scope from the grant, revoking the grant, deactivating the service account,
+suspending the user or revoking the `jti` stops the token at its next use.
+
+Every mint publishes `udb.authn.token.delegated.v1`, and every use publishes
+`udb.authn.token.delegated.used.v1` when the token's live state is checked (at
+most once per verdict-cache window per token). Both carry the actor, the
+subject, the `jti`, the job id and the purpose. Each request served with the
+token is also logged on the `udb.audit.authn` target.
+
+SDK helpers: TypeScript `UdbAuthClient.exchangeTokenForJob({ subjectToken,
+purpose, jobId, ttlSeconds })`, Go `AuthClient.ExchangeTokenForJob(ctx,
+ExchangeTokenForJobRequest{...})`, Python `UdbAuthClient.exchange_token_for_job(
+subject_token, purpose=..., job_id=..., ttl_seconds=...)`. Each is called with
+the service's own bearer.
+
+### Expired and revoked tokens
+
+A refused bearer says why, on every listener, for every token (not only
+delegated ones). Both refusals stay `UNAUTHENTICATED`:
+
+| Reason | When | What to do |
+|---|---|---|
+| `UDB_TOKEN_EXPIRED` | The token's `exp` has passed (beyond the clock-skew leeway) | Refresh the token or sign in again. A delegated token cannot be refreshed: mint a new one from a fresh user token. |
+| `UDB_TOKEN_REVOKED` | The token is no longer backed by live state: its `jti`, session or refresh family was revoked, its user or tenant was revoked or deactivated, or a delegated token's service lost its grant or `udb:token:delegate` | Do not retry with the same token; sign in again. |
+
+Other bearer refusals (a bad signature, a wrong issuer or audience) keep
+`UDB_AUTHENTICATION_FAILED`. The SDKs keep classifying all three as
+`unauthenticated` and add `isTokenExpired` / `isTokenRevoked` (TypeScript),
+`IsTokenExpired` / `IsTokenRevoked` (Go) and `is_token_expired` /
+`is_token_revoked` (Python).
 
 ## Authorization
 
@@ -215,6 +300,13 @@ Reads mask personal data. A column marked `is_pii` (or `mask_in_logs`) comes bac
 as `***MASKED***` to any caller that does not hold the `udb:pii:read` scope (or
 `udb:*`). Grant `udb:pii:read` only to the services and roles that must see the
 clear value.
+
+Filtering or sorting on a PII or encrypted column needs the same scope (or a
+purpose of `export`, `verification` or `audit`). A filter is a question about
+the value: without this rule, a caller that may not see a national ID could
+still learn whether a row with a guessed one exists. Blind-index equality
+lookups on an encrypted column count too. A service that looks rows up by such
+a column holds `udb:pii:read`.
 
 Here's how to handle common classes of sensitive data:
 

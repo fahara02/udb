@@ -23,6 +23,16 @@ metadata. ``service_account_caller`` is null when the prepared fixtures do not
 provision the account (a broker older than 0.6.4); the row is then measured
 with the ordinary caller and fails honestly.
 
+RPCs flagged ``"delegating_service": true`` (only
+AuthnService/ExchangeTokenForJob) must be measured the same way as the
+service account named by the top-level ``delegating_service_caller`` object
+(``username``, the BENCH ``tenant_id`` and ``project_id``): a service account
+whose ACTIVE grant holds ``udb:token:delegate``. The row's ``subject_token``
+is the access-token sentinel, so it carries the measuring SDK's own user
+token. ``delegating_service_caller`` is null when the prepared fixtures do not
+provision the account; the row is then measured with the ordinary caller and
+fails honestly.
+
 Usage (same environment as `UDB_LIVE_PERF=1 pytest`):
 
     python sdk/python/tests/export_bench_plan.py <plan.json>
@@ -87,6 +97,20 @@ def service_account_caller(fixtures) -> dict | None:
         "username": username,
         "tenant_id": fixtures.m.get("membership_home_tenant_id", ""),
         "project_id": fixtures.m.get("membership_exchange_project_id", ""),
+    }
+
+
+def delegating_service_caller(fixtures, tenant_id: str, project_id: str) -> dict | None:
+    """The bench-tenant service account that measures the ``delegating_service``
+    rows, or None when the prepared fixtures do not provision it. Never carries
+    a credential: its password is env ``UDB_LIVE_PASSWORD``."""
+    username = fixtures.m.get("delegate_service_username", "")
+    if not username:
+        return None
+    return {
+        "username": username,
+        "tenant_id": tenant_id,
+        "project_id": fixtures.m.get("delegate_service_project_id", "") or project_id,
     }
 
 
@@ -162,6 +186,7 @@ def main(argv: list[str]) -> int:
             "warm_up": kind == "read_only" and not streaming and method.name not in live.SINGLE_CALL_PERF_METHODS,
             "platform": live.requires_platform_perf_identity(client_cls, method.name),
             "service_account": live.requires_service_account_perf_identity(client_cls, method.name),
+            "delegating_service": live.requires_delegating_service_perf_identity(client_cls, method.name),
             "reauthenticate_before": client_cls is live.TenantServiceClient and method.name == "PurgeTenant",
             "capability_optional": client_cls is live.RoomServiceClient
             and method.name in live.WEBRTC_EGRESS_OPTIONAL_METHODS,
@@ -193,6 +218,8 @@ def main(argv: list[str]) -> int:
             "context": as_json(authed_meta.with_purpose("rust.live.perf.cdc").to_request_context()),
         },
         "service_account_caller": service_account_caller(fixtures),
+        "delegating_service_caller": delegating_service_caller(
+            fixtures, authed_meta.tenant_id, authed_meta.project_id),
         "rpcs": rpcs,
         # For SDKs that build requests reflectively without their own copy of
         # the contract (Java's DynamicMessage).

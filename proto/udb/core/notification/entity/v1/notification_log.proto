@@ -35,7 +35,7 @@ message NotificationLog {
     retention_days: 90 // 90 days — notification delivery logs; short operational window
     rls_policies: {
       policy_name: "tenant_project_isolation"
-      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text)"
+      using: "((tenant_id::text = current_setting('app.current_tenant_id', true)::text AND project_id::text = current_setting('app.current_project_id', true)::text) OR current_setting('app.platform_admin', true) = 'true')"
       permissive: true
     }
     indexes: {

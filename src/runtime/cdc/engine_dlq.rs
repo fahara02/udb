@@ -20,6 +20,22 @@ fn durable_dlq_insert_sql(dlq_rel: &str) -> String {
     )
 }
 
+/// One shared, bounded client for schema-registry lookups: a hung registry
+/// must not stall CDC ingress, and an https:// registry must not redirect the
+/// credential to a plaintext URL.
+#[cfg(feature = "http-client")]
+fn schema_registry_client() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .timeout(std::time::Duration::from_secs(10))
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .unwrap_or_else(|err| panic!("schema registry HTTP client could not be built: {err}"))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -367,7 +383,15 @@ impl CdcEngine {
                 urlencoding::encode(schema_uri)
             );
 
-            let mut request = reqwest::Client::new().get(&lookup_url);
+            // The registry credential never goes out over plaintext to a
+            // non-loopback host while UDB_OUTBOUND_TLS_REQUIRED is on.
+            if !self.config.schema_registry_auth.is_empty() {
+                crate::runtime::transport_policy::check_secret_url(
+                    registry_url,
+                    "UDB_SCHEMA_REGISTRY_URL",
+                )?;
+            }
+            let mut request = schema_registry_client().get(&lookup_url);
             if !self.config.schema_registry_auth.is_empty() {
                 request = request.header("Authorization", &self.config.schema_registry_auth);
             }
@@ -797,8 +821,9 @@ impl CdcEngine {
         // Push the current open depth to Prometheus so alerting rules can fire on it.
         self.metrics.set_cdc_dlq_depth(dlq_open);
 
-        // WAL lag
-        let wal_lag_sql = "SELECT COALESCE(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn), 0) as lag_bytes \
+        // WAL lag. `pg_wal_lsn_diff` returns NUMERIC; cast it so it decodes
+        // into an i64 instead of failing the whole metrics read.
+        let wal_lag_sql = "SELECT COALESCE(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn), 0)::BIGINT as lag_bytes \
              FROM pg_replication_slots WHERE slot_name = $1";
         let wal_lag: i64 = sqlx::query_scalar(wal_lag_sql)
             .bind(&self.config.slot_name)
@@ -806,6 +831,16 @@ impl CdcEngine {
             .await
             .map_err(|e| format!("failed to fetch WAL lag: {}", e))?
             .unwrap_or(0);
+        // UDB_CDC_MAX_WAL_LAG_BYTES: a slot holding back more WAL than the
+        // ceiling is reported loudly so an operator can act before the disk fills.
+        if wal_lag_exceeds_ceiling(wal_lag, self.config.max_wal_lag_bytes) {
+            tracing::error!(
+                slot = %self.config.slot_name,
+                wal_lag_bytes = wal_lag,
+                max_wal_lag_bytes = self.config.max_wal_lag_bytes,
+                "CDC replication slot WAL lag is above UDB_CDC_MAX_WAL_LAG_BYTES"
+            );
+        }
 
         // Events published by topic (last hour)
         let events_sql = format!(
@@ -836,5 +871,33 @@ impl CdcEngine {
             dlq_quarantined,
             events_by_topic,
         })
+    }
+}
+
+/// True when a measured WAL lag is above the configured ceiling. A ceiling of
+/// zero or less means no ceiling.
+fn wal_lag_exceeds_ceiling(lag_bytes: i64, ceiling_bytes: i64) -> bool {
+    ceiling_bytes > 0 && lag_bytes > ceiling_bytes
+}
+
+#[cfg(test)]
+mod wal_lag_ceiling_tests {
+    use super::wal_lag_exceeds_ceiling;
+
+    #[test]
+    fn lag_above_the_ceiling_is_reported() {
+        assert!(wal_lag_exceeds_ceiling(2_000, 1_000));
+    }
+
+    #[test]
+    fn lag_at_or_below_the_ceiling_is_not_reported() {
+        assert!(!wal_lag_exceeds_ceiling(1_000, 1_000));
+        assert!(!wal_lag_exceeds_ceiling(0, 1_000));
+    }
+
+    #[test]
+    fn a_non_positive_ceiling_means_no_ceiling() {
+        assert!(!wal_lag_exceeds_ceiling(i64::MAX, 0));
+        assert!(!wal_lag_exceeds_ceiling(i64::MAX, -1));
     }
 }

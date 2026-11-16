@@ -4,7 +4,7 @@
 //! Phase D add-on (§8.2): each of these executors previously hand-rolled
 //! `reqwest::Client::builder()` with its own TLS/timeout/cloud-detection logic.
 //! They now compose the helpers here so the policy (which knobs apply, how
-//! "cloud" is detected, the `build().unwrap_or_default()` fallback) lives in one
+//! "cloud" is detected, how a failed build is reported) lives in one
 //! place. `reqwest` is a non-optional dependency and these backends are always
 //! compiled, so this module needs no feature gate.
 
@@ -75,8 +75,13 @@ impl HttpClientSpec {
         self
     }
 
-    /// Build the `reqwest::Client`. Falls back to `Client::default()` if the
-    /// builder fails (mirrors the previous per-executor `.unwrap_or_default()`).
+    /// Build the `reqwest::Client`.
+    ///
+    /// The builder only fails when the TLS backend cannot be initialised. The
+    /// old fallback to `Client::default()` silently dropped `https_only` and both
+    /// timeouts; `Client::default()` panics in that same situation anyway, so
+    /// failing loudly here loses nothing and never hands out a client weaker
+    /// than the one asked for.
     pub(crate) fn build(&self) -> reqwest::Client {
         let mut builder = reqwest::Client::builder();
         if let Some(timeout) = self.timeout {
@@ -88,7 +93,14 @@ impl HttpClientSpec {
         if self.https_only {
             builder = builder.https_only(true);
         }
-        builder.build().unwrap_or_default()
+        match builder.build() {
+            Ok(client) => client,
+            Err(err) => panic!(
+                "HTTP backend client could not be built (https_only={}, timeout={:?}, \
+                 connect_timeout={:?}): {err}",
+                self.https_only, self.timeout, self.connect_timeout
+            ),
+        }
     }
 }
 

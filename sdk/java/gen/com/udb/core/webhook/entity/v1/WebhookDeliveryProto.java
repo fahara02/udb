@@ -45,7 +45,7 @@ public final class WebhookDeliveryProto {
       "\037google/protobuf/timestamp.proto\032\033udb/co" +
       "re/common/v1/db.proto\032!udb/core/common/v" +
       "1/security.proto\032\036udb/core/common/v1/typ" +
-      "es.proto\"\367\014\n\017WebhookDelivery\022O\n\013delivery" +
+      "es.proto\"\204\r\n\017WebhookDelivery\022O\n\013delivery" +
       "_id\030\001 \001(\tB.\202\267\030*\n\013delivery_id\022\004UUID\030\001(\001:\021" +
       "gen_random_uuid()R\ndeliveryId\0227\n\ttenant_" +
       "id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002\001R\010te" +
@@ -72,28 +72,28 @@ public final class WebhookDeliveryProto {
       "_info\030\r \001(\0132\035.udb.core.common.v1.AuditIn" +
       "foBD\202\267\030@\n\naudit_info\022\005JSONB\030\001:\013\'{}\'::jso" +
       "nbZ\032Audit trail stored as JSONx\001R\tauditI" +
-      "nfo:\304\004\372\266\030\256\003\n\022webhook_deliveries\022\013udb_web" +
+      "nfo:\321\004\372\266\030\273\003\n\022webhook_deliveries\022\013udb_web" +
       "hook\030\002 \001*2Durable webhook delivery journ" +
-      "al (master-plan 9.4)8\001@\001b\241\001\n!webhook_del" +
-      "ivery_tenant_isolation\032z(tenant_id::text" +
-      " = current_setting(\'app.current_tenant_i" +
-      "d\', true) OR current_setting(\'app.platfo" +
-      "rm_admin\', true) = \'true\')(\001h\001\212\0011\n\035idx_w" +
-      "ebhook_deliveries_tenant\022\005BTREEZ\ttenant_" +
-      "id\212\001@\n\037idx_webhook_deliveries_endpoint\022\005" +
-      "BTREEZ\ttenant_idZ\013endpoint_id\362\001\"udb.webh" +
-      "ook.webhook_deliveries.cdc\372\001\014webhook:rea" +
-      "d\212\262\031\214\001\n\006tenant\032\ttenant_id*4tenant_id = c" +
-      "urrent_setting(\'app.current_tenant_id\')2" +
-      "\004none:\rwebhook.audit@\373\023H\002R\006tenantZ\010stand" +
-      "ardr\025tenant.data_residencyB\213\002\n\036com.udb.c" +
-      "ore.webhook.entity.v1B\024WebhookDeliveryPr" +
-      "otoP\001ZFgithub.com/fahara02/udb/sdk/go/ge" +
-      "n/udb/core/webhook/entity/v1;entityv1\242\002\004" +
-      "UCWE\252\002\032Udb.Core.Webhook.Entity.V1\312\002\032Udb\\" +
-      "Core\\Webhook\\Entity\\V1\342\002&Udb\\GPBMetadata" +
-      "\\Core\\Webhook\\Entity\\V1\352\002\036Udb::Core::Web" +
-      "hook::Entity::V1b\006proto3"
+      "al (master-plan 9.4)8\001@\001b\256\001\n!webhook_del" +
+      "ivery_tenant_isolation\032\206\001(tenant_id = NU" +
+      "LLIF(current_setting(\'app.current_tenant" +
+      "_id\', true), \'\')::uuid OR current_settin" +
+      "g(\'app.platform_admin\', true) = \'true\')(" +
+      "\001h\001\212\0011\n\035idx_webhook_deliveries_tenant\022\005B" +
+      "TREEZ\ttenant_id\212\001@\n\037idx_webhook_deliveri" +
+      "es_endpoint\022\005BTREEZ\ttenant_idZ\013endpoint_" +
+      "id\362\001\"udb.webhook.webhook_deliveries.cdc\372" +
+      "\001\014webhook:read\212\262\031\214\001\n\006tenant\032\ttenant_id*4" +
+      "tenant_id = current_setting(\'app.current" +
+      "_tenant_id\')2\004none:\rwebhook.audit@\373\023H\002R\006" +
+      "tenantZ\010standardr\025tenant.data_residencyB" +
+      "\213\002\n\036com.udb.core.webhook.entity.v1B\024Webh" +
+      "ookDeliveryProtoP\001ZFgithub.com/fahara02/" +
+      "udb/sdk/go/gen/udb/core/webhook/entity/v" +
+      "1;entityv1\242\002\004UCWE\252\002\032Udb.Core.Webhook.Ent" +
+      "ity.V1\312\002\032Udb\\Core\\Webhook\\Entity\\V1\342\002&Ud" +
+      "b\\GPBMetadata\\Core\\Webhook\\Entity\\V1\352\002\036U" +
+      "db::Core::Webhook::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

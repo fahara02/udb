@@ -82,6 +82,33 @@ func runConstraints(t *testing.T, connect Connect, tenant func() string) {
 			t.Fatalf("refused update changed its target: %v, %v", got, err)
 		}
 	})
+	t.Run("transaction require_affected refuses a missed row and rolls back the prefix", func(t *testing.T) {
+		u := connect(t, tenant())
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		files := udbclient.TableOf[*storagev1.File](u)
+		missing := udbclient.RowKey{"file_id": NewID()}
+		for name, write := range map[string]func(tx *udbclient.TxScope) error{
+			"patch": func(tx *udbclient.TxScope) error {
+				return tx.Patch(&storagev1.File{}, missing, udbclient.Record{"filename": "never.pdf"})
+			},
+			"delete": func(tx *udbclient.TxScope) error { return tx.Delete(&storagev1.File{}, missing) },
+		} {
+			prefix := file("", NewID(), "must-roll-back.pdf")
+			err := u.Tx(ctx, func(tx *udbclient.TxScope) error {
+				if err := tx.Insert(prefix); err != nil {
+					return err
+				}
+				return write(tx)
+			})
+			if udbclient.CodeOf(err) != udbclient.CodeNotFound {
+				t.Fatalf("transaction %s of a missing row = %v, want NotFound (UDB_NO_ROWS_AFFECTED)", name, err)
+			}
+			if _, err := files.Get(ctx, udbclient.RowKey{"file_id": prefix.GetFileId()}); !errors.Is(err, udbclient.ErrNotFound) {
+				t.Fatalf("transaction %s refusal committed its prefix: %v", name, err)
+			}
+		}
+	})
 	t.Run("unary keys replay before CAS and reject changed input", func(t *testing.T) {
 		u := connect(t, tenant())
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -261,6 +288,67 @@ func runConstraints(t *testing.T, connect Connect, tenant func() string) {
 					t.Fatalf("refused transaction kept its prefix: %v", err)
 				}
 			})
+		}
+	})
+	t.Run("transaction keys replay before CAS and reject changed input", func(t *testing.T) {
+		u := connect(t, tenant())
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		files := udbclient.TableOf[*storagev1.File](u)
+		row := file("", NewID(), "tx-keyed-original.pdf")
+		other := file("", NewID(), "tx-keyed-upsert.pdf")
+		if err := files.Insert(ctx, row); err != nil {
+			t.Fatal(err)
+		}
+		key := udbclient.RowKey{"file_id": row.GetFileId()}
+		filter, _ := structpb.NewStruct(map[string]any(key))
+		read := func() string {
+			t.Helper()
+			result, err := u.Data.Broker.Select(ctx, &entityv1.SelectRequest{MessageType: udbclient.MessageType(row),
+				Filter: filter, Fields: []string{"filename"}, IncludeRevision: true})
+			if err != nil || len(result.GetRecordRevisions()) != 1 {
+				t.Fatalf("Select omitted the row revision: %v, %v", result, err)
+			}
+			return result.GetRecordRevisions()[0]
+		}
+		before := read()
+		replayKey := NewID()
+		attempt := func(filename string) func(tx *udbclient.TxScope) error {
+			return func(tx *udbclient.TxScope) error {
+				if err := tx.Upsert(other); err != nil {
+					return err
+				}
+				next := proto.Clone(row).(*storagev1.File)
+				next.Filename = filename
+				return tx.UpdateIf(next, udbclient.Record{"filename": row.GetFilename()})
+			}
+		}
+		if err := u.TxWithKey(ctx, replayKey, attempt("tx-keyed-v2.pdf")); err != nil {
+			t.Fatal(err)
+		}
+		committed := read()
+		if committed == before {
+			t.Fatal("the keyed transaction did not write")
+		}
+		// The stored row no longer holds expected: only a replay that skips CAS succeeds.
+		if err := u.TxWithKey(ctx, replayKey, attempt("tx-keyed-v2.pdf")); err != nil {
+			t.Fatalf("an identical keyed transaction did not replay: %v", err)
+		}
+		if read() != committed {
+			t.Fatal("a replayed transaction wrote again")
+		}
+		err := u.TxWithKey(ctx, replayKey, attempt("tx-keyed-v3.pdf"))
+		if info := udbclient.Inspect(err); info.Reason != "UDB_IDEMPOTENCY_REUSE" || info.Code != udbclient.CodePrecondition {
+			t.Fatalf("changed input under a reused key: %+v, %v", info, err)
+		}
+		if read() != committed {
+			t.Fatal("a refused key reuse changed the row")
+		}
+		if got, err := files.Get(ctx, key); err != nil || got.GetFilename() != "tx-keyed-v2.pdf" {
+			t.Fatalf("keyed transaction row: %v, %v", got, err)
+		}
+		if got, err := files.Get(ctx, udbclient.RowKey{"file_id": other.GetFileId()}); err != nil || got.GetFilename() != other.GetFilename() {
+			t.Fatalf("keyed transaction upsert: %v, %v", got, err)
 		}
 	})
 	t.Run("secondary uniqueness refuses insert and rolls back a multirow update", func(t *testing.T) {

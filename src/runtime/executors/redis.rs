@@ -347,16 +347,34 @@ impl MutationExecutor for RedisExecutor {
                             .unwrap_or_else(|| value.to_string())
                     })
                     .ok_or_else(|| redis_required_field_status("value", "value is required"))?;
-                if let Some(ttl) = spec.get("ttl").and_then(Json::as_u64) {
-                    conn.set_ex::<_, _, ()>(key, value, ttl)
-                        .await
-                        .map_err(|err| backend_transport_status("redis", "SETEX", err))?;
-                } else {
-                    conn.set::<_, _, ()>(key, value)
-                        .await
-                        .map_err(|err| backend_transport_status("redis", "SET", err))?;
+                let ttl = spec.get("ttl").and_then(Json::as_u64);
+                let nx = spec.get("nx").and_then(Json::as_bool).unwrap_or(false);
+                let xx = spec.get("xx").and_then(Json::as_bool).unwrap_or(false);
+                if nx && xx {
+                    return Err(redis_required_field_status(
+                        "nx",
+                        "nx and xx exclude each other",
+                    ));
                 }
-                Ok(json!({ "affected_rows": 1 }).to_string())
+                // One SET with its options: NX writes only an absent key, XX
+                // only a present one, and either returns nil when it did not
+                // write (affected_rows 0).
+                let mut command = redis::cmd("SET");
+                command.arg(&key).arg(&value);
+                if nx {
+                    command.arg("NX");
+                }
+                if xx {
+                    command.arg("XX");
+                }
+                if let Some(ttl) = ttl {
+                    command.arg("EX").arg(ttl);
+                }
+                let written: Option<String> = command
+                    .query_async(&mut conn)
+                    .await
+                    .map_err(|err| backend_transport_status("redis", "SET", err))?;
+                Ok(json!({ "affected_rows": i64::from(written.is_some()) }).to_string())
             }
             "delete" | "del" | "cache_delete" => {
                 let deleted: u64 = conn

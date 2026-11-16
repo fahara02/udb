@@ -152,7 +152,7 @@ var File_udb_core_asset_entity_v1_asset_proto protoreflect.FileDescriptor
 
 const file_udb_core_asset_entity_v1_asset_proto_rawDesc = "" +
 	"\n" +
-	"$udb/core/asset/entity/v1/asset.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xba\v\n" +
+	"$udb/core/asset/entity/v1/asset.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xc7\v\n" +
 	"\x05Asset\x12F\n" +
 	"\basset_id\x18\x01 \x01(\tB+\x82\xb7\x18'\n" +
 	"\basset_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\aassetId\x127\n" +
@@ -187,9 +187,9 @@ const file_udb_core_asset_entity_v1_asset_proto_rawDesc = "" +
 	"\n" +
 	"deleted_by\x18\v \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\x8b\x04\xfa\xb6\x18\xea\x02\n" +
-	"\x06assets\x12\tudb_asset\x18\x01 \x01*?Managed assets wrapping storage files with processing lifecycle0\x018\x01@\x01b\x97\x01\n" +
-	"\x17assets_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01%\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\x98\x04\xfa\xb6\x18\xf7\x02\n" +
+	"\x06assets\x12\tudb_asset\x18\x01 \x01*?Managed assets wrapping storage files with processing lifecycle0\x018\x01@\x01b\xa4\x01\n" +
+	"\x17assets_tenant_isolation\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01%\n" +
 	"\x11idx_assets_tenant\x12\x05BTREEZ\ttenant_id\x8a\x01!\n" +
 	"\x0fidx_assets_file\x12\x05BTREEZ\afile_id\xf2\x01\x14udb.asset.assets.cdc\xfa\x01\n" +
 	"asset:read\x8a\xb2\x19\x97\x01\n" +

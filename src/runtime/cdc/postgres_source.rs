@@ -13,7 +13,7 @@ use futures::Stream;
 use sha2::{Digest, Sha256};
 use sqlx::{
     PgConnection, PgPool, Row,
-    postgres::{PgConnectOptions, PgPoolOptions},
+    postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
 use uuid::Uuid;
 
@@ -113,6 +113,33 @@ fn capture_body(r: &Relations, generation: Uuid, source_oid: i64) -> String {
     )
 }
 
+/// Whether the operator asked for an encrypted source connection. The setting
+/// is `UDB_CDC_TLS`; it is documented as off by default, so it is enforced only
+/// when the operator sets it (an unset variable leaves plaintext allowed, as the
+/// documentation promises).
+fn replication_tls_required(config: &super::CdcConfig) -> bool {
+    config.replication_tls_required
+}
+
+/// Refuses to start the source when `UDB_CDC_TLS` is on and the connection
+/// string does not demand TLS (`sslmode=require`, `verify-ca` or `verify-full`).
+/// `disable`, `allow` and `prefer` can all fall back to plaintext, so none of
+/// them meets the requirement.
+fn ensure_replication_tls(required: bool, mode: PgSslMode) -> Result<(), String> {
+    if !required {
+        return Ok(());
+    }
+    match mode {
+        PgSslMode::Require | PgSslMode::VerifyCa | PgSslMode::VerifyFull => Ok(()),
+        _ => Err(
+            "UDB_CDC_TLS is on but the postgres source connection does not require TLS; \
+             set sslmode=require, verify-ca or verify-full in UDB_CDC_POSTGRES_SOURCE_DSN, \
+             or set UDB_CDC_TLS=false"
+                .to_string(),
+        ),
+    }
+}
+
 /// Resolve factory configuration once, enroll under a source write lock, and own
 /// one bounded pool for polling, health and receipts. Neither DSN nor credentials
 /// enter the durable namespace or logs.
@@ -130,6 +157,10 @@ async fn prepare_inner(factory: &PostgresCdcSource) -> Result<PreparedPostgresSo
     }
     let options = PgConnectOptions::from_str(&factory.dsn)
         .map_err(|_| "postgres source connection configuration is invalid".to_string())?;
+    ensure_replication_tls(
+        replication_tls_required(&SystemCatalogConfig::current().cdc),
+        options.get_ssl_mode(),
+    )?;
     let options = if options.get_application_name().is_none() {
         options.application_name(APPLICATION_NAME)
     } else {
@@ -769,5 +800,46 @@ impl CdcSource for PreparedPostgresSource {
         })
         .await
         .map_err(|_| "postgres source health deadline exceeded".to_string())?
+    }
+}
+
+#[cfg(test)]
+mod replication_tls_tests {
+    use super::{PgConnectOptions, PgSslMode, ensure_replication_tls};
+    use std::str::FromStr;
+
+    #[test]
+    fn tls_off_accepts_any_mode() {
+        assert!(ensure_replication_tls(false, PgSslMode::Disable).is_ok());
+        assert!(ensure_replication_tls(false, PgSslMode::Prefer).is_ok());
+    }
+
+    #[test]
+    fn tls_on_refuses_modes_that_can_fall_back_to_plaintext() {
+        for mode in [PgSslMode::Disable, PgSslMode::Allow, PgSslMode::Prefer] {
+            let err = ensure_replication_tls(true, mode).unwrap_err();
+            assert!(err.contains("UDB_CDC_TLS"), "{err}");
+        }
+    }
+
+    #[test]
+    fn tls_on_accepts_modes_that_demand_tls() {
+        for mode in [
+            PgSslMode::Require,
+            PgSslMode::VerifyCa,
+            PgSslMode::VerifyFull,
+        ] {
+            assert!(ensure_replication_tls(true, mode).is_ok());
+        }
+    }
+
+    #[test]
+    fn the_dsn_sslmode_decides() {
+        let plain =
+            PgConnectOptions::from_str("postgres://u@db.example/app?sslmode=disable").unwrap();
+        assert!(ensure_replication_tls(true, plain.get_ssl_mode()).is_err());
+        let tls =
+            PgConnectOptions::from_str("postgres://u@db.example/app?sslmode=verify-full").unwrap();
+        assert!(ensure_replication_tls(true, tls.get_ssl_mode()).is_ok());
     }
 }

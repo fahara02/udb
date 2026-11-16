@@ -199,14 +199,35 @@ async fn rerank_points(
     #[cfg(feature = "http-client")]
     {
         use super::config::embedding_rerank_timeout;
-        let response = reqwest::Client::new()
-            .post(endpoint)
-            .json(&body)
-            .timeout(embedding_rerank_timeout())
-            .send()
-            .await;
+        // The request carries the query and the candidates' chunk text, which
+        // is tenant data: plaintext http:// to a non-loopback sidecar is refused
+        // when UDB_OUTBOUND_TLS_REQUIRED is on. This is a configuration error,
+        // so it is reported even on a fail_open config rather than skipped.
+        if let Err(reason) =
+            crate::runtime::transport_policy::check_secret_url(endpoint, "UDB_EMBEDDING_RERANK_URL")
+        {
+            return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                reason,
+                [(
+                    "UDB_EMBEDDING_RERANK_URL",
+                    "must be https:// or a loopback address",
+                )],
+            ));
+        }
+        // Bounded connect and request timeouts, and no redirects: a sidecar
+        // cannot bounce tenant text to another host or down to http://.
+        let response = match crate::runtime::security::outbound_secret_http_client_with_timeout(
+            endpoint,
+            embedding_rerank_timeout(),
+        ) {
+            Ok(client) => client.post(endpoint).json(&body).send().await.ok(),
+            Err(error) => {
+                tracing::warn!(%error, "embedding rerank client could not be built");
+                None
+            }
+        };
         let decoded = match response {
-            Ok(response) if response.status().is_success() => {
+            Some(response) if response.status().is_success() => {
                 response.json::<serde_json::Value>().await.ok()
             }
             _ => None,

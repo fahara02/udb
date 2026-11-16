@@ -45,7 +45,7 @@ public final class TrackProto {
       "mon/v1/db.proto\032!udb/core/common/v1/secu" +
       "rity.proto\032\036udb/core/common/v1/types.pro" +
       "to\032%udb/core/webrtc/entity/v1/enums.prot" +
-      "o\"\214\n\n\005Track\022F\n\010track_id\030\001 \001(\tB+\202\267\030\'\n\010tra" +
+      "o\"\231\n\n\005Track\022F\n\010track_id\030\001 \001(\tB+\202\267\030\'\n\010tra" +
       "ck_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\007trac" +
       "kId\022.\n\007room_id\030\002 \001(\tB\025\202\267\030\021\n\007room_id\022\004UUI" +
       "D\030\001R\006roomId\022.\n\007peer_id\030\003 \001(\tB\025\202\267\030\021\n\007peer" +
@@ -63,27 +63,28 @@ public final class TrackProto {
       "c metadatax\001R\010metadata\022\202\001\n\naudit_info\030\n " +
       "\001(\0132\035.udb.core.common.v1.AuditInfoBD\202\267\030@" +
       "\n\naudit_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audi" +
-      "t trail stored as JSONx\001R\tauditInfo:\232\004\372\266" +
-      "\030\377\002\n\006tracks\022\nudb_webrtc\030\003 \001*/WebRTC medi" +
+      "t trail stored as JSONx\001R\tauditInfo:\247\004\372\266" +
+      "\030\214\003\n\006tracks\022\nudb_webrtc\030\003 \001*/WebRTC medi" +
       "a and data tracks published by peers8\001@\001" +
-      "b\227\001\n\027tracks_tenant_isolation\032z(tenant_id" +
-      "::text = current_setting(\'app.current_te" +
-      "nant_id\', true) OR current_setting(\'app." +
-      "platform_admin\', true) = \'true\')(\001h\001\212\001!\n" +
-      "\017idx_tracks_room\022\005BTREEZ\007room_id\212\001!\n\017idx" +
-      "_tracks_peer\022\005BTREEZ\007peer_id\212\001%\n\021idx_tra" +
-      "cks_tenant\022\005BTREEZ\ttenant_id\362\001\025udb.webrt" +
-      "c.tracks.cdc\372\001\013webrtc:read\212\262\031\221\001\n\006tenant\032" +
-      "\ttenant_id*4tenant_id = current_setting(" +
-      "\'app.current_tenant_id\')2\004none:\022webrtc.o" +
-      "perational@\373\023H\002R\006tenantZ\010standardr\025tenan" +
-      "t.data_residencyB\373\001\n\035com.udb.core.webrtc" +
-      ".entity.v1B\nTrackProtoP\001ZEgithub.com/fah" +
-      "ara02/udb/sdk/go/gen/udb/core/webrtc/ent" +
-      "ity/v1;entityv1\242\002\004UCWE\252\002\031Udb.Core.Webrtc" +
-      ".Entity.V1\312\002\031Udb\\Core\\Webrtc\\Entity\\V1\342\002" +
-      "%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1\352\002" +
-      "\035Udb::Core::Webrtc::Entity::V1b\006proto3"
+      "b\244\001\n\027tracks_tenant_isolation\032\206\001(tenant_i" +
+      "d = NULLIF(current_setting(\'app.current_" +
+      "tenant_id\', true), \'\')::uuid OR current_" +
+      "setting(\'app.platform_admin\', true) = \'t" +
+      "rue\')(\001h\001\212\001!\n\017idx_tracks_room\022\005BTREEZ\007ro" +
+      "om_id\212\001!\n\017idx_tracks_peer\022\005BTREEZ\007peer_i" +
+      "d\212\001%\n\021idx_tracks_tenant\022\005BTREEZ\ttenant_i" +
+      "d\362\001\025udb.webrtc.tracks.cdc\372\001\013webrtc:read\212" +
+      "\262\031\221\001\n\006tenant\032\ttenant_id*4tenant_id = cur" +
+      "rent_setting(\'app.current_tenant_id\')2\004n" +
+      "one:\022webrtc.operational@\373\023H\002R\006tenantZ\010st" +
+      "andardr\025tenant.data_residencyB\373\001\n\035com.ud" +
+      "b.core.webrtc.entity.v1B\nTrackProtoP\001ZEg" +
+      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
+      "re/webrtc/entity/v1;entityv1\242\002\004UCWE\252\002\031Ud" +
+      "b.Core.Webrtc.Entity.V1\312\002\031Udb\\Core\\Webrt" +
+      "c\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Webrt" +
+      "c\\Entity\\V1\352\002\035Udb::Core::Webrtc::Entity:" +
+      ":V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

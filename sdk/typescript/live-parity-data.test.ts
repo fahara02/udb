@@ -60,6 +60,33 @@ async function waitFor(check: () => boolean, what: string, ms = 30_000): Promise
   }
 }
 
+test("live selectMany runs several reads in one call, in request order, repeatedly", live, async (t) => {
+  const u = await connect(t, "ts.live.parity.select_many");
+  for (let i = 0; i < REPEATS; i += 1) {
+    const first = randomUUID();
+    const second = randomUUID();
+    await u.tx((scope) => {
+      scope.insert(WORKFLOW, workflow(first, `ts.live.many.a.${i}`));
+      scope.insert(WORKFLOW, workflow(second, `ts.live.many.b.${i}`));
+    });
+    const results = await u.selectMany<Record<string, unknown>>([
+      { messageType: WORKFLOW, where: { workflow_id: second }, limit: 1 },
+      { messageType: WORKFLOW, where: { workflow_id: first }, limit: 1 },
+      { messageType: WORKFLOW, where: { workflow_id: randomUUID() }, limit: 1 },
+    ]);
+    assert.equal(results.length, 3);
+    assert.equal(results[0].rows[0]?.workflow_type, `ts.live.many.b.${i}`, "results keep request order");
+    assert.equal(results[1].rows[0]?.workflow_type, `ts.live.many.a.${i}`);
+    assert.equal(results[2].rows.length, 0, "a read matching nothing returns no rows");
+  }
+  // Negative: one bad read fails the whole call with that read's error.
+  await assert.rejects(u.selectMany([
+    { messageType: WORKFLOW, where: {}, limit: 1 },
+    { messageType: "udb.nope.v1.Missing", where: {}, limit: 1 },
+  ]));
+  assert.deepEqual(await u.selectMany([]), [], "no reads, no call");
+});
+
 test("live tx commits writes and events together, repeatedly, and rolls all back on a conflict", live, async (t) => {
   const u = await connect(t, "ts.live.parity.tx");
   const table = u.tableOf(WORKFLOW);

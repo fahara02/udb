@@ -27,7 +27,7 @@ message Tenant {
     force_rls: true
     rls_policies: {
       policy_name: "tenant_self_or_platform"
-      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      using: "(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')"
       permissive: true
     }
     indexes: {

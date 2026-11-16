@@ -470,15 +470,77 @@ async fn send_lifecycle_webhook(
             cfg.failed_payload(&run_id, err, "")
         }
     };
-    let client = reqwest::Client::new();
-    if let Err(e) = client
-        .post(&cfg.url)
-        .json(&payload)
-        .timeout(std::time::Duration::from_secs(10))
-        .send()
-        .await
+    // The payload carries the migration error text and a webhook URL often
+    // embeds its own token, so the webhook follows the outbound secret rule:
+    // plaintext http:// to a non-loopback host is refused when
+    // UDB_OUTBOUND_TLS_REQUIRED is on; the client has bounded timeouts and
+    // follows no redirects.
+    let target = webhook_log_target(&cfg.url);
+    if let Err(reason) =
+        crate::runtime::transport_policy::check_secret_url(&cfg.url, "migration notification_url")
     {
-        tracing::warn!(url = %cfg.url, error = %e, "migration completion webhook POST failed (best-effort)");
+        tracing::warn!(webhook = %target, %reason, "migration completion webhook not sent");
+        return;
+    }
+    let client = match crate::runtime::security::outbound_secret_http_client_with_timeout(
+        &cfg.url,
+        std::time::Duration::from_secs(10),
+    ) {
+        Ok(client) => client,
+        Err(error) => {
+            tracing::warn!(webhook = %target, %error, "migration completion webhook not sent");
+            return;
+        }
+    };
+    match client.post(&cfg.url).json(&payload).send().await {
+        Ok(response) if response.status().is_success() => {}
+        // Redirects are not followed, so a 3xx lands here as a refusal.
+        Ok(response) => tracing::warn!(
+            webhook = %target,
+            status = %response.status(),
+            "migration completion webhook refused (best-effort)"
+        ),
+        Err(e) => tracing::warn!(
+            webhook = %target,
+            error = %e,
+            "migration completion webhook POST failed (best-effort)"
+        ),
+    }
+}
+
+/// The scheme, host and port of a webhook URL, for logs. The path and query
+/// are left out because a webhook URL often carries its token there.
+#[cfg(feature = "http-client")]
+fn webhook_log_target(url: &str) -> String {
+    match reqwest::Url::parse(url.trim()) {
+        Ok(parsed) => format!(
+            "{}://{}{}",
+            parsed.scheme(),
+            parsed.host_str().unwrap_or_default(),
+            parsed
+                .port()
+                .map(|port| format!(":{port}"))
+                .unwrap_or_default()
+        ),
+        Err(_) => "<unparseable url>".to_string(),
+    }
+}
+
+#[cfg(all(test, feature = "http-client"))]
+mod webhook_log_target_tests {
+    use super::webhook_log_target;
+
+    #[test]
+    fn webhook_log_target_drops_the_path_and_query() {
+        assert_eq!(
+            webhook_log_target("https://hooks.example.test:8443/T0/B1/secret-token?key=abc"),
+            "https://hooks.example.test:8443"
+        );
+        assert_eq!(
+            webhook_log_target("http://127.0.0.1/hook"),
+            "http://127.0.0.1"
+        );
+        assert_eq!(webhook_log_target("not a url"), "<unparseable url>");
     }
 }
 

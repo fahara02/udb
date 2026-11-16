@@ -148,7 +148,7 @@ var File_udb_core_asset_entity_v1_pipeline_definition_proto protoreflect.FileDes
 
 const file_udb_core_asset_entity_v1_pipeline_definition_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/asset/entity/v1/pipeline_definition.proto\x12\x18udb.core.asset.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\xca\n" +
+	"2udb/core/asset/entity/v1/pipeline_definition.proto\x12\x18udb.core.asset.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\xd7\n" +
 	"\n" +
 	"\x12PipelineDefinition\x12U\n" +
 	"\rdefinition_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
@@ -175,9 +175,9 @@ const file_udb_core_asset_entity_v1_pipeline_definition_proto_rawDesc = "" +
 	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo\x12\x8b\x01\n" +
 	"\rtrigger_topic\x18\n" +
 	" \x01(\tBf\x82\xb7\x18b\n" +
-	"\rtrigger_topic\x12\fVARCHAR(255)ZCKafka topic that triggers this pipeline; NULL = not topic-triggeredR\ftriggerTopic:\x8e\x04\xfa\xb6\x18\xf4\x02\n" +
-	"\x14pipeline_definitions\x12\tudb_asset\x18\x02 \x01*2Reusable versioned processing-pipeline definitions8\x01@\x01b\xa5\x01\n" +
-	"%pipeline_definitions_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x018\n" +
+	"\rtrigger_topic\x12\fVARCHAR(255)ZCKafka topic that triggers this pipeline; NULL = not topic-triggeredR\ftriggerTopic:\x9b\x04\xfa\xb6\x18\x81\x03\n" +
+	"\x14pipeline_definitions\x12\tudb_asset\x18\x02 \x01*2Reusable versioned processing-pipeline definitions8\x01@\x01b\xb2\x01\n" +
+	"%pipeline_definitions_tenant_isolation\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x018\n" +
 	"\x1cidx_pipeline_def_name_unique\x12\x05BTREE\x18\x01Z\ttenant_idZ\x04name\xf2\x01\"udb.asset.pipeline_definitions.cdc\xfa\x01\n" +
 	"asset:read\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11asset.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x82\x02\n" +

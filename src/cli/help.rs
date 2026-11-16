@@ -65,6 +65,11 @@ const COMMANDS: &[CmdHelp] = &[
     --cleanup-interval <dur>      UDB_CLEANUP_INTERVAL
     --cleanup-batch <rows>        UDB_CLEANUP_BATCH
     --cleanup-max-size <size|off> UDB_CLEANUP_MAX_SIZE (default 1GB)
+    --cleanup-app-retention <off|declared> UDB_CLEANUP_APP_RETENTION
+    --cleanup-sweep-interval <dur> UDB_CLEANUP_SWEEP_INTERVAL (default 24h)
+    --cleanup-keep-versions <n>   UDB_CLEANUP_KEEP_VERSIONS (default 20)
+    --cleanup-statement-timeout <dur|0> UDB_CLEANUP_STATEMENT_TIMEOUT (default 0 = none)
+    --cleanup-sweep-pages <n>     UDB_CLEANUP_SWEEP_PAGES (default 4096 = 32 MiB)
     --delegated-allow-audit-window <dur>   UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW
     --delegated-allow-audit-max-tracked <n> UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_MAX_TRACKED
     --cdc-journal-retention <dur>          UDB_CDC_JOURNAL_RETENTION
@@ -345,6 +350,19 @@ const COMMANDS: &[CmdHelp] = &[
                   With --policies (or UDB_ABAC_POLICY_FILE) it warns on stderr for every role \
                   that has grants elsewhere but none on an entity the plan creates, with the \
                   policies-file entry and the `udb policy apply` command that grants it.",
+    },
+    CmdHelp {
+        name: "migrate-enum-tokens",
+        group: "Schema & SQL",
+        summary: "Rewrite stored enum values in a text column to one form.",
+        usage: "udb migrate-enum-tokens --entity <Message> --column <column> [--to full|short] [--dry-run] [--batch <n>]",
+        details: "For a column whose enum_values list full proto value names: the SDKs write \
+                  the form the list declares, and the generated CHECK allows only that form. \
+                  Rows written as short tokens (the value without the enum's common prefix) by \
+                  older SDKs break that CHECK on update and do not match filters on the full \
+                  name; `--to full` (the default) converts them. `--to short` converts back. \
+                  Prints a histogram first; --dry-run stops there. Batched and idempotent: a \
+                  re-run rewrites nothing.",
     },
     CmdHelp {
         name: "catalog",

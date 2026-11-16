@@ -64,11 +64,26 @@ impl std::fmt::Debug for MemcachedClient {
 
 impl MemcachedClient {
     /// Open from a `memcache://host:port` URL. The crate also accepts
-    /// `memcache+udp://`, `memcache+tls://`, and unix sockets via
-    /// `memcache+unix://`, plus query-string tuning
-    /// (`?timeout=10&tcp_nodelay=true`). The operator's DSN is
-    /// passed through verbatim — no rewriting.
+    /// `memcache+udp://` and unix sockets via `memcache+unix://`, plus
+    /// query-string tuning (`?timeout=10&tcp_nodelay=true`). The operator's
+    /// DSN is passed through verbatim — no rewriting.
+    ///
+    /// This build compiles the memcache client without TLS (its TLS support
+    /// needs OpenSSL), so `memcache+tls://` is refused here with the way out
+    /// rather than failing with an opaque scheme error.
     pub fn connect(url: &str) -> Result<Self, String> {
+        if url
+            .trim()
+            .to_ascii_lowercase()
+            .starts_with("memcache+tls://")
+        {
+            return Err(
+                "memcache+tls:// is not supported: this build has no Memcached TLS. Reach \
+                 Memcached through a TLS tunnel (for example stunnel) listening on a loopback \
+                 address and point UDB_MEMCACHED_DSN at memcache://127.0.0.1:<port>"
+                    .to_string(),
+            );
+        }
         let client =
             memcache::connect(url).map_err(|e| format!("memcached connect failed: {e}"))?;
         Ok(Self {
@@ -309,10 +324,27 @@ impl QueryExecutor for MemcachedExecutor {
     }
 }
 
+/// Whether a set asks to write only an absent (`nx`) or a present (`xx`) key.
+fn conditional_set(request_json: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(request_json)
+        .map(|spec| {
+            ["nx", "xx"]
+                .iter()
+                .any(|flag| spec.get(*flag).and_then(serde_json::Value::as_bool) == Some(true))
+        })
+        .unwrap_or(false)
+}
+
 impl MutationExecutor for MemcachedExecutor {
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
         let (op, key, value, ttl) = parse_kv_request(request_json)?;
         match op.as_str() {
+            "set" | "cache_set" if conditional_set(request_json) => Err(capability_status(
+                "memcached",
+                "set",
+                "conditional_set",
+                "memcached cache writes are unconditional here; only_if_absent / only_if_present need redis",
+            )),
             "set" | "cache_set" => {
                 let bytes = value.ok_or_else(|| {
                     memcached_missing_field_status("value", "set op requires `value`")
@@ -420,6 +452,20 @@ mod tests {
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
+    #[test]
+    fn a_conditional_set_is_recognised_so_memcached_refuses_it() {
+        assert!(conditional_set(
+            r#"{"op":"set","key":"k","value":"v","nx":true}"#
+        ));
+        assert!(conditional_set(
+            r#"{"op":"set","key":"k","value":"v","xx":true}"#
+        ));
+        assert!(!conditional_set(r#"{"op":"set","key":"k","value":"v"}"#));
+        assert!(!conditional_set(
+            r#"{"op":"set","key":"k","value":"v","nx":false}"#
+        ));
+    }
+
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status
             .metadata()
@@ -449,6 +495,13 @@ mod tests {
     fn internal_status_carries_typed_detail() {
         let status = memcached_internal_status("get", "memcached blocking task join: cancelled");
         assert_internal_detail(&status, "get", "memcached blocking task join: cancelled");
+    }
+
+    #[test]
+    fn tls_scheme_is_refused_with_the_way_out() {
+        let err = MemcachedClient::connect("memcache+tls://mc.example.com:11211")
+            .expect_err("this build has no Memcached TLS");
+        assert!(err.contains("loopback"), "{err}");
     }
 
     #[test]

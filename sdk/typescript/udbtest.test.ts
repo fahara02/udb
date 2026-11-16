@@ -10,8 +10,13 @@ import * as grpc from "@grpc/grpc-js";
 
 import { UdbProject } from "./project";
 import { ProtoSchemas, protoSchemas } from "./protoSchema";
-import { ErrorCode, Table, codeOf, inspect, isNotFound, isUnique, missingScope } from "./stores";
+import { ErrorCode, Table, codeOf, inspect, isNotFound, isUnique, missingScope, selectMany } from "./stores";
 import { createDescriptorFake, createFake, parsePolicies, runTable, runTableCases, start, startPair } from "./udbtest";
+import { uniquePredicate } from "./udbtest/entityRules";
+import { matches } from "./udbtest/filter";
+import { decodeRecord, encodeRecord } from "./recordCodec";
+import { UdbColumn, udbEnumFromText, udbEnumToText } from "./entity";
+import { approvalPlanArgs, embeddedEnvironment } from "./udbtest/embedded";
 
 const FILE = "udb.core.storage.entity.v1.File";
 const EVENT = "udb.core.apikey.events.v1.ApiKeyCreatedEvent";
@@ -87,6 +92,43 @@ test("the fake meets the shared cross-SDK cases", async (t) => {
   await runTableCases(t, (tenant) => fake.client(tenant));
 });
 
+test("selectMany reads several entities in one BatchSelect, in request order, and one bad read rejects", async (t) => {
+  const workflow = "udb.core.workflow.entity.v1.WorkflowInstance";
+  const fake = await createFake(t, [FILE, workflow]);
+  const u = await fake.client(TENANT);
+  const fileA = "0190f1b2-0000-4000-8000-000000000301";
+  const fileB = "0190f1b2-0000-4000-8000-000000000302";
+  const flow = "0190f1b2-0000-4000-8000-000000000303";
+  await u.tableOf<any>(FILE).upsert({ file_id: fileA, filename: "a.pdf", object_key: `many/${fileA}` });
+  await u.tableOf<any>(FILE).upsert({ file_id: fileB, filename: "b.pdf", object_key: `many/${fileB}` });
+  await u.tableOf<any>(workflow).upsert({ workflow_id: flow, workflow_type: "many", status: "WORKFLOW_STATUS_PENDING" });
+  for (let i = 0; i < 3; i += 1) {
+    const results = await selectMany<any>(u.core, [
+      { messageType: FILE, where: { file_id: fileB } },
+      { messageType: workflow, where: { workflow_id: flow } },
+      { messageType: FILE, where: { file_id: fileA } },
+      { messageType: FILE, where: { file_id: { $in: [fileA, fileB] } }, orderBy: ["-filename"], limit: 1 },
+      { messageType: workflow, where: { workflow_id: "0190f1b2-0000-4000-8000-000000000399" } },
+    ]);
+    assert.equal(results.length, 5);
+    assert.equal(results[0].rows[0]?.filename, "b.pdf", "results keep request order");
+    assert.equal(results[1].rows[0]?.workflow_type, "many");
+    assert.equal(results[2].rows[0]?.filename, "a.pdf");
+    assert.deepEqual(results[3].rows.map((row) => row.filename), ["b.pdf"]);
+    assert.equal(results[3].hasMore, true);
+    assert.equal(results[4].rows.length, 0, "a read matching nothing returns no rows");
+  }
+  // One failing read rejects the whole call with that read's error.
+  await assert.rejects(
+    selectMany(u.core, [
+      { messageType: FILE, where: {} },
+      { messageType: "udb.nope.v1.Missing", where: {} },
+    ]),
+    (err: unknown) => codeOf(err) === ErrorCode.Invalid,
+  );
+  assert.deepEqual(await selectMany(u.core, []), [], "no reads, no call");
+});
+
 test("emit builds the envelope from the event's contract and commits with the writes", async (t) => {
   const fake = await createFake(t, [FILE]);
   const u = await fake.client(TENANT);
@@ -126,6 +168,62 @@ test("inspect reads the reason the broker sends in the trailer", async (t) => {
     const got = inspect(err);
     return got.code === ErrorCode.Invalid && got.reason === "UDB_UNSUPPORTED_FILTER_OPERATOR";
   });
+});
+
+test("array filters: $contains, $contained_by, $overlaps/$overlap on an array column", async (t) => {
+  const audit = "udb.core.authz.entity.v1.AccessDecisionAudit";
+  const fake = await createFake(t, [audit]);
+  const table = (await fake.client(TENANT)).tableOf<any>(audit);
+  const rows: [string, string[]][] = [
+    ["0190f1b2-0000-4000-8000-000000000101", ["p1", "p2"]],
+    ["0190f1b2-0000-4000-8000-000000000102", ["p2", "p3"]],
+    ["0190f1b2-0000-4000-8000-000000000103", []],
+  ];
+  for (const [id, matched] of rows) {
+    await table.upsert({
+      decision_audit_id: id, user_id: TENANT, domain: "d", object: "o", action: "read",
+      effect: "POLICY_EFFECT_ALLOW", decision_source: "DECISION_SOURCE_ROLE_POLICY", tenant_id: TENANT, matched_policy_ids: matched,
+    });
+  }
+  const ids = async (filter: any) =>
+    (await table.select(filter)).rows.map((row: any) => row.decision_audit_id.slice(-3)).sort();
+  assert.deepEqual(await ids({ matched_policy_ids: { $contains: ["p2"] } }), ["101", "102"]);
+  assert.deepEqual(await ids({ matched_policy_ids: { $contains: ["p1", "p2"] } }), ["101"]);
+  assert.deepEqual(await ids({ matched_policy_ids: { $contained_by: ["p1", "p2", "p9"] } }), ["101", "103"]);
+  assert.deepEqual(await ids({ matched_policy_ids: { $overlaps: ["p3", "p9"] } }), ["102"]);
+  assert.deepEqual(await ids({ matched_policy_ids: { $overlap: ["p1", "p3"] } }), ["101", "102"]);
+  assert.deepEqual(await ids({ matched_policy_ids: { $overlaps: [] } }), []);
+  assert.deepEqual(await ids({ matched_policy_ids: { $not: { $contains: ["p1"] } } }), ["102", "103"]);
+  // A NULL column matches no array operator, nor its negation.
+  for (const op of ["$contains", "$contained_by", "$overlaps"]) {
+    assert.equal(matches({ c: null }, { c: { [op]: ["p1"] } }), false, op);
+    assert.equal(matches({ c: null }, { c: { $not: { [op]: ["p1"] } } }), false, op);
+  }
+  await assert.rejects(table.select({ matched_policy_ids: { $contains: "p1" } }), /requires an array value/);
+  await assert.rejects(table.select({ domain: { $contains: ["d"] } }), /array \(repeated\) or JSON column/);
+});
+
+test("a JSON column takes JSON containment for $contains and $contained_by", async (t) => {
+  const workflow = "udb.core.workflow.entity.v1.WorkflowInstance";
+  const fake = await createFake(t, [workflow]);
+  const table = (await fake.client(TENANT)).tableOf<any>(workflow);
+  const docs: [string, string][] = [
+    ["201", '{"kind":"invoice","tags":["a","b"],"n":1}'],
+    ["202", '{"kind":"receipt","tags":["b"]}'],
+    ["203", '["x","y"]'],
+  ];
+  for (const [n, payload] of docs) {
+    await table.upsert({ workflow_id: `0190f1b2-0000-4000-8000-000000000${n}`, workflow_type: "json", status: "WORKFLOW_STATUS_PENDING", payload });
+  }
+  await table.upsert({ workflow_id: "0190f1b2-0000-4000-8000-000000000204", workflow_type: "json", status: "WORKFLOW_STATUS_PENDING", payload: null });
+  const ids = async (filter: any) => (await table.select(filter)).rows.map((row: any) => row.workflow_id.slice(-3)).sort();
+  assert.deepEqual(await ids({ payload: { $contains: { kind: "invoice" } } }), ["201"]);
+  assert.deepEqual(await ids({ payload: { $contains: { tags: ["b"] } } }), ["201", "202"]);
+  assert.deepEqual(await ids({ payload: { $contains: { n: "1" } } }), [], "a JSON string is not the number 1");
+  assert.deepEqual(await ids({ payload: { $contains: "x" } }), ["203"], "a top-level array contains a bare scalar it holds");
+  assert.deepEqual(await ids({ payload: { $contains: ["y"] } }), ["203"]);
+  assert.deepEqual(await ids({ payload: { $contained_by: { kind: "receipt", tags: ["b", "c"], extra: true } } }), ["202"]);
+  await assert.rejects(table.select({ payload: { $overlaps: ["x"] } }), /needs an array column/);
 });
 
 test("a named consumer resumes after the last event it acknowledged", async (t) => {
@@ -416,6 +514,129 @@ test("a descriptor-set fake serves its tables with their annotations, under a po
   const closed = await createDescriptorFake({ descriptorSet: bytes });
   t.after(() => closed.close());
   await assert.rejects((await closed.client(TENANT)).tableOf(NOTE, { schemas }).select({}), (err) => inspect(err).reason === "UDB_POLICY_DENIED");
+});
+
+/** The note file with a `code` column unique among rows matching `where`. */
+function partialUniqueFile(where: string): Record<string, unknown> {
+  const file = noteFile();
+  const note = (file.messageType as any[])[0];
+  const text = (name: string, number: number) => ({ name, number, type: "TYPE_STRING", label: "LABEL_OPTIONAL", options: { [PG_COLUMN]: { sql_type: "TEXT" } } });
+  note.field.push(text("code", 7), text("retired_at", 8), text("deleted_at", 9), text("role", 10));
+  note.options[PG_TABLE].indexes = [{ index_name: "notes_code_live", unique: true, columns: ["code"], where_clause: where }];
+  return file;
+}
+
+test("a partial unique index with a conjunction holds only among the rows it names", async (t) => {
+  const NOTE = "acme.notes.v1.Note";
+  let n = 20;
+  const id = () => `0190f1b2-0000-4000-8000-0000000000${n++}`;
+  const open = async (where: string) => {
+    const bytes = descriptorSet(partialUniqueFile(where));
+    const fake = await createDescriptorFake({ descriptorSet: bytes, policies: [{ id: "all", action: "*", resource: "*" }] });
+    t.after(() => fake.close());
+    return (await fake.client(TENANT)).tableOf(NOTE, { schemas: ProtoSchemas.fromDescriptorSet(bytes) });
+  };
+  const unique = (err: unknown) => isUnique(err) && inspect(err).constraint === "notes_code_live";
+
+  const live = await open("retired_at IS NULL AND deleted_at IS NULL");
+  await live.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "a" });
+  await live.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "a", retired_at: "2026-01-01" });
+  await live.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "a", deleted_at: "2026-01-01" });
+  await assert.rejects(live.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "a" }), unique, "two live rows collide");
+
+  const primary = await open("role = 'primary' AND deleted_at IS NULL");
+  await primary.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "b", role: "primary" });
+  await primary.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "b", role: "backup" });
+  await primary.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "b" });
+  await primary.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "b", role: "primary", deleted_at: "2026-01-01" });
+  await assert.rejects(primary.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "b", role: "primary" }), unique, "two live primaries collide");
+
+  // Negative: a predicate the fake cannot read is refused, never dropped.
+  const or = await open("retired_at IS NULL OR deleted_at IS NULL");
+  await assert.rejects(or.insert({ note_id: id(), kind: "NOTE_KIND_MEMO", code: "c" }), /unsupported unique-index predicate/);
+});
+
+/** The note file whose `kind` column declares `enumValues`, so its CHECK lists them. */
+function checkedKindFile(enumValues: string[]): Record<string, unknown> {
+  const file = noteFile();
+  (file.enumType as any[])[0].value.push({ name: "NOTE_KIND_TASK", number: 2 });
+  const kind = (file.messageType as any[])[0].field.find((field: any) => field.name === "kind");
+  kind.options[PG_COLUMN].enum_values = enumValues;
+  return file;
+}
+
+test("a text enum column stores the form its enum_values declare, and the fake enforces its CHECK", async (t) => {
+  const NOTE = "acme.notes.v1.Note";
+  let n = 40;
+  const id = () => `0190f1b2-0000-4000-8000-0000000000${n++}`;
+  const check = (err: unknown) =>
+    (err as grpc.ServiceError).code === grpc.status.FAILED_PRECONDITION && /breaks constraint chk_notes_kind_enum/.test((err as Error).message);
+  for (const [declared, stored] of [
+    [["NOTE_KIND_UNSPECIFIED", "NOTE_KIND_MEMO"], "NOTE_KIND_MEMO"],
+    [["UNSPECIFIED", "MEMO"], "MEMO"],
+  ] as const) {
+    const bytes = descriptorSet(checkedKindFile([...declared]));
+    const schemas = ProtoSchemas.fromDescriptorSet(bytes);
+    // The writer: the declared form, whichever form the caller used; a value outside throws.
+    assert.equal(encodeRecord(NOTE, { kind: "NOTE_KIND_MEMO" }, undefined, schemas).kind, stored);
+    assert.throws(() => encodeRecord(NOTE, { kind: "NOTE_KIND_TASK" }, undefined, schemas), /breaks constraint chk_notes_kind_enum/);
+    const fake = await createDescriptorFake({ descriptorSet: bytes, policies: [{ id: "all", action: "*", resource: "*" }] });
+    t.after(() => fake.close());
+    const client = await fake.client(TENANT);
+    const notes = client.tableOf(NOTE, { schemas });
+    const full = id();
+    await notes.insert({ note_id: full, kind: "NOTE_KIND_MEMO" });
+    assert.equal((await notes.get({ note_id: full })).kind, stored, "a full name is accepted and stored as declared");
+    const short = id();
+    await notes.insert({ note_id: short, kind: "MEMO" });
+    assert.equal((await notes.get({ note_id: short })).kind, stored, "a short token is accepted and stored as declared");
+    // The reader returns the full name from either stored form.
+    assert.equal(decodeRecord<any>(NOTE, { kind: stored }, schemas).kind, "NOTE_KIND_MEMO");
+    // Negative: the typed table refuses a value outside the list before sending it, and the
+    // fake, sent the raw record, refuses it and junk with the broker's check violation.
+    await assert.rejects(notes.insert({ note_id: id(), kind: "NOTE_KIND_TASK" }), /breaks constraint chk_notes_kind_enum/);
+    for (const kind of ["NOTE_KIND_TASK", "TASK", "NOT_A_KIND"]) {
+      await assert.rejects(client.tx((scope) => scope.insert(NOTE, { note_id: id(), kind })), check, kind);
+    }
+  }
+  // A column that declares no enum_values keeps the short token and has no CHECK.
+  const plain = ProtoSchemas.fromDescriptorSet(descriptorSet(noteFile()));
+  assert.equal(encodeRecord(NOTE, { kind: "NOTE_KIND_MEMO" }, undefined, plain).kind, "MEMO");
+});
+
+test("generated mappers store the declared enum form, or the short token without one", () => {
+  assert.equal(udbEnumToText("ORDER_STATUS_OPEN", "ORDER_STATUS_"), "OPEN", "no declared values: the short token");
+  assert.equal(udbEnumToText("OPEN", "ORDER_STATUS_", ["ORDER_STATUS_OPEN"]), "ORDER_STATUS_OPEN");
+  assert.equal(udbEnumToText("ORDER_STATUS_OPEN", "ORDER_STATUS_", ["OPEN", "CLOSED"]), "OPEN");
+  assert.throws(() => udbEnumToText("ORDER_STATUS_CLOSED", "ORDER_STATUS_", ["ORDER_STATUS_OPEN"]), /breaks its CHECK constraint/);
+  assert.equal(udbEnumFromText("OPEN", "ORDER_STATUS_"), "ORDER_STATUS_OPEN", "a short token reads as the full name");
+  assert.equal(udbEnumFromText("ORDER_STATUS_OPEN", "ORDER_STATUS_"), "ORDER_STATUS_OPEN");
+  assert.deepEqual(new UdbColumn<string>("status", "ORDER_STATUS_", ["ORDER_STATUS_OPEN"]).eq("OPEN"), { status: { $eq: "ORDER_STATUS_OPEN" } });
+});
+
+test("the unique-index predicate reader takes conjunctions and refuses everything else", () => {
+  const columns = (column: string) => (["retired_at", "deleted_at", "kind", "label"].includes(column) ? column : undefined);
+  const both = uniquePredicate(`retired_at IS NULL and "Deleted_At" is null`, columns);
+  assert.equal(both({ retired_at: null, deleted_at: null }), true);
+  assert.equal(both({ retired_at: "x", deleted_at: null }), false);
+  assert.equal(both({ retired_at: null, deleted_at: "x" }), false);
+  const notEqual = uniquePredicate(`label <> 'it''s and more'`, columns);
+  assert.equal(notEqual({ label: "it's and more" }), false);
+  assert.equal(notEqual({ label: "x" }), true);
+  assert.equal(notEqual({ label: null }), false, "NULL makes <> false");
+  for (const where of ["retired_at IS NULL OR deleted_at IS NULL", "(deleted_at IS NULL)", "lower(kind) = 'primary'", "unknown_column IS NULL", "kind > 'a'"]) {
+    assert.throws(() => uniquePredicate(where, columns), /unsupported unique-index predicate/, where);
+  }
+});
+
+test("the embedded broker's environment drops UDB_* settings and carries only the approval plan it is given", () => {
+  const source = { PATH: "/bin", UDB_PG_DSN: "postgres://other", udb_grpc_addr: "x", DATABASE_URL: "postgres://x", UDB_HOME: "/h", UDB_MIGRATION_APPROVAL_PLAN: "/stale.json" };
+  const plain = embeddedEnvironment(source, "/proto");
+  assert.deepEqual(plain, { PATH: "/bin", UDB_HOME: "/h", UDB_PROTO_ROOT: "/proto" }, "a caller's approval plan is never inherited");
+  const approved = embeddedEnvironment(source, "/proto", "/project/approval.json");
+  assert.equal(approved.UDB_MIGRATION_APPROVAL_PLAN, "/project/approval.json");
+  assert.equal(approved.UDB_PG_DSN, undefined);
+  assert.deepEqual(approvalPlanArgs("/project/approval.json"), ["plan", "--emit-approval-plan", "/project/approval.json"]);
 });
 
 test("a bad descriptor set is refused", async () => {

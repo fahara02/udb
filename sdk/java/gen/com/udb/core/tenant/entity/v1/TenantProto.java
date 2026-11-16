@@ -45,7 +45,7 @@ public final class TenantProto {
       "obuf/timestamp.proto\032\033udb/core/common/v1" +
       "/db.proto\032!udb/core/common/v1/security.p" +
       "roto\032\036udb/core/common/v1/types.proto\032%ud" +
-      "b/core/tenant/entity/v1/enums.proto\"\334\016\n\006" +
+      "b/core/tenant/entity/v1/enums.proto\"\351\016\n\006" +
       "Tenant\022L\n\ttenant_id\030\001 \001(\tB/\202\267\030+\n\ttenant_" +
       "id\022\004UUID\030\001(\001:\021gen_random_uuid()\230\002\001R\010tena" +
       "ntId\022S\n\004code\030\002 \001(\tB?\202\267\030;\n\004code\022\013VARCHAR(" +
@@ -72,34 +72,34 @@ public final class TenantProto {
       "at\022\013TIMESTAMPTZZ\025Soft delete timestampR\t" +
       "deletedAt\022H\n\ndeleted_by\030\013 \001(\tB)\202\267\030%\n\ndel" +
       "eted_by\022\004UUIDZ\021Soft delete actorR\tdelete" +
-      "dBy:\304\006\372\266\030\242\005\n\007tenants\022\nudb_tenant\030\001 \001*KMu" +
+      "dBy:\321\006\372\266\030\257\005\n\007tenants\022\nudb_tenant\030\001 \001*KMu" +
       "lti-tenancy support for organizations, w" +
       "orkspaces, accounts, and projects0\0018\001@\001b" +
-      "\227\001\n\027tenant_self_or_platform\032z(tenant_id:" +
-      ":text = current_setting(\'app.current_ten" +
-      "ant_id\', true) OR current_setting(\'app.p" +
-      "latform_admin\', true) = \'true\')(\001h\001\212\001<\n\031" +
-      "idx_tenants_parent_status\022\005BTREEZ\020parent" +
-      "_tenant_idZ\006status\252\001R\n\034trg_tenants_touch" +
-      "_updated_at\022\006BEFORE\032\006UPDATE\"\035udb_tenant." +
-      "touch_updated_at()*\003ROW\302\001\333\001\n\031touch_updat" +
-      "ed_at_function\022\010postgres\032\017before_trigger" +
-      "s\"\242\001CREATE OR REPLACE FUNCTION udb_tenan" +
-      "t.touch_updated_at()\nRETURNS trigger\nLAN" +
-      "GUAGE plpgsql\nAS $$\nBEGIN\n  NEW.updated_" +
-      "at = CURRENT_TIMESTAMP;\n  RETURN NEW;\nEN" +
-      "D;\n$$;\362\001\026udb.tenant.tenants.cdc\372\001\013tenant" +
-      ":read\212\262\031\230\001\n\006tenant\032\ttenant_id*4tenant_id" +
-      " = current_setting(\'app.current_tenant_i" +
-      "d\')2\013soft_delete:\022tenant.operational@\373\023H" +
-      "\002R\006tenantZ\010standardr\025tenant.data_residen" +
-      "cyB\374\001\n\035com.udb.core.tenant.entity.v1B\013Te" +
-      "nantProtoP\001ZEgithub.com/fahara02/udb/sdk" +
-      "/go/gen/udb/core/tenant/entity/v1;entity" +
-      "v1\242\002\004UCTE\252\002\031Udb.Core.Tenant.Entity.V1\312\002\031" +
-      "Udb\\Core\\Tenant\\Entity\\V1\342\002%Udb\\GPBMetad" +
-      "ata\\Core\\Tenant\\Entity\\V1\352\002\035Udb::Core::T" +
-      "enant::Entity::V1b\006proto3"
+      "\244\001\n\027tenant_self_or_platform\032\206\001(tenant_id" +
+      " = NULLIF(current_setting(\'app.current_t" +
+      "enant_id\', true), \'\')::uuid OR current_s" +
+      "etting(\'app.platform_admin\', true) = \'tr" +
+      "ue\')(\001h\001\212\001<\n\031idx_tenants_parent_status\022\005" +
+      "BTREEZ\020parent_tenant_idZ\006status\252\001R\n\034trg_" +
+      "tenants_touch_updated_at\022\006BEFORE\032\006UPDATE" +
+      "\"\035udb_tenant.touch_updated_at()*\003ROW\302\001\333\001" +
+      "\n\031touch_updated_at_function\022\010postgres\032\017b" +
+      "efore_triggers\"\242\001CREATE OR REPLACE FUNCT" +
+      "ION udb_tenant.touch_updated_at()\nRETURN" +
+      "S trigger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n " +
+      " NEW.updated_at = CURRENT_TIMESTAMP;\n  R" +
+      "ETURN NEW;\nEND;\n$$;\362\001\026udb.tenant.tenants" +
+      ".cdc\372\001\013tenant:read\212\262\031\230\001\n\006tenant\032\ttenant_" +
+      "id*4tenant_id = current_setting(\'app.cur" +
+      "rent_tenant_id\')2\013soft_delete:\022tenant.op" +
+      "erational@\373\023H\002R\006tenantZ\010standardr\025tenant" +
+      ".data_residencyB\374\001\n\035com.udb.core.tenant." +
+      "entity.v1B\013TenantProtoP\001ZEgithub.com/fah" +
+      "ara02/udb/sdk/go/gen/udb/core/tenant/ent" +
+      "ity/v1;entityv1\242\002\004UCTE\252\002\031Udb.Core.Tenant" +
+      ".Entity.V1\312\002\031Udb\\Core\\Tenant\\Entity\\V1\342\002" +
+      "%Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1\352\002" +
+      "\035Udb::Core::Tenant::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

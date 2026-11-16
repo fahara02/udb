@@ -550,9 +550,10 @@ pub(crate) fn render_index_impl(
 
 // ── GAP 4: ENUM type DDL ───────────────────────────────────────────────────────
 
-// Emit idempotent CREATE TYPE … AS ENUM DDL for every column that declares
-// `enum_values`. The enum type name is derived as `<table>_<column>_enum`
-// scoped to the table's schema. PostgreSQL does not have CREATE TYPE IF NOT
+// Emit idempotent CREATE TYPE … AS ENUM DDL for every column whose SQL type is
+// its derived enum type, `<table>_<column>_enum` scoped to the table's schema
+// (see `column_uses_enum_type`). A VARCHAR/TEXT column with `enum_values` gets
+// its CHECK only, never an unused type. PostgreSQL does not have CREATE TYPE IF NOT
 // EXISTS, so we wrap inside a DO block that ignores duplicate_object.
 // ── GAP 31: ENUM value validation ────────────────────────────────────────────
 
@@ -594,10 +595,37 @@ pub(crate) fn declared_enum_values(values: &[String]) -> Vec<String> {
         .collect()
 }
 
+/// The PostgreSQL enum type a column's `enum_values` would derive:
+/// `<table>_<column>_enum`, in the table's schema.
+pub(crate) fn enum_type_base_name(table: &str, column: &str) -> String {
+    format!("{table}_{column}_enum")
+}
+
+/// Whether the column is declared with its derived enum type
+/// (`<table>_<column>_enum`, optionally schema-qualified or quoted) as its SQL
+/// type. Only such a column needs the `CREATE TYPE … AS ENUM`; a VARCHAR/TEXT
+/// column with `enum_values` is constrained by its CHECK alone, and a type
+/// nothing uses is an orphan.
+pub(crate) fn column_uses_enum_type(table: &ManifestTable, column: &ManifestColumn) -> bool {
+    if column.enum_values.is_empty() {
+        return false;
+    }
+    let sql_type: String = column
+        .sql_type
+        .trim()
+        .chars()
+        .filter(|c| *c != '"')
+        .collect::<String>()
+        .to_ascii_lowercase();
+    let base = enum_type_base_name(&table.table, &column.column_name).to_ascii_lowercase();
+    let qualified = format!("{}.{base}", table.schema.to_ascii_lowercase());
+    sql_type == base || sql_type == qualified
+}
+
 pub(crate) fn render_enum_types(table: &ManifestTable) -> String {
     let mut out = String::new();
     for column in &table.columns {
-        if column.enum_values.is_empty() {
+        if !column_uses_enum_type(table, column) {
             continue;
         }
         let values = declared_enum_values(&column.enum_values);
@@ -829,6 +857,10 @@ pub(crate) fn render_partition_setup(table: &ManifestTable) -> String {
         out.push_str(&format!(
             "CREATE TABLE IF NOT EXISTS {default_ident} PARTITION OF {parent_ident} DEFAULT;\n\n"
         ));
+        out.push_str(&render_static_child_rls(
+            table,
+            &format!("{}_default", table.table),
+        ));
     }
 
     // Retention: configure pg_partman to drop child partitions older than the
@@ -847,6 +879,98 @@ pub(crate) fn render_partition_setup(table: &ManifestTable) -> String {
             retention = ql(&format!("{} days", table.retention_days)),
             parent_lit = ql(&format!("{}.{}", table.schema, table.table)),
         ));
+    }
+    out
+}
+
+/// The row-level security policies the parent carries, as the table's DDL
+/// creates them: the declared policies, else the synthesized tenant policy.
+/// Empty when the parent does not enable row-level security.
+pub(crate) fn partition_child_rls_policies(table: &ManifestTable) -> Vec<ManifestPolicy> {
+    if !table.enable_rls {
+        return Vec::new();
+    }
+    if !table.rls_policies.is_empty() {
+        return table
+            .rls_policies
+            .iter()
+            .filter(|policy| !policy.name.trim().is_empty())
+            .cloned()
+            .collect();
+    }
+    default_tenant_rls_policy(table).into_iter().collect()
+}
+
+/// A partition UDB creates under a static name carries the parent's row-level
+/// security: a query that names the partition directly is filtered exactly as
+/// one through the parent.
+pub(crate) fn render_static_child_rls(table: &ManifestTable, child: &str) -> String {
+    if !table.enable_rls {
+        return String::new();
+    }
+    let ident = format!("{}.{}", qi(&table.schema), qi(child));
+    let mut out = format!("ALTER TABLE {ident} ENABLE ROW LEVEL SECURITY;\n");
+    if table.force_rls {
+        out.push_str(&format!("ALTER TABLE {ident} FORCE ROW LEVEL SECURITY;\n"));
+    }
+    for policy in partition_child_rls_policies(table) {
+        out.push_str(&render_policy(&table.schema, child, &policy));
+        out.push('\n');
+    }
+    out.push('\n');
+    out
+}
+
+/// The same for a partition a DO block creates under a computed name: the
+/// statements run on `%I.%I` filled from the plpgsql variables `_schema` and
+/// `_child_table`. The child was just created, so its policies are created.
+fn render_dynamic_child_rls(table: &ManifestTable, indent: &str) -> String {
+    if !table.enable_rls {
+        return String::new();
+    }
+    let execute = |template: String| {
+        format!(
+            "{indent}EXECUTE format({}, _schema, _child_table);\n",
+            ql(&template)
+        )
+    };
+    let mut out = execute("ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY".to_string());
+    if table.force_rls {
+        out.push_str(&execute(
+            "ALTER TABLE %I.%I FORCE ROW LEVEL SECURITY".to_string(),
+        ));
+    }
+    for policy in partition_child_rls_policies(table) {
+        // Everything but the two placeholders is literal text to format().
+        let literal = |text: &str| text.replace('%', "%%");
+        let mode = if policy.permissive {
+            "PERMISSIVE"
+        } else {
+            "RESTRICTIVE"
+        };
+        let command = if policy.command.trim().is_empty() {
+            "ALL"
+        } else {
+            policy.command.trim()
+        };
+        let mut statement = format!(
+            "CREATE POLICY {} ON %I.%I AS {mode} FOR {}",
+            literal(&qi(&policy.name)),
+            literal(command)
+        );
+        if !policy.using_expression.trim().is_empty() {
+            statement.push_str(&format!(
+                " USING ({})",
+                literal(policy.using_expression.trim())
+            ));
+        }
+        if !policy.with_check.trim().is_empty() {
+            statement.push_str(&format!(
+                " WITH CHECK ({})",
+                literal(policy.with_check.trim())
+            ));
+        }
+        out.push_str(&execute(statement));
     }
     out
 }
@@ -890,6 +1014,7 @@ fn render_current_partition_fallback(table: &ManifestTable, interval: &str) -> S
          \t\t\t\t\t'CREATE TABLE IF NOT EXISTS %I.%I PARTITION OF %I.%I FOR VALUES FROM (%L) TO (%L)',\n\
          \t\t\t\t\t_schema, _child_table, _schema, _table, _start_ts, _end_ts\n\
          \t\t\t\t);\n\
+         {child_rls}\
          \t\t\tEXCEPTION WHEN duplicate_table OR invalid_object_definition THEN\n\
          \t\t\t\tRAISE NOTICE 'Skipping fallback partition %.%: %', _schema, _child_table, SQLERRM;\n\
          \t\t\tEND;\n\
@@ -908,6 +1033,7 @@ fn render_current_partition_fallback(table: &ManifestTable, interval: &str) -> S
         date_trunc = ql(&date_trunc),
         interval = ql(&normalized),
         suffix_format = ql(suffix_format),
+        child_rls = render_dynamic_child_rls(table, "\t\t\t\t"),
     )
 }
 
@@ -1130,6 +1256,10 @@ pub(crate) fn render_table_rebuild(table: &ManifestTable) -> String {
                 "CREATE TABLE IF NOT EXISTS {}.{} PARTITION OF {ident} DEFAULT;\n",
                 qi(&table.schema),
                 qi(&format!("{}_default", table.table)),
+            ));
+            out.push_str(&render_static_child_rls(
+                table,
+                &format!("{}_default", table.table),
             ));
         }
     }

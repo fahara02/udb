@@ -102,6 +102,11 @@ struct Plan {
     /// the plan.
     #[serde(default)]
     service_account_caller: Option<ServiceAccountCaller>,
+    /// The bench-tenant service account whose grant holds
+    /// `udb:token:delegate`, for ExchangeTokenForJob. Same shape and password
+    /// rule as `service_account_caller`.
+    #[serde(default)]
+    delegating_service_caller: Option<ServiceAccountCaller>,
 }
 
 #[derive(Clone, serde::Deserialize)]
@@ -136,6 +141,8 @@ struct RpcPlan {
     platform: bool,
     #[serde(default)]
     service_account: bool,
+    #[serde(default)]
+    delegating_service: bool,
     reauthenticate_before: bool,
     capability_optional: bool,
     #[serde(default)]
@@ -620,6 +627,10 @@ struct Session {
     /// three minutes.
     service_account: Option<(Metadata, Instant)>,
     service_account_failed: bool,
+    delegating_service_caller: Option<ServiceAccountCaller>,
+    /// The delegating service's metadata, minted the same way.
+    delegating_service: Option<(Metadata, Instant)>,
+    delegating_service_failed: bool,
     sentinels: BTreeMap<&'static str, String>,
     auto_refresh_token: String,
     auto_session_id: String,
@@ -730,6 +741,34 @@ async fn ensure_service_account(caller: &mut Caller, session: &mut Session) {
             );
             session.service_account = None;
             session.service_account_failed = true;
+        }
+    }
+}
+
+/// Mint the delegating service's identity on first use (ExchangeTokenForJob),
+/// exactly as `ensure_service_account` does. A failed login is reported once
+/// and the row runs under the default identity, where it fails honestly.
+async fn ensure_delegating_service(caller: &mut Caller, session: &mut Session) {
+    if session.delegating_service_failed {
+        return;
+    }
+    if let Some((_, minted)) = &session.delegating_service {
+        if minted.elapsed() < Duration::from_secs(180) {
+            return;
+        }
+    }
+    let Some(account) = session.delegating_service_caller.clone() else {
+        return;
+    };
+    match mint_service_account(caller, &session.base, &account).await {
+        Ok(meta) => session.delegating_service = Some((meta, Instant::now())),
+        Err(err) => {
+            println!(
+                "[PERF-DELEGATING-SERVICE] login as {} failed; its rows run under the default identity: {err}",
+                account.username
+            );
+            session.delegating_service = None;
+            session.delegating_service_failed = true;
         }
     }
 }
@@ -849,8 +888,16 @@ async fn time_one(
     if rpc.service_account {
         ensure_service_account(caller, session).await;
     }
+    if rpc.delegating_service {
+        ensure_delegating_service(caller, session).await;
+    }
     let meta = match (&session.service_account, rpc.service_account) {
         (Some((service_account, _)), true) => service_account.clone(),
+        _ if rpc.delegating_service && session.delegating_service.is_some() => session
+            .delegating_service
+            .as_ref()
+            .map(|(meta, _)| meta.clone())
+            .unwrap_or_else(|| session.user.clone()),
         _ if rpc.platform => session.platform.clone(),
         _ => session.user.clone(),
     };
@@ -1106,6 +1153,9 @@ async fn prepare(plan: &Plan) -> Result<(Caller, Session), String> {
         service_account_caller: plan.service_account_caller.clone(),
         service_account: None,
         service_account_failed: false,
+        delegating_service_caller: plan.delegating_service_caller.clone(),
+        delegating_service: None,
+        delegating_service_failed: false,
         sentinels,
         auto_refresh_token: auto.refresh_token,
         auto_session_id: auto.session_id,

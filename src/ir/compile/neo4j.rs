@@ -51,6 +51,18 @@ impl CypherBind {
     }
 }
 
+/// Read-side tenant predicate: the node's tenant is the caller's own OR the
+/// shared marker that nodes projected from a shared (global) table carry.
+/// Writes and deletes keep the exact `n.col = $p` match.
+fn shared_tenant_read_predicate(bind: &mut CypherBind, column: &str, tid: &str) -> String {
+    let values = super::util::shared_read_tenants(tid)
+        .iter()
+        .map(|tenant| LogicalValue::String((*tenant).to_string()))
+        .collect();
+    let p = bind.push(&LogicalValue::Array(values));
+    format!("n.`{column}` IN {p}")
+}
+
 impl Neo4jCompiler {
     fn resolve_table<'a>(
         &self,
@@ -239,8 +251,7 @@ impl Compiler for Neo4jCompiler {
             && !tid.is_empty()
             && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            let p = bind.push(&LogicalValue::String(tid.to_string()));
-            where_parts.push(format!("n.`{column}` = {p}"));
+            where_parts.push(shared_tenant_read_predicate(&mut bind, column, tid));
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
@@ -331,6 +342,7 @@ impl Compiler for Neo4jCompiler {
             });
         }
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Neo4j)?;
         if table.primary_key.is_empty() {
             return Err(CompileError::Malformed {
                 reason: format!(
@@ -416,6 +428,7 @@ impl Compiler for Neo4jCompiler {
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Neo4j)?;
         let label = Self::label_for(ctx, table);
         let mut bind = CypherBind::new();
         let user_body = self.render_filter(&op.filter, table, &op.message_type, &mut bind)?;
@@ -494,8 +507,7 @@ impl Compiler for Neo4jCompiler {
             && !tid.is_empty()
             && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            let p = bind.push(&LogicalValue::String(tid.to_string()));
-            where_parts.push(format!("n.`{column}` = {p}"));
+            where_parts.push(shared_tenant_read_predicate(&mut bind, column, tid));
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
@@ -612,8 +624,7 @@ impl Compiler for Neo4jCompiler {
                 && !tid.is_empty()
                 && let Some(column) = Some(super::util::tenant_system_field(table))
             {
-                let p = bind.push(&LogicalValue::String(tid.to_string()));
-                where_parts.push(format!("n.`{column}` = {p}"));
+                where_parts.push(shared_tenant_read_predicate(&mut bind, column, tid));
             }
             if let Some(pid) = ctx.project_id
                 && !pid.is_empty()
@@ -662,8 +673,7 @@ impl Compiler for Neo4jCompiler {
             && !tid.is_empty()
             && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            let p = bind.push(&LogicalValue::String(tid.to_string()));
-            where_parts.push(format!("n.`{column}` = {p}"));
+            where_parts.push(shared_tenant_read_predicate(&mut bind, column, tid));
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
@@ -1115,9 +1125,13 @@ mod tests {
             },
         );
         let (statement, params) = cypher(Neo4jCompiler.compile_read(&read, &ctx).unwrap());
-        assert!(statement.contains("n.`_tenant_id` = $p0"));
+        // Reads match the caller's own tenant OR the shared marker.
+        assert!(statement.contains("n.`_tenant_id` IN $p0"));
         assert!(statement.contains("n.`_project_id` = $p1"));
-        assert_eq!(params["p0"], "acme");
+        assert_eq!(
+            params["p0"],
+            json!(["acme", crate::broker::SHARED_TENANT_MARKER])
+        );
         assert_eq!(params["p1"], "p1");
     }
 
@@ -1161,9 +1175,12 @@ mod tests {
         };
         let (statement, params) = cypher(Neo4jCompiler.compile_search(&search, &ctx).unwrap());
         assert!(statement.contains("db.index.fulltext.queryNodes('Customer_fulltext'"));
-        assert!(statement.contains("WHERE n.`_tenant_id` = $p1"));
+        assert!(statement.contains("WHERE n.`_tenant_id` IN $p1"));
         assert_eq!(params["p0"], "Alice");
-        assert_eq!(params["p1"], "tenant-a");
+        assert_eq!(
+            params["p1"],
+            json!(["tenant-a", crate::broker::SHARED_TENANT_MARKER])
+        );
     }
 
     /// C17: the aggregate WHERE must carry the tenant/project predicate like the
@@ -1189,11 +1206,14 @@ mod tests {
         };
         let (statement, params) = cypher(Neo4jCompiler.compile_aggregate(&agg, &ctx).unwrap());
         assert!(
-            statement.contains("n.`_tenant_id` = $p0"),
+            statement.contains("n.`_tenant_id` IN $p0"),
             "aggregate WHERE must scope tenant: {statement}"
         );
         assert!(statement.contains("n.`_project_id` = $p1"));
-        assert_eq!(params["p0"], "acme");
+        assert_eq!(
+            params["p0"],
+            json!(["acme", crate::broker::SHARED_TENANT_MARKER])
+        );
         assert_eq!(params["p1"], "p1");
     }
 
@@ -1223,5 +1243,37 @@ mod tests {
             .with_tenant("acme")
             .enforcing_tenant_scope(true);
         assert!(Neo4jCompiler.compile_read(&read, &ctx).is_ok());
+    }
+    /// Shared reference nodes: deletes and MERGEs keep the exact caller
+    /// tenant, and the shared marker can never be a write scope.
+    #[test]
+    fn delete_keeps_exact_tenant_and_marker_cannot_write() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m).with_tenant("acme");
+        let del = LogicalDelete {
+            message_type: "acme.billing.v1.Customer".into(),
+            filter: LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("abc".into()),
+            },
+            return_fields: vec![],
+        };
+        let (statement, params) = cypher(Neo4jCompiler.compile_delete(&del, &ctx).unwrap());
+        assert!(statement.contains("n.`_tenant_id` = $p1"), "{statement}");
+        assert!(!statement.contains(" IN "), "{statement}");
+        assert_eq!(params["p1"], "acme");
+
+        let marker = CompileContext::new(&m).with_tenant(crate::broker::SHARED_TENANT_MARKER);
+        assert!(Neo4jCompiler.compile_delete(&del, &marker).is_err());
+        let mut rec = LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("abc".into()));
+        let write = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::Replace,
+            return_fields: vec![],
+        };
+        assert!(Neo4jCompiler.compile_write(&write, &marker).is_err());
     }
 }

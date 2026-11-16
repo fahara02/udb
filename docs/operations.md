@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.20 | protocol v1.0.0                                          │
+│    crate v0.6.21 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -219,6 +219,7 @@ hurt in production if it isn't handled up front.
 | Area | Check |
 |---|---|
 | Transport | TLS for public traffic; internal or gateway-protected native listener |
+| Outbound | Every backend DSN and webhook URL is encrypted and verified (see [Outbound connections](#outbound-connections)) |
 | Identity | JWT issuer/audience/key source configured; MFA for privileged accounts |
 | Metadata | SDKs or gateway middleware attach tenant, project, purpose, scopes, correlation id, and service identity |
 | Backends | Every project backend is configured, reachable, and visible in `udb compat-matrix` |
@@ -228,6 +229,90 @@ hurt in production if it isn't handled up front.
 | Scale | Broker replicas, admission limits, and backend pools are sized together |
 | CI | Rust, proto, SDK, descriptor, and conformance checks run before release |
 | Recovery | Runbooks exist for backend outage, auth failures, CDC lag, and policy rollback |
+
+## Outbound connections
+
+UDB connects out to PostgreSQL, Redis, the other backends, object storage, the
+OTLP collector and several webhooks. At startup the broker reads every one of
+those DSNs and URLs, decides whether the connection is encrypted and whether it
+checks the server's certificate, and refuses to start when a connection that
+must be protected is not. The refusal names the connection, the DSN parameter to
+set, and the flag that turns the check off. It never prints the DSN.
+
+### Flags
+
+| Flag | Default | Covers |
+|---|---|---|
+| `UDB_PG_TLS_REQUIRED` | `true` under `UDB_ENV=production`, else `false` | PostgreSQL: primary, backup, signal, read replicas (`UDB_PG_REPLICA_DSNS`), every `postgres` backend instance, the CDC source (`UDB_CDC_POSTGRES_SOURCE_DSN`) |
+| `UDB_REDIS_TLS_REQUIRED` | same | Redis (`UDB_REDIS_DSN` / `REDIS_URL`, `redis` backend instances) |
+| `UDB_OUTBOUND_TLS_REQUIRED` | same | Everything else: Qdrant, Elasticsearch, Weaviate, MongoDB, Neo4j, ClickHouse, MySQL, SQL Server, Cassandra, Memcached, MinIO/S3, `OTEL_EXPORTER_OTLP_ENDPOINT`, `UDB_OTP_DELIVERY_WEBHOOK_URL`, `UDB_AUDIT_SINK_URL`, `UDB_AUDIT_EXPORT_WEBHOOK_URL`, `UDB_SCHEMA_REGISTRY_URL`, `UDB_EMBEDDING_RERANK_URL`, `UDB_JWT_JWKS_URL`, `UDB_OIDC_ISSUER`, `UDB_VAULT_ADDR`, `UDB_LIVEKIT_URL`, the migration notification URL |
+
+`0`, `false`, `no` and `off` turn a flag off; any other value turns it on. An
+explicit value always wins over the production default. Kafka has its own
+setting (`UDB_KAFKA_TLS_REQUIRED`) and is not judged by this check.
+
+A backend marked as a cloud deployment (`UDB_<BACKEND>_DEPLOY_MODE=cloud`, a
+well-known managed hostname such as `*.neon.tech`, or `tls_override: true` in the
+config file) must be at least encrypted even with its flag off. `sslmode=require`
+is enough for that; the flag asks for more.
+
+Hosts that never leave the machine are always allowed: `localhost`,
+`127.0.0.0/8`, `::1` and unix sockets. A TLS tunnel or sidecar listening on
+loopback is the supported way to reach a backend this build cannot speak TLS to.
+
+### What passes
+
+| Backend | Passes with the flag on | Refused |
+|---|---|---|
+| PostgreSQL | `sslmode=verify-full` or `sslmode=verify-ca` | no `sslmode` (the driver default is `prefer`), `disable`, `allow`, `prefer`, `require` (encrypts but does not check the certificate) |
+| Redis | `rediss://` | `redis://`, `rediss://…#insecure` |
+| HTTP backends, webhooks, OTLP, Vault, LiveKit | `https://`, `wss://` | `http://`, `ws://` |
+| MySQL | `ssl-mode=VERIFY_IDENTITY` or `VERIFY_CA` | no `ssl-mode` (default `PREFERRED`), `DISABLED`, `PREFERRED`, `REQUIRED` |
+| SQL Server | `encrypt=true` | no `encrypt`, `encrypt=false`, `TrustServerCertificate=true` |
+| MongoDB | `mongodb+srv://`, or `mongodb://…?tls=true` | `tls=false`, `tlsInsecure=true`, `tlsAllowInvalidCertificates=true`, `tlsAllowInvalidHostnames=true` |
+| Neo4j | `neo4j+s://`, `bolt+s://`, `https://` | `neo4j://`, `bolt://`, `+ssc` schemes, `http://` |
+| ClickHouse | `https://` in `UDB_COLUMN_DSN` or `UDB_COLUMN_HTTP_URL` | `http://`, `clickhouse://` (sent as plain HTTP) |
+| Cassandra, Memcached | loopback only: this build has no TLS for them | any non-loopback host; `memcache+tls://` is refused at connect |
+
+`PGSSLMODE` is honoured when a PostgreSQL DSN carries no `sslmode`, because the
+driver does the same.
+
+### Providing a CA file
+
+When the server's certificate is signed by a public CA nothing else is needed.
+For a private CA, put the CA file path in the DSN:
+
+```bash
+# PostgreSQL (also works with PGSSLROOTCERT)
+UDB_PG_DSN='postgresql://udb:…@db.internal:5432/udb?sslmode=verify-full&sslrootcert=/etc/udb/pg-ca.pem'
+# MySQL
+UDB_MYSQL_DSN='mysql://udb:…@mysql.internal/udb?ssl-mode=VERIFY_IDENTITY&ssl-ca=/etc/udb/mysql-ca.pem'
+# MongoDB
+UDB_NOSQL_DSN='mongodb://udb:…@mongo.internal:27017/udb?tls=true&tlsCAFile=/etc/udb/mongo-ca.pem'
+```
+
+Amazon RDS and Aurora sign with the Amazon RDS CA, which is not in the public
+root store: download the region bundle and point `sslrootcert` at it.
+
+Redis and the HTTPS clients verify against the system root store; add a private
+CA to the container's trust store (`/usr/local/share/ca-certificates` plus
+`update-ca-certificates` on Debian-based images).
+
+### Clients that send secrets
+
+Independently of the startup check, the clients that carry a credential or a
+secret refuse a plaintext, non-loopback URL while `UDB_OUTBOUND_TLS_REQUIRED` is
+on. That covers the OTP and magic-link webhook (the code is not sent; an error
+is logged), the SIEM audit export webhook (the export fails), the schema
+registry when it has an auth header, the OIDC issuer and its JWKS URL (the login
+fails), the Qdrant api-key (withheld), and the ClickHouse, Neo4j, MongoDB Data
+API and Elasticsearch clients when they send credentials (built HTTPS-only).
+The OTP, audit export, schema registry and OIDC clients also have connect and
+request timeouts and do not follow redirects.
+
+Under `UDB_ENV=production`, `UDB_DEV_MODE` no longer allows a plaintext
+`UDB_VAULT_ADDR` (a Vault agent on loopback is still fine), and
+`UDB_LIVEKIT_ALLOW_INSECURE` is refused.
 
 ## Configuration
 
@@ -503,11 +588,40 @@ it; it is on by default.
 | `udb_authz.access_decision_audits` (monthly partitions) | every deny; a delegated allow (a service checking access for a user) once per window for the same decision | `declared`: 30 days, for allows and denies (`access_decision_audits:deny` can keep denies longer) |
 | `udb_system.auth_audit_log` | every auth event, when `UDB_AUDIT_EXPORT_POSTGRES=1` | `declared`: same as the decision audit |
 | `udb_metering.usage_events` | every native-service call | `declared`: 400 days |
-| other time-partitioned UDB tables (sessions, notification log, ...) | | kept; listed tables only |
-| `udb_system.udb_cdc_event_journal` | every published event | `UDB_CDC_JOURNAL_RETENTION` (above, 7 days) |
+| `udb_apikey.api_key_usages`, `udb_notification.notification_logs` (monthly partitions) | every API-key call; every notification sent | `declared`: 365 and 90 days |
+| other time-partitioned UDB tables (analytics summaries, ...) | | kept; listed tables only |
+| `udb_authn.sessions` (default partition included) | every login | `declared` (180 days) after the session expires |
+| other native tables whose rows end: `token_revocations`, `token_families`, `mfa_challenges`, `oidc_login_states`, `devices`, `user_roles`, `locks`, `webhook_deliveries`, `inbox`, `saml_replay_entries`, ... | | `declared`, counted from the row's end (below) |
+| `udb_system.udb_projection_tasks` | every projected write | completed tasks: 7 days |
+| `udb_system.udb_cdc_dlq_events` | every dead-lettered event | replayed or dismissed: 30 days; open, retrying and quarantined stay |
+| `udb_system` sagas and XA ledger | every saga and two-phase commit | committed or compensated sagas, committed or rolled-back decisions: 30 days; in-doubt stays |
+| `udb_system.udb_catalog_versions` | every catalog staged | 30 days, but never the active version, a bound version, nor the newest `UDB_CLEANUP_KEEP_VERSIONS` (20) per project |
+| `udb_system.udb_catalog_reload_log` | every stage, activation, reload | 90 days, but never the activation record of an active version nor the newest row |
+| `udb_system.udb_cdc_event_journal` | every published event | `UDB_CDC_JOURNAL_RETENTION` (above, 7 days); dead-lettered rows `UDB_CDC_JOURNAL_DLQ_RETENTION` (30 days) once the DLQ entry is resolved |
 
 `declared` is the table's proto `retention_days`. `udb cleanup show` prints the
 retention in force for every table and every setting below.
+
+A native table without a time partition follows its declared retention when
+its rows have an end: the age is counted from the first of `expires_at`,
+`occurred_at`, `revoked_at`, `consumed_at`, `acked_at`, `delivered_at`,
+`completed_at`, `finished_at` it has. `expires_at` comes first, so a token
+revocation is kept until the token it blocks has expired for the retention,
+never only from when it was revoked. A row whose end column is empty (a
+session not yet expired, a device not revoked, a delivery still pending) is
+never deleted. Not touched: soft-deleted entity tables (users, API keys,
+tenants, ...), tables other tables reference, tables with only a creation
+time (configuration, policies), `vault_db_credential_leases` (a lease row is
+how its database login is revoked), the admin audit log (its hash chain is
+verified from the first row) and the migration ledger.
+
+These tables and UDB's bookkeeping tables are swept once per
+`UDB_CLEANUP_SWEEP_INTERVAL` (daily), in one pass over each table in page
+ranges, so no index on the time column is needed. They are outside
+`UDB_CLEANUP_MAX_SIZE`. A table whose rows the broker's database role cannot
+see across tenants (row-level security applies to the role and the policy has
+no `app.platform_admin` clause) is reported on every pass instead of silently
+keeping everything: give the role `BYPASSRLS`.
 
 Every setting is an environment variable, an entry in `.env`, or a `udb serve`
 flag. A flag wins over the environment and `.env`.
@@ -515,9 +629,17 @@ flag. A flag wins over the environment and `.env`.
 | Setting | `udb serve` flag | Default | Meaning |
 | --- | --- | --- | --- |
 | `UDB_CLEANUP_ENABLED` | `--cleanup-enabled` | `true` | `false` stops the worker. `udb cleanup run` still works. |
-| `UDB_CLEANUP_RETENTION` | `--cleanup-retention` | the three log tables above = `declared` | Comma-separated `table=value`, merged over the defaults entry by entry: `access_decision_audits=90d,usage_events=keep`. A table is named by its table name or `schema.table`. A value is a duration (`d` or `h`, at least `1d`), `declared` or `keep`. `access_decision_audits:deny=value` keeps denied decisions longer than allows (`=keep` keeps them for good); a class is never kept shorter than its table. A bad entry is logged on every pass and pauses removal for the table it names (an unknown table pauses nothing); the table never falls back to the default retention. Partitions are still created. |
+| `UDB_CLEANUP_RETENTION` | `--cleanup-retention` | each table's default above | Comma-separated `table=value`, merged over the defaults entry by entry: `access_decision_audits=90d,usage_events=keep,webhook_deliveries=90d,udb_projection_tasks=2d`. A table two schemas share a name for (`devices`) is named `schema.table`. A table is named by its table name or `schema.table`. A value is a duration (`d` or `h`, at least `1d`), `declared` or `keep`. `access_decision_audits:deny=value` keeps denied decisions longer than allows (`=keep` keeps them for good); a class is never kept shorter than its table. A bad entry is logged on every pass and pauses removal for the table it names (an unknown table pauses nothing); the table never falls back to the default retention. Partitions are still created. |
 | `UDB_CLEANUP_MAX_SIZE` | `--cleanup-max-size` | `1GB` | Cap on the estimated size of the log tables above (`500MB`, `10GB`, `off`). Over it, each pass deletes their oldest rows, each table in proportion to its size, down to 90% of the cap, even rows inside retention. Never deleted for the cap: rows of the last hour, denied decisions while `access_decision_audits:deny` keeps them, and `auth_audit_log` rows the evidence export has not exported; when those alone exceed the cap the pass logs it. A table set to `keep` is outside the cap. `usage_events` is inside it: a project that bills from it raises the cap or sets `usage_events=keep`. |
 | `UDB_CLEANUP_INTERVAL` | `--cleanup-interval` | `10m` | How often a pass runs (`30s`, `10m`, `1h`). |
+| `UDB_CLEANUP_STATEMENT_TIMEOUT` | `--cleanup-statement-timeout` | `0` (none) | `statement_timeout` for cleanup's own deletes, sweeps and VACUUMs (`30min`, `2h`, `0`). A database or role timeout would otherwise cancel a large sweep or VACUUM FULL. |
+| `UDB_CLEANUP_SWEEP_PAGES` | `--cleanup-sweep-pages` | `4096` | Heap pages one sweep statement covers (4096 = 32 MiB). Lower it for very wide rows. |
+| `UDB_CLEANUP_SWEEP_INTERVAL` | | `24h` | How often the kept partitions, the native tables whose rows end and the bookkeeping tables are swept (`6h`, `30m`). `udb cleanup run` always sweeps. |
+| `UDB_CLEANUP_KEEP_VERSIONS` | | `20` | Catalog versions each project always keeps, newest first (at least 1), besides the active and bound ones. |
+| `UDB_CDC_JOURNAL_DLQ_RETENTION` | | `30d` | Dead-lettered CDC journal rows older than this go once their DLQ entry is replayed or dismissed (`keep` keeps them). The newest row of a topic always stays. |
+| `UDB_CDC_JOURNAL_SWEEP_MAX_ROWS` | | `100000` | Most journal rows one retention sweep deletes per CDC maintenance tick (5000 per statement); a larger backlog goes over the next ticks. |
+| `UDB_IDEMPOTENCY_SWEEP_MAX_ROWS` | | `100000` | Most expired idempotency keys deleted per CDC maintenance tick, 5000 per statement, found through the `created_at` index. |
+| `UDB_CLEANUP_APP_RETENTION` | | `off` | App tables: `declared` drops UDB-named partitions of time-partitioned application tables past the table's declared `retention_days`. By default app partitions are only created ahead of writes, never dropped. |
 | `UDB_CLEANUP_BATCH` | `--cleanup-batch` | `5000` | Rows one scheduled delete removes from an unpartitioned table; at most 20 deletes per table per pass. `udb cleanup run` is not capped. |
 | `UDB_CLEANUP_RECLAIM` | `--cleanup-reclaim` | `vacuum` | After rows were deleted from a table: `vacuum` runs `VACUUM (ANALYZE)` (the space is reused at once, nothing is locked); `full` runs `VACUUM FULL` (the space goes back to the operating system, the table is locked while it runs); `off` leaves it to autovacuum. |
 | `UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW` | `--delegated-allow-audit-window` | `1h` | Identical delegated allows inside this window are audited once. The next written row carries the count of the others as `suppressed_identical_allows` in `decision_input`. `0` audits every allow. Denies are always audited. |
@@ -540,7 +662,8 @@ Each pass:
    Rows past retention inside the partitions that stay (the current month,
    for one) are deleted too: once a day, in one pass over each partition, 32
    MiB of the table per statement. `auth_audit_log` and `usage_events` delete
-   old rows in batches. When the compliance evidence export is on
+   old rows in batches; the other native and bookkeeping tables are swept once
+   per `UDB_CLEANUP_SWEEP_INTERVAL`. When the compliance evidence export is on
    (`UDB_COMPLIANCE_EVIDENCE_EXPORT_ENABLED`), `auth_audit_log` rows it has not
    exported yet are kept, so the exported hash chain stays complete.
 3. **Reclaims space** as `UDB_CLEANUP_RECLAIM` says.
@@ -549,6 +672,12 @@ Each pass:
    included). Deleted rows make room for new ones, so the tables stop
    growing at the cap; a database that is already larger shrinks on disk only
    after `udb cleanup run --reclaim full`.
+5. **Keeps application tables' partitions ahead of writes.** Every time-partitioned
+   PostgreSQL table of every active app catalogue gets its current period and its
+   declared `partition_premake` future partitions, named as the migration names
+   them, so a write past the window the migration created does not fail. A table
+   pg_partman manages is left to it. Old app partitions are dropped only with
+   `UDB_CLEANUP_APP_RETENTION=declared`; app rows are never deleted one by one.
 
 Run a pass by hand:
 
@@ -700,7 +829,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.6.20"
+python scripts/bench_snapshot.py --label "release-0.6.21"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

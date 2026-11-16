@@ -46,7 +46,7 @@ public final class PipelineStepProto {
       "on/v1/db.proto\032!udb/core/common/v1/secur" +
       "ity.proto\032\036udb/core/common/v1/types.prot" +
       "o\032$udb/core/asset/entity/v1/enums.proto\"" +
-      "\306\014\n\014PipelineStep\022C\n\007step_id\030\001 \001(\tB*\202\267\030&\n" +
+      "\323\014\n\014PipelineStep\022C\n\007step_id\030\001 \001(\tB*\202\267\030&\n" +
       "\007step_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\006s" +
       "tepId\022:\n\013instance_id\030\002 \001(\tB\031\202\267\030\025\n\013instan" +
       "ce_id\022\004UUID\030\001R\ninstanceId\0227\n\ttenant_id\030\014" +
@@ -72,27 +72,28 @@ public final class PipelineStepProto {
       "t\022\202\001\n\naudit_info\030\013 \001(\0132\035.udb.core.common" +
       ".v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005JSONB\030\001" +
       ":\013\'{}\'::jsonbZ\032Audit trail stored as JSO" +
-      "Nx\001R\tauditInfo:\247\004\372\266\030\215\003\n\016pipeline_steps\022\t" +
+      "Nx\001R\tauditInfo:\264\004\372\266\030\232\003\n\016pipeline_steps\022\t" +
       "udb_asset\030\004 \001*6Individual executable ste" +
-      "ps within a pipeline instance8\001@\001b\237\001\n\037pi" +
-      "peline_steps_tenant_isolation\032z(tenant_i" +
-      "d::text = current_setting(\'app.current_t" +
-      "enant_id\', true) OR current_setting(\'app" +
-      ".platform_admin\', true) = \'true\')(\001h\001\212\0010" +
-      "\n\032idx_pipeline_step_instance\022\005BTREEZ\013ins" +
-      "tance_id\212\001,\n\030idx_pipeline_step_tenant\022\005B" +
-      "TREEZ\ttenant_id\362\001\034udb.asset.pipeline_ste" +
-      "ps.cdc\372\001\nasset:read\212\262\031\220\001\n\006tenant\032\ttenant" +
-      "_id*4tenant_id = current_setting(\'app.cu" +
-      "rrent_tenant_id\')2\004none:\021asset.operation" +
-      "al@\373\023H\002R\006tenantZ\010standardr\025tenant.data_r" +
-      "esidencyB\374\001\n\034com.udb.core.asset.entity.v" +
-      "1B\021PipelineStepProtoP\001ZDgithub.com/fahar" +
-      "a02/udb/sdk/go/gen/udb/core/asset/entity" +
-      "/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Asset.Ent" +
-      "ity.V1\312\002\030Udb\\Core\\Asset\\Entity\\V1\342\002$Udb\\" +
-      "GPBMetadata\\Core\\Asset\\Entity\\V1\352\002\034Udb::" +
-      "Core::Asset::Entity::V1b\006proto3"
+      "ps within a pipeline instance8\001@\001b\254\001\n\037pi" +
+      "peline_steps_tenant_isolation\032\206\001(tenant_" +
+      "id = NULLIF(current_setting(\'app.current" +
+      "_tenant_id\', true), \'\')::uuid OR current" +
+      "_setting(\'app.platform_admin\', true) = \'" +
+      "true\')(\001h\001\212\0010\n\032idx_pipeline_step_instanc" +
+      "e\022\005BTREEZ\013instance_id\212\001,\n\030idx_pipeline_s" +
+      "tep_tenant\022\005BTREEZ\ttenant_id\362\001\034udb.asset" +
+      ".pipeline_steps.cdc\372\001\nasset:read\212\262\031\220\001\n\006t" +
+      "enant\032\ttenant_id*4tenant_id = current_se" +
+      "tting(\'app.current_tenant_id\')2\004none:\021as" +
+      "set.operational@\373\023H\002R\006tenantZ\010standardr\025" +
+      "tenant.data_residencyB\374\001\n\034com.udb.core.a" +
+      "sset.entity.v1B\021PipelineStepProtoP\001ZDgit" +
+      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
+      "/asset/entity/v1;entityv1\242\002\004UCAE\252\002\030Udb.C" +
+      "ore.Asset.Entity.V1\312\002\030Udb\\Core\\Asset\\Ent" +
+      "ity\\V1\342\002$Udb\\GPBMetadata\\Core\\Asset\\Enti" +
+      "ty\\V1\352\002\034Udb::Core::Asset::Entity::V1b\006pr" +
+      "oto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -213,6 +213,10 @@ fn payload_value_matches_stream_scope(
     policy_scoped: bool,
 ) -> bool {
     let event_tenant = json_string_field(payload, "tenant_id").trim();
+    // A change to a shared (global) table is stamped with the reserved shared
+    // marker instead of a tenant: it reaches every tenant-scoped subscriber
+    // (still subject to the project scope), never an unscoped non-privileged one.
+    let shared = crate::broker::is_shared_tenant_marker(event_tenant);
     if !crate::runtime::cdc::tenant_scoped_topic(topic) && !policy_scoped {
         // #8 fail closed: a non-`udb.` topic prefix is NOT a tenant bypass.
         // An event stamped with a tenant_id must only reach a subscriber
@@ -224,7 +228,7 @@ fn payload_value_matches_stream_scope(
         if privileged && tenant_scope.is_empty() && project_scope.is_empty() {
             return true;
         }
-        if tenant_scope.is_empty() || event_tenant != tenant_scope {
+        if tenant_scope.is_empty() || (!shared && event_tenant != tenant_scope) {
             return false;
         }
         if !project_scope.is_empty() {
@@ -242,7 +246,7 @@ fn payload_value_matches_stream_scope(
     if event_tenant.is_empty() {
         return false;
     }
-    if !tenant_scope.is_empty() && event_tenant != tenant_scope {
+    if !tenant_scope.is_empty() && !shared && event_tenant != tenant_scope {
         return false;
     }
     if !privileged && tenant_scope.is_empty() {
@@ -627,9 +631,35 @@ pub(super) async fn cdc_journal_poll(
     })
 }
 
-/// Rows one retention batch deletes, and batches one sweep runs per tick.
+/// Rows one retention batch deletes. How many batches one sweep runs per tick
+/// follows `UDB_CDC_JOURNAL_SWEEP_MAX_ROWS` (default 100000 rows, 20 batches).
 const JOURNAL_RETENTION_BATCH: i64 = 5_000;
-const JOURNAL_RETENTION_MAX_BATCHES: usize = 20;
+
+/// Batches of [`JOURNAL_RETENTION_BATCH`] rows that delete at most `max_rows`
+/// rows (at least one batch).
+fn retention_batches_for(max_rows: u64) -> usize {
+    (max_rows.div_ceil(JOURNAL_RETENTION_BATCH as u64)).max(1) as usize
+}
+
+/// One retention batch over the dead-lettered journal rows. Binds: `$1` age
+/// in seconds, `$2` batch size. A `dlq` row goes once it is older than the
+/// age, is not the newest row of its topic, and the DLQ table holds no
+/// unresolved entry (`OPEN`, `RETRYING`, `QUARANTINED`) for its event, so an
+/// event an operator has not dealt with keeps its journal evidence.
+fn journal_dlq_retention_sweep_sql(journal_relation: &str, dlq_relation: &str) -> String {
+    format!(
+        "DELETE FROM {journal_relation} WHERE ctid = ANY(ARRAY( \
+           SELECT j.ctid FROM {journal_relation} j \
+           WHERE j.published_at < NOW() - make_interval(secs => $1::double precision) \
+             AND j.delivery_state = 'dlq' \
+             AND EXISTS (SELECT 1 FROM {journal_relation} n \
+                         WHERE n.topic = j.topic AND n.journal_position > j.journal_position) \
+             AND NOT EXISTS (SELECT 1 FROM {dlq_relation} d \
+                             WHERE d.event_id = j.event_id \
+                               AND d.status IN ('OPEN', 'RETRYING', 'QUARANTINED')) \
+           ORDER BY j.published_at LIMIT $2))"
+    )
+}
 
 /// One retention batch over the CDC journal. Binds: `$1` age in seconds,
 /// `$2` batch size, then (override pass) `$3` the position floor, then the
@@ -712,10 +742,17 @@ fn consumer_may_read(cursor_pattern: &str, override_pattern: &str) -> bool {
 /// replay is treated as fresh anyway, so keeping the row is pure unbounded growth
 /// (the table previously had NO sweeper — the `(tenant_id, project_id, created_at)`
 /// index existed as if a purge were planned but was never written).
+///
+/// One bounded batch: `$1` the TTL in seconds, `$2` the batch size. The rows
+/// are found through the `created_at` index, so a large backlog is removed in
+/// short transactions over several ticks instead of one huge delete that scans
+/// the whole table.
 fn idempotency_retention_sweep_sql(idempotency_relation: &str) -> String {
     format!(
-        "DELETE FROM {idempotency_relation} \
-         WHERE created_at < NOW() - make_interval(secs => $1::double precision)"
+        "DELETE FROM {idempotency_relation} WHERE ctid = ANY(ARRAY( \
+           SELECT ctid FROM {idempotency_relation} \
+           WHERE created_at < NOW() - make_interval(secs => $1::double precision) \
+           ORDER BY created_at LIMIT $2))"
     )
 }
 
@@ -905,6 +942,53 @@ mod tests {
             &json!({"tenant_id": "tenant-b", "project_id": "project-a"}),
             "tenant-a",
             "project-a",
+            false,
+            false,
+        ));
+    }
+
+    #[test]
+    fn shared_table_events_reach_every_tenant_within_the_project() {
+        let shared = crate::broker::SHARED_TENANT_MARKER;
+        for topic in ["udb.terminology.concept.changed.v1", "app.concept.changed"] {
+            for tenant in ["tenant-a", "tenant-b"] {
+                assert!(
+                    payload_value_matches_stream_scope(
+                        topic,
+                        &json!({"tenant_id": shared, "project_id": "project-a"}),
+                        tenant,
+                        "project-a",
+                        false,
+                        false,
+                    ),
+                    "{topic} {tenant}"
+                );
+            }
+            // Another project's subscriber still does not see it.
+            assert!(!payload_value_matches_stream_scope(
+                topic,
+                &json!({"tenant_id": shared, "project_id": "project-a"}),
+                "tenant-a",
+                "project-b",
+                false,
+                false,
+            ));
+            // An unscoped, unprivileged subscriber does not either.
+            assert!(!payload_value_matches_stream_scope(
+                topic,
+                &json!({"tenant_id": shared, "project_id": "project-a"}),
+                "",
+                "",
+                false,
+                false,
+            ));
+        }
+        // A tenant event still never reaches another tenant.
+        assert!(!payload_value_matches_stream_scope(
+            "app.concept.changed",
+            &json!({"tenant_id": "tenant-b"}),
+            "tenant-a",
+            "",
             false,
             false,
         ));
@@ -1271,6 +1355,28 @@ mod tests {
                 "udb.lock.acquired.v1".to_string()
             ]
         );
+    }
+
+    /// Dead-lettered journal rows age out too, but never the topic head and
+    /// never while the DLQ still holds an unresolved entry for the event; the
+    /// idempotency sweep and the journal sweep are bounded batches.
+    #[test]
+    fn dlq_journal_rows_and_idempotency_keys_are_swept_in_batches() {
+        let sql = journal_dlq_retention_sweep_sql("j_rel", "dlq_rel");
+        assert!(sql.starts_with("DELETE FROM j_rel WHERE ctid = ANY(ARRAY("));
+        assert!(sql.contains("j.delivery_state = 'dlq'"));
+        assert!(sql.contains("n.topic = j.topic AND n.journal_position > j.journal_position"));
+        assert!(sql.contains("FROM dlq_rel d"));
+        assert!(sql.contains("d.status IN ('OPEN', 'RETRYING', 'QUARANTINED')"));
+        assert!(sql.contains("LIMIT $2"));
+
+        let sql = idempotency_retention_sweep_sql("idem");
+        assert!(sql.starts_with("DELETE FROM idem WHERE ctid = ANY(ARRAY("));
+        assert!(sql.contains("ORDER BY created_at LIMIT $2"));
+
+        assert_eq!(retention_batches_for(100_000), 20);
+        assert_eq!(retention_batches_for(1), 1);
+        assert_eq!(retention_batches_for(12_000), 3);
     }
 
     #[test]
@@ -1844,6 +1950,26 @@ impl CdcEngine {
                 warn!("[cdc] journal retention sweep failed: {err}");
             }
         }
+        // Dead-lettered rows follow their own, longer retention
+        // (`UDB_CDC_JOURNAL_DLQ_RETENTION`, default 30 days, `keep` keeps them).
+        if let Some(secs) = crate::runtime::config::cdc_journal_dlq_retention_secs() {
+            let catalog = SystemCatalogConfig::current();
+            let sql = journal_dlq_retention_sweep_sql(
+                &catalog.cdc_journal_relation(),
+                &catalog.dlq_relation(),
+            );
+            match retention_batches(&self.pool, &sql, &[], secs, None, false, None).await {
+                Ok(removed) if removed > 0 => {
+                    info!(
+                        "[cdc] journal retention sweep removed {removed} dead-lettered rows (retention {secs}s)"
+                    );
+                }
+                Ok(_) => {}
+                Err(err) => {
+                    warn!("[cdc] dead-lettered journal retention sweep failed: {err}");
+                }
+            }
+        }
     }
 
     /// One retention sweep under explicit rules; returns the rows removed.
@@ -1852,6 +1978,50 @@ impl CdcEngine {
         &self,
         retention: &JournalRetention,
     ) -> Result<u64, String> {
+        journal_retention_sweep(&self.pool, retention, false, None).await
+    }
+}
+
+/// Run the journal retention sweep now, as the leader's maintenance tick does
+/// (`UDB_CDC_JOURNAL_RETENTION`, its topic overrides and the dead-letter
+/// retention), until nothing past retention is left. `udb cleanup run` uses
+/// it, so the journal can be trimmed without a running broker. Only published
+/// and acknowledged rows are removed, and a named consumer that is still
+/// acknowledging holds back the override pruning.
+pub(crate) async fn sweep_journal_now(
+    pool: &sqlx::PgPool,
+    config: &super::CdcConfig,
+    statement_timeout: &str,
+) -> Result<u64, String> {
+    let retention = JournalRetention {
+        global_secs: Some(config.journal_retention_secs.max(1)),
+        overrides: config.journal_retention_overrides.clone(),
+        only_topics: None,
+    };
+    let mut removed =
+        journal_retention_sweep(pool, &retention, true, Some(statement_timeout)).await?;
+    if let Some(secs) = crate::runtime::config::cdc_journal_dlq_retention_secs() {
+        let catalog = SystemCatalogConfig::current();
+        let sql = journal_dlq_retention_sweep_sql(
+            &catalog.cdc_journal_relation(),
+            &catalog.dlq_relation(),
+        );
+        removed +=
+            retention_batches(pool, &sql, &[], secs, None, true, Some(statement_timeout)).await?;
+    }
+    Ok(removed)
+}
+
+/// One retention sweep under explicit rules; returns the rows removed. The
+/// durable head row is never touched, so positions never restart. `drain`
+/// lifts the per-tick limit (`UDB_CDC_JOURNAL_SWEEP_MAX_ROWS`).
+pub(crate) async fn journal_retention_sweep(
+    pool: &sqlx::PgPool,
+    retention: &JournalRetention,
+    drain: bool,
+    statement_timeout: Option<&str>,
+) -> Result<u64, String> {
+    {
         let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
         let scope = retention
             .only_topics
@@ -1860,13 +2030,14 @@ impl CdcEngine {
         let mut removed = 0u64;
         if let Some(secs) = retention.global_secs {
             let (sql, binds) = journal_retention_sweep_sql(&journal_relation, None, scope.as_ref());
-            removed += self.run_retention_batches(&sql, &binds, secs, None).await?;
+            removed +=
+                retention_batches(pool, &sql, &binds, secs, None, drain, statement_timeout).await?;
         }
         if retention.overrides.is_empty() {
             return Ok(removed);
         }
         let catalog = SystemCatalogConfig::current();
-        let head = super::journal::head(&self.pool, &catalog)
+        let head = super::journal::head(pool, &catalog)
             .await
             .map_err(|err| format!("journal head read failed: {err}"))?;
         // Named consumers still acking within retention hold back override
@@ -1879,7 +2050,7 @@ impl CdcEngine {
             catalog.cdc_consumer_cursors_relation()
         ))
         .bind(active_secs)
-        .fetch_all(&self.pool)
+        .fetch_all(pool)
         .await
         .map_err(|err| format!("consumer cursor read failed: {err}"))?;
         for (pattern, secs) in &retention.overrides {
@@ -1893,70 +2064,116 @@ impl CdcEngine {
             let filter = super::topic_filter::TopicFilter::compile(pattern);
             let (sql, binds) =
                 journal_retention_sweep_sql(&journal_relation, Some(&filter), scope.as_ref());
-            removed += self
-                .run_retention_batches(&sql, &binds, *secs, Some(floor))
-                .await?;
+            removed += retention_batches(
+                pool,
+                &sql,
+                &binds,
+                *secs,
+                Some(floor),
+                drain,
+                statement_timeout,
+            )
+            .await?;
         }
         Ok(removed)
     }
+}
 
-    /// Run one retention statement in bounded batches until a short batch or
-    /// the per-tick batch limit.
-    async fn run_retention_batches(
-        &self,
-        sql: &str,
-        binds: &[String],
-        age_secs: u64,
-        floor: Option<i64>,
-    ) -> Result<u64, String> {
-        let mut removed = 0u64;
-        for _ in 0..JOURNAL_RETENTION_MAX_BATCHES {
-            let mut query = sqlx::query(sql)
-                .bind(age_secs.max(1) as f64)
-                .bind(JOURNAL_RETENTION_BATCH);
-            if let Some(floor) = floor {
-                query = query.bind(floor);
+/// Run one retention statement in bounded batches until a short batch, or
+/// the per-tick limit (`UDB_CDC_JOURNAL_SWEEP_MAX_ROWS`) unless `drain`.
+async fn retention_batches(
+    pool: &sqlx::PgPool,
+    sql: &str,
+    binds: &[String],
+    age_secs: u64,
+    floor: Option<i64>,
+    drain: bool,
+    statement_timeout: Option<&str>,
+) -> Result<u64, String> {
+    let mut removed = 0u64;
+    let batches = if drain {
+        usize::MAX
+    } else {
+        retention_batches_for(crate::runtime::config::cdc_journal_sweep_max_rows())
+    };
+    for _ in 0..batches {
+        let mut query = sqlx::query(sql)
+            .bind(age_secs.max(1) as f64)
+            .bind(JOURNAL_RETENTION_BATCH);
+        if let Some(floor) = floor {
+            query = query.bind(floor);
+        }
+        for value in binds {
+            query = query.bind(value);
+        }
+        // A maintenance run (`udb cleanup run`) sets its own statement
+        // timeout so a database or role default cannot cancel a large batch.
+        let deleted = match statement_timeout {
+            Some(timeout) => {
+                let mut tx = pool.begin().await.map_err(|err| err.to_string())?;
+                sqlx::query("SELECT set_config('statement_timeout', $1, true)")
+                    .bind(timeout)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|err| err.to_string())?;
+                let deleted = query
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|err| format!("journal retention batch failed: {err}"))?
+                    .rows_affected();
+                tx.commit().await.map_err(|err| err.to_string())?;
+                deleted
             }
-            for value in binds {
-                query = query.bind(value);
-            }
-            let deleted = query
-                .execute(&self.pool)
+            None => query
+                .execute(pool)
                 .await
                 .map_err(|err| format!("journal retention batch failed: {err}"))?
-                .rows_affected();
-            removed += deleted;
-            if deleted < JOURNAL_RETENTION_BATCH as u64 {
-                break;
-            }
+                .rows_affected(),
+        };
+        removed += deleted;
+        if deleted < JOURNAL_RETENTION_BATCH as u64 {
+            break;
         }
-        Ok(removed)
     }
+    Ok(removed)
+}
 
+impl CdcEngine {
     /// F-7: prune expired idempotency-dedup rows. Runs on the leader-elected
     /// tailer's maintenance tick (single cluster-wide sweeper, no coordination
-    /// needed) at the same TTL as the dedup window. Best-effort: a failure is
-    /// logged and retried on the next tick.
+    /// needed) at the same TTL as the dedup window, in batches of
+    /// [`JOURNAL_RETENTION_BATCH`] rows up to `UDB_IDEMPOTENCY_SWEEP_MAX_ROWS`
+    /// per tick (default 100000); a larger backlog goes over the next ticks.
+    /// Best-effort: a failure is logged and retried on the next tick.
     pub(crate) async fn run_idempotency_retention_sweep(&self) {
         let relation = SystemCatalogConfig::current().idempotency_keys_relation();
         let sweep_sql = idempotency_retention_sweep_sql(&relation);
         let ttl_secs = self.config.idempotency_ttl_secs.max(1) as f64;
-        match sqlx::query(&sweep_sql)
-            .bind(ttl_secs)
-            .execute(&self.pool)
-            .await
-        {
-            Ok(res) if res.rows_affected() > 0 => {
-                info!(
-                    "[cdc] idempotency retention sweep removed {} rows older than {}s",
-                    res.rows_affected(),
-                    ttl_secs
-                );
+        let batches = retention_batches_for(crate::runtime::config::idempotency_sweep_max_rows());
+        let mut removed = 0u64;
+        for _ in 0..batches {
+            match sqlx::query(&sweep_sql)
+                .bind(ttl_secs)
+                .bind(JOURNAL_RETENTION_BATCH)
+                .execute(&self.pool)
+                .await
+            {
+                Ok(res) => {
+                    removed += res.rows_affected();
+                    if res.rows_affected() < JOURNAL_RETENTION_BATCH as u64 {
+                        break;
+                    }
+                }
+                Err(err) => {
+                    warn!("[cdc] idempotency retention sweep failed: {err}");
+                    break;
+                }
             }
-            Ok(_) => {}
-            Err(err) => {
-                warn!("[cdc] idempotency retention sweep failed: {err}");
-            }
+        }
+        if removed > 0 {
+            info!(
+                "[cdc] idempotency retention sweep removed {removed} rows older than {ttl_secs}s"
+            );
         }
     }
 

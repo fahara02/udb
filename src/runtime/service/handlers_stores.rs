@@ -35,8 +35,9 @@
 
 use super::*;
 use crate::ir::{
-    ComparisonOp, ConflictStrategy, LogicalDelete, LogicalFilter, LogicalPagination, LogicalRead,
-    LogicalRecord, LogicalValue, LogicalWrite,
+    ComparisonOp, ConflictStrategy, LogicalDelete, LogicalFilter, LogicalPagination,
+    LogicalProjection, LogicalRead, LogicalRecord, LogicalSort, LogicalValue, LogicalWrite,
+    NullOrder, SortDirection,
 };
 use crate::runtime::executor_utils::{invalid_argument_fields, json_into_struct, struct_to_json};
 
@@ -468,6 +469,9 @@ impl DataBrokerService {
         {
             return self.record_grpc("CacheGet", started, Err(e));
         }
+        if let Err(e) = cache_get_unsupported(&req) {
+            return self.record_grpc("CacheGet", started, Err(e));
+        }
         let spec = serde_json::json!({ "operation": "get", "key": req.key });
         let out = self
             .run_store_op(&security, req.resource.as_ref(), false, "query", spec)
@@ -513,13 +517,37 @@ impl DataBrokerService {
         {
             return self.record_grpc("CacheSet", started, Err(e));
         }
+        if let Err(e) = cache_set_unsupported(&req) {
+            return self.record_grpc("CacheSet", started, Err(e));
+        }
+        // The cache stores text: a value that is not UTF-8 would come back
+        // changed, so it is refused rather than silently altered.
+        let value = match String::from_utf8(req.value.clone()) {
+            Ok(value) => value,
+            Err(_) => {
+                return self.record_grpc(
+                    "CacheSet",
+                    started,
+                    Err(crate::runtime::executor_utils::invalid_argument_fields(
+                        "CacheSet stores text; the value is not valid UTF-8 (encode binary values, e.g. base64)",
+                        [("value", "must be valid UTF-8")],
+                    )),
+                );
+            }
+        };
         let mut spec = serde_json::json!({
             "operation": "set",
             "key": req.key,
-            "value": String::from_utf8_lossy(&req.value),
+            "value": value,
         });
         if req.ttl_seconds > 0 {
             spec["ttl"] = serde_json::json!(req.ttl_seconds);
+        }
+        if req.only_if_absent {
+            spec["nx"] = serde_json::json!(true);
+        }
+        if req.only_if_present {
+            spec["xx"] = serde_json::json!(true);
         }
         let out = self
             .run_store_op(&security, req.resource.as_ref(), true, "mutate", spec)
@@ -547,6 +575,16 @@ impl DataBrokerService {
             )
             .await
         {
+            return self.record_grpc("CacheDelete", started, Err(e));
+        }
+        if let Err(e) = refuse_unsupported_fields(
+            "CacheDelete",
+            &[(
+                "idempotency_key",
+                has_text(&req.idempotency_key),
+                NO_STORE_IDEMPOTENCY,
+            )],
+        ) {
             return self.record_grpc("CacheDelete", started, Err(e));
         }
         let spec = serde_json::json!({ "operation": "delete", "key": req.key });
@@ -655,24 +693,29 @@ impl DataBrokerService {
         }
         let ir = target.entity.as_deref().and_then(|entity| {
             let pk = entity_primary_key(&catalog.manifest, entity)?;
-            Some(ir_envelope(
-                "read",
-                &LogicalRead::message(entity)
-                    .with_filter(pk_filter(&pk, &req.document_id))
-                    .with_pagination(LogicalPagination {
-                        limit: Some(1),
-                        ..Default::default()
-                    }),
-            ))
+            let mut read = LogicalRead::message(entity)
+                .with_filter(pk_filter(&pk, &req.document_id))
+                .with_pagination(LogicalPagination {
+                    limit: Some(1),
+                    ..Default::default()
+                });
+            read.projection = field_projection(&req.fields);
+            Some(ir_envelope("read", &read))
         });
         let spec = match ir {
             Some(Ok(spec)) => spec,
             Some(Err(e)) => return self.record_grpc("DocumentGet", started, Err(e)),
-            None => serde_json::json!({
-                "collection": collection_of(&req.resource),
-                "filter": { "_id": req.document_id },
-                "limit": 1,
-            }),
+            None => {
+                let mut spec = serde_json::json!({
+                    "collection": collection_of(&req.resource),
+                    "filter": { "_id": req.document_id },
+                    "limit": 1,
+                });
+                if let Some(projection) = mongo_projection(&req.fields) {
+                    spec["projection"] = projection;
+                }
+                spec
+            }
         };
         let out = self
             .run_store_op(&security, req.resource.as_ref(), false, "query", spec)
@@ -706,11 +749,27 @@ impl DataBrokerService {
         if let Err(e) = require_collection(&req.resource) {
             return self.record_grpc("DocumentFind", started, Err(e));
         }
+        if let Err(e) = refuse_unsupported_fields(
+            "DocumentFind",
+            &[(
+                "page_token",
+                has_text(&req.page_token),
+                "document finds return one page and issue no continuation token",
+            )],
+        ) {
+            return self.record_grpc("DocumentFind", started, Err(e));
+        }
+        let sort = match document_sort(&req.sort) {
+            Ok(sort) => sort,
+            Err(e) => return self.record_grpc("DocumentFind", started, Err(e)),
+        };
         let filter_doc = struct_field(&req.filter);
         let ir = match (target.entity.as_deref(), filter_from_document(&filter_doc)) {
             (Some(entity), Ok(filter)) => {
                 let mut read = LogicalRead::message(entity);
                 read.filter = filter;
+                read.projection = field_projection(&req.fields);
+                read.sort = sort.clone();
                 read.pagination = limit_pagination(i64::from(req.limit));
                 Some(ir_envelope("read", &read))
             }
@@ -719,11 +778,31 @@ impl DataBrokerService {
         let spec = match ir {
             Some(Ok(spec)) => spec,
             Some(Err(e)) => return self.record_grpc("DocumentFind", started, Err(e)),
-            None => serde_json::json!({
-                "collection": collection_of(&req.resource),
-                "filter": filter_doc,
-                "limit": req.limit,
-            }),
+            None => {
+                // The raw document query takes a projection but no sort, so a
+                // sorted find that cannot use the neutral IR is refused rather
+                // than returned in an order the caller did not ask for.
+                if !sort.is_empty() {
+                    return self.record_grpc(
+                        "DocumentFind",
+                        started,
+                        Err(unsupported_store_field(
+                            "DocumentFind",
+                            "sort",
+                            "sorting needs a catalog entity and a filter the neutral IR can express",
+                        )),
+                    );
+                }
+                let mut spec = serde_json::json!({
+                    "collection": collection_of(&req.resource),
+                    "filter": filter_doc,
+                    "limit": req.limit,
+                });
+                if let Some(projection) = mongo_projection(&req.fields) {
+                    spec["projection"] = projection;
+                }
+                spec
+            }
         };
         let out = self
             .run_store_op(&security, req.resource.as_ref(), false, "query", spec)
@@ -757,6 +836,16 @@ impl DataBrokerService {
         if let Err(e) = require_collection(&req.resource) {
             return self.record_grpc("DocumentUpsert", started, Err(e));
         }
+        if let Err(e) = refuse_unsupported_fields(
+            "DocumentUpsert",
+            &[(
+                "idempotency_key",
+                has_text(&req.idempotency_key),
+                NO_STORE_IDEMPOTENCY,
+            )],
+        ) {
+            return self.record_grpc("DocumentUpsert", started, Err(e));
+        }
         let document = struct_field(&req.document);
         let ir = target.entity.as_deref().and_then(|entity| {
             let pk = entity_primary_key(&catalog.manifest, entity)?;
@@ -768,10 +857,9 @@ impl DataBrokerService {
                 return None;
             }
             let fields: Vec<String> = record.keys().filter(|k| **k != pk).cloned().collect();
-            let conflict = if req.replace || fields.is_empty() {
-                ConflictStrategy::Replace
-            } else {
-                ConflictStrategy::update(fields)
+            let conflict = match upsert_conflict(&pk, fields, &req.merge_fields, req.replace) {
+                Ok(conflict) => conflict,
+                Err(e) => return Some(Err(e)),
             };
             Some(ir_envelope(
                 "write",
@@ -786,6 +874,19 @@ impl DataBrokerService {
         let spec = match ir {
             Some(Ok(spec)) => spec,
             Some(Err(e)) => return self.record_grpc("DocumentUpsert", started, Err(e)),
+            // The raw document write replaces or merges the whole document;
+            // it cannot limit the update to `merge_fields`.
+            None if !req.merge_fields.is_empty() => {
+                return self.record_grpc(
+                    "DocumentUpsert",
+                    started,
+                    Err(unsupported_store_field(
+                        "DocumentUpsert",
+                        "merge_fields",
+                        "a partial merge needs a catalog entity and a document that carries its primary key",
+                    )),
+                );
+            }
             None => serde_json::json!({
                 "collection": collection_of(&req.resource),
                 "operation": if req.replace { "update" } else { "upsert" },
@@ -1010,7 +1111,7 @@ impl DataBrokerService {
             Err(e) => return self.record_grpc("TimeSeriesWrite", started, Err(e)),
         };
         let req = request.into_inner();
-        let (target, _catalog) = match self
+        let (target, catalog) = match self
             .authorize_store_target(
                 &security,
                 &req.resource,
@@ -1025,6 +1126,27 @@ impl DataBrokerService {
         if let Err(e) = require_collection(&req.resource) {
             return self.record_grpc("TimeSeriesWrite", started, Err(e));
         }
+        if let Err(e) = refuse_unsupported_fields(
+            "TimeSeriesWrite",
+            &[(
+                "idempotency_key",
+                has_text(&req.idempotency_key),
+                NO_STORE_IDEMPOTENCY,
+            )],
+        ) {
+            return self.record_grpc("TimeSeriesWrite", started, Err(e));
+        }
+        // `TimeSeriesPoint.timestamp` is written into the entity's declared
+        // time column (`timeseries_store.time_field`). Without one there is no
+        // column to put it in, so a stamped point is refused, not dropped.
+        let time_field = target
+            .entity
+            .as_deref()
+            .and_then(|entity| timeseries_time_field(&catalog.manifest, entity));
+        let stamped_times = match point_times(&req.points, time_field.as_deref()) {
+            Ok(times) => times,
+            Err(e) => return self.record_grpc("TimeSeriesWrite", started, Err(e)),
+        };
         let rows: Vec<serde_json::Value> = req
             .points
             .iter()
@@ -1060,7 +1182,17 @@ impl DataBrokerService {
             self.store_backend_kind(&security, &req.resource),
             Some(crate::backend::BackendKind::Clickhouse)
         );
-        let records: Vec<LogicalRecord> = rows.iter().map(record_from_json).collect();
+        let records: Vec<LogicalRecord> = match rows
+            .iter()
+            .zip(&stamped_times)
+            .map(|(row, time)| {
+                stamp_point_record(record_from_json(row), time_field.as_deref(), *time)
+            })
+            .collect::<Result<Vec<_>, Status>>()
+        {
+            Ok(records) => records,
+            Err(e) => return self.record_grpc("TimeSeriesWrite", started, Err(e)),
+        };
         let writes: Vec<Vec<LogicalRecord>> = if batch {
             vec![records]
         } else {
@@ -1108,7 +1240,7 @@ impl DataBrokerService {
             Err(e) => return self.record_grpc("TimeSeriesQuery", started, Err(e)),
         };
         let req = request.into_inner();
-        let (target, _catalog) = match self
+        let (target, catalog) = match self
             .authorize_store_target(
                 &security,
                 &req.resource,
@@ -1123,11 +1255,27 @@ impl DataBrokerService {
         if let Err(e) = require_collection(&req.resource) {
             return self.record_grpc("TimeSeriesQuery", started, Err(e));
         }
+        if let Err(e) = time_series_query_unsupported(&req) {
+            return self.record_grpc("TimeSeriesQuery", started, Err(e));
+        }
+        let time_field = target
+            .entity
+            .as_deref()
+            .and_then(|entity| timeseries_time_field(&catalog.manifest, entity));
+        let time_range = match time_range_filter(
+            time_field.as_deref(),
+            req.from.as_ref().map(|t| (t.seconds, t.nanos)),
+            req.to.as_ref().map(|t| (t.seconds, t.nanos)),
+        ) {
+            Ok(range) => range,
+            Err(e) => return self.record_grpc("TimeSeriesQuery", started, Err(e)),
+        };
         let filter_doc = struct_field(&req.filter);
         let ir = match (target.entity.as_deref(), filter_from_document(&filter_doc)) {
             (Some(entity), Ok(filter)) => {
                 let mut read = LogicalRead::message(entity);
-                read.filter = filter;
+                read.filter = and_filters(filter, time_range);
+                read.projection = field_projection(&req.fields);
                 read.pagination = limit_pagination(i64::from(req.limit));
                 Some(ir_envelope("read", &read))
             }
@@ -1136,11 +1284,26 @@ impl DataBrokerService {
         let spec = match ir {
             Some(Ok(spec)) => spec,
             Some(Err(e)) => return self.record_grpc("TimeSeriesQuery", started, Err(e)),
-            None => serde_json::json!({
-                "table": collection_of(&req.resource),
-                "filter": filter_doc,
-                "limit": req.limit,
-            }),
+            None => {
+                // The raw table read takes a filter document only; it has no
+                // time range or column list, so neither may be dropped here.
+                let refused = refuse_unsupported_fields(
+                    "TimeSeriesQuery",
+                    &[
+                        ("from", req.from.is_some(), TS_RANGE_NEEDS_IR),
+                        ("to", req.to.is_some(), TS_RANGE_NEEDS_IR),
+                        ("fields", !req.fields.is_empty(), TS_RANGE_NEEDS_IR),
+                    ],
+                );
+                if let Err(e) = refused {
+                    return self.record_grpc("TimeSeriesQuery", started, Err(e));
+                }
+                serde_json::json!({
+                    "table": collection_of(&req.resource),
+                    "filter": filter_doc,
+                    "limit": req.limit,
+                })
+            }
         };
         let out = self
             .run_store_op(&security, req.resource.as_ref(), false, "query", spec)
@@ -1195,6 +1358,9 @@ impl DataBrokerService {
             if let Err(e) = require_collection(&req.resource) {
                 return self.record_grpc("AnalyticalQuery", started, Err(e));
             }
+        }
+        if let Err(e) = analytical_query_unsupported(&req) {
+            return self.record_grpc("AnalyticalQuery", started, Err(e));
         }
         let ir = match target.entity.as_deref() {
             Some(entity) if table_scan => {
@@ -1320,6 +1486,377 @@ fn require_collection(resource: &Option<crate::proto::StoreResource>) -> Result<
         ));
     }
     Ok(())
+}
+
+// ── Request fields a store RPC cannot honour ───────────────────────────────
+//
+// A field the broker cannot act on is refused with `Unimplemented` naming the
+// field, never accepted and ignored: a caller who sets it is relying on it.
+
+/// Why an `idempotency_key` cannot be honoured on a store RPC: the broker's
+/// replay ledger commits in the same PostgreSQL transaction as the write it
+/// guards, and these writes go to another store.
+const NO_STORE_IDEMPOTENCY: &str = "replay protection is only available on the relational data \
+     RPCs (Insert/Update/Upsert/Delete), whose ledger commits with the write; retry this call \
+     only when a repeat is harmless";
+
+/// Why a time-series range or column list needs the neutral IR path.
+const TS_RANGE_NEEDS_IR: &str = "it needs a catalog entity with a timeseries_store time_field and \
+     a filter the neutral IR can express";
+
+fn has_text(value: &str) -> bool {
+    !value.trim().is_empty()
+}
+
+fn unsupported_store_field(rpc: &str, field: &str, why: &str) -> Status {
+    crate::runtime::executor_utils::capability_status_with_code(
+        tonic::Code::Unimplemented,
+        "udb",
+        rpc,
+        field,
+        format!("{rpc}.{field} is not supported: {why}; leave it unset"),
+    )
+}
+
+/// Refuses the first `(field, is_set, why)` entry whose field the caller set.
+fn refuse_unsupported_fields(rpc: &str, fields: &[(&str, bool, &str)]) -> Result<(), Status> {
+    for (field, is_set, why) in fields {
+        if *is_set {
+            return Err(unsupported_store_field(rpc, field, why));
+        }
+    }
+    Ok(())
+}
+
+fn cache_get_unsupported(req: &crate::proto::CacheGetRequest) -> Result<(), Status> {
+    refuse_unsupported_fields(
+        "CacheGet",
+        &[(
+            "touch",
+            req.touch,
+            "the cache read does not refresh a key's expiry; set the key again with ttl_seconds",
+        )],
+    )
+}
+
+/// A content type the cache can honour: the value is stored as UTF-8 text.
+fn text_content_type(content_type: &str) -> bool {
+    let base = content_type
+        .split(';')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+    base.is_empty()
+        || base.starts_with("text/")
+        || base == "application/json"
+        || base.ends_with("+json")
+        || base == "application/xml"
+        || base.ends_with("+xml")
+}
+
+fn cache_set_unsupported(req: &crate::proto::CacheSetRequest) -> Result<(), Status> {
+    if req.only_if_absent && req.only_if_present {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "CacheSet: only_if_absent and only_if_present exclude each other",
+            [(
+                "only_if_absent",
+                "set at most one of only_if_absent / only_if_present",
+            )],
+        ));
+    }
+    refuse_unsupported_fields(
+        "CacheSet",
+        &[
+            (
+                "idempotency_key",
+                has_text(&req.idempotency_key),
+                NO_STORE_IDEMPOTENCY,
+            ),
+            (
+                "content_type",
+                !text_content_type(&req.content_type),
+                "the cache stores text values; a binary content type would not survive",
+            ),
+            (
+                "metadata",
+                req.metadata.as_ref().is_some_and(|m| !m.fields.is_empty()),
+                "the cache stores the value only, so metadata would not come back on CacheGet",
+            ),
+        ],
+    )
+}
+
+fn time_series_query_unsupported(req: &crate::proto::TimeSeriesQueryRequest) -> Result<(), Status> {
+    const NO_AGGREGATION: &str =
+        "time-series queries return raw points; aggregate with AnalyticalQuery";
+    refuse_unsupported_fields(
+        "TimeSeriesQuery",
+        &[
+            ("group_by", has_text(&req.group_by), NO_AGGREGATION),
+            ("aggregate", has_text(&req.aggregate), NO_AGGREGATION),
+            ("window", has_text(&req.window), NO_AGGREGATION),
+            (
+                "page_token",
+                has_text(&req.page_token),
+                "time-series queries return one page and issue no continuation token",
+            ),
+        ],
+    )
+}
+
+fn analytical_query_unsupported(req: &crate::proto::AnalyticalQueryRequest) -> Result<(), Status> {
+    refuse_unsupported_fields(
+        "AnalyticalQuery",
+        &[
+            (
+                "dry_run",
+                req.dry_run,
+                "the analytical store has no plan-only mode here, and a dry run must not execute",
+            ),
+            (
+                "parameters",
+                req.parameters
+                    .as_ref()
+                    .is_some_and(|p| !p.fields.is_empty()),
+                "the analytical store does not bind query parameters",
+            ),
+            (
+                "page_token",
+                has_text(&req.page_token),
+                "analytical queries return one page and issue no continuation token",
+            ),
+        ],
+    )
+}
+
+/// The requested field list as an IR projection; `None` means every field.
+fn field_projection(fields: &[String]) -> Option<LogicalProjection> {
+    let fields: Vec<String> = fields
+        .iter()
+        .map(|field| field.trim().to_string())
+        .filter(|field| !field.is_empty())
+        .collect();
+    (!fields.is_empty()).then(|| LogicalProjection::fields(fields))
+}
+
+/// The requested field list as a raw document-query projection
+/// (`{"field": 1, ...}`); `None` means every field.
+fn mongo_projection(fields: &[String]) -> Option<serde_json::Value> {
+    let projection = field_projection(fields)?;
+    Some(serde_json::Value::Object(
+        projection
+            .fields
+            .into_iter()
+            .map(|field| (field, serde_json::json!(1)))
+            .collect(),
+    ))
+}
+
+/// `DocumentFind.sort` as IR sort keys. A sort key with no field is refused.
+fn document_sort(sort: &[crate::proto::Sort]) -> Result<Vec<LogicalSort>, Status> {
+    sort.iter()
+        .map(|key| {
+            let field = key.field.trim();
+            if field.is_empty() {
+                return Err(store_rpc_invalid_fields(
+                    "every sort key needs a field",
+                    [("sort.field", "must name a document field")],
+                ));
+            }
+            Ok(LogicalSort {
+                field: field.to_string(),
+                direction: if key.descending {
+                    SortDirection::Desc
+                } else {
+                    SortDirection::Asc
+                },
+                nulls: NullOrder::Default,
+            })
+        })
+        .collect()
+}
+
+/// How a document upsert resolves a conflict on its primary key `pk`.
+/// `fields` are the non-key fields the document carries. With `merge_fields`
+/// only those fields are updated on an existing document; each must be in the
+/// document, and a merge cannot be combined with `replace`.
+fn upsert_conflict(
+    pk: &str,
+    fields: Vec<String>,
+    merge_fields: &[String],
+    replace: bool,
+) -> Result<ConflictStrategy, Status> {
+    if merge_fields.is_empty() {
+        return Ok(if replace || fields.is_empty() {
+            ConflictStrategy::Replace
+        } else {
+            ConflictStrategy::update(fields)
+        });
+    }
+    if replace {
+        return Err(store_rpc_invalid_fields(
+            "merge_fields and replace cannot both be set",
+            [(
+                "merge_fields",
+                "must be empty when replace is set (replace overwrites the whole document)",
+            )],
+        ));
+    }
+    let mut merged = Vec::with_capacity(merge_fields.len());
+    for field in merge_fields {
+        let field = field.trim();
+        if field.is_empty() || field == pk || !fields.iter().any(|f| f == field) {
+            return Err(store_rpc_invalid_fields(
+                format!("merge field '{field}' is not a non-key field of the document"),
+                [(
+                    "merge_fields",
+                    "must name non-key fields that the document carries",
+                )],
+            ));
+        }
+        if !merged.iter().any(|f: &String| f == field) {
+            merged.push(field.to_string());
+        }
+    }
+    Ok(ConflictStrategy::update(merged))
+}
+
+/// The time column a time-series entity declared with
+/// `timeseries_store.time_field`, if any.
+fn timeseries_time_field(manifest: &CatalogManifest, entity: &str) -> Option<String> {
+    let crate::broker::TableLookup::Found(table) = crate::broker::table_lookup(manifest, entity)
+    else {
+        return None;
+    };
+    manifest
+        .stores
+        .iter()
+        .filter(|store| {
+            store.store_kind == "timeseries"
+                && store.owner_table == table.table
+                && store.owner_schema == table.schema
+        })
+        .flat_map(|store| store.options.iter())
+        .find(|option| option.key == "time_field" && !option.value.trim().is_empty())
+        .map(|option| option.value.trim().to_string())
+}
+
+fn utc_from_proto_time(
+    field: &str,
+    seconds: i64,
+    nanos: i32,
+) -> Result<chrono::DateTime<chrono::Utc>, Status> {
+    u32::try_from(nanos)
+        .ok()
+        .and_then(|nanos| chrono::DateTime::from_timestamp(seconds, nanos))
+        .ok_or_else(|| {
+            store_rpc_invalid_fields(
+                format!("{field} is not a valid timestamp"),
+                [(field, "must be a valid google.protobuf.Timestamp")],
+            )
+        })
+}
+
+/// Each point's `timestamp` as UTC, in point order. A stamped point needs a
+/// time column to land in; without one the request is refused.
+fn point_times(
+    points: &[crate::proto::TimeSeriesPoint],
+    time_field: Option<&str>,
+) -> Result<Vec<Option<chrono::DateTime<chrono::Utc>>>, Status> {
+    points
+        .iter()
+        .map(|point| {
+            let Some(ts) = point.timestamp.as_ref() else {
+                return Ok(None);
+            };
+            if time_field.is_none() {
+                return Err(unsupported_store_field(
+                    "TimeSeriesWrite",
+                    "points.timestamp",
+                    "the target has no declared timeseries_store time_field to hold it; \
+                     send the time inside the point's fields",
+                ));
+            }
+            utc_from_proto_time("points.timestamp", ts.seconds, ts.nanos).map(Some)
+        })
+        .collect()
+}
+
+/// Puts a point's timestamp into its time column. A point that also carries
+/// that column in its fields/values is refused: two times for one point.
+fn stamp_point_record(
+    mut record: LogicalRecord,
+    time_field: Option<&str>,
+    time: Option<chrono::DateTime<chrono::Utc>>,
+) -> Result<LogicalRecord, Status> {
+    let (Some(field), Some(time)) = (time_field, time) else {
+        return Ok(record);
+    };
+    if record.contains_key(field) {
+        return Err(store_rpc_invalid_fields(
+            format!("the point sets both timestamp and the time column '{field}'"),
+            [(
+                "points.timestamp",
+                "must be unset when the point's fields or values carry the time column",
+            )],
+        ));
+    }
+    record.insert(field.to_string(), LogicalValue::Timestamp(time));
+    Ok(record)
+}
+
+/// `from` (inclusive) and `to` (exclusive) as a filter on the time column.
+fn time_range_filter(
+    time_field: Option<&str>,
+    from: Option<(i64, i32)>,
+    to: Option<(i64, i32)>,
+) -> Result<Option<LogicalFilter>, Status> {
+    if from.is_none() && to.is_none() {
+        return Ok(None);
+    }
+    let Some(field) = time_field else {
+        return Err(unsupported_store_field(
+            "TimeSeriesQuery",
+            if from.is_some() { "from" } else { "to" },
+            TS_RANGE_NEEDS_IR,
+        ));
+    };
+    let from = from
+        .map(|(seconds, nanos)| utc_from_proto_time("from", seconds, nanos))
+        .transpose()?;
+    let to = to
+        .map(|(seconds, nanos)| utc_from_proto_time("to", seconds, nanos))
+        .transpose()?;
+    if let (Some(from), Some(to)) = (from, to)
+        && from > to
+    {
+        return Err(store_rpc_invalid_fields(
+            "from is after to",
+            [("from", "must not be later than to")],
+        ));
+    }
+    let bound = |op: ComparisonOp, time: chrono::DateTime<chrono::Utc>| LogicalFilter::Comparison {
+        field: field.to_string(),
+        op,
+        value: LogicalValue::Timestamp(time),
+    };
+    let mut clauses: Vec<LogicalFilter> = Vec::new();
+    if let Some(from) = from {
+        clauses.push(bound(ComparisonOp::Ge, from));
+    }
+    if let Some(to) = to {
+        clauses.push(bound(ComparisonOp::Lt, to));
+    }
+    Ok(and_filters(clauses.pop(), clauses.pop()))
+}
+
+fn and_filters(left: Option<LogicalFilter>, right: Option<LogicalFilter>) -> Option<LogicalFilter> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(LogicalFilter::And(vec![left, right])),
+        (Some(only), None) | (None, Some(only)) => Some(only),
+        (None, None) => None,
+    }
 }
 
 fn cache_value_bytes(value: &str) -> Vec<u8> {
@@ -1690,5 +2227,303 @@ mod tests {
             let rendered = serde_json::to_string(&rendering.unwrap()).unwrap();
             assert!(rendered.contains("tenant-a"), "{rendered}");
         }
+    }
+}
+
+#[cfg(test)]
+mod store_field_honesty_tests {
+    use super::*;
+    use tonic::Code;
+
+    fn manifest_with_time_field(time_field: &str) -> CatalogManifest {
+        let mut manifest = CatalogManifest::default();
+        manifest.tables.push(crate::generation::ManifestTable {
+            message_name: "acme.v1.Reading".into(),
+            schema: "public".into(),
+            table: "readings".into(),
+            primary_key: vec!["id".into()],
+            ..Default::default()
+        });
+        manifest.stores.push(crate::generation::ManifestStore {
+            store_kind: "timeseries".into(),
+            owner_schema: "public".into(),
+            owner_table: "readings".into(),
+            options: vec![crate::generation::ManifestStoreOption {
+                key: "time_field".into(),
+                value: time_field.into(),
+            }],
+            ..Default::default()
+        });
+        manifest
+    }
+
+    #[test]
+    fn cache_set_honours_conditions_and_text_types_and_refuses_the_rest() {
+        let base = crate::proto::CacheSetRequest::default();
+        assert!(cache_set_unsupported(&base).is_ok());
+        // Conditional writes and text content types are honoured.
+        for honoured in [
+            crate::proto::CacheSetRequest {
+                only_if_absent: true,
+                ..base.clone()
+            },
+            crate::proto::CacheSetRequest {
+                only_if_present: true,
+                ..base.clone()
+            },
+            crate::proto::CacheSetRequest {
+                content_type: "text/plain; charset=utf-8".into(),
+                ..base.clone()
+            },
+            crate::proto::CacheSetRequest {
+                content_type: "application/problem+json".into(),
+                ..base.clone()
+            },
+        ] {
+            assert!(cache_set_unsupported(&honoured).is_ok(), "{honoured:?}");
+        }
+        let both = crate::proto::CacheSetRequest {
+            only_if_absent: true,
+            only_if_present: true,
+            ..base.clone()
+        };
+        assert_eq!(
+            cache_set_unsupported(&both).unwrap_err().code(),
+            Code::InvalidArgument
+        );
+        // What the cache cannot keep is refused, not ignored.
+        let cases = [
+            (
+                "idempotency_key",
+                crate::proto::CacheSetRequest {
+                    idempotency_key: "k".into(),
+                    ..base.clone()
+                },
+            ),
+            (
+                "content_type",
+                crate::proto::CacheSetRequest {
+                    content_type: "application/octet-stream".into(),
+                    ..base.clone()
+                },
+            ),
+        ];
+        for (field, req) in cases {
+            let err = cache_set_unsupported(&req).unwrap_err();
+            assert_eq!(err.code(), Code::Unimplemented, "{field}");
+            assert!(err.message().contains(field), "{field}: {}", err.message());
+        }
+        let touch = crate::proto::CacheGetRequest {
+            touch: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            cache_get_unsupported(&touch).unwrap_err().code(),
+            Code::Unimplemented
+        );
+    }
+
+    #[test]
+    fn analytical_dry_run_and_parameters_are_refused_before_execution() {
+        let dry = crate::proto::AnalyticalQueryRequest {
+            dry_run: true,
+            ..Default::default()
+        };
+        let err = analytical_query_unsupported(&dry).unwrap_err();
+        assert_eq!(err.code(), Code::Unimplemented);
+        assert!(err.message().contains("dry_run"));
+        let mut params = prost_types::Struct::default();
+        params.fields.insert(
+            "id".into(),
+            prost_types::Value {
+                kind: Some(prost_types::value::Kind::NumberValue(1.0)),
+            },
+        );
+        let with_params = crate::proto::AnalyticalQueryRequest {
+            parameters: Some(params),
+            ..Default::default()
+        };
+        assert!(
+            analytical_query_unsupported(&with_params)
+                .unwrap_err()
+                .message()
+                .contains("parameters")
+        );
+        let empty_params = crate::proto::AnalyticalQueryRequest {
+            parameters: Some(prost_types::Struct::default()),
+            ..Default::default()
+        };
+        assert!(analytical_query_unsupported(&empty_params).is_ok());
+    }
+
+    #[test]
+    fn time_series_aggregation_fields_are_refused() {
+        let cases = [
+            (
+                "group_by",
+                crate::proto::TimeSeriesQueryRequest {
+                    group_by: "host".into(),
+                    ..Default::default()
+                },
+            ),
+            (
+                "aggregate",
+                crate::proto::TimeSeriesQueryRequest {
+                    aggregate: "avg".into(),
+                    ..Default::default()
+                },
+            ),
+            (
+                "window",
+                crate::proto::TimeSeriesQueryRequest {
+                    window: "1m".into(),
+                    ..Default::default()
+                },
+            ),
+            (
+                "page_token",
+                crate::proto::TimeSeriesQueryRequest {
+                    page_token: "p".into(),
+                    ..Default::default()
+                },
+            ),
+        ];
+        for (field, req) in cases {
+            let err = time_series_query_unsupported(&req).unwrap_err();
+            assert_eq!(err.code(), Code::Unimplemented, "{field}");
+            assert!(err.message().contains(field), "{field}");
+        }
+    }
+
+    #[test]
+    fn the_time_field_comes_from_the_timeseries_store() {
+        let manifest = manifest_with_time_field("observed_at");
+        assert_eq!(
+            timeseries_time_field(&manifest, "acme.v1.Reading").as_deref(),
+            Some("observed_at")
+        );
+        assert_eq!(
+            timeseries_time_field(&CatalogManifest::default(), "acme.v1.Reading"),
+            None
+        );
+    }
+
+    #[test]
+    fn a_point_timestamp_lands_in_the_time_column() {
+        let point = crate::proto::TimeSeriesPoint {
+            timestamp: Some(prost_types::Timestamp {
+                seconds: 1_700_000_000,
+                nanos: 0,
+            }),
+            ..Default::default()
+        };
+        let times = point_times(std::slice::from_ref(&point), Some("observed_at")).unwrap();
+        let record =
+            stamp_point_record(LogicalRecord::new(), Some("observed_at"), times[0]).unwrap();
+        assert_eq!(
+            record.get("observed_at"),
+            Some(&LogicalValue::Timestamp(
+                chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap()
+            ))
+        );
+        // No time column: the stamped point is refused, never dropped.
+        let err = point_times(std::slice::from_ref(&point), None).unwrap_err();
+        assert_eq!(err.code(), Code::Unimplemented);
+        // A point with no timestamp is unchanged.
+        let unstamped = point_times(&[crate::proto::TimeSeriesPoint::default()], None).unwrap();
+        assert_eq!(unstamped, vec![None]);
+        // Two times for one point: refused.
+        let mut both = LogicalRecord::new();
+        both.insert("observed_at".into(), LogicalValue::String("x".into()));
+        assert_eq!(
+            stamp_point_record(both, Some("observed_at"), times[0])
+                .unwrap_err()
+                .code(),
+            Code::InvalidArgument
+        );
+    }
+
+    #[test]
+    fn from_and_to_become_a_half_open_time_range() {
+        let range = time_range_filter(Some("observed_at"), Some((100, 0)), Some((200, 0)))
+            .unwrap()
+            .expect("a range");
+        let LogicalFilter::And(clauses) = range else {
+            panic!("expected an AND of two bounds");
+        };
+        assert!(clauses.iter().any(|c| matches!(
+            c,
+            LogicalFilter::Comparison { op: ComparisonOp::Ge, field, .. } if field == "observed_at"
+        )));
+        assert!(clauses.iter().any(|c| matches!(
+            c,
+            LogicalFilter::Comparison { op: ComparisonOp::Lt, field, .. } if field == "observed_at"
+        )));
+        assert!(time_range_filter(Some("t"), None, None).unwrap().is_none());
+        assert_eq!(
+            time_range_filter(None, Some((1, 0)), None)
+                .unwrap_err()
+                .code(),
+            Code::Unimplemented
+        );
+        assert_eq!(
+            time_range_filter(Some("t"), Some((200, 0)), Some((100, 0)))
+                .unwrap_err()
+                .code(),
+            Code::InvalidArgument
+        );
+    }
+
+    #[test]
+    fn merge_fields_update_only_the_named_fields() {
+        let fields = vec!["name".to_string(), "email".to_string()];
+        assert_eq!(
+            upsert_conflict("id", fields.clone(), &["email".to_string()], false).unwrap(),
+            ConflictStrategy::update(vec!["email".to_string()])
+        );
+        assert_eq!(
+            upsert_conflict("id", fields.clone(), &[], false).unwrap(),
+            ConflictStrategy::update(fields.clone())
+        );
+        assert_eq!(
+            upsert_conflict("id", fields.clone(), &["missing".to_string()], false)
+                .unwrap_err()
+                .code(),
+            Code::InvalidArgument
+        );
+        assert_eq!(
+            upsert_conflict("id", fields, &["email".to_string()], true)
+                .unwrap_err()
+                .code(),
+            Code::InvalidArgument
+        );
+    }
+
+    #[test]
+    fn document_fields_and_sort_map_to_projection_and_order() {
+        assert!(field_projection(&[]).is_none());
+        assert_eq!(
+            field_projection(&["a".to_string(), " ".to_string()])
+                .unwrap()
+                .fields,
+            vec!["a".to_string()]
+        );
+        assert_eq!(
+            mongo_projection(&["a".to_string()]).unwrap(),
+            serde_json::json!({ "a": 1 })
+        );
+        let sort = document_sort(&[crate::proto::Sort {
+            field: "age".into(),
+            descending: true,
+        }])
+        .unwrap();
+        assert_eq!(sort[0].field, "age");
+        assert_eq!(sort[0].direction, SortDirection::Desc);
+        assert_eq!(
+            document_sort(&[crate::proto::Sort::default()])
+                .unwrap_err()
+                .code(),
+            Code::InvalidArgument
+        );
     }
 }

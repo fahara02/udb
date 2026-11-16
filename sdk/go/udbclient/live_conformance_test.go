@@ -1168,6 +1168,33 @@ func runLiveBackendE2E(t *testing.T, ctx context.Context, broker servicesv1.Data
 		t.Fatalf("BatchSelect payload = %q", liveRecordPayload(t, batchSelected, 0))
 	}
 
+	// SelectMany: several reads in one BatchSelect call, results in request
+	// order, run concurrently by the broker.
+	reads := []*entityv1.SelectRequest{
+		{Context: requestCtx, MessageType: liveMessageType, Limit: 1,
+			Filter: liveStruct(t, map[string]any{"record_id": secondRecordID, "tenant_id": tenant, "project_id": project})},
+		{Context: requestCtx, MessageType: liveMessageType, Limit: 1,
+			Filter: liveStruct(t, map[string]any{"record_id": recordID, "tenant_id": tenant, "project_id": project})},
+		{Context: requestCtx, MessageType: liveMessageType, Limit: 1,
+			Filter: liveStruct(t, map[string]any{"record_id": "absent-" + suffix, "tenant_id": tenant, "project_id": project})},
+	}
+	many, err := selectMany(callCtx, broker, reads)
+	if err != nil {
+		t.Fatalf("SelectMany failed: %v", err)
+	}
+	if len(many) != 3 {
+		t.Fatalf("SelectMany returned %d results, want 3", len(many))
+	}
+	if liveRecordPayload(t, many[0], 0) != "created-from-go-batch" {
+		t.Fatalf("SelectMany[0] payload = %q", liveRecordPayload(t, many[0], 0))
+	}
+	if got := liveRecordPayload(t, many[1], 0); got != "updated-from-go" && got != "created-from-go" {
+		t.Fatalf("SelectMany[1] payload = %q", got)
+	}
+	if len(many[2].GetRecordsJson()) != 0 {
+		t.Fatalf("SelectMany[2] should be empty, got %d rows", len(many[2].GetRecordsJson()))
+	}
+
 	if _, err := broker.EnsureResource(callCtx, &entityv1.ResourceAdminRequest{
 		Context:      requestCtx,
 		Backend:      "mongodb",

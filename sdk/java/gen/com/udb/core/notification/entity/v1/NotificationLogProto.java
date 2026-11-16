@@ -50,7 +50,7 @@ public final class NotificationLogProto {
       "entity.v1\032\037google/protobuf/timestamp.pro" +
       "to\032\033udb/core/common/v1/db.proto\032!udb/cor" +
       "e/common/v1/security.proto\032+udb/core/not" +
-      "ification/entity/v1/enums.proto\"\331\027\n\017Noti" +
+      "ification/entity/v1/enums.proto\"\223\030\n\017Noti" +
       "ficationLog\022@\n\006log_id\030\001 \001(\tB)\202\267\030%\n\006log_i" +
       "d\022\004UUID\030\001(\001:\021gen_random_uuid()R\005logId\022\303\001" +
       "\n\013template_id\030\002 \001(\tB\241\001\202\267\030\234\001\n\013template_id" +
@@ -109,83 +109,84 @@ public final class NotificationLogProto {
       "ed_subject\030\024 \001(\tB\034\202\267\030\030\n\020rendered_subject" +
       "\022\004TEXTR\017renderedSubject\022>\n\rrendered_body" +
       "\030\025 \001(\tB\031\202\267\030\025\n\rrendered_body\022\004TEXTR\014rende" +
-      "redBody:\271\005\372\266\030\311\003\n\021notification_logs\022\020udb_" +
+      "redBody:\363\005\372\266\030\203\004\n\021notification_logs\022\020udb_" +
       "notification\030\002 \001*<Delivery audit log for" +
       " every notification sent by the system@\001" +
-      "H\003R\ncreated_atXZb\264\001\n\030tenant_project_isol" +
-      "ation\032\225\001(tenant_id::text = current_setti" +
-      "ng(\'app.current_tenant_id\', true)::text " +
-      "AND project_id::text = current_setting(\'" +
-      "app.current_project_id\', true)::text)(\001h" +
-      "\001\212\001W\n&idx_nlog_tenant_project_channel_st" +
-      "atus\022\005BTREEZ\ttenant_idZ\nproject_idZ\007chan" +
-      "nelZ\006status\212\001!\n\020idx_nlog_sent_at\022\004BRINZ\007" +
-      "sent_at\362\001\026notification.failed.v1\212\262\031\346\001\n\006t" +
-      "enant\022\007project\032\ttenant_id\"\nproject_id*ot" +
-      "enant_id = current_setting(\'app.current_" +
-      "tenant_id\') AND project_id = current_set" +
-      "ting(\'app.current_project_id\')2\004none:\030no" +
-      "tification.operational@ZH\002R\006tenantZ\010stan" +
-      "dardr\025tenant.data_residency\"\357\017\n\033Notifica" +
-      "tionDeliveryAttempt\022L\n\nattempt_id\030\001 \001(\tB" +
-      "-\202\267\030)\n\nattempt_id\022\004UUID\030\001(\001:\021gen_random_" +
-      "uuid()R\tattemptId\022x\n\017notification_id\030\002 \001" +
-      "(\tBO\202\267\030K\n\017notification_id\022\004UUID\030\001R0\n\'idx" +
-      "_notif_delivery_attempt_notification\022\005BT" +
-      "REER\016notificationId\022?\n\ttenant_id\030\003 \001(\tB\"" +
-      "\202\267\030\036\n\ttenant_id\022\014VARCHAR(120)\030\001\230\002\001R\010tena" +
-      "ntId\022l\n\007channel\030\004 \001(\01624.udb.core.notific" +
-      "ation.entity.v1.NotificationChannelB\034\202\267\030" +
-      "\030\n\007channel\022\013VARCHAR(20)\030\001R\007channel\022=\n\010pr" +
-      "ovider\030\005 \001(\tB!\202\267\030\035\n\010provider\022\013VARCHAR(60" +
-      ")\030\001:\002\'\'R\010provider\022\237\001\n\006status\030\006 \001(\01623.udb" +
-      ".core.notification.entity.v1.Notificatio" +
-      "nStatusBR\202\267\030N\n\006status\022\013VARCHAR(20)\030\001:\t\'P" +
-      "ENDING\'R*\n!idx_notif_delivery_attempt_st" +
-      "atus\022\005BTREER\006status\022F\n\rattempt_count\030\007 \001" +
-      "(\005B!\202\267\030\035\n\rattempt_count\022\007INTEGER\030\001:\0010R\014a" +
-      "ttemptCount\0225\n\nlast_error\030\010 \001(\tB\026\202\267\030\022\n\nl" +
-      "ast_error\022\004TEXTR\tlastError\022W\n\023provider_m" +
-      "essage_id\030\t \001(\tB\'\202\267\030#\n\023provider_message_" +
-      "id\022\014VARCHAR(255)R\021providerMessageId\022q\n\nc" +
-      "reated_at\030\n \001(\0132\032.google.protobuf.Timest" +
-      "ampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CU" +
-      "RRENT_TIMESTAMP`\001h\001R\tcreatedAt\022m\n\nupdate" +
-      "d_at\030\013 \001(\0132\032.google.protobuf.TimestampB2" +
-      "\202\267\030.\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT" +
-      "_TIMESTAMPR\tupdatedAt\022v\n\nproject_id\030\014 \001(" +
-      "\tBW\202\267\030S\n\nproject_id\022\014VARCHAR(120)\030\001:\002\'\'R" +
-      ".\n%idx_notif_delivery_attempt_project_id" +
-      "\022\005BTREE\240\002\001R\tprojectId:\305\006\372\266\030\325\004\n\036notificat" +
-      "ion_delivery_attempts\022\020udb_notification\030" +
-      "\004 \001*BPer-channel notification delivery-s" +
-      "tatus record (master-plan 9.13)8\001@\001b\356\001\n\030" +
-      "tenant_project_isolation\032\317\001((tenant_id::" +
-      "text = current_setting(\'app.current_tena" +
-      "nt_id\', true)::text AND project_id::text" +
-      " = current_setting(\'app.current_project_" +
-      "id\', true)::text) OR current_setting(\'ap" +
-      "p.platform_admin\', true) = \'true\')(\001h\001\212\001" +
-      "f\n uq_notif_delivery_attempt_target\022\005BTR" +
-      "EE\030\001Z\ttenant_idZ\nproject_idZ\017notificatio" +
-      "n_idZ\007channelZ\010provider\212\001X\n0idx_notif_de" +
-      "livery_attempt_tenant_project_status\022\005BT" +
-      "REEZ\ttenant_idZ\nproject_idZ\006status\362\001\035udb" +
-      ".notification.delivery.cdc\212\262\031\346\001\n\006tenant\022" +
-      "\007project\032\ttenant_id\"\nproject_id*otenant_" +
-      "id = current_setting(\'app.current_tenant" +
-      "_id\') AND project_id = current_setting(\'" +
-      "app.current_project_id\')2\004none:\030notifica" +
-      "tion.operational@ZH\002R\006tenantZ\010standardr\025" +
-      "tenant.data_residencyB\251\002\n#com.udb.core.n" +
-      "otification.entity.v1B\024NotificationLogPr" +
-      "otoP\001ZKgithub.com/fahara02/udb/sdk/go/ge" +
-      "n/udb/core/notification/entity/v1;entity" +
-      "v1\242\002\004UCNE\252\002\037Udb.Core.Notification.Entity" +
-      ".V1\312\002\037Udb\\Core\\Notification\\Entity\\V1\342\002+" +
-      "Udb\\GPBMetadata\\Core\\Notification\\Entity" +
-      "\\V1\352\002#Udb::Core::Notification::Entity::V" +
-      "1b\006proto3"
+      "H\003R\ncreated_atXZb\356\001\n\030tenant_project_isol" +
+      "ation\032\317\001((tenant_id::text = current_sett" +
+      "ing(\'app.current_tenant_id\', true)::text" +
+      " AND project_id::text = current_setting(" +
+      "\'app.current_project_id\', true)::text) O" +
+      "R current_setting(\'app.platform_admin\', " +
+      "true) = \'true\')(\001h\001\212\001W\n&idx_nlog_tenant_" +
+      "project_channel_status\022\005BTREEZ\ttenant_id" +
+      "Z\nproject_idZ\007channelZ\006status\212\001!\n\020idx_nl" +
+      "og_sent_at\022\004BRINZ\007sent_at\362\001\026notification" +
+      ".failed.v1\212\262\031\346\001\n\006tenant\022\007project\032\ttenant" +
+      "_id\"\nproject_id*otenant_id = current_set" +
+      "ting(\'app.current_tenant_id\') AND projec" +
+      "t_id = current_setting(\'app.current_proj" +
+      "ect_id\')2\004none:\030notification.operational" +
+      "@ZH\002R\006tenantZ\010standardr\025tenant.data_resi" +
+      "dency\"\357\017\n\033NotificationDeliveryAttempt\022L\n" +
+      "\nattempt_id\030\001 \001(\tB-\202\267\030)\n\nattempt_id\022\004UUI" +
+      "D\030\001(\001:\021gen_random_uuid()R\tattemptId\022x\n\017n" +
+      "otification_id\030\002 \001(\tBO\202\267\030K\n\017notification" +
+      "_id\022\004UUID\030\001R0\n\'idx_notif_delivery_attemp" +
+      "t_notification\022\005BTREER\016notificationId\022?\n" +
+      "\ttenant_id\030\003 \001(\tB\"\202\267\030\036\n\ttenant_id\022\014VARCH" +
+      "AR(120)\030\001\230\002\001R\010tenantId\022l\n\007channel\030\004 \001(\0162" +
+      "4.udb.core.notification.entity.v1.Notifi" +
+      "cationChannelB\034\202\267\030\030\n\007channel\022\013VARCHAR(20" +
+      ")\030\001R\007channel\022=\n\010provider\030\005 \001(\tB!\202\267\030\035\n\010pr" +
+      "ovider\022\013VARCHAR(60)\030\001:\002\'\'R\010provider\022\237\001\n\006" +
+      "status\030\006 \001(\01623.udb.core.notification.ent" +
+      "ity.v1.NotificationStatusBR\202\267\030N\n\006status\022" +
+      "\013VARCHAR(20)\030\001:\t\'PENDING\'R*\n!idx_notif_d" +
+      "elivery_attempt_status\022\005BTREER\006status\022F\n" +
+      "\rattempt_count\030\007 \001(\005B!\202\267\030\035\n\rattempt_coun" +
+      "t\022\007INTEGER\030\001:\0010R\014attemptCount\0225\n\nlast_er" +
+      "ror\030\010 \001(\tB\026\202\267\030\022\n\nlast_error\022\004TEXTR\tlastE" +
+      "rror\022W\n\023provider_message_id\030\t \001(\tB\'\202\267\030#\n" +
+      "\023provider_message_id\022\014VARCHAR(255)R\021prov" +
+      "iderMessageId\022q\n\ncreated_at\030\n \001(\0132\032.goog" +
+      "le.protobuf.TimestampB6\202\267\0302\n\ncreated_at\022" +
+      "\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tc" +
+      "reatedAt\022m\n\nupdated_at\030\013 \001(\0132\032.google.pr" +
+      "otobuf.TimestampB2\202\267\030.\n\nupdated_at\022\013TIME" +
+      "STAMPTZ\030\001:\021CURRENT_TIMESTAMPR\tupdatedAt\022" +
+      "v\n\nproject_id\030\014 \001(\tBW\202\267\030S\n\nproject_id\022\014V" +
+      "ARCHAR(120)\030\001:\002\'\'R.\n%idx_notif_delivery_" +
+      "attempt_project_id\022\005BTREE\240\002\001R\tprojectId:" +
+      "\305\006\372\266\030\325\004\n\036notification_delivery_attempts\022" +
+      "\020udb_notification\030\004 \001*BPer-channel notif" +
+      "ication delivery-status record (master-p" +
+      "lan 9.13)8\001@\001b\356\001\n\030tenant_project_isolati" +
+      "on\032\317\001((tenant_id::text = current_setting" +
+      "(\'app.current_tenant_id\', true)::text AN" +
+      "D project_id::text = current_setting(\'ap" +
+      "p.current_project_id\', true)::text) OR c" +
+      "urrent_setting(\'app.platform_admin\', tru" +
+      "e) = \'true\')(\001h\001\212\001f\n uq_notif_delivery_a" +
+      "ttempt_target\022\005BTREE\030\001Z\ttenant_idZ\nproje" +
+      "ct_idZ\017notification_idZ\007channelZ\010provide" +
+      "r\212\001X\n0idx_notif_delivery_attempt_tenant_" +
+      "project_status\022\005BTREEZ\ttenant_idZ\nprojec" +
+      "t_idZ\006status\362\001\035udb.notification.delivery" +
+      ".cdc\212\262\031\346\001\n\006tenant\022\007project\032\ttenant_id\"\np" +
+      "roject_id*otenant_id = current_setting(\'" +
+      "app.current_tenant_id\') AND project_id =" +
+      " current_setting(\'app.current_project_id" +
+      "\')2\004none:\030notification.operational@ZH\002R\006" +
+      "tenantZ\010standardr\025tenant.data_residencyB" +
+      "\251\002\n#com.udb.core.notification.entity.v1B" +
+      "\024NotificationLogProtoP\001ZKgithub.com/faha" +
+      "ra02/udb/sdk/go/gen/udb/core/notificatio" +
+      "n/entity/v1;entityv1\242\002\004UCNE\252\002\037Udb.Core.N" +
+      "otification.Entity.V1\312\002\037Udb\\Core\\Notific" +
+      "ation\\Entity\\V1\342\002+Udb\\GPBMetadata\\Core\\N" +
+      "otification\\Entity\\V1\352\002#Udb::Core::Notif" +
+      "ication::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

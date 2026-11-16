@@ -1437,10 +1437,12 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Resu
                 needs_timestamppb = true;
             }
             if !column.enum_values.is_empty() {
-                // Text enum storage uses TrimPrefix when the type is known.
-                // Numeric enum storage and unresolved types use the codec.
+                // Text enum storage without declared CHECK values trims the prefix
+                // (the short token) when the type is known; with declared values it
+                // goes through `udbclient.EnumText`. Numeric enum storage and
+                // unresolved types use the codec.
                 let qualifiable = !column.enum_cross_package || column.enum_go_import.is_some();
-                if qualifiable && go_enum_text_column(column) {
+                if qualifiable && go_enum_text_column(column) && column.check_values.is_empty() {
                     needs_strings = true;
                 }
                 // A qualifiable cross-package enum imports its OWN Go package so the
@@ -1895,10 +1897,9 @@ fn render_go_table_and_key(
                 GoScalar::Int64 => format!("strconv.FormatInt(k.{go_field}, 10)"),
                 GoScalar::Uint64 => format!("strconv.FormatUint(k.{go_field}, 10)"),
                 GoScalar::Bytes => format!("base64.StdEncoding.EncodeToString(k.{go_field})"),
-                _ if !column.enum_values.is_empty() && go_enum_text_column(column) => format!(
-                    "strings.TrimPrefix(k.{go_field}.String(), {:?})",
-                    enum_common_prefix(&column.enum_values)
-                ),
+                _ if !column.enum_values.is_empty() && go_enum_text_column(column) => {
+                    go_enum_key_text(column, &format!("k.{go_field}.String()"))
+                }
                 _ if !column.enum_values.is_empty() => {
                     format!("json.Number(strconv.FormatInt(int64(k.{go_field}), 10))")
                 }
@@ -2128,12 +2129,8 @@ fn ts_value_type(column: &EntityColumnDescriptor) -> String {
         if !go_enum_text_column(column) {
             return "number".to_string();
         }
-        return column
-            .enum_values
-            .iter()
-            .map(|token| format!("{token:?}"))
-            .collect::<Vec<_>>()
-            .join(" | ");
+        // The named type `render_ts_entities_file` emits once per proto enum.
+        return go_enum_type_name(&column.proto_type).to_string();
     }
     let scalar = if is_go_timestamp(&column.proto_type) {
         "string"
@@ -2262,6 +2259,44 @@ fn update_excluded_fields(entity: &EntityDescriptor) -> Vec<&str> {
         .collect()
 }
 
+/// A TypeScript `["a", "b"]` array literal.
+fn ts_string_array(values: &[String]) -> String {
+    format!(
+        "[{}]",
+        values
+            .iter()
+            .map(|value| format!("{value:?}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+}
+
+/// A Go `[]string{...}` literal.
+fn go_string_slice(values: &[String]) -> String {
+    format!(
+        "[]string{{{}}}",
+        values
+            .iter()
+            .map(|value| format!("{value:?}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+}
+
+/// The stored text of a text enum key value `full` (a Go `string` expression):
+/// the short token, or the matching entry of the column's declared CHECK values.
+fn go_enum_key_text(column: &EntityColumnDescriptor, full: &str) -> String {
+    let prefix = enum_common_prefix(&column.enum_values);
+    if column.check_values.is_empty() {
+        format!("strings.TrimPrefix({full}, {prefix:?})")
+    } else {
+        format!(
+            "udbclient.EnumKeyText({full}, {prefix:?}, {})",
+            go_string_slice(&column.check_values)
+        )
+    }
+}
+
 /// True for a column stored as enum value text, which crosses the mappers.
 fn column_is_text_enum(column: &EntityColumnDescriptor) -> bool {
     !column.enum_values.is_empty() && !column.is_array && go_enum_text_column(column)
@@ -2284,6 +2319,142 @@ fn refuse_short_name_collisions(
     Ok(())
 }
 
+/// The TypeScript `as const` object and type for each proto enum the entities'
+/// columns use, in first-use order. The keys are the value names without the
+/// enum's common prefix; the values stay the full proto value names, which is what
+/// a decoded row carries. Two enums that would share a name, or an enum named like
+/// a generated or referenced name, refuse generation rather than being renamed.
+fn render_ts_enum_types(entities: &[EntityDescriptor]) -> Result<String, String> {
+    let mut taken: BTreeMap<String, String> = [
+        "UdbColumn",
+        "TypedRepo",
+        "TypedTable",
+        "udbBigInt",
+        "udbEnumFromText",
+        "udbEnumToText",
+        "EntityHost",
+        "TypedTableSpec",
+        "UDBColumn",
+        "Record",
+        "Partial",
+        "Readonly",
+        "Pick",
+    ]
+    .into_iter()
+    .map(|name| {
+        (
+            name.to_string(),
+            "a name the generated file uses".to_string(),
+        )
+    })
+    .collect();
+    for entity in entities {
+        let name = &entity.short_name;
+        let mut generated: Vec<String> = [
+            "",
+            "Key",
+            "Fields",
+            "Columns",
+            "Where",
+            "ToFields",
+            "ToUDBRecord",
+            "FromUDBRow",
+            "Spec",
+            "Table",
+            "Repo",
+        ]
+        .iter()
+        .map(|suffix| format!("{name}{suffix}"))
+        .collect();
+        generated.extend(typed_entity_keys(entity).unique.into_iter().map(|(n, _)| n));
+        for type_name in generated {
+            taken
+                .entry(type_name)
+                .or_insert_with(|| format!("generated for entity `{}`", entity.message_type));
+        }
+    }
+
+    let mut enums: Vec<(String, String, &Vec<String>)> = Vec::new();
+    for entity in entities {
+        for column in entity
+            .columns
+            .iter()
+            .filter(|column| column.declared_in_proto && !column.enum_values.is_empty())
+        {
+            // A bare reference names an enum of the entity's own package; qualify it
+            // so two packages' bare `Status` are told apart.
+            let written = column.proto_type.trim_start_matches('.');
+            let qualified;
+            let proto_type = if written.contains('.') || entity.proto_package.is_empty() {
+                written
+            } else {
+                qualified = format!("{}.{written}", entity.proto_package);
+                qualified.as_str()
+            };
+            let name = go_enum_type_name(proto_type).to_string();
+            if let Some((_, seen_type, seen_values)) =
+                enums.iter().find(|(seen, _, _)| *seen == name)
+            {
+                // A relative nested reference (`Ticket.Status`) and its full name
+                // are the same enum.
+                let same_type = seen_type == proto_type
+                    || seen_type.ends_with(&format!(".{proto_type}"))
+                    || proto_type.ends_with(&format!(".{seen_type}"));
+                if !same_type || *seen_values != &column.enum_values {
+                    return Err(format!(
+                        "two proto enums are named `{name}` (`{seen_type}` and `{proto_type}`, \
+                         used by column `{}` of `{}`), so their generated TypeScript types \
+                         collide; rename one enum or generate them from separate \
+                         --project-proto directories",
+                        column.field_name, entity.message_type
+                    ));
+                }
+                continue;
+            }
+            if let Some(owner) = taken.get(&name) {
+                return Err(format!(
+                    "proto enum `{proto_type}` (column `{}` of `{}`) would generate the \
+                     TypeScript type `{name}`, which collides with a name {owner}; rename the \
+                     enum or the message",
+                    column.field_name, entity.message_type
+                ));
+            }
+            enums.push((name, proto_type.to_string(), &column.enum_values));
+        }
+    }
+
+    let is_identifier = |key: &str| {
+        let mut chars = key.chars();
+        chars
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic() || c == '_' || c == '$')
+            && chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
+    };
+    let mut out = String::new();
+    for (name, proto_type, values) in enums {
+        let prefix = enum_common_prefix(values);
+        out.push_str(&format!(
+            "/** Values of the proto enum `{proto_type}`, as a row carries them. */\n\
+             export const {name} = {{\n"
+        ));
+        for value in values {
+            let short = value
+                .strip_prefix(prefix.as_str())
+                .filter(|short| !short.is_empty())
+                .unwrap_or(value);
+            if is_identifier(short) {
+                out.push_str(&format!("  {short}: {value:?},\n"));
+            } else {
+                out.push_str(&format!("  {short:?}: {value:?},\n"));
+            }
+        }
+        out.push_str(&format!(
+            "}} as const;\nexport type {name} = (typeof {name})[keyof typeof {name}];\n\n"
+        ));
+    }
+    Ok(out)
+}
+
 /// The typed TypeScript surface for a consumer's entities, with the same per-table
 /// parts as the Go file: a row type, the mappers, column policy, typed predicates,
 /// primary and unique key types, a typed table and a repository. Rows use protobuf
@@ -2291,7 +2462,7 @@ fn refuse_short_name_collisions(
 /// the mapping lives only in this generated code.
 fn render_ts_entities_file(entities: &[EntityDescriptor]) -> Result<String, String> {
     refuse_short_name_collisions(entities, "TypeScript")?;
-    let mut body = String::new();
+    let mut body = render_ts_enum_types(entities)?;
     let (mut needs_big_int, mut needs_enum, mut needs_table) = (false, false, false);
     for entity in entities {
         let name = &entity.short_name;
@@ -2397,7 +2568,12 @@ fn render_ts_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
         ));
         for column in &columns {
             let prefix = if column_is_text_enum(column) {
-                format!(", {:?}", enum_common_prefix(&column.enum_values))
+                let allowed = if column.check_values.is_empty() {
+                    String::new()
+                } else {
+                    format!(", {}", ts_string_array(&column.check_values))
+                };
+                format!(", {:?}{allowed}", enum_common_prefix(&column.enum_values))
             } else {
                 String::new()
             };
@@ -2419,8 +2595,13 @@ fn render_ts_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
             let field = &column.field_name;
             let value = if column_is_text_enum(column) {
                 needs_enum = true;
+                let allowed = if column.check_values.is_empty() {
+                    String::new()
+                } else {
+                    format!(", {}", ts_string_array(&column.check_values))
+                };
                 format!(
-                    "udbEnumToText(row.{property}, {:?})",
+                    "udbEnumToText(row.{property}, {:?}{allowed})",
                     enum_common_prefix(&column.enum_values)
                 )
             } else {
@@ -2739,6 +2920,21 @@ fn render_py_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
             })
             .collect();
         out.push_str(&format!("_{name}Enums = {{{}}}\n", enums.join(", ")));
+        let enum_values: Vec<String> = columns
+            .iter()
+            .filter(|column| column_is_text_enum(column) && !column.check_values.is_empty())
+            .map(|column| {
+                format!(
+                    "{:?}: {}",
+                    column.field_name,
+                    py_str_tuple(column.check_values.iter().map(String::as_str))
+                )
+            })
+            .collect();
+        out.push_str(&format!(
+            "_{name}EnumValues = {{{}}}\n",
+            enum_values.join(", ")
+        ));
         out.push_str(&format!(
             "_{name}BigInts = {}\n",
             py_str_tuple(
@@ -2790,7 +2986,15 @@ fn render_py_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
         ));
         for column in &columns {
             let prefix = if column_is_text_enum(column) {
-                format!(", {:?}", enum_common_prefix(&column.enum_values))
+                let allowed = if column.check_values.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        ", {}",
+                        py_str_tuple(column.check_values.iter().map(String::as_str))
+                    )
+                };
+                format!(", {:?}{allowed}", enum_common_prefix(&column.enum_values))
             } else {
                 String::new()
             };
@@ -2812,7 +3016,7 @@ fn render_py_entities_file(entities: &[EntityDescriptor]) -> Result<String, Stri
             .collect();
         out.push_str(&format!(
             "def {name}ToFields(row: Mapping[str, Any]) -> dict[str, Any]:\n    \
-             return udb_record_fields(row, {name}Fields, _{name}Enums)\n\n\n\
+             return udb_record_fields(row, {name}Fields, _{name}Enums, _{name}EnumValues)\n\n\n\
              def {name}ToUDBRecord(row: Mapping[str, Any]) -> dict[str, Any]:\n    \
              \"\"\"The record to write: absent keys are omitted, None writes SQL NULL.\"\"\"\n    \
              record = {name}ToFields(row)\n    \
@@ -3056,6 +3260,20 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
             );
         }
         let prefix = enum_common_prefix(&column.enum_values);
+        if !column.check_values.is_empty() {
+            // The column's CHECK lists its values: store the matching entry, and
+            // refuse a value outside the list before the broker does.
+            let stmt = format!(
+                "if s, err := udbclient.EnumText(m.{getter}().String(), {prefix:?}, {allowed}); err != nil {{\n\t\treturn nil, fmt.Errorf(\"encode column %q: %w\", \"{key}\", err)\n\t}} else {{\n\t\tr[\"{key}\"] = s\n\t}}",
+                allowed = go_string_slice(&column.check_values),
+            );
+            if column.has_presence {
+                let stmt = stmt.replace("\n\t", "\n\t\t");
+                return format!("\tif m.{field} != nil {{\n\t\t{stmt}\n\t}}\n");
+            }
+            return format!("\t{stmt}\n");
+        }
+        // No declared values: the short token (the name without the prefix).
         let expr = format!("strings.TrimPrefix(m.{getter}().String(), \"{prefix}\")");
         if column.has_presence {
             return format!("\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = {expr}\n\t}}\n");
@@ -3171,8 +3389,9 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
                 fail = fail("\t\t"),
             );
         }
-        // The DB stores the enum SHORT token (the write path trims the prefix);
-        // read it back through protoc-gen-go's `<Type>_value` map. A same-package
+        // The DB stores the enum as text: the short token, or the full name or
+        // short token the column's enum_values list. Read it back through
+        // protoc-gen-go's `<Type>_value` map. A same-package
         // enum uses the entity's own import alias; a cross-package enum uses the
         // foreign package's alias + type name resolved from `enum_go_import`.
         let (enum_alias, enum_type) = match column.enum_go_import.as_deref().and_then(parse_go_type)
@@ -3184,16 +3403,15 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
             ),
         };
         let prefix = enum_common_prefix(&column.enum_values);
-        // W9 dual-read tolerance: probe the SHORT token first (the wire
-        // convention), then the FULL enum name — so readers deployed before a
-        // legacy-data `migrate-enum-tokens` rewrite decode both forms.
+        // Dual-read tolerance: probe the full name first, then the short token
+        // (prefix added back), so both stored forms decode.
         if column.has_presence {
             return format!(
                 "\tif s, err := udbAsString(row[\"{key}\"]); err != nil {{\n{fail}\
                  \t}} else if row[\"{key}\"] != nil {{\n\
-                 \t\tif v, ok := {enum_alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
+                 \t\tif v, ok := {enum_alias}.{enum_type}_value[s]; ok {{\n\
                  \t\t\te := {enum_alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\
-                 \t\t}} else if v, ok := {enum_alias}.{enum_type}_value[s]; ok {{\n\
+                 \t\t}} else if v, ok := {enum_alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
                  \t\t\te := {enum_alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\
                  \t\t}} else {{\n\t\t\terr := fmt.Errorf(\"unknown enum token %q\", s)\n{unknown}\t\t}}\n\t}}\n",
                 fail = fail("\t\t"),
@@ -3203,9 +3421,9 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
         return format!(
             "\tif s, err := udbAsString(row[\"{key}\"]); err != nil {{\n{fail}\
              \t}} else if row[\"{key}\"] != nil {{\n\
-             \t\tif v, ok := {enum_alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
+             \t\tif v, ok := {enum_alias}.{enum_type}_value[s]; ok {{\n\
              \t\t\tm.{field} = {enum_alias}.{enum_type}(v)\n\
-             \t\t}} else if v, ok := {enum_alias}.{enum_type}_value[s]; ok {{\n\
+             \t\t}} else if v, ok := {enum_alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
              \t\t\tm.{field} = {enum_alias}.{enum_type}(v)\n\
              \t\t}} else {{\n\t\t\terr := fmt.Errorf(\"unknown enum token %q\", s)\n{unknown}\t\t}}\n\t}}\n",
             fail = fail("\t\t"),
@@ -4713,6 +4931,7 @@ mod tests {
             has_presence: false,
             oneof_group: String::new(),
             enum_values: Vec::new(),
+            check_values: Vec::new(),
             enum_cross_package: false,
             enum_go_import: None,
             predicate_go_import: None,
@@ -4935,6 +5154,100 @@ mod tests {
         assert!(out.contains("export interface Rollup {"));
         assert!(out.contains("export function RollupFromUDBRow("));
         assert!(!out.contains("RollupTable"));
+    }
+
+    #[test]
+    fn typescript_text_enums_get_one_named_const_and_type() {
+        let text_enum = |field: &str, proto_type: &str, values: &[&str]| {
+            let mut col = column(field, proto_type);
+            col.sql_type = "TEXT".to_string();
+            col.enum_values = values.iter().map(|v| v.to_string()).collect();
+            col
+        };
+        let status = |field: &str| {
+            text_enum(
+                field,
+                ".acme.v1.TicketStatus",
+                &[
+                    "TICKET_STATUS_UNSPECIFIED",
+                    "TICKET_STATUS_OPEN",
+                    "TICKET_STATUS_2FA_PENDING",
+                ],
+            )
+        };
+        let mut level = column("level", "acme.v1.Level");
+        level.sql_type = "INTEGER".to_string();
+        level.enum_values = vec!["LEVEL_UNSPECIFIED".into(), "LEVEL_HIGH".into()];
+        let mut prior = status("prior_status");
+        prior.not_null = false;
+        let ticket = ts_entity(
+            "Ticket",
+            &["id"],
+            vec![column("id", "string"), status("status"), prior, level],
+        );
+        let audit = ts_entity(
+            "TicketAudit",
+            &["id"],
+            vec![column("id", "string"), status("status")],
+        );
+        let out = render_ts_entities_file(&[ticket.clone(), audit.clone()]).expect("render");
+        assert_eq!(
+            out.matches("export const TicketStatus = {\n").count(),
+            1,
+            "one const per proto enum, however many columns use it:\n{out}"
+        );
+        assert!(out.contains(
+            "export const TicketStatus = {\n  UNSPECIFIED: \"TICKET_STATUS_UNSPECIFIED\",\n  \
+             OPEN: \"TICKET_STATUS_OPEN\",\n  \"2FA_PENDING\": \"TICKET_STATUS_2FA_PENDING\",\n\
+             } as const;\n\
+             export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus];\n"
+        ));
+        assert!(out.contains("  status: TicketStatus;\n"), "{out}");
+        assert!(
+            out.contains("  priorStatus?: TicketStatus | null;\n"),
+            "{out}"
+        );
+        assert!(
+            out.contains(
+                "  status: new UdbColumn<TicketStatus>(\"status\", \"TICKET_STATUS_\"),\n"
+            )
+        );
+        assert!(
+            out.contains("  level: number;\n"),
+            "an integer-stored enum stays a number"
+        );
+        assert!(
+            !out.contains("\"TICKET_STATUS_OPEN\" | "),
+            "no inline unions remain"
+        );
+
+        // Another package's enum with the same short name is refused, not renamed.
+        let mut foreign = ts_entity(
+            "Other",
+            &["id"],
+            vec![column("id", "string"), status("status")],
+        );
+        foreign.columns[1].proto_type = "acme.billing.v1.TicketStatus".to_string();
+        let err = render_ts_entities_file(&[ticket.clone(), foreign]).expect_err("collision");
+        assert!(
+            err.contains("TicketStatus") && err.contains("acme.billing.v1"),
+            "{err}"
+        );
+
+        // An enum named like a generated entity name is refused too.
+        let clash = ts_entity(
+            "Ticket",
+            &["id"],
+            vec![
+                column("id", "string"),
+                text_enum("kind", "acme.v1.TicketKey", &["TICKET_KEY_UNSPECIFIED"]),
+            ],
+        );
+        let err = render_ts_entities_file(&[clash]).expect_err("clash with TicketKey");
+        assert!(
+            err.contains("TicketKey") && err.contains("acme.v1.Ticket"),
+            "{err}"
+        );
     }
 
     #[test]
@@ -5310,10 +5623,12 @@ message Stored {
         );
     }
 
-    // V19-1 regression guard: a resolved enum keeps the short-token round-trip
-    // (write trims the common prefix; read reconstructs via <Type>_value).
+    // A resolved enum without declared CHECK values keeps the short-token write
+    // (the common prefix trimmed); with declared values it writes the matching
+    // list entry through udbclient.EnumText, which refuses a value outside the
+    // list. The read takes the full name first and still accepts a short token.
     #[test]
-    fn resolved_enum_round_trips_short_tokens() {
+    fn resolved_enum_writes_the_declared_form_and_reads_both_forms() {
         let mut col = column("status", "acme.order.v1.OrderStatus");
         col.sql_type = "TEXT".into();
         col.enum_values = vec![
@@ -5323,13 +5638,28 @@ message Stored {
         let write = go_to_record_stmt(&col);
         assert!(
             write.contains("strings.TrimPrefix(m.GetStatus().String(), \"ORDER_STATUS_\")"),
-            "enum write must trim to the short token, got: {write}"
+            "without declared values the enum write trims to the short token, got: {write}"
+        );
+        col.check_values = col.enum_values.clone();
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains(
+                "udbclient.EnumText(m.GetStatus().String(), \"ORDER_STATUS_\", \
+                 []string{\"ORDER_STATUS_ACTIVE\", \"ORDER_STATUS_CLOSED\"})"
+            ) && write.contains("r[\"status\"] = s")
+                && write
+                    .contains("return nil, fmt.Errorf(\"encode column %q: %w\", \"status\", err)")
+                && !write.contains("TrimPrefix"),
+            "with declared values the enum write stores the matching entry, got: {write}"
         );
         let read = go_from_row_stmt(&col, "orderv1");
-        assert!(
-            read.contains("orderv1.OrderStatus_value[\"ORDER_STATUS_\"+s]"),
-            "enum read must rebuild the full name, got: {read}"
-        );
+        let full = read
+            .find("orderv1.OrderStatus_value[s]")
+            .expect("enum read must take the full name");
+        let short = read
+            .find("orderv1.OrderStatus_value[\"ORDER_STATUS_\"+s]")
+            .expect("enum read must still rebuild a short token");
+        assert!(full < short, "the full name is probed first, got: {read}");
     }
 
     // 0.6.0: an entity with no usable Go language class is a generation error

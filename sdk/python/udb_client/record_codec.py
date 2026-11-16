@@ -16,7 +16,7 @@ import json
 import math
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from google.protobuf import json_format
 from google.protobuf.descriptor import EnumDescriptor, FieldDescriptor
@@ -30,6 +30,7 @@ from .schema import (
     is_repeated,
     message_type,
     project_column,
+    table_options,
     tenant_column,
     topic,
 )
@@ -153,7 +154,7 @@ def _no_empty_value(column: Any) -> bool:
 
 
 def _text_column(column: Any) -> bool:
-    """Whether an enum column stores the value's short token rather than its number."""
+    """Whether an enum column stores the value as text rather than its number."""
     sql_type = _sql_type(column).strip().upper()
     return sql_type.startswith(("VARCHAR", "CHARACTER VARYING", "TEXT", "CHAR", "CITEXT"))
 
@@ -175,12 +176,72 @@ def _enum_common_prefix(descriptor: EnumDescriptor) -> str:
 
 
 def enum_common_prefix(descriptor: EnumDescriptor) -> str:
-    """The prefix a stored enum token leaves out, e.g. ``FILE_STATUS_``."""
+    """The prefix a short enum token leaves out, e.g. ``FILE_STATUS_``."""
     return _enum_common_prefix(descriptor)
 
 
-def _enum_tokens(descriptor: EnumDescriptor, value: Any) -> Any:
+def enum_stored_text(value: str, prefix: str, allowed: Sequence[str] = ()) -> str | None:
+    """The text a text enum column stores for an enum value (full name or short token).
+
+    With no declared ``allowed`` values (the column's ``enum_values``) the column stores
+    the short token, the name without ``prefix``. With declared values it stores the
+    entry that matches the value's full name or its short token, so the write passes the
+    column's CHECK in whichever form the list was written. ``None`` means the list does
+    not hold the value: the broker would refuse the write.
+    """
+    short = value[len(prefix) :] if prefix and value.startswith(prefix) else value
+    if not allowed:
+        return short
+    full = prefix + short
+    for entry in allowed:
+        if entry == full or entry == short:
+            return entry
+    return None
+
+
+def enum_check_name(table: str, column: str) -> str:
+    """The constraint the generated DDL names for a text enum column's CHECK."""
+    return f"chk_{table}_{column}_enum"
+
+
+def _enum_check_constraint(message_descriptor: Any, field: FieldDescriptor, column: Any) -> str:
+    table = table_options(message_descriptor)
+    table_name = (table.table_name if table is not None else "") or message_descriptor.name
+    return enum_check_name(table_name, column.column_name or field.name)
+
+
+def enum_check_violation(message_descriptor: Any, field: FieldDescriptor, value: Any) -> str | None:
+    """The CHECK constraint a written enum value (number, full name or short token;
+    singular or repeated) would break, or ``None`` when it passes. Only a text enum
+    column that declares ``enum_values`` has that CHECK; a text naming no value of the
+    enum breaks it."""
+    column = column_options(field)
+    if field.type != FieldDescriptor.TYPE_ENUM or column is None or not _text_column(column):
+        return None
+    allowed = list(column.enum_values)
+    if not allowed:
+        return None
+    prefix = _enum_common_prefix(field.enum_type)
+    for item in value if isinstance(value, list) else [value]:
+        if isinstance(item, bool) or not isinstance(item, (int, str)):
+            continue
+        if isinstance(item, int):
+            found = field.enum_type.values_by_number.get(item)
+            name = found.name if found is not None else None
+        else:
+            full = _enum_full_name(field.enum_type, item.strip())
+            name = full if full in field.enum_type.values_by_name else None
+        if name is None or enum_stored_text(name, prefix, allowed) is None:
+            return _enum_check_constraint(message_descriptor, field, column)
+    return None
+
+
+def _enum_column_text(field: FieldDescriptor, column: Any, value: Any) -> Any:
+    """Enum numbers (singular or repeated) as the text the column stores (see
+    :func:`enum_stored_text`). A value outside the column's ``enum_values`` raises."""
+    descriptor = field.enum_type
     prefix = _enum_common_prefix(descriptor)
+    allowed = list(column.enum_values)
 
     def token(number: Any) -> Any:
         if not isinstance(number, int) or isinstance(number, bool):
@@ -188,7 +249,14 @@ def _enum_tokens(descriptor: EnumDescriptor, value: Any) -> Any:
         found = descriptor.values_by_number.get(number)
         if found is None:
             return number
-        return found.name[len(prefix) :] if found.name.startswith(prefix) else found.name
+        stored = enum_stored_text(found.name, prefix, allowed)
+        if stored is None:
+            constraint = _enum_check_constraint(field.containing_type, field, column)
+            raise ValueError(
+                f"{field.full_name}: {found.name} is not in the column's enum_values; "
+                f"the value breaks constraint {constraint}"
+            )
+        return stored
 
     if isinstance(value, list):
         return [token(item) for item in value]
@@ -230,7 +298,7 @@ def _encode_column(message: Message, field: FieldDescriptor, column: Any, value:
     if field.type in _INT64_TYPES:
         return _exact_ints(value)
     if field.type == FieldDescriptor.TYPE_ENUM and _text_column(column):
-        return _enum_tokens(field.enum_type, value)
+        return _enum_column_text(field, column, value)
     if not isinstance(value, str) or is_repeated(field) or field.type != FieldDescriptor.TYPE_STRING:
         return value
     if value == "" and not not_null and not field.has_presence:
@@ -280,7 +348,9 @@ def encode_record(message: Message, mode: WriteMode = WriteMode.INSERT) -> Recor
     """Turn an entity message into a udb record keyed by proto field names.
 
     Fields without a column annotation, generated columns and the columns ``mode``
-    excludes are dropped. Enums are numbers, or short tokens in text columns. An
+    excludes are dropped. Enums are numbers; in a text column, the entry of the
+    column's ``enum_values`` matching the value (full name or short token), or the short
+    token when it declares none. An
     unset optional field is ``None``, or dropped when its column is NOT NULL. An
     empty string without presence in a nullable column is ``None``; in a NOT NULL
     UUID, CHAR(n), DATE, TIMESTAMP or JSON column it is dropped. A JSON column

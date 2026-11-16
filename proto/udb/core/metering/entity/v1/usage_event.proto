@@ -58,6 +58,13 @@ message UsageEvent {
       index_type: "BTREE"
       columns: "occurred_at_unix"
     }
+    // The cleanup service deletes by `occurred_at` across every tenant; this
+    // lets each bounded delete batch find the oldest rows without a table scan.
+    indexes: {
+      index_name: "idx_usage_events_occurred_at"
+      index_type: "BTREE"
+      columns: "occurred_at"
+    }
     cdc_topic: "udb.metering.usage_events.cdc"
     required_scope: "metering:read"
   };

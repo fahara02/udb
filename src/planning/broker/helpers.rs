@@ -21,7 +21,7 @@ pub(crate) fn sql_operator(value: &str) -> Option<&'static str> {
         "$contains" | "contains" => Some("@>"), // JSONB / array contains
         "$contained_by" | "contained_by" => Some("<@"), // JSONB / array contained-by
         "$has_key" | "has_key" => Some("?"),    // JSONB key exists
-        "$overlaps" | "overlaps" => Some("&&"), // array overlap
+        "$overlaps" | "overlaps" | "$overlap" | "overlap" => Some("&&"), // array overlap
         "$matches" | "matches" => Some("@@"),   // tsvector / jsonpath match
         _ => None,
     }

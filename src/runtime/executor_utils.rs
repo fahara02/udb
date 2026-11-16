@@ -1619,14 +1619,22 @@ pub(crate) fn merge_context(
         .unwrap_or_default();
     let proto_read_fence_json =
         first_non_empty(&proto.read_fence_json, &proto_typed_read_fence_json);
+    // The user and purpose the request was authorized with come from the verified
+    // metadata side (headers / token claims). Authorization decided on THOSE
+    // values, so they are the ones that reach `app.current_purpose`, the audit
+    // row and the cache key. A body value is used only when the verified side
+    // carries none; a body value that differs from a verified one is dropped and
+    // logged, never allowed to replace what was authorized.
+    let user_id = authorized_context_value("user_id", &metadata_context.user_id, &proto.user_id);
+    let purpose = authorized_context_value("purpose", &metadata_context.purpose, &proto.purpose);
     RequestContext {
         // SECURITY: tenant_id is the authenticated isolation boundary — take it
         // from the request metadata context, NOT a caller-supplied per-op proto
         // context (which could target a foreign tenant). Mirrors project_id below.
         tenant_id: metadata_context.tenant_id,
-        user_id: first_non_empty(&proto.user_id, &metadata_context.user_id),
+        user_id,
         correlation_id: first_non_empty(&proto.correlation_id, &metadata_context.correlation_id),
-        purpose: first_non_empty(&proto.purpose, &metadata_context.purpose),
+        purpose,
         project_id: metadata_context.project_id,
         consistency: first_non_empty(&metadata_context.consistency, &proto_consistency),
         client_catalog_version: metadata_context.client_catalog_version,
@@ -1689,11 +1697,45 @@ pub(crate) fn first_non_empty(left: &str, right: &str) -> String {
     }
 }
 
+/// Picks the value of an identity field (`user_id`, `purpose`) for the merged
+/// context: the verified value wins; the body value fills in only when the
+/// verified side is blank. A body value that disagrees with the verified one is
+/// not used, and the disagreement is logged so the caller can be found.
+fn authorized_context_value(field: &str, verified: &str, body: &str) -> String {
+    let verified_trimmed = verified.trim();
+    let body_trimmed = body.trim();
+    if verified_trimmed.is_empty() {
+        return body.to_string();
+    }
+    if !body_trimmed.is_empty() && body_trimmed != verified_trimmed {
+        tracing::warn!(
+            field,
+            "request body context names a different {field} than the authorized one; the authorized value is used"
+        );
+    }
+    verified.to_string()
+}
+
 // ── RecordSet helpers ─────────────────────────────────────────────────────────
 
 pub(crate) fn reject_plan(errors: &[String]) -> Result<(), tonic::Status> {
     if errors.is_empty() {
         return Ok(());
+    }
+    // A write to a shared (global) table by a caller who may not write it is
+    // an authorization refusal, not a malformed request: batch items and
+    // transaction mutations reach it through the planner, so it surfaces
+    // here with the same code and reason the single-message verbs return.
+    if errors
+        .iter()
+        .any(|error| is_shared_table_write_refusal(error))
+    {
+        return Err(policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "plan",
+            SHARED_TABLE_WRITE_DENIED,
+            errors.join("; "),
+        ));
     }
     let status = executor_utils_invalid_field(
         "plan",
@@ -1709,6 +1751,18 @@ pub(crate) fn reject_plan(errors: &[String]) -> Result<(), tonic::Status> {
     })
 }
 
+/// Policy reason a shared-table write refusal carries (the same one the
+/// data-plane authorize gate returns for single-message writes).
+const SHARED_TABLE_WRITE_DENIED: &str = "shared_table_write_denied";
+
+/// Whether a planner error is the refusal `broker::global_table_write_error`
+/// produces: a write to a shared table without platform authority or the
+/// global-write scope, or any write made under the reserved shared tenant.
+fn is_shared_table_write_refusal(error: &str) -> bool {
+    error.starts_with("permission denied: ")
+        && (error.contains("is a shared table") || error.contains("is reserved for shared data"))
+}
+
 /// The stable reason for a planner validation error, when it has one.
 fn plan_error_reason(error: &str) -> Option<crate::runtime::error_reasons::ErrorReason> {
     use crate::runtime::error_reasons as reasons;
@@ -1721,6 +1775,12 @@ fn plan_error_reason(error: &str) -> Option<crate::runtime::error_reasons::Error
     } else {
         None
     }
+}
+
+/// A column a cache hit masks for a caller without `udb:pii:read`: the rule
+/// `core::is_client_masked_column` applies to a fresh read.
+fn is_cache_masked_column(column: &ManifestColumn) -> bool {
+    column.security.is_pii || column.security.mask_in_logs || is_encrypted_column(column)
 }
 
 pub(crate) fn cached_record_set(
@@ -1754,26 +1814,47 @@ pub(crate) fn cached_record_set(
         .scopes
         .iter()
         .any(|scope| matches!(scope.as_str(), "udb:pii:read" | "udb:*" | "*"));
+    // The same column set the fresh read masks (`core::is_client_masked_column`):
+    // PII, mask-in-logs, and every encrypted column, legacy `encrypted` flag
+    // included. An encrypted column is decrypted before it is cached, so
+    // leaving it out here would hand plaintext to a caller a fresh read masks.
     let masked_columns: std::collections::BTreeSet<&str> = table
         .columns
         .iter()
-        .filter(|column| !can_read_pii && (column.security.is_pii || column.security.mask_in_logs))
+        .filter(|column| !can_read_pii && is_cache_masked_column(column))
         .map(|column| column.column_name.as_str())
         .collect();
     let mut redacted_fields = std::collections::BTreeSet::new();
+    let mut records_json = records_json;
     if !masked_columns.is_empty() {
-        // Cache entries contain the canonical masked JSON. Recover the same
-        // descriptor-qualified signal as the database serializer; a literal
-        // sentinel in an ordinary column is not a redacted value.
-        for bytes in &records_json {
-            if let Ok(JsonValue::Object(record)) = serde_json::from_slice(bytes) {
-                for (name, value) in record {
-                    if masked_columns.contains(name.as_str())
-                        && value.as_str() == Some(REDACTION_PLACEHOLDER)
-                    {
-                        redacted_fields.insert(name);
-                    }
+        // Mask again on the way out rather than trusting what the cache holds:
+        // an entry written for a caller holding `udb:pii:read`, or before a
+        // column was marked PII/encrypted, may carry the stored value. A cache
+        // hit must never be less masked than a fresh read. Like the fresh read,
+        // every masked column present becomes the placeholder and is listed in
+        // `redacted_fields`; a literal sentinel in an ordinary column is not a
+        // redacted value. Bytes are rewritten only when a value changed, so an
+        // already-masked entry passes through untouched.
+        for bytes in &mut records_json {
+            let Ok(JsonValue::Object(mut record)) = serde_json::from_slice(bytes) else {
+                continue;
+            };
+            let mut changed = false;
+            for (name, value) in record.iter_mut() {
+                if !masked_columns.contains(name.as_str()) {
+                    continue;
                 }
+                if value.as_str() != Some(REDACTION_PLACEHOLDER) {
+                    *value = JsonValue::String(REDACTION_PLACEHOLDER.to_string());
+                    changed = true;
+                }
+                redacted_fields.insert(name.clone());
+            }
+            if changed {
+                // Serialising a JSON object cannot fail in practice; if it
+                // ever did, return an empty record rather than the unmasked one.
+                *bytes = serde_json::to_vec(&JsonValue::Object(record))
+                    .unwrap_or_else(|_| b"{}".to_vec());
             }
         }
     }
@@ -4505,6 +4586,48 @@ mod error_detail_tests {
         );
     }
 
+    /// A shared-table write refusal from the planner (batch items, transaction
+    /// mutations) is PermissionDenied with the `shared_table_write_denied`
+    /// reason, matching the single-message verbs; other plan errors stay
+    /// InvalidArgument.
+    #[test]
+    fn reject_plan_maps_shared_table_write_refusal_to_permission_denied() {
+        let mut table = crate::generation::ManifestTable {
+            schema: "ref".to_string(),
+            table: "countries".to_string(),
+            ..Default::default()
+        };
+        table.table_security.tenant_isolation_mode = "global".to_string();
+        let tenant = crate::broker::RequestContext {
+            tenant_id: "acme".to_string(),
+            ..crate::broker::RequestContext::default()
+        };
+        let marker = crate::broker::RequestContext {
+            tenant_id: crate::broker::SHARED_TENANT_MARKER.to_string(),
+            ..crate::broker::RequestContext::default()
+        };
+        for refusal in [
+            crate::broker::global_table_write_error(&tenant, &table)
+                .expect("a tenant may not write a shared table"),
+            crate::broker::global_table_write_error(
+                &marker,
+                &crate::generation::ManifestTable::default(),
+            )
+            .expect("the shared marker never writes"),
+        ] {
+            let status =
+                reject_plan(&["missing field".to_string(), refusal.clone()]).expect_err("refusal");
+            assert_eq!(status.code(), tonic::Code::PermissionDenied, "{refusal}");
+            let detail = decode_detail(&status);
+            assert_eq!(detail.kind, ErrorKind::Policy as i32);
+            assert_eq!(detail.policy_decision_id, "shared_table_write_denied");
+            assert!(status.message().contains(&refusal));
+        }
+        let other = reject_plan(&["permission denied: something else".to_string()])
+            .expect_err("plan errors");
+        assert_eq!(other.code(), tonic::Code::InvalidArgument);
+    }
+
     #[test]
     fn compile_error_status_carries_code_as_schema_kind() {
         let status = compile_error_status(
@@ -5076,6 +5199,65 @@ mod cached_record_set_shape_tests {
         );
     }
 
+    fn protected_table() -> crate::generation::ManifestTable {
+        let column = |name: &str| crate::generation::ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            ..crate::generation::ManifestColumn::default()
+        };
+        let mut legacy = column("legacy_secret");
+        legacy.encrypted = true;
+        let mut encrypted = column("national_id");
+        encrypted.security.is_encrypted = true;
+        let mut pii = column("email");
+        pii.security.is_pii = true;
+        crate::generation::ManifestTable {
+            columns: vec![column("id"), legacy, encrypted, pii],
+            ..crate::generation::ManifestTable::default()
+        }
+    }
+
+    /// A cache entry holding stored values (written for a caller with
+    /// `udb:pii:read`) is masked on the way out for a caller without it, the
+    /// same columns a fresh read masks: PII and both encrypted flags.
+    #[test]
+    fn cache_hits_mask_encrypted_and_pii_columns_like_a_fresh_read() {
+        let blob = serde_json::to_vec(&json!({
+            "id": 1,
+            "legacy_secret": "plain-legacy",
+            "national_id": "plain-national",
+            "email": "a@example.test",
+        }))
+        .unwrap();
+        let set = cached_record_set(
+            vec![blob.clone()],
+            &protected_table(),
+            &crate::RequestContext::default(),
+        );
+        let record: serde_json::Value = serde_json::from_slice(&set.records_json[0]).unwrap();
+        for name in ["legacy_secret", "national_id", "email"] {
+            assert_eq!(
+                record[name],
+                json!(super::REDACTION_PLACEHOLDER),
+                "{name} must be masked on a cache hit"
+            );
+        }
+        assert_eq!(record["id"], json!(1));
+        assert_eq!(
+            set.redacted_fields,
+            vec!["email", "legacy_secret", "national_id"]
+        );
+
+        // A caller holding `udb:pii:read` gets the stored values verbatim.
+        let reader = crate::RequestContext {
+            scopes: vec!["udb:pii:read".to_string()],
+            ..crate::RequestContext::default()
+        };
+        let set = cached_record_set(vec![blob.clone()], &protected_table(), &reader);
+        assert_eq!(set.records_json, vec![blob]);
+        assert!(set.redacted_fields.is_empty());
+    }
+
     /// Populating `rows` is not merely inconsistent, it is lossy: the conversion
     /// to `google.protobuf.Value` is double-only. This pins the reason the parity
     /// fix removes the population rather than adding it to the other path.
@@ -5247,6 +5429,35 @@ mod merge_context_scope_authority_tests {
         };
         let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read"]));
         assert_eq!(merged.read_fence_json, r#"{"min_outbox_lsn":"0/legacy"}"#);
+    }
+
+    #[test]
+    fn authorized_purpose_and_user_win_over_body_values() {
+        // Authorization decided on the verified purpose/user; the body must not
+        // replace them on the way to `app.current_purpose` and the audit row.
+        let mut meta = metadata_ctx(&["udb:read"]);
+        meta.purpose = "billing".into();
+        meta.user_id = "alice".into();
+        let proto = ProtoRequestContext {
+            purpose: "marketing".into(),
+            user_id: "mallory".into(),
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), meta);
+        assert_eq!(merged.purpose, "billing");
+        assert_eq!(merged.user_id, "alice");
+    }
+
+    #[test]
+    fn body_purpose_and_user_fill_in_only_when_verified_side_is_blank() {
+        let proto = ProtoRequestContext {
+            purpose: "billing".into(),
+            user_id: "alice".into(),
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read"]));
+        assert_eq!(merged.purpose, "billing");
+        assert_eq!(merged.user_id, "alice");
     }
 
     #[test]

@@ -18,8 +18,9 @@
 //! **Retention per table.** UDB's own logs follow the retention their proto
 //! declares (`retention_days`) out of the box: the default list is
 //! [`DEFAULT_CLEANUP_RETENTION`] (`access_decision_audits`, `auth_audit_log`,
-//! `usage_events` = `declared`; `auth_audit_log` has no proto and follows the
-//! decision audit's). `UDB_CLEANUP_RETENTION` (or `udb serve
+//! `usage_events`, `api_key_usages`, `notification_logs` = `declared`;
+//! `auth_audit_log` has no proto and follows the decision audit's), plus each
+//! table's own default (below). `UDB_CLEANUP_RETENTION` (or `udb serve
 //! --cleanup-retention`) is merged over that list, entry by entry, for example
 //! `access_decision_audits=90d,usage_events=keep`. A value is a duration (`90d`,
 //! `36h`), `declared` or `keep` (every row is kept). Any other time-partitioned
@@ -46,6 +47,23 @@
 //!   older than the retention in bounded batches. When the compliance evidence
 //!   export is on, `auth_audit_log` rows not yet exported are kept, so the
 //!   exported hash chain stays complete.
+//! - Every other native table that declares `retention_days` and whose rows
+//!   have an end (sessions, token revocations, MFA challenges, webhook
+//!   deliveries, revoked devices, ...) follows its declared retention, counted
+//!   from the column that marks the end of a row's life ([`ROW_END_COLUMNS`]:
+//!   `expires_at` first, so a token revocation outlives the token it blocks).
+//!   A table with a default partition (sessions) is swept partition by
+//!   partition. A soft-deleted entity table, a table other tables reference,
+//!   or a table with no such column is not touched (see [`row_end_column`]).
+//! - UDB's own bookkeeping tables keep only what is still needed: completed
+//!   projection tasks (7 days), resolved CDC dead letters (30 days), finished
+//!   sagas and XA decisions (30 days), catalog versions (30 days, never the
+//!   active version nor the newest `UDB_CLEANUP_KEEP_VERSIONS`, default 20,
+//!   per project) and the catalog reload log (90 days, never the activation
+//!   record of an active version nor the newest row).
+//! - Those last two groups are swept once per `UDB_CLEANUP_SWEEP_INTERVAL`
+//!   (default `24h`, the same interval as the kept-partition sweep), one pass
+//!   over each table in page ranges, so they need no index on their time column.
 //! - The CDC journal has its own sweep: `UDB_CDC_JOURNAL_RETENTION`.
 //!
 //! **Reclaim.** Deleted rows leave free space inside the table file.
@@ -65,6 +83,10 @@
 //! exported and rows of a table's kept class (denied decisions) are never
 //! deleted for the cap; when they alone exceed it, the pass says so. A table
 //! set to `keep` is outside the cap. The CDC journal has its own retention.
+//!
+//! A table the database role cannot see across tenants (row-level security
+//! applies to the role and the table's policy has no `app.platform_admin`
+//! clause) is reported as an error instead of silently deleting nothing.
 //!
 //! `UDB_CLEANUP_INTERVAL` sets how often a pass runs (default `10m`)
 //! and `UDB_CLEANUP_BATCH` how many rows one delete removes (default
@@ -90,10 +112,27 @@ pub const CLEANUP_BATCH_ENV: &str = "UDB_CLEANUP_BATCH";
 pub const CLEANUP_ENABLED_ENV: &str = "UDB_CLEANUP_ENABLED";
 /// What happens to the space deleted rows leave (`off`, `vacuum`, `full`).
 pub const CLEANUP_RECLAIM_ENV: &str = "UDB_CLEANUP_RECLAIM";
+/// `declared`: drop app-table partitions past the table's declared
+/// `retention_days`. Default `off`: app partitions are created ahead of
+/// writes and never dropped.
+pub const CLEANUP_APP_RETENTION_ENV: &str = "UDB_CLEANUP_APP_RETENTION";
+/// `statement_timeout` for cleanup's own statements (`0` = none, the default):
+/// a database or role timeout must not cancel a long sweep or VACUUM FULL.
+pub const CLEANUP_STATEMENT_TIMEOUT_ENV: &str = "UDB_CLEANUP_STATEMENT_TIMEOUT";
+/// Heap pages one sweep statement covers (default 4096 = 32 MiB).
+pub const CLEANUP_SWEEP_PAGES_ENV: &str = "UDB_CLEANUP_SWEEP_PAGES";
 /// Cap on the estimated size of UDB's own log tables (`1GB`, `500MB`, `off`).
 pub const CLEANUP_MAX_SIZE_ENV: &str = "UDB_CLEANUP_MAX_SIZE";
 /// The default size cap: 1 GiB.
 pub const DEFAULT_MAX_SIZE: u64 = 1 << 30;
+/// How often kept partitions and the swept tables are swept (`24h`, `6h`, `30m`).
+pub const CLEANUP_SWEEP_INTERVAL_ENV: &str = "UDB_CLEANUP_SWEEP_INTERVAL";
+/// Catalog versions always kept per project, newest first.
+pub const CLEANUP_KEEP_VERSIONS_ENV: &str = "UDB_CLEANUP_KEEP_VERSIONS";
+pub const DEFAULT_KEEP_VERSIONS: u32 = 20;
+/// The `service` of a target in the system catalog (the primary pool), not a
+/// native service's store.
+const SYSTEM_STORE: &str = "udb_system";
 /// Rows newer than this are never deleted for the size cap.
 const SIZE_CAP_FLOOR: Duration = Duration::from_secs(3600);
 /// Rows one table's size estimate samples.
@@ -186,6 +225,12 @@ pub struct CleanupSettings {
     pub reclaim: Result<Reclaim, String>,
     /// The size cap in bytes (`None` = off).
     pub max_size: Result<Option<u64>, String>,
+    /// Drop app-table partitions past their declared `retention_days`.
+    pub app_retention: bool,
+    /// How often kept partitions and the swept tables are swept.
+    pub sweep_interval: Duration,
+    /// Catalog versions always kept per project, newest first.
+    pub keep_versions: u32,
     pub(crate) targets: Vec<Target>,
     pub(crate) retention: RetentionConfig,
 }
@@ -205,6 +250,69 @@ impl CleanupSettings {
             evidence_export,
         )
         .with_max_size(read(CLEANUP_MAX_SIZE_ENV).as_deref())
+        .with_app_retention(read(CLEANUP_APP_RETENTION_ENV).as_deref())
+        .with_session_settings(
+            read(CLEANUP_STATEMENT_TIMEOUT_ENV).as_deref(),
+            read(CLEANUP_SWEEP_PAGES_ENV).as_deref(),
+        )
+        .with_sweep_interval(read(CLEANUP_SWEEP_INTERVAL_ENV).as_deref())
+        .with_keep_versions(read(CLEANUP_KEEP_VERSIONS_ENV).as_deref())
+    }
+
+    /// Set the sweep interval from its raw value (unset or malformed → 24h).
+    pub(crate) fn with_sweep_interval(mut self, raw: Option<&str>) -> Self {
+        self.sweep_interval = raw
+            .and_then(parse_interval)
+            .unwrap_or(DEFAULT_SWEEP_INTERVAL);
+        self
+    }
+
+    /// Set how many catalog versions each project keeps (unset or malformed
+    /// → 20, at least 1) and rebuild the targets whose rule names it.
+    pub(crate) fn with_keep_versions(mut self, raw: Option<&str>) -> Self {
+        self.keep_versions = raw
+            .and_then(|raw| raw.trim().parse::<u32>().ok())
+            .map(|keep| keep.max(1))
+            .unwrap_or(DEFAULT_KEEP_VERSIONS);
+        for rebuilt in system_targets(self.keep_versions) {
+            if let Some(target) = self
+                .targets
+                .iter_mut()
+                .find(|target| target.qualified() == rebuilt.qualified())
+            {
+                target.kind = rebuilt.kind;
+            }
+        }
+        self
+    }
+
+    /// Install cleanup's statement timeout and sweep range for this process
+    /// (read once; a malformed value logs and keeps the default).
+    pub(crate) fn with_session_settings(self, timeout: Option<&str>, pages: Option<&str>) -> Self {
+        let timeout = match timeout.map(parse_statement_timeout) {
+            Some(Ok(value)) => value,
+            Some(Err(why)) => {
+                tracing::warn!("{why}; cleanup runs without a statement timeout");
+                "0".to_string()
+            }
+            None => "0".to_string(),
+        };
+        let _ = STATEMENT_TIMEOUT.set(timeout);
+        let pages = pages
+            .and_then(|raw| raw.trim().parse::<i64>().ok())
+            .filter(|pages| *pages > 0)
+            .unwrap_or(DEFAULT_SWEEP_PAGES);
+        let _ = SWEEP_PAGES.set(pages);
+        self
+    }
+
+    /// `declared` drops app partitions past their declared retention; anything
+    /// else (default) keeps them.
+    pub(crate) fn with_app_retention(mut self, raw: Option<&str>) -> Self {
+        self.app_retention = raw
+            .map(|raw| raw.trim().eq_ignore_ascii_case("declared"))
+            .unwrap_or(false);
+        self
     }
 
     /// Set the size cap from its raw value (`None` = unset → 1GB).
@@ -237,7 +345,18 @@ impl CleanupSettings {
         evidence_export: bool,
     ) -> Self {
         let targets = targets(evidence_export);
-        let mut config = parse_retention_entries(DEFAULT_CLEANUP_RETENTION, &targets);
+        // Each table's own default first, then the default list, then the
+        // operator's list, entry by entry.
+        let mut config = RetentionConfig::default();
+        for target in &targets {
+            if let Some(default) = target.default_retention {
+                config.retention.insert(target.qualified(), Some(default));
+            }
+        }
+        let listed = parse_retention_entries(DEFAULT_CLEANUP_RETENTION, &targets);
+        config.retention.extend(listed.retention);
+        config.paused.extend(listed.paused);
+        config.errors.extend(listed.errors);
         if let Some(raw) = retention {
             let set = parse_retention_entries(raw, &targets);
             config.retention.extend(set.retention);
@@ -259,6 +378,9 @@ impl CleanupSettings {
                 .unwrap_or(DEFAULT_ROW_BATCH),
             reclaim: reclaim.map_or(Ok(Reclaim::Vacuum), Reclaim::parse),
             max_size: Ok(Some(DEFAULT_MAX_SIZE)),
+            app_retention: false,
+            sweep_interval: DEFAULT_SWEEP_INTERVAL,
+            keep_versions: DEFAULT_KEEP_VERSIONS,
             targets,
             retention,
         }
@@ -291,6 +413,10 @@ impl CleanupSettings {
                 if let Some(why) = config.paused.get(&target.qualified()) {
                     entry["paused"] = serde_json::Value::String(why.clone());
                 }
+                if target.periodic {
+                    entry["swept_every"] =
+                        serde_json::Value::String(describe_duration(self.sweep_interval));
+                }
                 if let Some(class) = &target.kept_class {
                     entry["kept_class"] = serde_json::json!({
                         "name": class.name,
@@ -320,18 +446,79 @@ fn parse_interval(raw: &str) -> Option<Duration> {
 /// The retention in force when nothing is configured: UDB's own logs follow
 /// their declared retention.
 pub const DEFAULT_CLEANUP_RETENTION: &str = "access_decision_audits=declared,\
-     access_decision_audits:deny=declared,auth_audit_log=declared,usage_events=declared";
+     access_decision_audits:deny=declared,auth_audit_log=declared,usage_events=declared,\
+     api_key_usages=declared,notification_logs=declared";
 const DEFAULT_INTERVAL: Duration = Duration::from_secs(600);
 const MIN_RETENTION: Duration = Duration::from_secs(24 * 3600);
 const DEFAULT_PREMAKE: i32 = 4;
 const DEFAULT_ROW_BATCH: i64 = 5_000;
 const MAX_BATCHES_PER_PASS: usize = 20;
 /// Heap pages one sweep statement covers (32 MiB at the default block size).
-const SWEEP_PAGES: i64 = 4_096;
-/// How often the scheduled pass sweeps rows out of the partitions it keeps.
-/// Retention is set in days, so once a day is enough; `udb cleanup run`
-/// always sweeps.
-const PARTITION_SWEEP_EVERY: Duration = Duration::from_secs(24 * 3600);
+const DEFAULT_SWEEP_PAGES: i64 = 4_096;
+
+/// Cleanup's statement timeout and sweep range, set once from the settings
+/// (`UDB_CLEANUP_STATEMENT_TIMEOUT`, `UDB_CLEANUP_SWEEP_PAGES`).
+static STATEMENT_TIMEOUT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+static SWEEP_PAGES: std::sync::OnceLock<i64> = std::sync::OnceLock::new();
+
+fn statement_timeout() -> &'static str {
+    STATEMENT_TIMEOUT.get().map_or("0", String::as_str)
+}
+
+fn sweep_pages() -> i64 {
+    *SWEEP_PAGES.get().unwrap_or(&DEFAULT_SWEEP_PAGES)
+}
+
+/// A PostgreSQL duration for `statement_timeout`: `0`/`off`/`none` (no
+/// timeout), plain milliseconds, or a number with `ms`, `s`, `min` or `h`.
+fn parse_statement_timeout(raw: &str) -> Result<String, String> {
+    let value = raw.trim().to_ascii_lowercase();
+    if matches!(value.as_str(), "" | "0" | "off" | "none") {
+        return Ok("0".to_string());
+    }
+    let split = value
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(value.len());
+    let (number, unit) = value.split_at(split);
+    let number: u64 = number.parse().map_err(|_| {
+        format!("{CLEANUP_STATEMENT_TIMEOUT_ENV}: `{raw}` is not a duration like 30min or 0")
+    })?;
+    match unit.trim() {
+        "" | "ms" => Ok(format!("{number}ms")),
+        "s" => Ok(format!("{number}s")),
+        "m" | "min" => Ok(format!("{number}min")),
+        "h" => Ok(format!("{number}h")),
+        other => Err(format!(
+            "{CLEANUP_STATEMENT_TIMEOUT_ENV}: unit `{other}` is not ms, s, min or h"
+        )),
+    }
+}
+/// How often the scheduled pass sweeps rows out of the partitions it keeps
+/// and out of the swept tables (`UDB_CLEANUP_SWEEP_INTERVAL`). Retention is
+/// set in days, so once a day is enough; `udb cleanup run` always sweeps.
+const DEFAULT_SWEEP_INTERVAL: Duration = Duration::from_secs(24 * 3600);
+/// Columns that mark the end of a native row's life, in order of preference.
+/// `expires_at` comes first: a row that expires (a token revocation, a
+/// session, a challenge) is only aged from its expiry, never from an earlier
+/// revocation or use, so a revocation is never deleted while the token it
+/// blocks can still be presented.
+pub(crate) const ROW_END_COLUMNS: &[&str] = &[
+    "expires_at",
+    "occurred_at",
+    "revoked_at",
+    "consumed_at",
+    "acked_at",
+    "delivered_at",
+    "completed_at",
+    "finished_at",
+];
+/// Native tables whose rows are complete records from the moment they are
+/// written, so their creation time is the time they age from.
+const APPEND_ONLY_RECORDS: &[&str] = &["notification_delivery_attempts", "policy_simulations"];
+/// Native tables that declare a retention but whose rows must not age out on
+/// a timestamp alone: a database credential lease row is how its login is
+/// found and revoked, so an expired lease whose revocation failed stays.
+const NO_ROW_EXPIRY: &[&str] = &["vault_db_credential_leases"];
 const DECISION_AUDIT_MESSAGE: &str = "udb.core.authz.entity.v1.AccessDecisionAudit";
 const USAGE_EVENT_MESSAGE: &str = "udb.core.metering.entity.v1.UsageEvent";
 
@@ -361,6 +548,9 @@ pub(crate) enum TargetKind {
         column: String,
         /// Keep rows the evidence export has not reached yet.
         evidence_state_key: Option<String>,
+        /// A further SQL condition a row must meet to be deleted (a finished
+        /// status, not the active version, ...). Written by this module only.
+        only_when: Option<String>,
     },
 }
 
@@ -376,6 +566,14 @@ pub(crate) struct Target {
     pub declared: Option<Duration>,
     /// Rows kept at least as long as the table and longer when configured.
     pub kept_class: Option<KeptClass>,
+    /// The retention in force when no retention list names the table
+    /// (`None`: the table keeps every row unless listed).
+    pub default_retention: Option<Duration>,
+    /// Counted against the size cap (UDB's own logs only).
+    pub capped: bool,
+    /// Rows are removed by one page-range sweep per sweep interval instead of
+    /// bounded batches every pass (no index on the time column is needed).
+    pub periodic: bool,
 }
 
 /// A class of rows a table keeps longer than the rest, named in the retention
@@ -413,11 +611,13 @@ pub(crate) struct Outcome {
     pub created: i64,
     pub dropped: i64,
     pub deleted: i64,
+    /// Partitions brought in line with the parent's row-level security.
+    pub secured: i64,
 }
 
 impl Outcome {
     fn total(self) -> i64 {
-        self.created + self.dropped + self.deleted
+        self.created + self.dropped + self.deleted + self.secured
     }
 }
 
@@ -497,14 +697,18 @@ fn describe_duration(duration: Duration) -> String {
     let secs = duration.as_secs();
     if secs.is_multiple_of(86_400) {
         format!("{}d", secs / 86_400)
-    } else {
+    } else if secs.is_multiple_of(3_600) {
         format!("{}h", secs / 3_600)
+    } else {
+        format!("{}m", secs / 60)
     }
 }
 
-/// Every table the worker looks after: the time-partitioned native tables plus
-/// the two unpartitioned append-only logs. With the evidence export on, the
-/// auth audit log keeps rows it has not exported.
+/// Every table the worker looks after: the time-partitioned native tables, the
+/// two unpartitioned append-only logs, the other native tables whose rows have
+/// an end ([`row_end_column`]) and UDB's bookkeeping tables
+/// ([`system_targets`]). With the evidence export on, the auth audit log keeps
+/// rows it has not exported.
 pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
     let mut targets: Vec<Target> = crate::runtime::native_catalog::native_manifest()
         .tables
@@ -538,7 +742,11 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
             column: "occurred_at".to_string(),
             evidence_state_key: evidence_export
                 .then(|| crate::runtime::singleton::WORKER_EVIDENCE_EXPORT.to_string()),
+            only_when: None,
         },
+        default_retention: None,
+        capped: true,
+        periodic: false,
     });
     let usage = crate::runtime::native_catalog::native_model(USAGE_EVENT_MESSAGE, &["occurred_at"]);
     if let Some((schema, table)) = split_relation(&usage.relation) {
@@ -552,10 +760,193 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
             kind: TargetKind::Rows {
                 column: usage.column("occurred_at").to_string(),
                 evidence_state_key: None,
+                only_when: None,
             },
+            default_retention: None,
+            capped: true,
+            periodic: false,
         });
     }
+    // Every other native table whose rows have an end follows its declared
+    // retention by default.
+    let manifest = crate::runtime::native_catalog::native_manifest();
+    let mut taken: std::collections::BTreeSet<String> =
+        targets.iter().map(Target::qualified).collect();
+    for table in &manifest.tables {
+        let Ok(column) = row_end_column(table, manifest) else {
+            continue;
+        };
+        let target = Target {
+            schema: table.schema.clone(),
+            table: table.table.clone(),
+            service: native_service(table),
+            declared: declared_days(table.retention_days),
+            kept_class: None,
+            kind: TargetKind::Rows {
+                column,
+                evidence_state_key: None,
+                only_when: None,
+            },
+            default_retention: declared_days(table.retention_days),
+            capped: false,
+            periodic: true,
+        };
+        if taken.insert(target.qualified()) {
+            targets.push(target);
+        }
+    }
+    targets.extend(system_targets(DEFAULT_KEEP_VERSIONS));
     targets
+}
+
+/// The native service whose store holds a UDB table (`udb.core.<service>...`).
+fn native_service(table: &ManifestTable) -> String {
+    table
+        .proto_package
+        .split('.')
+        .nth(2)
+        .unwrap_or_default()
+        .to_string()
+}
+
+/// The column a native table's rows age from, or why the table's rows do not
+/// age out. Only tables whose rows have an end qualify: a row expires, records
+/// an event, or was revoked, consumed, acknowledged, delivered or finished
+/// ([`ROW_END_COLUMNS`]); a row whose end column is empty is still live and is
+/// never deleted. A creation time alone never qualifies (an entity created
+/// long ago is not stale) except for append-only records.
+pub(crate) fn row_end_column(
+    table: &ManifestTable,
+    manifest: &crate::generation::CatalogManifest,
+) -> Result<String, &'static str> {
+    if table.retention_days <= 0 {
+        return Err("declares no retention");
+    }
+    if partitioned_target(table).is_some() {
+        return Err("time-partitioned: whole partitions are dropped instead");
+    }
+    let timestamp = |name: &str| {
+        table.columns.iter().any(|column| {
+            column.column_name == name && column.sql_type.to_ascii_uppercase().contains("TIMESTAMP")
+        })
+    };
+    if table.soft_delete || timestamp("deleted_at") {
+        return Err("a soft-deleted entity: its rows end by deletion, not by age");
+    }
+    if NO_ROW_EXPIRY.contains(&table.table.as_str()) {
+        return Err("its rows track live external state");
+    }
+    let referenced = manifest.tables.iter().any(|other| {
+        !(other.schema == table.schema && other.table == table.table)
+            && other.foreign_keys.iter().any(|fk| {
+                fk.ref_table == table.table
+                    && (fk.ref_schema.is_empty() || fk.ref_schema == table.schema)
+            })
+    });
+    if referenced {
+        return Err("other tables reference its rows");
+    }
+    if let Some(column) = ROW_END_COLUMNS.iter().find(|column| timestamp(**column)) {
+        return Ok((*column).to_string());
+    }
+    if APPEND_ONLY_RECORDS.contains(&table.table.as_str()) && timestamp("created_at") {
+        return Ok("created_at".to_string());
+    }
+    Err("no column marks the end of a row's life")
+}
+
+/// UDB's bookkeeping tables in the system catalog, each with the rows it may
+/// lose and its default retention. They are swept once per sweep interval.
+fn system_targets(keep_versions: u32) -> Vec<Target> {
+    let config = crate::runtime::system::SystemCatalogConfig::current();
+    let schema = config.cdc.system_schema.clone();
+    let days = |n: u64| Some(Duration::from_secs(n * 86_400));
+    let target = |table: &str, column: &str, only_when: String, default: Option<Duration>| Target {
+        schema: schema.clone(),
+        table: table.to_string(),
+        service: SYSTEM_STORE.to_string(),
+        declared: None,
+        kept_class: None,
+        kind: TargetKind::Rows {
+            column: column.to_string(),
+            evidence_state_key: None,
+            only_when: Some(only_when),
+        },
+        default_retention: default,
+        capped: false,
+        periodic: true,
+    };
+    let bindings = config.project_catalog_bindings_relation();
+    let versions = config.catalog_versions_relation();
+    let reloads = config.catalog_reload_log_relation();
+    vec![
+        // A completed task only clears read fences of writes that recent.
+        target(
+            &config.projection_tasks_table,
+            "completed_at",
+            "status = 'COMPLETED'".to_string(),
+            days(7),
+        ),
+        // Open, retrying and quarantined dead letters stay until resolved.
+        target(
+            &config.dlq_table,
+            "updated_at",
+            "status IN ('REPLAYED', 'DISMISSED')".to_string(),
+            days(30),
+        ),
+        target(
+            &config.saga_table,
+            "updated_at",
+            "status IN ('committed', 'compensated')".to_string(),
+            days(30),
+        ),
+        // An in-doubt decision is what recovery resolves: it stays.
+        target(
+            &config.xa_ledger_table,
+            "updated_at",
+            "decision IN ('committed', 'rolled_back')".to_string(),
+            days(30),
+        ),
+        target(
+            &config.catalog_versions_table,
+            "created_at",
+            catalog_versions_removable(&versions, &bindings, keep_versions),
+            days(30),
+        ),
+        target(
+            &config.catalog_reload_log_table,
+            "created_at",
+            catalog_reloads_removable(&reloads, &bindings),
+            days(90),
+        ),
+    ]
+}
+
+/// A catalog version may go only when it is not active, no project binds it
+/// and it is not among its project's `keep` newest versions.
+fn catalog_versions_removable(versions: &str, bindings: &str, keep: u32) -> String {
+    format!(
+        "status <> 'ACTIVE' \
+         AND catalog_id NOT IN (SELECT b.active_catalog_id FROM {bindings} b \
+                                WHERE b.active_catalog_id IS NOT NULL) \
+         AND catalog_id NOT IN (SELECT ranked.catalog_id FROM ( \
+               SELECT v.catalog_id, row_number() OVER ( \
+                      PARTITION BY v.project_id ORDER BY v.created_at DESC) AS position \
+               FROM {versions} v) AS ranked \
+             WHERE ranked.position <= {keep})"
+    )
+}
+
+/// A reload-log row may go unless it records a project's active version (the
+/// catalog loader requires that activation record) or is the newest row (its
+/// sequence is the cluster's reload generation).
+fn catalog_reloads_removable(reloads: &str, bindings: &str) -> String {
+    format!(
+        "(project_id, catalog_id) NOT IN (SELECT b.project_id, b.active_catalog_id \
+                                          FROM {bindings} b \
+                                          WHERE b.active_catalog_id IS NOT NULL) \
+         AND reload_seq < (SELECT max(r.reload_seq) FROM {reloads} r)"
+    )
 }
 
 fn partitioned_target(table: &ManifestTable) -> Option<Target> {
@@ -586,18 +977,18 @@ fn partitioned_target(table: &ManifestTable) -> Option<Target> {
         "HOURLY" | "HOUR" => ("hour", "YYYYMMDDHH24"),
         _ => return None,
     };
-    let service = table
-        .proto_package
-        .split('.')
-        .nth(2)
-        .filter(|segment| !segment.is_empty())?
-        .to_string();
+    // The native service whose store holds a UDB table; app tables are
+    // reached through the primary pool instead.
+    let service = native_service(table);
     Some(Target {
         schema: table.schema.clone(),
         table: table.table.clone(),
         service,
         declared: declared_days(table.retention_days),
         kept_class: None,
+        default_retention: None,
+        capped: true,
+        periodic: false,
         kind: TargetKind::Partitioned {
             column: table.partition_column.trim().to_string(),
             unit: unit.to_string(),
@@ -765,24 +1156,105 @@ pub async fn run_cleanup_once(
     .and_then(|changed| reclaim.map(|_| changed))
 }
 
-/// Per table, when the scheduled pass last swept rows out of kept partitions.
-fn last_partition_sweep()
--> &'static std::sync::Mutex<std::collections::HashMap<String, std::time::Instant>> {
+/// Partition upkeep for every application catalogue's time-partitioned
+/// PostgreSQL tables (UDB's own are [`run_cleanup_once`]'s): the current
+/// period and the declared number of future partitions are created ahead of
+/// writes, as the migration names them, so a write past the window the
+/// migration created never fails. A table pg_partman manages is left to it.
+/// With `UDB_CLEANUP_APP_RETENTION=declared`, UDB-named partitions past the
+/// table's declared `retention_days` are dropped; by default nothing is.
+pub async fn run_app_partition_upkeep(
+    runtime: &crate::runtime::DataBrokerRuntime,
+    catalog: &crate::runtime::catalog::CatalogManager,
+    settings: &CleanupSettings,
+) -> Result<i64, String> {
+    let Some(pool) = runtime.pg_pool_clone() else {
+        return Ok(0);
+    };
+    let manifests: Vec<_> = catalog
+        .active_project_ids()
+        .into_iter()
+        .filter_map(|project| catalog.active_exact_for(&project))
+        .collect();
+    let mut changed = 0i64;
+    let mut failures = Vec::new();
+    for (target, retention) in app_partition_targets(
+        manifests.iter().map(|state| state.manifest.as_ref()),
+        settings.app_retention,
+    ) {
+        let mode = PassMode {
+            batch: settings.batch,
+            drain: false,
+            // App rows are never deleted one by one: whole partitions only.
+            sweep_partitions: false,
+        };
+        match maintain_target(&pool, &target, Ok(retention), mode).await {
+            Ok(outcome) => changed += outcome.total(),
+            Err(why) => failures.push(format!("{}: {why}", target.qualified())),
+        }
+    }
+    if failures.is_empty() {
+        Ok(changed)
+    } else {
+        Err(format!("app partition upkeep: {}", failures.join("; ")))
+    }
+}
+
+/// The time-partitioned app tables of `manifests`, once each, with the
+/// retention the upkeep applies: none (partitions are only created) unless
+/// `app_retention`, then the table's declared `retention_days`. UDB's own
+/// schemas are left to the native pass.
+pub(crate) fn app_partition_targets<'a>(
+    manifests: impl Iterator<Item = &'a crate::generation::CatalogManifest>,
+    app_retention: bool,
+) -> Vec<(Target, Retention)> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut out = Vec::new();
+    for manifest in manifests {
+        for table in &manifest.tables {
+            if table.schema.starts_with("udb") {
+                continue;
+            }
+            let Some(target) = partitioned_target(table) else {
+                continue;
+            };
+            if !seen.insert(target.qualified()) {
+                continue;
+            }
+            let retention = if app_retention {
+                let declared = declared_days(table.retention_days);
+                Retention {
+                    rows: declared,
+                    kept: declared,
+                }
+            } else {
+                Retention::default()
+            };
+            out.push((target, retention));
+        }
+    }
+    out
+}
+
+/// Per table, when the scheduled pass last swept it (kept partitions, or a
+/// periodic table's rows).
+fn last_sweep() -> &'static std::sync::Mutex<std::collections::HashMap<String, std::time::Instant>>
+{
     static LAST: std::sync::OnceLock<
         std::sync::Mutex<std::collections::HashMap<String, std::time::Instant>>,
     > = std::sync::OnceLock::new();
     LAST.get_or_init(Default::default)
 }
 
-/// Whether the scheduled pass sweeps this table's kept partitions now (at most
-/// once per [`PARTITION_SWEEP_EVERY`]).
-fn partition_sweep_due(target: &Target) -> bool {
-    let mut last = last_partition_sweep()
+/// Whether the scheduled pass sweeps this table now (at most once per
+/// `every`, the sweep interval).
+fn sweep_due(target: &Target, every: Duration) -> bool {
+    let mut last = last_sweep()
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     let now = std::time::Instant::now();
     match last.get(&target.qualified()) {
-        Some(at) if now.duration_since(*at) < PARTITION_SWEEP_EVERY => false,
+        Some(at) if now.duration_since(*at) < every => false,
         _ => {
             last.insert(target.qualified(), now);
             true
@@ -806,18 +1278,29 @@ pub async fn run_cleanup_with(
     let mut changed = 0i64;
     let mut failures = config.errors.clone();
     for target in &settings.targets {
-        let Ok(pool) = runtime.native_store_pool_for_service(&target.service, true, "") else {
+        let Some(pool) = store_pool(runtime, target) else {
             continue;
         };
         let retention = match config.paused.get(&target.qualified()) {
             Some(why) => Err(why.clone()),
             None => Ok(config.retention_of(target)),
         };
+        if target.periodic && config.retention_of(target).rows.is_none() {
+            // Kept for good: a periodic table has nothing else to do.
+            continue;
+        }
         let partitioned = matches!(target.kind, TargetKind::Partitioned { .. });
+        let swept = (partitioned || target.periodic)
+            && (drain || sweep_due(target, settings.sweep_interval));
+        if target.periodic && !swept {
+            // Between sweeps a periodic table is left alone.
+            continue;
+        }
         let mode = PassMode {
             batch: settings.batch,
-            drain,
-            sweep_partitions: partitioned && (drain || partition_sweep_due(target)),
+            // A periodic table is swept whole, page range by page range.
+            drain: drain || target.periodic,
+            sweep_partitions: partitioned && swept,
         };
         match maintain_target(&pool, target, retention, mode).await {
             Ok(outcome) => {
@@ -842,8 +1325,27 @@ pub async fn run_cleanup_with(
             Err(why) => failures.push(format!("{}: {why}", target.qualified())),
         }
     }
-    // The CDC journal prunes itself (UDB_CDC_JOURNAL_RETENTION); an explicit
-    // reclaim gives the space its sweep freed back as well.
+    // `udb cleanup run` also runs the CDC journal's retention sweep (the
+    // running broker's CDC worker does it on its own tick), so the journal can
+    // be trimmed in a maintenance window without a broker.
+    if drain && let Some(pool) = runtime.pg_pool_clone() {
+        match crate::runtime::cdc::sweep_journal_now(
+            &pool,
+            &runtime.config().cdc,
+            statement_timeout(),
+        )
+        .await
+        {
+            Ok(removed) => {
+                if removed > 0 {
+                    tracing::info!(removed, "cleanup run trimmed the CDC journal");
+                }
+                changed += removed as i64;
+            }
+            Err(why) => failures.push(format!("CDC journal: {why}")),
+        }
+    }
+    // An explicit reclaim gives the space the journal sweep freed back too.
     if reclaim_all
         && reclaim != Reclaim::Off
         && let Some(pool) = runtime.pg_pool_clone()
@@ -876,6 +1378,19 @@ pub async fn run_cleanup_with(
     }
 }
 
+/// The pool of the store that holds `target`: the primary pool for the system
+/// catalog, else the native service's store. `None` when this broker cannot
+/// reach it.
+fn store_pool(runtime: &crate::runtime::DataBrokerRuntime, target: &Target) -> Option<PgPool> {
+    if target.service == SYSTEM_STORE {
+        runtime.pg_pool_clone()
+    } else {
+        runtime
+            .native_store_pool_for_service(&target.service, true, "")
+            .ok()
+    }
+}
+
 /// Run `vacuum` on a relation that exists. VACUUM cannot run in a
 /// transaction, so it goes over the simple query protocol. On a partitioned
 /// table it covers every partition.
@@ -888,13 +1403,22 @@ async fn reclaim_space(pool: &PgPool, relation: &str, vacuum: &str) -> Result<()
     if !exists {
         return Ok(());
     }
+    // VACUUM runs outside a transaction, so the timeout is set on the
+    // session it uses and reset before the connection goes back.
+    let mut conn = pool.acquire().await.map_err(|err| err.to_string())?;
+    let set = format!("SET statement_timeout = '{}'", statement_timeout());
+    sqlx::Executor::execute(&mut *conn, sqlx::raw_sql(&set))
+        .await
+        .map_err(|err| format!("set statement_timeout: {err}"))?;
     let sql = format!("{vacuum} {relation}");
-    sqlx::Executor::execute(pool, sqlx::raw_sql(&sql))
+    let result = sqlx::Executor::execute(&mut *conn, sqlx::raw_sql(&sql))
         .await
         .map(|_| {
             tracing::info!(table = %relation, statement = vacuum, "cleanup reclaimed space");
         })
-        .map_err(|err| format!("{vacuum}: {err}"))
+        .map_err(|err| format!("{vacuum}: {err}"));
+    let _ = sqlx::Executor::execute(&mut *conn, sqlx::raw_sql("RESET statement_timeout")).await;
+    result
 }
 
 /// Upkeep for one table. `retention` is `Err` when the retention list is
@@ -913,7 +1437,26 @@ pub(crate) async fn maintain_target(
     if !exists {
         return Ok(Outcome::default());
     }
-    let retention = retention.unwrap_or_default();
+    let upkeep = upkeep_target(pool, target, retention.unwrap_or_default(), mode).await;
+    // Every pass, whatever the upkeep did: a partition pg_partman (or anyone)
+    // created without the parent's row-level security is brought in line.
+    let secured = secure_partitions(pool, target).await;
+    match (upkeep, secured) {
+        (Ok(mut outcome), Ok(secured)) => {
+            outcome.secured = secured;
+            Ok(outcome)
+        }
+        (Err(why), Ok(_)) | (Ok(_), Err(why)) => Err(why),
+        (Err(upkeep), Err(secured)) => Err(format!("{upkeep}; {secured}")),
+    }
+}
+
+async fn upkeep_target(
+    pool: &PgPool,
+    target: &Target,
+    retention: Retention,
+    mode: PassMode,
+) -> Result<Outcome, String> {
     match &target.kind {
         TargetKind::Partitioned {
             column,
@@ -959,6 +1502,7 @@ pub(crate) async fn maintain_target(
                         .as_ref()
                         .map(|class| (class, retention.kept)),
                     evidence_state_key: None,
+                    only_when: None,
                 };
                 for child in partitions_with_expired_rows(pool, target, rows).await? {
                     outcome.deleted += sweep_expired_rows(pool, &child, &expiry).await?;
@@ -972,6 +1516,7 @@ pub(crate) async fn maintain_target(
         TargetKind::Rows {
             column,
             evidence_state_key,
+            only_when,
         } => {
             let Some(rows) = retention.rows else {
                 return Ok(Outcome::default());
@@ -984,6 +1529,7 @@ pub(crate) async fn maintain_target(
                     .as_ref()
                     .map(|class| (class, retention.kept)),
                 evidence_state_key: evidence_state_key.as_deref(),
+                only_when: only_when.as_deref(),
             };
             Ok(Outcome {
                 deleted: delete_expired_rows(pool, target, &expiry, mode).await?,
@@ -1052,6 +1598,7 @@ async fn create_partitions_ahead(
     .await
     .map_err(|err| format!("plan partitions: {err}"))?;
     let mut created = 0i64;
+    let mut parent_rls: Option<RlsState> = None;
     for row in rows {
         let start: String = row.try_get("start_ts").map_err(|err| err.to_string())?;
         let end: String = row.try_get("end_ts").map_err(|err| err.to_string())?;
@@ -1065,28 +1612,296 @@ async fn create_partitions_ahead(
         if present {
             continue;
         }
+        let child_relation = format!("{}.{}", qi(&target.schema), qi(&child));
         let ddl = format!(
-            "CREATE TABLE IF NOT EXISTS {schema}.{child} PARTITION OF {parent} \
+            "CREATE TABLE IF NOT EXISTS {child_relation} PARTITION OF {parent} \
              FOR VALUES FROM ({start}) TO ({end})",
-            schema = qi(&target.schema),
-            child = qi(&child),
             parent = target.relation(),
             start = ql(&start),
             end = ql(&end),
         );
-        match sqlx::query(&ddl).execute(pool).await {
-            Ok(_) => {
-                created += 1;
-                tracing::info!(table = %target.qualified(), partition = %child, "created partition ahead of writes");
-            }
+        // The partition is created with the parent's row-level security in one
+        // transaction: it is never visible without it.
+        if parent_rls.is_none() {
+            parent_rls = Some(parent_rls_state(pool, target).await?);
+        }
+        let secure = rls_sync_statements(
+            &child_relation,
+            parent_rls.as_ref().expect("read above"),
+            &RlsState::default(),
+        );
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|err| format!("create partition {child}: {err}"))?;
+        match sqlx::query(&ddl).execute(&mut *tx).await {
+            Ok(_) => {}
             // Another partition already covers the period (42P17), or a racing
             // creator won (42P07): nothing to do.
             Err(sqlx::Error::Database(db))
-                if matches!(db.code().as_deref(), Some("42P17" | "42P07")) => {}
+                if matches!(db.code().as_deref(), Some("42P17" | "42P07")) =>
+            {
+                continue;
+            }
             Err(err) => return Err(format!("create partition {child}: {err}")),
         }
+        for statement in &secure {
+            sqlx::query(statement)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| format!("secure partition {child}: {statement}: {err}"))?;
+        }
+        tx.commit()
+            .await
+            .map_err(|err| format!("create partition {child}: {err}"))?;
+        created += 1;
+        tracing::info!(table = %target.qualified(), partition = %child, rls_statements = secure.len(), "created partition ahead of writes");
     }
     Ok(created)
+}
+
+/// A table's row-level security as the catalog holds it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct RlsState {
+    pub enabled: bool,
+    pub forced: bool,
+    pub policies: Vec<PolicyDef>,
+}
+
+/// One policy as `pg_policies` shows it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct PolicyDef {
+    pub name: String,
+    pub permissive: bool,
+    /// `ALL`, `SELECT`, `INSERT`, `UPDATE` or `DELETE`.
+    pub command: String,
+    /// Role names; `public` is PUBLIC.
+    pub roles: Vec<String>,
+    pub using: Option<String>,
+    pub check: Option<String>,
+}
+
+impl PolicyDef {
+    fn same_as(&self, other: &PolicyDef) -> bool {
+        let roles = |policy: &PolicyDef| {
+            let mut roles = policy.roles.clone();
+            roles.sort();
+            roles
+        };
+        self.permissive == other.permissive
+            && self.command.eq_ignore_ascii_case(&other.command)
+            && roles(self) == roles(other)
+            && self.using == other.using
+            && self.check == other.check
+    }
+
+    fn create_on(&self, relation: &str) -> String {
+        let command = match self.command.to_ascii_uppercase().as_str() {
+            "SELECT" => "SELECT",
+            "INSERT" => "INSERT",
+            "UPDATE" => "UPDATE",
+            "DELETE" => "DELETE",
+            _ => "ALL",
+        };
+        let roles = if self.roles.is_empty() {
+            "PUBLIC".to_string()
+        } else {
+            self.roles
+                .iter()
+                .map(|role| {
+                    if role == "public" {
+                        "PUBLIC".to_string()
+                    } else {
+                        qi(role)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        let mut sql = format!(
+            "CREATE POLICY {} ON {relation} AS {} FOR {command} TO {roles}",
+            qi(&self.name),
+            if self.permissive {
+                "PERMISSIVE"
+            } else {
+                "RESTRICTIVE"
+            },
+        );
+        if let Some(using) = &self.using {
+            sql.push_str(&format!(" USING ({using})"));
+        }
+        if let Some(check) = &self.check {
+            sql.push_str(&format!(" WITH CHECK ({check})"));
+        }
+        sql
+    }
+}
+
+/// The statements that make the partition `relation` carry exactly the
+/// parent's row-level security: enable/force flags, and the policy set
+/// (missing created, changed replaced, extra dropped). Empty when it already
+/// does, or when the parent has row-level security off.
+pub(crate) fn rls_sync_statements(
+    relation: &str,
+    parent: &RlsState,
+    child: &RlsState,
+) -> Vec<String> {
+    let mut out = Vec::new();
+    if !parent.enabled {
+        return out;
+    }
+    if !child.enabled {
+        out.push(format!("ALTER TABLE {relation} ENABLE ROW LEVEL SECURITY"));
+    }
+    if parent.forced != child.forced {
+        out.push(format!(
+            "ALTER TABLE {relation} {}FORCE ROW LEVEL SECURITY",
+            if parent.forced { "" } else { "NO " }
+        ));
+    }
+    let mut child_policies: Vec<&PolicyDef> = child.policies.iter().collect();
+    child_policies.sort_by(|a, b| a.name.cmp(&b.name));
+    let mut parent_policies: Vec<&PolicyDef> = parent.policies.iter().collect();
+    parent_policies.sort_by(|a, b| a.name.cmp(&b.name));
+    let mut create = Vec::new();
+    for have in &child_policies {
+        match parent_policies.iter().find(|want| want.name == have.name) {
+            Some(want) if want.same_as(have) => {}
+            Some(want) => {
+                out.push(format!("DROP POLICY {} ON {relation}", qi(&have.name)));
+                create.push(want.create_on(relation));
+            }
+            None => out.push(format!("DROP POLICY {} ON {relation}", qi(&have.name))),
+        }
+    }
+    for want in &parent_policies {
+        if !child_policies.iter().any(|have| have.name == want.name) {
+            create.push(want.create_on(relation));
+        }
+    }
+    out.extend(create);
+    out
+}
+
+/// The parent's row-level security, read from the catalog: what is live.
+async fn parent_rls_state(pool: &PgPool, target: &Target) -> Result<RlsState, String> {
+    let (enabled, forced): (bool, bool) = sqlx::query_as(
+        "SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE oid = $1::regclass",
+    )
+    .bind(target.relation())
+    .fetch_one(pool)
+    .await
+    .map_err(|err| format!("read the row-level security: {err}"))?;
+    let policies = relation_policies(pool, &target.schema, &target.table).await?;
+    Ok(RlsState {
+        enabled,
+        forced,
+        policies,
+    })
+}
+
+type PolicyRow = (
+    String,
+    String,
+    Option<Vec<String>>,
+    String,
+    Option<String>,
+    Option<String>,
+);
+
+fn policy_from_row((name, permissive, roles, command, using, check): PolicyRow) -> PolicyDef {
+    PolicyDef {
+        name,
+        permissive: permissive.eq_ignore_ascii_case("PERMISSIVE"),
+        command,
+        roles: roles.unwrap_or_default(),
+        using,
+        check,
+    }
+}
+
+async fn relation_policies(
+    pool: &PgPool,
+    schema: &str,
+    table: &str,
+) -> Result<Vec<PolicyDef>, String> {
+    let rows: Vec<PolicyRow> = sqlx::query_as(
+        "SELECT policyname::text, permissive, roles::text[], cmd, qual, with_check \
+         FROM pg_policies WHERE schemaname = $1 AND tablename = $2",
+    )
+    .bind(schema)
+    .bind(table)
+    .fetch_all(pool)
+    .await
+    .map_err(|err| format!("read the policies of {schema}.{table}: {err}"))?;
+    Ok(rows.into_iter().map(policy_from_row).collect())
+}
+
+/// Bring every partition of a partitioned table whose parent has row-level
+/// security on in line with it: the flags and the exact policy set, copied
+/// from the parent's live catalog state. Idempotent; returns the partitions
+/// it changed.
+async fn secure_partitions(pool: &PgPool, target: &Target) -> Result<i64, String> {
+    let partitioned: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM pg_partitioned_table WHERE partrelid = to_regclass($1))",
+    )
+    .bind(target.relation())
+    .fetch_one(pool)
+    .await
+    .map_err(|err| format!("read the partitioning: {err}"))?;
+    if !partitioned {
+        return Ok(0);
+    }
+    let parent = parent_rls_state(pool, target).await?;
+    if !parent.enabled {
+        return Ok(0);
+    }
+    let children: Vec<(String, String, bool, bool)> = sqlx::query_as(
+        "SELECT n.nspname::text, c.relname::text, c.relrowsecurity, c.relforcerowsecurity \
+         FROM pg_partition_tree($1::regclass) t \
+         JOIN pg_class c ON c.oid = t.relid \
+         JOIN pg_namespace n ON n.oid = c.relnamespace \
+         WHERE t.relid <> $1::regclass ORDER BY c.relname",
+    )
+    .bind(target.relation())
+    .fetch_all(pool)
+    .await
+    .map_err(|err| format!("list partitions: {err}"))?;
+    let mut fixed = 0i64;
+    for (schema, table, enabled, forced) in children {
+        let child = RlsState {
+            enabled,
+            forced,
+            policies: relation_policies(pool, &schema, &table).await?,
+        };
+        let relation = format!("{}.{}", qi(&schema), qi(&table));
+        let statements = rls_sync_statements(&relation, &parent, &child);
+        if statements.is_empty() {
+            continue;
+        }
+        // One transaction per partition: a changed policy is never missing.
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|err| format!("secure partition {relation}: {err}"))?;
+        for statement in &statements {
+            sqlx::query(statement)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| format!("secure partition {relation}: {statement}: {err}"))?;
+        }
+        tx.commit()
+            .await
+            .map_err(|err| format!("secure partition {relation}: {err}"))?;
+        fixed += 1;
+        tracing::warn!(
+            table = %target.qualified(),
+            partition = %relation,
+            fixes = ?statements,
+            "partition did not carry its parent's row-level security; brought in line"
+        );
+    }
+    Ok(fixed)
 }
 
 /// Drop UDB-created partitions whose whole range is older than the retention.
@@ -1140,6 +1955,8 @@ struct Expiry<'a> {
     kept: Option<(&'a KeptClass, Option<Duration>)>,
     /// With an evidence export, rows it has not exported are kept.
     evidence_state_key: Option<&'a str>,
+    /// A further condition a row must meet to be deleted.
+    only_when: Option<&'a str>,
 }
 
 impl Expiry<'_> {
@@ -1167,7 +1984,11 @@ impl Expiry<'_> {
                 before(kept)
             ),
         };
-        format!("{column} < {cutoff}{class}")
+        let only_when = self
+            .only_when
+            .map(|condition| format!(" AND ({condition})"))
+            .unwrap_or_default();
+        format!("{column} < {cutoff}{class}{only_when}")
     }
 }
 
@@ -1179,13 +2000,74 @@ async fn admin_tx(pool: &PgPool) -> Result<sqlx::Transaction<'static, sqlx::Post
         .execute(&mut *tx)
         .await
         .map_err(|err| err.to_string())?;
+    // A database or role statement_timeout must not cancel cleanup's work.
+    sqlx::query("SELECT set_config('statement_timeout', $1, true)")
+        .bind(statement_timeout())
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| err.to_string())?;
     Ok(tx)
 }
 
-/// Delete an unpartitioned table's rows past retention. The scheduled pass
-/// deletes bounded batches (at most [`MAX_BATCHES_PER_PASS`]); `udb cleanup
-/// run` sweeps the whole table once, page range by page range, so a large
-/// backlog costs one read of the table.
+/// The leaf tables that hold `target`'s rows: the table itself when it is not
+/// partitioned, else every partition (a default partition included). Leaves
+/// are deleted from directly: the parent's tenant policy would hide other
+/// tenants' rows from a delete through it.
+/// The leaf tables of `$1`: every leaf partition of a partitioned table, or
+/// the table itself when it is not partitioned (`pg_partition_tree` returns no
+/// row for a plain table, so without this every unpartitioned target would be
+/// skipped).
+const LEAF_RELIDS: &str = "SELECT relid FROM pg_partition_tree($1::regclass) WHERE isleaf \
+     UNION ALL SELECT $1::regclass AS relid \
+     WHERE NOT EXISTS (SELECT 1 FROM pg_partition_tree($1::regclass))";
+
+async fn leaf_relations(pool: &PgPool, target: &Target) -> Result<Vec<String>, String> {
+    let leaves: Vec<(String, String)> = sqlx::query_as(&format!(
+        "SELECT n.nspname::text, c.relname::text \
+         FROM ({LEAF_RELIDS}) t \
+         JOIN pg_class c ON c.oid = t.relid \
+         JOIN pg_namespace n ON n.oid = c.relnamespace \
+         ORDER BY c.relname"
+    ))
+    .bind(target.relation())
+    .fetch_all(pool)
+    .await
+    .map_err(|err| format!("list partitions: {err}"))?;
+    Ok(leaves
+        .into_iter()
+        .map(|(schema, table)| format!("{}.{}", qi(&schema), qi(&table)))
+        .collect())
+}
+
+/// Refuse loudly when row-level security would hide other tenants' rows from
+/// this role on `relation` (the policy applies to the role and has no
+/// `app.platform_admin` clause for [`admin_tx`] to open): a delete there
+/// would quietly remove nothing past retention.
+async fn ensure_rows_reachable(pool: &PgPool, relation: &str) -> Result<(), String> {
+    let hidden: bool = sqlx::query_scalar(
+        "SELECT row_security_active($1::regclass) \
+            AND NOT EXISTS (SELECT 1 FROM pg_policy p \
+                            WHERE p.polrelid = $1::regclass \
+                              AND pg_get_expr(p.polqual, p.polrelid) LIKE '%app.platform_admin%')",
+    )
+    .bind(relation)
+    .fetch_one(pool)
+    .await
+    .map_err(|err| format!("read the row-level security of {relation}: {err}"))?;
+    if hidden {
+        return Err(format!(
+            "{relation}: row-level security hides other tenants' rows from the broker's \
+             database role, so nothing past retention can be deleted; give the role \
+             BYPASSRLS or add an app.platform_admin clause to the table's policy"
+        ));
+    }
+    Ok(())
+}
+
+/// Delete a table's rows past retention, leaf table by leaf table. The
+/// scheduled pass deletes bounded batches (at most [`MAX_BATCHES_PER_PASS`]
+/// per leaf); `udb cleanup run` and periodic tables sweep each leaf once, page
+/// range by page range, so a large backlog costs one read of the table.
 async fn delete_expired_rows(
     pool: &PgPool,
     target: &Target,
@@ -1204,17 +2086,19 @@ async fn delete_expired_rows(
             return Ok(0);
         }
     }
-    let relation = target.relation();
-    let deleted = if mode.drain {
-        sweep_expired_rows(pool, &relation, expiry).await?
-    } else {
+    let mut deleted = 0i64;
+    for relation in leaf_relations(pool, target).await? {
+        ensure_rows_reachable(pool, &relation).await?;
+        if mode.drain {
+            deleted += sweep_expired_rows(pool, &relation, expiry).await?;
+            continue;
+        }
         let batch = mode.batch.max(1);
         let sql = format!(
             "DELETE FROM {relation} WHERE ctid IN ( \
                  SELECT ctid FROM {relation} WHERE {} LIMIT {batch})",
             expiry.condition()
         );
-        let mut deleted = 0i64;
         for _ in 0..MAX_BATCHES_PER_PASS {
             let mut tx = admin_tx(pool).await?;
             let done = sqlx::query(&sql)
@@ -1228,8 +2112,7 @@ async fn delete_expired_rows(
                 break;
             }
         }
-        deleted
-    };
+    }
     if deleted > 0 {
         tracing::info!(table = %target.qualified(), deleted, retention_secs = expiry.rows.as_secs(), "deleted rows past retention");
     }
@@ -1237,7 +2120,7 @@ async fn delete_expired_rows(
 }
 
 /// Delete every row of `relation` past retention in one pass over the heap,
-/// [`SWEEP_PAGES`] pages per statement (a TID range scan), each statement its
+/// `UDB_CLEANUP_SWEEP_PAGES` pages per statement (a TID range scan), each statement its
 /// own short transaction. Rows written after the pass started are newer than
 /// any cutoff, so the page count read at the start is enough.
 async fn sweep_expired_rows(
@@ -1256,7 +2139,7 @@ async fn sweep_expired_rows(
     let mut deleted = 0i64;
     let mut first = 0i64;
     while first < pages {
-        let last = first + SWEEP_PAGES;
+        let last = first + sweep_pages();
         let sql = format!(
             "DELETE FROM {relation} WHERE ctid >= '({first},0)'::tid \
              AND ctid < '({last},0)'::tid AND {condition}"
@@ -1319,13 +2202,12 @@ struct SizeSample {
 /// Leaves are read directly (the parent's tenant policy would hide other
 /// tenants' rows), inside the platform-admin escape for unpartitioned logs.
 async fn sample_size(pool: &PgPool, target: &Target, column: &str) -> Result<SizeSample, String> {
-    let leaves: Vec<(String, String, f32)> = sqlx::query_as(
+    let leaves: Vec<(String, String, f32)> = sqlx::query_as(&format!(
         "SELECT n.nspname::text, c.relname::text, c.reltuples \
-         FROM pg_partition_tree($1::regclass) t \
+         FROM ({LEAF_RELIDS}) t \
          JOIN pg_class c ON c.oid = t.relid \
-         JOIN pg_namespace n ON n.oid = c.relnamespace \
-         WHERE t.isleaf",
-    )
+         JOIN pg_namespace n ON n.oid = c.relnamespace"
+    ))
     .bind(target.relation())
     .fetch_all(pool)
     .await
@@ -1432,7 +2314,9 @@ async fn enforce_size_cap(
     let mut tables = Vec::new();
     let mut failures = Vec::new();
     for target in &settings.targets {
-        if config.paused.contains_key(&target.qualified()) {
+        // Only UDB's own logs are capped; entity and bookkeeping tables follow
+        // their retention alone.
+        if !target.capped || config.paused.contains_key(&target.qualified()) {
             continue;
         }
         let retention = config.retention_of(target);
@@ -1440,7 +2324,7 @@ async fn enforce_size_cap(
             // `keep` (or a table outside the retention list) is outside the cap.
             continue;
         };
-        let Ok(pool) = runtime.native_store_pool_for_service(&target.service, true, "") else {
+        let Some(pool) = store_pool(runtime, target) else {
             continue;
         };
         let exists: bool = match sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
@@ -1462,6 +2346,7 @@ async fn enforce_size_cap(
             TargetKind::Rows {
                 column,
                 evidence_state_key,
+                ..
             } => (column.clone(), evidence_state_key.clone()),
         };
         match sample_size(&pool, target, &column).await {
@@ -1506,6 +2391,7 @@ async fn enforce_size_cap(
                     .as_ref()
                     .map(|class| (class, retention.kept)),
                 evidence_state_key: evidence_state_key.as_deref(),
+                only_when: None,
             };
             let removed = match &target.kind {
                 TargetKind::Partitioned { .. } => {
@@ -1688,7 +2574,12 @@ mod tests {
             .iter()
             .find(|t| {
                 matches!(t.kind, TargetKind::Partitioned { .. })
-                    && t.table != "access_decision_audits"
+                    && ![
+                        "access_decision_audits",
+                        "api_key_usages",
+                        "notification_logs",
+                    ]
+                    .contains(&t.table.as_str())
             })
             .expect("another time-partitioned UDB table");
         assert_eq!(defaults.retention_for(other), None, "{}", other.qualified());
@@ -1713,6 +2604,92 @@ mod tests {
             let err = parse_retention(raw, &targets).unwrap_err();
             assert!(err.contains(why), "{raw}: {err}");
         }
+    }
+
+    fn tenant_policy(name: &str, using: &str) -> PolicyDef {
+        PolicyDef {
+            name: name.to_string(),
+            permissive: true,
+            command: "ALL".to_string(),
+            roles: vec!["public".to_string()],
+            using: Some(using.to_string()),
+            check: None,
+        }
+    }
+
+    // A partition is made to carry exactly its parent's row-level security:
+    // flags, missing policies created, changed ones replaced, extra dropped.
+    #[test]
+    fn rls_sync_statements_make_a_partition_match_its_parent() {
+        let relation = "\"s\".\"audit_p_202611\"";
+        let parent = RlsState {
+            enabled: true,
+            forced: true,
+            policies: vec![
+                tenant_policy("tenant_isolation", "(tenant_id = 'a'::text)"),
+                PolicyDef {
+                    name: "admin".to_string(),
+                    permissive: false,
+                    command: "SELECT".to_string(),
+                    roles: vec!["udb_admin".to_string(), "public".to_string()],
+                    using: Some("true".to_string()),
+                    check: Some("false".to_string()),
+                },
+            ],
+        };
+        // A bare partition: everything is added.
+        assert_eq!(
+            rls_sync_statements(relation, &parent, &RlsState::default()),
+            vec![
+                format!("ALTER TABLE {relation} ENABLE ROW LEVEL SECURITY"),
+                format!("ALTER TABLE {relation} FORCE ROW LEVEL SECURITY"),
+                format!(
+                    "CREATE POLICY \"admin\" ON {relation} AS RESTRICTIVE FOR SELECT \
+                     TO \"udb_admin\", PUBLIC USING (true) WITH CHECK (false)"
+                ),
+                format!(
+                    "CREATE POLICY \"tenant_isolation\" ON {relation} AS PERMISSIVE FOR ALL \
+                     TO PUBLIC USING ((tenant_id = 'a'::text))"
+                ),
+            ]
+        );
+        // Already in line (role order aside): nothing to do.
+        let mut same = parent.clone();
+        same.policies[1].roles.reverse();
+        assert!(rls_sync_statements(relation, &parent, &same).is_empty());
+        // A changed policy is replaced, an extra one dropped, FORCE set.
+        let drifted = RlsState {
+            enabled: true,
+            forced: false,
+            policies: vec![
+                tenant_policy("tenant_isolation", "true"),
+                parent.policies[1].clone(),
+                tenant_policy("leftover", "true"),
+            ],
+        };
+        assert_eq!(
+            rls_sync_statements(relation, &parent, &drifted),
+            vec![
+                format!("ALTER TABLE {relation} FORCE ROW LEVEL SECURITY"),
+                format!("DROP POLICY \"leftover\" ON {relation}"),
+                format!("DROP POLICY \"tenant_isolation\" ON {relation}"),
+                format!(
+                    "CREATE POLICY \"tenant_isolation\" ON {relation} AS PERMISSIVE FOR ALL \
+                     TO PUBLIC USING ((tenant_id = 'a'::text))"
+                ),
+            ]
+        );
+        // A forced child of an unforced parent loses FORCE.
+        let mut unforced = parent.clone();
+        unforced.forced = false;
+        assert_eq!(
+            rls_sync_statements(relation, &unforced, &same),
+            vec![format!(
+                "ALTER TABLE {relation} NO FORCE ROW LEVEL SECURITY"
+            )]
+        );
+        // A parent without row-level security leaves its partitions alone.
+        assert!(rls_sync_statements(relation, &RlsState::default(), &drifted).is_empty());
     }
 
     /// Against a real Postgres, on fixture tables of a throwaway schema:
@@ -1766,12 +2743,75 @@ mod tests {
              FOR VALUES FROM ('2020-02-01') TO ('2020-03-01')"
         ))
         .await;
+        // The parent carries row-level security; its partitions start without
+        // it, and the hand-made one with a policy the parent does not have.
+        run(format!(
+            "ALTER TABLE {schema}.audit ENABLE ROW LEVEL SECURITY"
+        ))
+        .await;
+        run(format!(
+            "ALTER TABLE {schema}.audit FORCE ROW LEVEL SECURITY"
+        ))
+        .await;
+        run(format!(
+            "CREATE POLICY tenant_scope ON {schema}.audit USING (id > 0)"
+        ))
+        .await;
+        run(format!(
+            "CREATE POLICY stray ON {schema}.audit_manual USING (true)"
+        ))
+        .await;
+        // Every partition: (name, RLS on, forced, policy names, tenant_scope's USING).
+        let partition_rls = || {
+            let pool = pool.clone();
+            let schema = schema.clone();
+            async move {
+                sqlx::query_as::<_, (String, bool, bool, Vec<String>, Option<String>)>(
+                    "SELECT c.relname::text, c.relrowsecurity, c.relforcerowsecurity, \
+                            COALESCE((SELECT array_agg(p.policyname::text ORDER BY p.policyname) \
+                                      FROM pg_policies p \
+                                      WHERE p.schemaname = $1::text AND p.tablename = c.relname), '{}'), \
+                            (SELECT p.qual FROM pg_policies p WHERE p.schemaname = $1::text \
+                               AND p.tablename = c.relname AND p.policyname = 'tenant_scope') \
+                     FROM pg_partition_tree(format('%I.%I', $1::text, 'audit')::regclass) t \
+                     JOIN pg_class c ON c.oid = t.relid \
+                     WHERE t.relid <> format('%I.%I', $1::text, 'audit')::regclass \
+                     ORDER BY 1",
+                )
+                .bind(schema)
+                .fetch_all(&pool)
+                .await
+                .expect("read partition row-level security")
+            }
+        };
+        let parent_qual: String = sqlx::query_scalar(
+            "SELECT qual FROM pg_policies WHERE schemaname = $1 AND tablename = 'audit'",
+        )
+        .bind(&schema)
+        .fetch_one(&pool)
+        .await
+        .expect("parent policy");
+        let assert_secured = |rows: Vec<(String, bool, bool, Vec<String>, Option<String>)>| {
+            assert!(!rows.is_empty());
+            for (name, enabled, forced, policies, qual) in rows {
+                assert!(enabled && forced, "{name} carries the parent's RLS flags");
+                assert_eq!(
+                    policies,
+                    ["tenant_scope"],
+                    "{name}: exactly the parent's policies"
+                );
+                assert_eq!(qual.as_deref(), Some(parent_qual.as_str()), "{name}");
+            }
+        };
         let audit = Target {
             schema: schema.clone(),
             table: "audit".to_string(),
             service: "authz".to_string(),
             declared: None,
             kept_class: None,
+            default_retention: None,
+            capped: true,
+            periodic: false,
             kind: TargetKind::Partitioned {
                 column: "decided_at".to_string(),
                 unit: "month".to_string(),
@@ -1792,6 +2832,11 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(created.created, 5, "the current month and four ahead");
+        // The partitions created ahead carried RLS from the start; the two
+        // that were there before (one hand-made, with a stray policy) were
+        // brought in line.
+        assert_eq!(created.secured, 2);
+        assert_secured(partition_rls().await);
         assert!(exists(format!("{schema}.audit_p_202001")).await);
         run(format!(
             "INSERT INTO {schema}.audit VALUES (1, now()), (2, now() + interval '3 months')"
@@ -1821,6 +2866,18 @@ mod tests {
             0,
             "a second pass changes nothing"
         );
+        // A partition someone else creates (pg_partman, an operator) without
+        // the parent's RLS is brought in line on the next pass.
+        run(format!(
+            "CREATE TABLE {schema}.audit_late PARTITION OF {schema}.audit \
+             FOR VALUES FROM ('2019-01-01') TO ('2019-02-01')"
+        ))
+        .await;
+        let late = maintain_target(&pool, &audit, Ok(Retention::default()), scheduled)
+            .await
+            .unwrap();
+        assert_eq!(late.secured, 1);
+        assert_secured(partition_rls().await);
 
         run(format!(
             "CREATE TABLE {schema}.log (id INT, occurred_at TIMESTAMPTZ NOT NULL)"
@@ -1840,9 +2897,13 @@ mod tests {
             service: "metering".to_string(),
             declared: None,
             kept_class: None,
+            default_retention: None,
+            capped: true,
+            periodic: false,
             kind: TargetKind::Rows {
                 column: "occurred_at".to_string(),
                 evidence_state_key: None,
+                only_when: None,
             },
         };
         let small = PassMode {
@@ -1922,6 +2983,9 @@ mod tests {
                 name: "deny".to_string(),
                 predicate: "effect IS DISTINCT FROM 'ALLOW'".to_string(),
             }),
+            default_retention: None,
+            capped: true,
+            periodic: false,
             kind: TargetKind::Partitioned {
                 column: "decided_at".to_string(),
                 unit: "month".to_string(),
@@ -1977,6 +3041,158 @@ mod tests {
             "denies kept for good"
         );
         assert_eq!(count(format!("{schema}.decisions")).await, 3);
+
+        // A table with a default partition (sessions) is swept partition by
+        // partition from its end column; a row whose end is empty or recent
+        // stays, and so does a row that is old but has not ended.
+        run(format!(
+            "CREATE TABLE {schema}.sessions (id INT, created_at TIMESTAMPTZ NOT NULL, \
+             expires_at TIMESTAMPTZ) PARTITION BY RANGE (created_at)"
+        ))
+        .await;
+        run(format!(
+            "CREATE TABLE {schema}.sessions_p_old PARTITION OF {schema}.sessions \
+             FOR VALUES FROM ('2000-01-01') TO ('2001-01-01')"
+        ))
+        .await;
+        run(format!(
+            "CREATE TABLE {schema}.sessions_default PARTITION OF {schema}.sessions DEFAULT"
+        ))
+        .await;
+        run(format!(
+            "INSERT INTO {schema}.sessions VALUES \
+             (1, '2000-06-01', now() - interval '40 days'), \
+             (2, now() - interval '50 days', now() - interval '40 days'), \
+             (3, now() - interval '50 days', now() + interval '1 day'), \
+             (4, now() - interval '50 days', NULL), \
+             (5, now(), now() - interval '1 day')"
+        ))
+        .await;
+        let sessions = Target {
+            schema: schema.clone(),
+            table: "sessions".to_string(),
+            service: "authn".to_string(),
+            declared: Some(month),
+            kept_class: None,
+            default_retention: Some(month),
+            capped: false,
+            periodic: true,
+            kind: TargetKind::Rows {
+                column: "expires_at".to_string(),
+                evidence_state_key: None,
+                only_when: None,
+            },
+        };
+        let swept = PassMode {
+            drain: true,
+            ..scheduled
+        };
+        assert_eq!(
+            deleted(
+                maintain_target(&pool, &sessions, Ok(Retention::uniform(month)), swept)
+                    .await
+                    .unwrap()
+            ),
+            2,
+            "the expired session in each partition"
+        );
+        let left: Vec<i32> =
+            sqlx::query_scalar(&format!("SELECT id FROM {schema}.sessions ORDER BY id"))
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(left, vec![3, 4, 5]);
+
+        // A bookkeeping table loses only finished rows, and the catalog rule
+        // keeps the active version, the bound one and the newest per project.
+        run(format!(
+            "CREATE TABLE {schema}.tasks (id INT, status TEXT NOT NULL, completed_at TIMESTAMPTZ)"
+        ))
+        .await;
+        run(format!(
+            "INSERT INTO {schema}.tasks VALUES \
+             (1, 'COMPLETED', now() - interval '10 days'), (2, 'FAILED', now() - interval '10 days'), \
+             (3, 'COMPLETED', now() - interval '1 day'), (4, 'PENDING', NULL)"
+        ))
+        .await;
+        let tasks = Target {
+            schema: schema.clone(),
+            table: "tasks".to_string(),
+            service: SYSTEM_STORE.to_string(),
+            declared: None,
+            kept_class: None,
+            default_retention: None,
+            capped: false,
+            periodic: true,
+            kind: TargetKind::Rows {
+                column: "completed_at".to_string(),
+                evidence_state_key: None,
+                only_when: Some("status = 'COMPLETED'".to_string()),
+            },
+        };
+        let week = Duration::from_secs(7 * 86_400);
+        assert_eq!(
+            deleted(
+                maintain_target(&pool, &tasks, Ok(Retention::uniform(week)), swept)
+                    .await
+                    .unwrap()
+            ),
+            1
+        );
+        assert_eq!(count(format!("{schema}.tasks")).await, 3);
+
+        run(format!(
+            "CREATE TABLE {schema}.versions (catalog_id INT PRIMARY KEY, project_id TEXT NOT NULL, \
+             status TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL)"
+        ))
+        .await;
+        run(format!(
+            "CREATE TABLE {schema}.bindings (project_id TEXT PRIMARY KEY, active_catalog_id INT)"
+        ))
+        .await;
+        // Project a: 1 (active, old), 2 (bound, old), 3 and 4 (old), 5 and 6
+        // (old but the newest two). Project b: 7 (old, its only version).
+        run(format!(
+            "INSERT INTO {schema}.versions VALUES \
+             (1, 'a', 'ACTIVE', now() - interval '200 days'), \
+             (2, 'a', 'ROLLED_BACK', now() - interval '190 days'), \
+             (3, 'a', 'STAGED', now() - interval '180 days'), \
+             (4, 'a', 'REJECTED', now() - interval '170 days'), \
+             (5, 'a', 'STAGED', now() - interval '160 days'), \
+             (6, 'a', 'STAGED', now() - interval '150 days'), \
+             (7, 'b', 'STAGED', now() - interval '150 days')"
+        ))
+        .await;
+        run(format!("INSERT INTO {schema}.bindings VALUES ('a', 2)")).await;
+        let versions = Target {
+            table: "versions".to_string(),
+            kind: TargetKind::Rows {
+                column: "created_at".to_string(),
+                evidence_state_key: None,
+                only_when: Some(catalog_versions_removable(
+                    &format!("{schema}.versions"),
+                    &format!("{schema}.bindings"),
+                    2,
+                )),
+            },
+            ..tasks.clone()
+        };
+        assert_eq!(
+            deleted(
+                maintain_target(&pool, &versions, Ok(Retention::uniform(month)), swept)
+                    .await
+                    .unwrap()
+            ),
+            2,
+            "versions 3 and 4"
+        );
+        let left: Vec<i32> = sqlx::query_scalar(&format!(
+            "SELECT catalog_id FROM {schema}.versions ORDER BY catalog_id"
+        ))
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(left, vec![1, 2, 5, 6, 7]);
 
         run(format!("DROP SCHEMA {schema} CASCADE")).await;
     }
@@ -2084,6 +3300,186 @@ mod tests {
         assert_eq!(find("auth_audit_log")["retention"], "30d");
     }
 
+    fn find_target<'a>(targets: &'a [Target], qualified: &str) -> &'a Target {
+        targets
+            .iter()
+            .find(|t| t.qualified() == qualified)
+            .unwrap_or_else(|| panic!("{qualified} is a target"))
+    }
+
+    fn rows_column(target: &Target) -> &str {
+        match &target.kind {
+            TargetKind::Rows { column, .. } => column.as_str(),
+            TargetKind::Partitioned { .. } => panic!("{} is partitioned", target.qualified()),
+        }
+    }
+
+    /// Native tables whose rows end follow their declared retention by
+    /// default, aged from the column that marks the end of a row's life.
+    #[test]
+    fn native_tables_with_an_end_follow_their_declared_retention() {
+        let settings = CleanupSettings::from_values(None, None, None, None, None, false);
+        let targets = &settings.targets;
+        let days = |n: u64| Some(Duration::from_secs(n * 86_400));
+        for (table, column, retention) in [
+            // A default-partitioned table is a rows target, swept per partition.
+            ("udb_authn.sessions", "expires_at", days(180)),
+            // A revocation is aged from the token's expiry, never from when it
+            // was revoked, so a still-valid token cannot be un-revoked.
+            ("udb_authn.token_revocations", "expires_at", days(90)),
+            ("udb_authn.token_families", "revoked_at", days(180)),
+            ("udb_authn.mfa_challenges", "expires_at", days(30)),
+            ("udb_authn.devices", "revoked_at", days(365)),
+            ("udb_webhook.webhook_deliveries", "delivered_at", days(2555)),
+        ] {
+            let target = find_target(targets, table);
+            assert_eq!(rows_column(target), column, "{table}");
+            assert!(target.periodic && !target.capped, "{table}");
+            assert_eq!(
+                settings.retention.retention_for(target),
+                retention,
+                "{table}"
+            );
+        }
+        // Partitioned logs with a declared retention now follow it by default.
+        for table in ["api_key_usages", "notification_logs"] {
+            let target = targets.iter().find(|t| t.table == table).unwrap();
+            assert!(matches!(target.kind, TargetKind::Partitioned { .. }));
+            assert!(
+                settings.retention.retention_for(target).is_some(),
+                "{table}"
+            );
+        }
+        // Entities never age out by creation time; a lease tracks a live login.
+        let manifest = crate::runtime::native_catalog::native_manifest();
+        let table = |name: &str| {
+            manifest
+                .tables
+                .iter()
+                .find(|t| t.table == name)
+                .unwrap_or_else(|| panic!("{name} is a native table"))
+        };
+        for name in [
+            "users",
+            "api_keys",
+            "tenants",
+            "vault_db_credential_leases",
+            "roles",
+        ] {
+            assert!(
+                row_end_column(table(name), manifest).is_err(),
+                "{name} must not age out"
+            );
+            assert!(
+                !targets.iter().any(|t| t.table == name && t.periodic),
+                "{name}"
+            );
+        }
+        // The list still overrides a table's own default.
+        let set = CleanupSettings::from_values(
+            None,
+            None,
+            None,
+            None,
+            Some("token_revocations=keep,webhook_deliveries=30d"),
+            false,
+        );
+        assert_eq!(
+            set.retention
+                .retention_for(find_target(&set.targets, "udb_authn.token_revocations")),
+            None
+        );
+        assert_eq!(
+            set.retention
+                .retention_for(find_target(&set.targets, "udb_webhook.webhook_deliveries")),
+            days(30)
+        );
+    }
+
+    /// UDB's bookkeeping tables keep only what is still needed, each with a
+    /// default the retention list can change; they are outside the size cap.
+    #[test]
+    fn bookkeeping_tables_lose_only_finished_rows() {
+        let settings = CleanupSettings::from_values(None, None, None, None, None, false);
+        let config = crate::runtime::system::SystemCatalogConfig::current();
+        let system = |table: &str| format!("{}.{table}", config.cdc.system_schema);
+        let days = |n: u64| Some(Duration::from_secs(n * 86_400));
+        for (table, only, retention) in [
+            (
+                &config.projection_tasks_table,
+                "status = 'COMPLETED'",
+                days(7),
+            ),
+            (&config.dlq_table, "'REPLAYED', 'DISMISSED'", days(30)),
+            (&config.saga_table, "'committed', 'compensated'", days(30)),
+            (
+                &config.xa_ledger_table,
+                "'committed', 'rolled_back'",
+                days(30),
+            ),
+            (
+                &config.catalog_versions_table,
+                "status <> 'ACTIVE'",
+                days(30),
+            ),
+            (&config.catalog_reload_log_table, "reload_seq <", days(90)),
+        ] {
+            let target = find_target(&settings.targets, &system(table));
+            assert_eq!(target.service, SYSTEM_STORE);
+            assert!(target.periodic && !target.capped);
+            let TargetKind::Rows { only_when, .. } = &target.kind else {
+                panic!("{table} is a rows target");
+            };
+            assert!(only_when.as_deref().unwrap().contains(only), "{table}");
+            assert_eq!(
+                settings.retention.retention_for(target),
+                retention,
+                "{table}"
+            );
+        }
+        assert!(catalog_versions_removable("v", "b", 20).contains("ranked.position <= 20"));
+        let kept = settings.clone().with_keep_versions(Some("5"));
+        assert_eq!(kept.keep_versions, 5);
+        let TargetKind::Rows { only_when, .. } =
+            &find_target(&kept.targets, &system(&config.catalog_versions_table)).kind
+        else {
+            panic!("rows target");
+        };
+        assert!(
+            only_when
+                .as_deref()
+                .unwrap()
+                .contains("ranked.position <= 5")
+        );
+        assert_eq!(
+            settings.clone().with_keep_versions(Some("0")).keep_versions,
+            1
+        );
+
+        assert_eq!(settings.sweep_interval, DEFAULT_SWEEP_INTERVAL);
+        let sweep = settings.clone().with_sweep_interval(Some("6h"));
+        assert_eq!(sweep.sweep_interval, Duration::from_secs(6 * 3_600));
+        assert_eq!(
+            settings.with_sweep_interval(Some("soon")).sweep_interval,
+            DEFAULT_SWEEP_INTERVAL
+        );
+    }
+
+    #[test]
+    fn a_further_condition_narrows_the_expired_rows() {
+        let expiry = Expiry {
+            column: "completed_at",
+            rows: Duration::from_secs(86_400),
+            kept: None,
+            evidence_state_key: None,
+            only_when: Some("status = 'COMPLETED'"),
+        };
+        assert_eq!(
+            expiry.condition(),
+            "\"completed_at\" < now() - interval '86400 seconds' AND (status = 'COMPLETED')"
+        );
+    }
+
     #[test]
     fn the_size_cap_parses_and_defaults_to_one_gigabyte() {
         assert_eq!(parse_size("1GB"), Ok(Some(1 << 30)));
@@ -2119,6 +3515,69 @@ mod tests {
             cap_cutoff_age(&sample, 10.0, 1_100.0),
             Some(Duration::from_secs(199))
         );
+    }
+
+    #[test]
+    fn app_partition_upkeep_takes_app_tables_once_and_drops_only_when_asked() {
+        let table = |schema: &str, name: &str, column: &str, days: i32| ManifestTable {
+            schema: schema.to_string(),
+            table: name.to_string(),
+            proto_package: format!("meddesk.{schema}.entity.v1"),
+            partition_strategy: "PARTITION_STRATEGY_RANGE_MONTH".to_string(),
+            partition_column: column.to_string(),
+            retention_days: days,
+            ..ManifestTable::default()
+        };
+        let first = crate::generation::CatalogManifest {
+            tables: vec![
+                table("visits", "events", "occurred_at", 90),
+                table("visits", "notes", "", 0),
+                table("udb_authz", "access_decision_audits", "decided_at", 30),
+            ],
+            ..crate::generation::CatalogManifest::default()
+        };
+        let second = crate::generation::CatalogManifest {
+            tables: vec![table("visits", "events", "occurred_at", 90)],
+            ..crate::generation::CatalogManifest::default()
+        };
+        let kept = app_partition_targets([&first, &second].into_iter(), false);
+        assert_eq!(kept.len(), 1, "one partitioned app table, once: {kept:?}");
+        assert_eq!(kept[0].0.qualified(), "visits.events");
+        assert!(matches!(
+            &kept[0].0.kind,
+            TargetKind::Partitioned { column, unit, .. } if column == "occurred_at" && unit == "month"
+        ));
+        assert_eq!(
+            kept[0].1,
+            Retention::default(),
+            "nothing is dropped by default"
+        );
+        let dropped = app_partition_targets([&first].into_iter(), true);
+        assert_eq!(
+            dropped[0].1,
+            Retention::uniform(Duration::from_secs(90 * 86_400))
+        );
+        let settings = CleanupSettings::from_values(None, None, None, None, None, false);
+        assert!(!settings.app_retention);
+        assert!(
+            settings
+                .clone()
+                .with_app_retention(Some("declared"))
+                .app_retention
+        );
+        assert!(!settings.with_app_retention(Some("on")).app_retention);
+    }
+
+    #[test]
+    fn the_cleanup_statement_timeout_parses() {
+        assert_eq!(parse_statement_timeout("0").unwrap(), "0");
+        assert_eq!(parse_statement_timeout("off").unwrap(), "0");
+        assert_eq!(parse_statement_timeout("30min").unwrap(), "30min");
+        assert_eq!(parse_statement_timeout("90s").unwrap(), "90s");
+        assert_eq!(parse_statement_timeout("1500").unwrap(), "1500ms");
+        assert_eq!(parse_statement_timeout("2h").unwrap(), "2h");
+        assert!(parse_statement_timeout("soon").is_err());
+        assert!(parse_statement_timeout("3d").is_err());
     }
 
     #[test]

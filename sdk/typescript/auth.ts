@@ -71,6 +71,36 @@ export interface PermissionCheck {
   action: string;
 }
 
+/** What `UdbAuthClient.exchangeTokenForJob` asks for. */
+export interface ExchangeTokenForJobRequest {
+  /** The user's current access token (with or without a `Bearer ` prefix). */
+  subjectToken: string;
+  /** Why the job acts for the user, e.g. `"export"`; signed into the token. */
+  purpose: string;
+  /** The job the token is for; at most 200 bytes. */
+  jobId: string;
+  /** Requested lifetime in seconds; 0 or absent = the broker's maximum. */
+  ttlSeconds?: number;
+}
+
+/** A delegated job token: acts for `subject` (the user) as `actor` (the service). */
+export interface DelegatedJobToken {
+  accessToken: string;
+  /** The token's id; revoking it stops the token. */
+  jti: string;
+  expiresAtUnix: number;
+  /** The user the token acts for. */
+  subject: string;
+  /** The acting service's identity (the RFC 8693 `act` claim). */
+  actor: string;
+  purpose: string;
+  jobId: string;
+  /** The scopes both the user's token and the service's grant allow. */
+  scopes: string[];
+  tenantId: string;
+  projectId: string;
+}
+
 /** Thrown by `require()` when the bound principal is NOT allowed to perform the
  *  action. Carries the full server `Decision` so callers can inspect the
  *  `decision_id`, `deny_reason`, and `required_scopes`. */
@@ -313,6 +343,13 @@ export class UdbAuthClient {
     });
   }
 
+  /** Close this client's AuthnService and AuthzService channels. */
+  close(): void {
+    for (const stub of [this.authn, this.authz]) {
+      if (typeof stub?.close === "function") stub.close();
+    }
+  }
+
   authenticateApiKey(apiKey: string): Promise<any> {
     return this.authenticate({
       api_key: apiKey,
@@ -355,6 +392,37 @@ export class UdbAuthClient {
     requested_scopes?: string[];
   }): Promise<any> {
     return this.call(this.authn, "ExchangeServiceTokenForTenant", request);
+  }
+
+  /** Exchange a user's current access token for a delegated job token
+   *  (`AuthnService.ExchangeTokenForJob`), so a durable job acts for that user.
+   *  Call it on a connection carrying the SERVICE's own bearer (its grant must
+   *  hold `udb:token:delegate`). The token names the user as subject and the
+   *  service as actor, carries `purpose` and `jobId`, and lives at most
+   *  `ttlSeconds` (0 = the broker's maximum, 24 hours by default). It has no
+   *  refresh token and cannot be exchanged again. */
+  async exchangeTokenForJob(request: ExchangeTokenForJobRequest): Promise<DelegatedJobToken> {
+    if (!request.subjectToken?.trim()) throw new Error("udb: exchangeTokenForJob: subjectToken is required");
+    if (!request.jobId?.trim()) throw new Error("udb: exchangeTokenForJob: jobId is required");
+    if (!request.purpose?.trim()) throw new Error("udb: exchangeTokenForJob: purpose is required");
+    const resp: any = await this.call(this.authn, "ExchangeTokenForJob", {
+      subject_token: request.subjectToken,
+      purpose: request.purpose,
+      job_id: request.jobId,
+      ttl_seconds: String(Math.max(0, Math.trunc(request.ttlSeconds ?? 0))),
+    });
+    return {
+      accessToken: String(resp?.access_token ?? ""),
+      jti: String(resp?.jti ?? ""),
+      expiresAtUnix: Number(resp?.expires_at_unix ?? 0),
+      subject: String(resp?.subject ?? ""),
+      actor: String(resp?.actor ?? ""),
+      purpose: String(resp?.purpose ?? ""),
+      jobId: String(resp?.job_id ?? ""),
+      scopes: Array.isArray(resp?.scopes) ? resp.scopes.map(String) : [],
+      tenantId: String(resp?.tenant_id ?? ""),
+      projectId: String(resp?.project_id ?? ""),
+    };
   }
 
   /** Better Auth bridge: forward a Better Auth session/JWT (already verified by

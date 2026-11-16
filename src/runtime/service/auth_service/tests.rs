@@ -25,6 +25,7 @@ mod authz_rbac_live;
 mod authz_rebac_live;
 #[cfg(feature = "kafka")]
 mod cdc_live;
+mod delegated_token_live;
 mod events_audit_tx_live;
 #[cfg(feature = "kafka")]
 mod events_live;

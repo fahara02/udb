@@ -71,6 +71,48 @@ fn tx_object_invalid_field(
     )
 }
 
+/// Stamp an emitted event with the verified caller's tenant and project. A
+/// payload that already names a different tenant or project is refused: the
+/// event would otherwise reach that tenant's subscribers. Returns the refusal,
+/// if any.
+fn stamp_event_scope(
+    payload: &mut serde_json::Value,
+    tenant_id: &str,
+    project_id: &str,
+) -> Option<tonic::Status> {
+    let obj = payload.as_object_mut()?;
+    for (key, verified) in [
+        ("tenant_id", tenant_id.trim()),
+        ("project_id", project_id.trim()),
+    ] {
+        if verified.is_empty() {
+            continue;
+        }
+        match obj.get(key) {
+            Some(serde_json::Value::String(named)) if named.trim() == verified => {}
+            Some(serde_json::Value::Null) | None => {
+                obj.insert(
+                    key.to_string(),
+                    serde_json::Value::String(verified.to_string()),
+                );
+            }
+            Some(_) => {
+                return Some(
+                    crate::runtime::error_reasons::Refusal::new(
+                        crate::runtime::error_reasons::TENANT_MISMATCH,
+                        format!(
+                            "the event payload names a different {key} than the caller's                              verified one; leave it out and the broker fills it in"
+                        ),
+                    )
+                    .column(key)
+                    .into_status(),
+                );
+            }
+        }
+    }
+    None
+}
+
 /// Applies [`crate::runtime::core::scope_autofill`] to every upsert record and
 /// update/delete filter of a transaction, writing the scoped JSON back into the
 /// mutation so every later reader (CAS check, plan, CDC) sees the same shape.
@@ -1009,31 +1051,24 @@ impl DataBrokerRuntime {
                                             cdc_config.redaction_mode,
                                             cdc_config.redaction_version,
                                         );
-                                    if let Some(obj) = payload.as_object_mut() {
-                                        if !context.tenant_id.trim().is_empty() {
-                                            obj.entry("tenant_id".to_string()).or_insert_with(
-                                                || {
-                                                    serde_json::Value::String(
-                                                        context.tenant_id.clone(),
-                                                    )
-                                                },
-                                            );
-                                        }
-                                        if !context.project_id.trim().is_empty() {
-                                            obj.entry("project_id".to_string()).or_insert_with(
-                                                || {
-                                                    serde_json::Value::String(
-                                                        context.project_id.clone(),
-                                                    )
-                                                },
-                                            );
-                                        }
-                                    }
-                                    match prepare_outbox_envelope(
-                                        topic,
-                                        &mutation.object_key,
-                                        payload,
-                                        schema_uri,
+                                    // The event's scope is the verified caller's: a
+                                    // payload naming another tenant or project would
+                                    // be delivered to that tenant's subscribers.
+                                    let scope_error = stamp_event_scope(
+                                        &mut payload,
+                                        &context.tenant_id,
+                                        &context.project_id,
+                                    );
+                                    match scope_error.map_or_else(
+                                        || {
+                                            prepare_outbox_envelope(
+                                                topic,
+                                                &mutation.object_key,
+                                                payload,
+                                                schema_uri,
+                                            )
+                                        },
+                                        Err,
                                     ) {
                                         Ok((event_id_uuid, _, enriched)) => {
                                             let outbox_relation = cdc_config.outbox_relation();
@@ -2976,6 +3011,26 @@ fn is_unpopulated_materialized_view_refresh_error(error_text: &str) -> bool {
 #[cfg(test)]
 mod materialized_view_refresh_tests {
     use super::*;
+
+    #[test]
+    fn an_emitted_event_carries_the_verified_scope_and_never_another_tenant() {
+        let mut payload = serde_json::json!({ "file_id": "f1" });
+        assert!(stamp_event_scope(&mut payload, "t-a", "p-1").is_none());
+        assert_eq!(payload["tenant_id"], "t-a");
+        assert_eq!(payload["project_id"], "p-1");
+        let mut same = serde_json::json!({ "tenant_id": "t-a" });
+        assert!(stamp_event_scope(&mut same, "t-a", "").is_none());
+        for spoofed in [
+            serde_json::json!({ "tenant_id": "t-b" }),
+            serde_json::json!({ "tenant_id": 7 }),
+            serde_json::json!({ "project_id": "p-2" }),
+        ] {
+            let mut spoofed = spoofed;
+            let refusal = stamp_event_scope(&mut spoofed, "t-a", "p-1")
+                .expect("a payload naming another tenant or project is refused");
+            assert_eq!(refusal.code(), tonic::Code::PermissionDenied);
+        }
+    }
     use crate::generation::ManifestMaterializedView;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;

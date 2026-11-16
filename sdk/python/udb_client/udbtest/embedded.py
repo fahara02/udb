@@ -10,6 +10,7 @@ import socket
 import subprocess
 import tempfile
 import time
+from typing import Mapping
 import uuid
 
 from ..enterprise import EnterpriseSession, connect_enterprise
@@ -30,7 +31,7 @@ class EmbeddedBroker:
     and PostgreSQL. Bootstrap credentials stay in its private project directory.
     """
 
-    def __init__(self, proto_root: str, policy_file: str, with_peer: bool):
+    def __init__(self, proto_root: str, policy_file: str, with_peer: bool, approve_review_required: bool = False):
         self.client: EnterpriseSession | None = None
         self.peer: EnterpriseSession | None = None
         self._project = tempfile.TemporaryDirectory(prefix="udbtest-")
@@ -41,17 +42,8 @@ class EmbeddedBroker:
             proto_root = str(project / "proto")
             os.mkdir(proto_root, 0o700)
         proto_root = os.path.abspath(proto_root)
-        # Avoid inheriting another project's listeners, database DSNs or credentials.
-        # Acquisition settings alone may be shared between isolated test brokers.
-        environment = {
-            key: value
-            for key, value in os.environ.items()
-            if not key.upper().startswith("UDB_") and key.upper() != "DATABASE_URL"
-        }
-        for key in _INHERITED:
-            if key in os.environ:
-                environment[key] = os.environ[key]
-        environment["UDB_PROTO_ROOT"] = proto_root
+        approval_plan = str(project / "approval.json") if approve_review_required else ""
+        environment = _embedded_environment(os.environ, proto_root, approval_plan)
         pg_address, *addresses = _reserve_ports(1 + len(_LISTENERS))
         pg_port = pg_address.rsplit(":", 1)[1]
         listeners = dict(zip(_LISTENERS, addresses))
@@ -62,6 +54,18 @@ class EmbeddedBroker:
         self._log_path = project / "broker.log"
         self._log = open(self._log_path, "xb")
         os.chmod(self._log_path, 0o600)
+        if approval_plan:
+            # A fresh cluster can hold review-required work, which the broker runs only
+            # under an approved plan. Write that plan with the same binary and proto
+            # root, before the broker that reads it starts.
+            plan_environment = {k: v for k, v in environment.items() if k != "UDB_MIGRATION_APPROVAL_PLAN"}
+            try:
+                self._run([self._binary, *_approval_plan_args(approval_plan)], project, plan_environment,
+                          "write the approval plan", timeout=120)
+            except BaseException:
+                self._closed = True
+                self._log.close()
+                raise
         self._process = subprocess.Popen(
             [self._binary, "dev", "up", "--embedded", "--pg-port", pg_port],
             cwd=project,
@@ -135,11 +139,13 @@ class EmbeddedBroker:
             project, environment, f"apply policy file for tenant {tenant}",
         )
 
-    def _run(self, command: list[str], project: Path, environment: dict[str, str], what: str) -> None:
+    def _run(
+        self, command: list[str], project: Path, environment: dict[str, str], what: str, timeout: float = 60
+    ) -> None:
         try:
             subprocess.run(
                 command, cwd=project, env=environment, stdout=self._log, stderr=subprocess.STDOUT,
-                timeout=60, check=True,
+                timeout=timeout, check=True,
             )
         except (subprocess.SubprocessError, OSError) as error:
             raise RuntimeError(f"udbtest.start: {what}: {type(error).__name__} (private log: {self._log_path})") from None
@@ -200,6 +206,30 @@ class EmbeddedBroker:
         self.close()
 
 
+def _approval_plan_args(plan_file: str) -> list[str]:
+    """The ``udb`` arguments that write the approval plan for the current schema."""
+    return ["plan", "--emit-approval-plan", plan_file]
+
+
+def _embedded_environment(source: Mapping[str, str], proto_root: str, approval_plan: str = "") -> dict[str, str]:
+    """The child environment: the caller's environment without another project's
+    listeners, database DSNs or credentials (every ``UDB_*`` variable and
+    ``DATABASE_URL``), then the acquisition settings isolated brokers may share, the
+    proto root and, when given, the approval plan."""
+    environment = {
+        key: value
+        for key, value in source.items()
+        if not key.upper().startswith("UDB_") and key.upper() != "DATABASE_URL"
+    }
+    for key in _INHERITED:
+        if key in source:
+            environment[key] = source[key]
+    environment["UDB_PROTO_ROOT"] = proto_root
+    if approval_plan:
+        environment["UDB_MIGRATION_APPROVAL_PLAN"] = approval_plan
+    return environment
+
+
 def _resolve_binary() -> str:
     binary = os.environ.get("UDB_TEST_BINARY") or shutil.which("udb")
     if not binary:
@@ -223,7 +253,7 @@ def _reserve_ports(count: int) -> list[str]:
             listener.close()
 
 
-def start(proto_root: str = "", policy_file: str = "") -> EmbeddedBroker:
+def start(proto_root: str = "", policy_file: str = "", *, approve_review_required: bool = False) -> EmbeddedBroker:
     """Run the installed real broker with its embedded PostgreSQL and log in as the
     bootstrapped test administrator. ``UDB_TEST_BINARY`` selects a broker binary;
     otherwise ``udb`` on PATH is used. It must support ``dev up --embedded``. This never
@@ -235,15 +265,21 @@ def start(proto_root: str = "", policy_file: str = "") -> EmbeddedBroker:
     project and separate loopback ports. PostgreSQL downloads use the ordinary shared
     cache or ``UDB_HOME``, ``UDB_POSTGRES_BINARIES_URL`` and ``UDB_EMBEDDED_PG_ARCHIVE``.
 
+    ``approve_review_required`` approves the migration work the broker marks
+    review-required, so a fresh cluster starts: ``udb plan --emit-approval-plan``
+    writes the plan before ``dev up``, and the broker reads it through
+    ``UDB_MIGRATION_APPROVAL_PLAN``. Off by default: a test that does not ask for it
+    sees the same refusal a production deploy would.
+
     Use the result as a context manager::
 
         with udbtest.start() as broker:
             run_table(lambda tenant: broker.client)
     """
-    return EmbeddedBroker(proto_root, policy_file, False)
+    return EmbeddedBroker(proto_root, policy_file, False, approve_review_required)
 
 
-def start_pair(proto_root: str = "", policy_file: str = "") -> EmbeddedBroker:
+def start_pair(proto_root: str = "", policy_file: str = "", *, approve_review_required: bool = False) -> EmbeddedBroker:
     """:func:`start` with two independently provisioned tenant administrators, for the
     full shared isolation contract."""
-    return EmbeddedBroker(proto_root, policy_file, True)
+    return EmbeddedBroker(proto_root, policy_file, True, approve_review_required)

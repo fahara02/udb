@@ -341,9 +341,25 @@ impl MongoDbExecutor {
                 "MongoDB API base uses plain HTTP — api-key header will be sent unencrypted"
             );
         }
+        // The api-key header goes out on every request, so a non-loopback http://
+        // base is refused whenever UDB_OUTBOUND_TLS_REQUIRED is on (production
+        // default), not only in cloud mode.
+        let https_only = config.is_cloud
+            || crate::runtime::transport_policy::https_only_for(
+                &config.api_base,
+                config.api_key.is_some(),
+            );
+        if https_only && config.api_base.starts_with("http://") && !config.is_cloud {
+            tracing::error!(
+                api_base = %config.api_base,
+                "MongoDB API base uses plaintext http:// to a non-loopback host while \
+                 UDB_OUTBOUND_TLS_REQUIRED is on — all requests will fail. Use https://, \
+                 or set UDB_OUTBOUND_TLS_REQUIRED=false"
+            );
+        }
         let timeout = std::time::Duration::from_secs(config.timeout_secs.max(1));
         let http = super::http::HttpClientSpec::with_timeout(timeout)
-            .https_only(config.is_cloud)
+            .https_only(https_only)
             .build();
         Self {
             transport: MongoDbTransport::DataApi { config, http },

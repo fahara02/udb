@@ -40,8 +40,9 @@
 //!
 //! ## C7/C8 tenant enforcement
 //!
-//! Every read/delete/search filter ANDs in `{_tenant_id: {$eq: ctx}}`
-//! when a tenant is set. Every write stamps `_tenant_id` /
+//! Every delete filter ANDs in `{_tenant_id: {$eq: ctx}}` when a tenant
+//! is set; read/search/count filters use `{_tenant_id: {$in: [ctx,
+//! "*shared*"]}}` so vectors projected from a shared table stay visible. Every write stamps `_tenant_id` /
 //! `_project_id` into vector metadata.
 
 use serde_json::{Map, Value as Json, json};
@@ -55,6 +56,7 @@ use crate::ir::operations::{
 };
 use crate::ir::value::LogicalValue;
 
+use super::util::TenantMatch;
 use super::{CompileContext, CompileError, CompiledRendering, Compiler, HttpMethod};
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -200,18 +202,29 @@ impl PineconeCompiler {
     }
 
     /// AND the active tenant context into a metadata filter.
+    ///
+    /// `tenant_match` decides the tenant clause: reads use
+    /// `{ _tenant_id: { $in: [tid, "*shared*"] } }` so vectors projected from
+    /// a shared (global) table are visible to every tenant; deletes keep the
+    /// exact `$eq`.
     fn and_with_context(
         &self,
         user_filter: Json,
         table: &ManifestTable,
         ctx: &CompileContext<'_>,
+        tenant_match: TenantMatch,
     ) -> Json {
         let mut ctx_parts: Vec<Json> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
             && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            ctx_parts.push(json!({ column: { "$eq": tid } }));
+            ctx_parts.push(match tenant_match {
+                TenantMatch::Exact => json!({ column: { "$eq": tid } }),
+                TenantMatch::CallerOrShared => {
+                    json!({ column: { "$in": super::util::shared_read_tenants(tid) } })
+                }
+            });
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
@@ -388,6 +401,7 @@ impl Compiler for PineconeCompiler {
             });
         }
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Pinecone)?;
         let pk_field = table
             .primary_key
             .first()
@@ -548,6 +562,7 @@ impl Compiler for PineconeCompiler {
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Pinecone)?;
         let pk_field = table.primary_key.first();
         let mut body = Map::new();
         Self::add_namespace(&mut body, ctx);
@@ -592,7 +607,7 @@ impl Compiler for PineconeCompiler {
                     .into(),
             });
         }
-        let filter = self.and_with_context(user_filter, table, ctx);
+        let filter = self.and_with_context(user_filter, table, ctx, TenantMatch::Exact);
         body.insert("filter".into(), filter);
         Ok(CompiledRendering::Json {
             backend: BackendKind::Pinecone,
@@ -617,7 +632,7 @@ impl Compiler for PineconeCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => json!({}),
         };
-        let filter = self.and_with_context(user_filter, table, ctx);
+        let filter = self.and_with_context(user_filter, table, ctx, TenantMatch::CallerOrShared);
         let mut body = Map::new();
         body.insert("vector".into(), json!(vector));
         body.insert("topK".into(), json!(op.top_k));
@@ -698,13 +713,13 @@ impl Compiler for PineconeCompiler {
         let mut body = Map::new();
         if let Some(f) = &op.filter {
             let user = self.render_filter(f, table, &op.message_type)?;
-            let filter = self.and_with_context(user, table, ctx);
+            let filter = self.and_with_context(user, table, ctx, TenantMatch::CallerOrShared);
             if !filter.as_object().is_some_and(|m| m.is_empty()) {
                 body.insert("filter".into(), filter);
             }
         } else {
             // Apply tenant filter only.
-            let filter = self.and_with_context(json!({}), table, ctx);
+            let filter = self.and_with_context(json!({}), table, ctx, TenantMatch::CallerOrShared);
             if !filter.as_object().is_some_and(|m| m.is_empty()) {
                 body.insert("filter".into(), filter);
             }
@@ -1367,5 +1382,57 @@ mod tests {
                 .compile_search(&search, &CompileContext::new(&m))
                 .is_ok()
         );
+    }
+    /// Shared reference vectors: a query matches the caller's own tenant OR
+    /// the shared marker; a metadata delete stays exact; the marker can never
+    /// be a write scope.
+    #[test]
+    fn query_matches_shared_marker_delete_stays_exact() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m).with_tenant("acme");
+        let search = LogicalSearch {
+            message_type: "acme.docs.v1.Doc".into(),
+            vector: Some(vec![0.1, 0.2, 0.3]),
+            text_query: None,
+            filter: None,
+            top_k: 5,
+            score_threshold: None,
+            require_hybrid: false,
+            with_vector: false,
+            with_payload: true,
+        };
+        let (_, _, body) = extract_json(PineconeCompiler.compile_search(&search, &ctx).unwrap());
+        assert_eq!(
+            body["filter"]["$and"][0]["_tenant_id"]["$in"],
+            json!(["acme", crate::broker::SHARED_TENANT_MARKER])
+        );
+
+        let del = LogicalDelete {
+            message_type: "acme.docs.v1.Doc".into(),
+            filter: LogicalFilter::Comparison {
+                field: "title".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("old".into()),
+            },
+            return_fields: vec![],
+        };
+        let (_, _, body) = extract_json(PineconeCompiler.compile_delete(&del, &ctx).unwrap());
+        assert_eq!(body["filter"]["$and"][1]["_tenant_id"]["$eq"], "acme");
+
+        let marker = CompileContext::new(&m).with_tenant(crate::broker::SHARED_TENANT_MARKER);
+        assert!(PineconeCompiler.compile_delete(&del, &marker).is_err());
+        let mut rec = LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("v1".into()));
+        rec.insert(
+            "_vector".into(),
+            LogicalValue::Array(vec![LogicalValue::Float(0.1)]),
+        );
+        let write = LogicalWrite {
+            message_type: "acme.docs.v1.Doc".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::Replace,
+            return_fields: vec![],
+        };
+        assert!(PineconeCompiler.compile_write(&write, &marker).is_err());
     }
 }

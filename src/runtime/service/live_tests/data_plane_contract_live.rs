@@ -123,10 +123,25 @@ impl Fx {
 
     /// Run mutations in one BeginTx over a real client stream. Returns (committed, error).
     async fn tx(&self, mutations: Vec<Mutation>) -> (bool, Option<tonic::Status>) {
+        self.tx_as(mutations, None).await
+    }
+
+    /// [`Fx::tx`] with the caller's scopes replaced (`udb:pii:read` to filter
+    /// on an encrypted column, as a real caller must).
+    async fn tx_as(
+        &self,
+        mutations: Vec<Mutation>,
+        scopes: Option<&str>,
+    ) -> (bool, Option<tonic::Status>) {
         let dsn = dp_live_pg_dsn().expect("dsn");
         let (mut client, shutdown, handle) =
             serve_data_broker(dp_service(&dsn, self.manifest.clone()).await).await;
-        let request: Request<_> = with_ctx(stream::iter(mutations), &self.tenant);
+        let mut request: Request<_> = with_ctx(stream::iter(mutations), &self.tenant);
+        if let Some(scopes) = scopes {
+            request
+                .metadata_mut()
+                .insert("x-scopes", scopes.parse().expect("scopes header"));
+        }
         let mut committed = false;
         let mut failure = None;
         match client.begin_tx(request).await {
@@ -455,7 +470,23 @@ live!(begin_tx_delete_finds_a_row_by_its_encrypted_value_live, {
         tx_id: Uuid::new_v4().to_string(),
         ..Mutation::default()
     };
-    let (committed, error) = fx.tx(vec![delete]).await;
+    // Without the PII scope a filter on the encrypted value is refused: it
+    // would answer "does a row with this secret exist".
+    let (committed, error) = fx.tx(vec![delete.clone()]).await;
+    assert!(
+        !committed,
+        "a delete by an encrypted value needs udb:pii:read"
+    );
+    assert_eq!(
+        error.map(|status| status.code()),
+        Some(tonic::Code::PermissionDenied)
+    );
+    let (committed, error) = fx
+        .tx_as(
+            vec![delete],
+            Some("udb:admin,udb:read,udb:write,udb:pii:read"),
+        )
+        .await;
     assert!(committed, "{error:?}");
     let left: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM \"{}\".rows", fx.schema))
         .fetch_one(&fx.pool)

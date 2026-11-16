@@ -175,7 +175,7 @@ var File_udb_core_asset_entity_v1_pipeline_step_proto protoreflect.FileDescripto
 
 const file_udb_core_asset_entity_v1_pipeline_step_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/asset/entity/v1/pipeline_step.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xc6\f\n" +
+	",udb/core/asset/entity/v1/pipeline_step.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xd3\f\n" +
 	"\fPipelineStep\x12C\n" +
 	"\astep_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\astep_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06stepId\x12:\n" +
@@ -209,9 +209,9 @@ const file_udb_core_asset_entity_v1_pipeline_step_proto_rawDesc = "" +
 	"\n" +
 	"audit_info\x18\v \x01(\v2\x1d.udb.core.common.v1.AuditInfoBD\x82\xb7\x18@\n" +
 	"\n" +
-	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xa7\x04\xfa\xb6\x18\x8d\x03\n" +
-	"\x0epipeline_steps\x12\tudb_asset\x18\x04 \x01*6Individual executable steps within a pipeline instance8\x01@\x01b\x9f\x01\n" +
-	"\x1fpipeline_steps_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x010\n" +
+	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xb4\x04\xfa\xb6\x18\x9a\x03\n" +
+	"\x0epipeline_steps\x12\tudb_asset\x18\x04 \x01*6Individual executable steps within a pipeline instance8\x01@\x01b\xac\x01\n" +
+	"\x1fpipeline_steps_tenant_isolation\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x010\n" +
 	"\x1aidx_pipeline_step_instance\x12\x05BTREEZ\vinstance_id\x8a\x01,\n" +
 	"\x18idx_pipeline_step_tenant\x12\x05BTREEZ\ttenant_id\xf2\x01\x1cudb.asset.pipeline_steps.cdc\xfa\x01\n" +
 	"asset:read\x8a\xb2\x19\x90\x01\n" +

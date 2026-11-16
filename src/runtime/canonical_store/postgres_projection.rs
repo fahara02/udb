@@ -564,7 +564,10 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         // reset table) — treating that as "0 pending" cleared the fence and
         // served a stale read as fresh. Counting it keeps the fence closed until
         // it times out into the honest ProjectionMissing. Superseded tasks are
-        // retired as COMPLETED, never deleted, so they still clear.
+        // retired as COMPLETED, so they still clear. The cleanup service deletes
+        // COMPLETED tasks only once they are older than the
+        // `udb_projection_tasks` retention (default 7 days); a fence key that
+        // old counts as pending and times out, it never clears as fresh.
         let sql = format!(
             r#"SELECT COUNT(*)::BIGINT
                FROM (SELECT DISTINCT key FROM UNNEST($1::TEXT[]) AS requested(key)) AS k

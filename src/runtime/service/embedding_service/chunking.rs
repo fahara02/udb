@@ -104,6 +104,12 @@ pub(crate) fn tenant_scoped_point_id(tenant_id: &str, point_id: &str) -> String 
 /// verified tenant's `"{tenant}:"` prefix so callers see the logical id. Any
 /// other id (a legacy unscoped point, or an engine-hashed id) is returned as-is.
 pub(crate) fn strip_tenant_point_id(tenant_id: &str, id: &str) -> String {
+    // A shared (global-source) point is written under the shared marker; the
+    // caller sees its logical id too.
+    let shared = format!("{}:", crate::broker::SHARED_TENANT_MARKER);
+    if let Some(logical) = id.strip_prefix(&shared) {
+        return logical.to_string();
+    }
     let tenant = tenant_id.trim();
     if tenant.is_empty() {
         return id.to_string();

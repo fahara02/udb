@@ -375,6 +375,13 @@ fn run_cleanup_command(command: args::CleanupCommand) -> i32 {
             ),
             "UDB_CLEANUP_BATCH": cleanup.batch,
             "UDB_CLEANUP_MAX_SIZE": cleanup.describe_max_size(),
+            "UDB_CLEANUP_APP_RETENTION": if cleanup.app_retention { "declared" } else { "off" },
+            "UDB_CLEANUP_SWEEP_INTERVAL": format!("{}s", cleanup.sweep_interval.as_secs()),
+            "UDB_CLEANUP_KEEP_VERSIONS": cleanup.keep_versions,
+            "UDB_CLEANUP_STATEMENT_TIMEOUT": env::var("UDB_CLEANUP_STATEMENT_TIMEOUT")
+                .unwrap_or_else(|_| "0 (none)".to_string()),
+            "UDB_CLEANUP_SWEEP_PAGES": env::var("UDB_CLEANUP_SWEEP_PAGES")
+                .unwrap_or_else(|_| "4096 (default)".to_string()),
             "retention_errors": cleanup.retention_errors(),
             "UDB_AUTHZ_DELEGATED_ALLOW_AUDIT_WINDOW": format!(
                 "{}s",
@@ -466,7 +473,34 @@ where
     runtime.block_on(async {
         let rt = DataBrokerRuntime::from_env().await;
         if rt.pg_pool_clone().is_none() {
-            eprintln!("{label}: PostgreSQL is not configured. Pass --dsn <dsn> or set UDB_PG_DSN.");
+            // Say why: a DSN that is set but unreachable, refused or mistyped
+            // used to read as "not configured" and hid the real cause.
+            let reasons = rt
+                .init_report()
+                .warnings
+                .iter()
+                .filter(|warning| {
+                    let lower = warning.to_ascii_lowercase();
+                    lower.contains("postgres") || lower.contains("pg ") || lower.contains("primary")
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+            let dsn_set = env::var("UDB_PG_DSN").is_ok_and(|value| !value.trim().is_empty());
+            if dsn_set {
+                eprintln!("{label}: PostgreSQL is configured (UDB_PG_DSN) but no connection was made.");
+                if reasons.is_empty() {
+                    eprintln!("  No startup reason was recorded; run with RUST_LOG=info to see the connection log.");
+                }
+                for reason in reasons {
+                    eprintln!("  {reason}");
+                }
+                eprintln!(
+                    "  Check the host and port, the password (percent-encode @ : / ? # % in a URL), \
+                     and any .env file or UDB_PG_DSN_PRIMARY that overrides it."
+                );
+            } else {
+                eprintln!("{label}: PostgreSQL is not configured. Pass --dsn <dsn> or set UDB_PG_DSN.");
+            }
             return 1;
         }
         body(rt).await
@@ -1315,15 +1349,19 @@ pub fn run() {
                 .unwrap_or_else(|err| fatal_json("failed to generate SQL artifacts", err));
             output_json(&artifacts, "SQL artifacts");
         }
-        // W9 (0.4.23 tip 5): batched, idempotent rewrite of persisted enum
-        // values to the generator's short-token convention. Dry-run prints the
-        // per-convention histogram; apply rewrites via ctid-batched UPDATEs so
-        // it is resumable and safe to re-run (a re-run matches 0 rows).
+        // Batched, idempotent rewrite of persisted enum values in a text column
+        // to one stored form: the full proto value name (the default; what the
+        // SDKs write and the generated CHECK allows when the column's enum_values
+        // list full names), or with `--to short` the value without the enum's
+        // common prefix. Dry-run prints the
+        // per-form histogram; apply rewrites via ctid-batched UPDATEs so it is
+        // resumable and safe to re-run (a re-run matches 0 rows).
         Command::MigrateEnumTokens {
             entity,
             column,
             dry_run,
             batch,
+            to_short,
         } => {
             let manifest = CatalogManifest::from_schemas(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
@@ -1354,17 +1392,27 @@ pub fn run() {
                 process::exit(2);
             }
             let prefix = sdk_gen::enum_common_prefix(&col.enum_values);
-            // full name -> short token (the generator's wire convention).
+            // (from, to) for every declared value whose two forms differ: a value
+            // without the common prefix has one form and nothing to rewrite.
             let pairs: Vec<(String, String)> = col
                 .enum_values
                 .iter()
-                .map(|full| {
-                    (
-                        full.clone(),
-                        full.strip_prefix(&prefix).unwrap_or(full).to_string(),
-                    )
+                .filter_map(|full| {
+                    let short = full.strip_prefix(&prefix).unwrap_or(full).to_string();
+                    if short == *full {
+                        None
+                    } else if to_short {
+                        Some((full.clone(), short))
+                    } else {
+                        Some((short, full.clone()))
+                    }
                 })
                 .collect();
+            let target = if to_short {
+                "short tokens"
+            } else {
+                "full names"
+            };
             let relation = format!("\"{}\".\"{}\"", table.schema, table.table);
             let column_ident = format!("\"{}\"", col.column_name);
             let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
@@ -1391,17 +1439,19 @@ pub fn run() {
                             return 1;
                         }
                     };
-                let shorts: std::collections::BTreeSet<&str> =
-                    pairs.iter().map(|(_, s)| s.as_str()).collect();
-                let fulls: std::collections::BTreeSet<&str> =
-                    pairs.iter().map(|(f, _)| f.as_str()).collect();
+                let sources: std::collections::BTreeSet<&str> =
+                    pairs.iter().map(|(from, _)| from.as_str()).collect();
+                let targets: std::collections::BTreeSet<&str> =
+                    pairs.iter().map(|(_, to)| to.as_str()).collect();
                 let mut to_rewrite = 0i64;
                 for (value, count) in &rows {
-                    let class = if shorts.contains(value.as_str()) {
-                        "short (target)"
-                    } else if fulls.contains(value.as_str()) {
+                    let class = if sources.contains(value.as_str()) {
                         to_rewrite += count;
-                        "FULL NAME (will rewrite)"
+                        "will rewrite"
+                    } else if targets.contains(value.as_str())
+                        || col.enum_values.iter().any(|declared| declared == value)
+                    {
+                        "target"
                     } else {
                         "UNKNOWN (left untouched — review manually)"
                     };
@@ -1409,13 +1459,13 @@ pub fn run() {
                 }
                 if dry_run {
                     println!(
-                        "dry-run: {to_rewrite} row(s) would be rewritten to short tokens \
+                        "dry-run: {to_rewrite} row(s) would be rewritten to {target} \
                          in {relation}.{column_ident}"
                     );
                     return 0;
                 }
                 let mut rewritten = 0i64;
-                for (full, short) in &pairs {
+                for (from, to) in &pairs {
                     loop {
                         let update_sql = format!(
                             "UPDATE {relation} SET {column_ident} = $1 \
@@ -1423,8 +1473,8 @@ pub fn run() {
                              WHERE {column_ident} = $2 LIMIT {batch})"
                         );
                         match sqlx::query(&update_sql)
-                            .bind(short)
-                            .bind(full)
+                            .bind(to)
+                            .bind(from)
                             .execute(&pool)
                             .await
                         {
@@ -1434,11 +1484,11 @@ pub fn run() {
                                 if n < batch {
                                     break;
                                 }
-                                println!("… {rewritten} rewritten so far ({full} -> {short})");
+                                println!("… {rewritten} rewritten so far ({from} -> {to})");
                             }
                             Err(err) => {
                                 eprintln!(
-                                    "migrate-enum-tokens: batch update failed for {full}: {err} \
+                                    "migrate-enum-tokens: batch update failed for {from}: {err} \
                                      (safe to re-run; completed batches are durable)"
                                 );
                                 return 1;
@@ -1447,7 +1497,7 @@ pub fn run() {
                     }
                 }
                 println!(
-                    "migrate-enum-tokens: {rewritten} row(s) rewritten to short tokens in \
+                    "migrate-enum-tokens: {rewritten} row(s) rewritten to {target} in \
                      {relation}.{column_ident}; re-run with --dry-run to verify convergence"
                 );
                 0

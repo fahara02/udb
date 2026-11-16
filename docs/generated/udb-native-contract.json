@@ -1,8 +1,8 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "bf5916eed704142e4e10394d61837576793b3a70c9ba5e33ad15a0b3cf75919e",
+  "descriptor_sha256": "76db5cc168cf45b78984b99f9ee196e90a5abb4985980d719ebafc437f2eb38f",
   "contract_version": "9.0.0",
-  "udb_version": "0.6.20",
+  "udb_version": "0.6.21",
   "protocol_version": "1.0.0",
   "service_count": 29,
   "services": [
@@ -2686,7 +2686,7 @@
         ],
         "degraded_when_missing": []
       },
-      "rpc_count": 81,
+      "rpc_count": 82,
       "rpcs": [
         {
           "method": "AcceptInvitation",
@@ -4678,6 +4678,101 @@
           "http": {
             "verb": "post",
             "path": "/v1/auth/service-tokens:exchangeForTenant",
+            "body": "*",
+            "response_body": ""
+          }
+        },
+        {
+          "method": "ExchangeTokenForJob",
+          "method_alias": "exchange_token_for_job",
+          "rest_operation_id": "exchangeTokenForJob",
+          "path": "/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.core.authn.services.v1.ExchangeTokenForJobRequest",
+          "output": ".udb.core.authn.services.v1.ExchangeTokenForJobResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:token:delegate"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:token:delegate"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              4
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "authn.ExchangeTokenForJob",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": {
+            "event_type": "authn.ExchangeTokenForJob",
+            "outbox_topic": "authn.events",
+            "partition_key_field": "job_id",
+            "payload_redaction_profile": "standard",
+            "delivery_guarantee": "at_least_once",
+            "replay_compatibility": "stable"
+          },
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "exchange_token_for_job",
+            "rest_operation_id": "exchangeTokenForJob",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "auth"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "authn"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/auth/tokens:exchangeForJob",
             "body": "*",
             "response_body": ""
           }
@@ -36921,7 +37016,7 @@
       ]
     }
   ],
-  "message_count": 1154,
+  "message_count": 1156,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -59616,6 +59711,360 @@
         {
           "name": "error",
           "number": 8,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.authn.services.v1.ExchangeTokenForJobRequest",
+      "file": "udb/core/authn/services/v1/authn_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "authn"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "subject_token",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "purpose",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "job_id",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ttl_seconds",
+          "number": 4,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.authn.services.v1.ExchangeTokenForJobResponse",
+      "file": "udb/core/authn/services/v1/authn_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "authn"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 12,
+      "fields": [
+        {
+          "name": "access_token",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "jti",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expires_at_unix",
+          "number": 3,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "subject",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "actor",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "purpose",
+          "number": 6,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "job_id",
+          "number": 7,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "scopes",
+          "number": 8,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "tenant_id",
+          "number": 9,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "project_id",
+          "number": 10,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 11,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 12,
           "type": ".udb.core.common.v1.ApiError",
           "column_security": null,
           "scalar_security": {
@@ -203643,7 +204092,7 @@
       ]
     }
   ],
-  "event_count": 274,
+  "event_count": 275,
   "events": [
     {
       "event_type": "analytics.GetExecutorPerformance",
@@ -204049,6 +204498,15 @@
       "delivery_guarantee": "at_least_once",
       "replay_compatibility": "stable",
       "source": "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"
+    },
+    {
+      "event_type": "authn.ExchangeTokenForJob",
+      "outbox_topic": "authn.events",
+      "partition_key_field": "job_id",
+      "payload_redaction_profile": "standard",
+      "delivery_guarantee": "at_least_once",
+      "replay_compatibility": "stable",
+      "source": "/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob"
     },
     {
       "event_type": "authn.FinishOidcLogin",

@@ -431,6 +431,12 @@ class LivePerfTest {
   private Identity serviceAccount;
   private long serviceAccountMintedNanos;
   private boolean serviceAccountFailed;
+  // The plan's delegating service (bench tenant, grant holding
+  // udb:token:delegate) for ExchangeTokenForJob, minted the same way.
+  private JsonObject delegatingServiceCaller;
+  private Identity delegatingService;
+  private long delegatingServiceMintedNanos;
+  private boolean delegatingServiceFailed;
 
   private void bind(Credentials credentials) {
     user.bearer = credentials.access();
@@ -477,24 +483,7 @@ class LivePerfTest {
     }
     String username = serviceAccountCaller.get("username").getAsString();
     try {
-      Identity hints = user.copy();
-      hints.tenant = serviceAccountCaller.get("tenant_id").getAsString();
-      hints.project = serviceAccountCaller.get("project_id").getAsString();
-      hints.bearer = "";
-      Credentials credentials =
-          login(hints, username, env("UDB_LIVE_PASSWORD"), "java-sdk-perf-service-account");
-      DynamicMessage who = principal(hints, credentials.access());
-      Identity minted = hints.copy();
-      String whoTenant = text(who, "tenant_id");
-      String whoProject = text(who, "project_id");
-      if (!whoTenant.isEmpty()) {
-        minted.tenant = whoTenant;
-      }
-      if (!whoProject.isEmpty()) {
-        minted.project = whoProject;
-      }
-      minted.bearer = credentials.access();
-      serviceAccount = minted;
+      serviceAccount = mintPlanCaller(serviceAccountCaller, "java-sdk-perf-service-account");
       serviceAccountMintedNanos = System.nanoTime();
     } catch (Exception error) {
       System.out.println(
@@ -505,6 +494,53 @@ class LivePerfTest {
       serviceAccount = null;
       serviceAccountFailed = true;
     }
+  }
+
+  private void ensureDelegatingService() {
+    if (delegatingServiceCaller == null || delegatingServiceFailed) {
+      return;
+    }
+    if (delegatingService != null
+        && System.nanoTime() - delegatingServiceMintedNanos < TimeUnit.SECONDS.toNanos(180)) {
+      return;
+    }
+    String username = delegatingServiceCaller.get("username").getAsString();
+    try {
+      delegatingService =
+          mintPlanCaller(delegatingServiceCaller, "java-sdk-perf-delegating-service");
+      delegatingServiceMintedNanos = System.nanoTime();
+    } catch (Exception error) {
+      System.out.println(
+          "[PERF-DELEGATING-SERVICE] login as "
+              + username
+              + " failed; its rows run under the default identity: "
+              + error);
+      delegatingService = null;
+      delegatingServiceFailed = true;
+    }
+  }
+
+  // Log a plan-named service account in (password UDB_LIVE_PASSWORD, never in
+  // the plan) and build its identity from the verified principal.
+  private Identity mintPlanCaller(JsonObject caller, String device) throws IOException {
+    String username = caller.get("username").getAsString();
+    Identity hints = user.copy();
+    hints.tenant = caller.get("tenant_id").getAsString();
+    hints.project = caller.get("project_id").getAsString();
+    hints.bearer = "";
+    Credentials credentials = login(hints, username, env("UDB_LIVE_PASSWORD"), device);
+    DynamicMessage who = principal(hints, credentials.access());
+    Identity minted = hints.copy();
+    String whoTenant = text(who, "tenant_id");
+    String whoProject = text(who, "project_id");
+    if (!whoTenant.isEmpty()) {
+      minted.tenant = whoTenant;
+    }
+    if (!whoProject.isEmpty()) {
+      minted.project = whoProject;
+    }
+    minted.bearer = credentials.access();
+    return minted;
   }
 
   private Outcome cdcFirstEvent(JsonObject cdc, Identity identity) throws IOException {
@@ -571,10 +607,19 @@ class LivePerfTest {
     if (asServiceAccount) {
       ensureServiceAccount();
     }
+    boolean asDelegatingService =
+        rpc.has("delegating_service")
+            && rpc.get("delegating_service").isJsonPrimitive()
+            && rpc.get("delegating_service").getAsBoolean();
+    if (asDelegatingService) {
+      ensureDelegatingService();
+    }
     Identity identity =
         asServiceAccount && serviceAccount != null
             ? serviceAccount
-            : rpc.get("platform").getAsBoolean() ? platform : user;
+            : asDelegatingService && delegatingService != null
+                ? delegatingService
+                : rpc.get("platform").getAsBoolean() ? platform : user;
     long start = System.nanoTime();
     if ("cdc_first_event".equals(rpc.get("kind").getAsString())) {
       Outcome outcome = cdcFirstEvent(plan.getAsJsonObject("cdc"), identity);
@@ -696,6 +741,11 @@ class LivePerfTest {
       serviceAccountCaller =
           serviceAccountPlan != null && serviceAccountPlan.isJsonObject()
               ? serviceAccountPlan.getAsJsonObject()
+              : null;
+      JsonElement delegatingServicePlan = plan.get("delegating_service_caller");
+      delegatingServiceCaller =
+          delegatingServicePlan != null && delegatingServicePlan.isJsonObject()
+              ? delegatingServicePlan.getAsJsonObject()
               : null;
       Credentials token = login(user, username, password, "java-sdk-perf-token");
       Credentials refresh = login(user, username, password, "java-sdk-perf-refresh");

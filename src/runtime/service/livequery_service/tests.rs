@@ -235,6 +235,67 @@ fn per_event_scope_drops_foreign_and_tenantless_keeps_match() {
     ));
 }
 
+fn concept_manifest(isolation_mode: &str) -> crate::generation::CatalogManifest {
+    crate::generation::CatalogManifest {
+        tables: vec![crate::generation::ManifestTable {
+            schema: "terminology".to_string(),
+            table: "concepts".to_string(),
+            message_name: "Concept".to_string(),
+            cdc_topic: "udb.terminology.concept.changed.v1".to_string(),
+            table_security: crate::generation::manifest::ManifestTableSecurity {
+                tenant_isolation_mode: isolation_mode.to_string(),
+                ..Default::default()
+            },
+            columns: vec![crate::generation::ManifestColumn {
+                field_name: "id".to_string(),
+                column_name: "id".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// A shared (global) table is a live source for every tenant, and its change
+/// events, stamped with the shared tenant marker, reach every tenant's
+/// subscription on it. A table with no tenant column that does not declare
+/// itself shared still fails closed.
+#[test]
+fn shared_table_events_reach_every_tenants_live_query() {
+    let manifest = concept_manifest("global");
+    let Ok(source) = resolve_source("Concept", &manifest) else {
+        panic!("a shared table is a live source");
+    };
+    assert!(source.shared);
+    assert!(source.tenant_field.is_empty());
+    assert_eq!(source.cdc_topic, "udb.terminology.concept.changed.v1");
+
+    let shared_event = json!({
+        "tenant_id": crate::broker::SHARED_TENANT_MARKER,
+        "project_id": "project-a",
+    });
+    for tenant in ["tenant-a", "tenant-b"] {
+        assert!(
+            event_matches_tenant_scope(&source.cdc_topic, &shared_event, tenant, "project-a"),
+            "{tenant} must see the shared table's change"
+        );
+    }
+    // Another tenant's own event on the same topic is still not delivered.
+    assert!(!event_matches_tenant_scope(
+        &source.cdc_topic,
+        &json!({"tenant_id": "tenant-b", "project_id": "project-a"}),
+        "tenant-a",
+        "project-a",
+    ));
+
+    let undeclared = concept_manifest("");
+    assert!(
+        resolve_source("Concept", &undeclared).is_err(),
+        "a table without a tenant column that is not declared shared fails closed"
+    );
+}
+
 /// The source must resolve a tenant column or the subscription fails closed.
 #[test]
 fn unknown_source_fails_closed() {

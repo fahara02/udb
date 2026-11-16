@@ -124,6 +124,28 @@ export async function runTable(t: TestContext, connect: Connect, opts: RunTableO
     assert.equal((await table.get({ file_id: fresh })).filename, "committed.pdf");
   });
 
+  await t.test("transaction require_affected refuses a missed row and rolls back the prefix", async () => {
+    const u = await connect(newTenant());
+    const table = files(u);
+    const missing = { file_id: randomUUID() };
+    const writes: Record<string, (scope: TxScope) => void> = {
+      patch: (scope) => scope.patch(FILE, missing, { filename: "never.pdf" }),
+      delete: (scope) => scope.delete(FILE, missing),
+    };
+    for (const [name, write] of Object.entries(writes)) {
+      const prefix = file(randomUUID(), "must-roll-back.pdf");
+      await rejectsWith(
+        u.tx((scope) => {
+          scope.insert(FILE, prefix);
+          write(scope);
+        }),
+        code(ErrorCode.NotFound),
+        `transaction ${name} of a missing row (UDB_NO_ROWS_AFFECTED)`,
+      );
+      await rejectsWith(table.get({ file_id: prefix.file_id }), isMissing, `transaction ${name} refusal committed its prefix`);
+    }
+  });
+
   await t.test("tenants never see each other's rows", async () => {
     const a = newTenant();
     const b = opts.tenants?.[1] ?? randomUUID();
@@ -475,6 +497,43 @@ async function runConstraints(t: TestContext, connect: Connect, tenant: () => st
       assert.ok(violations.some((violation) => violation.field === "mutations[1].idempotency_key"), `${operation}: an ignored key was not explicitly refused`);
       await rejectsWith(files(u).get({ file_id: row.file_id }), isMissing, `${operation}: the refused transaction kept its prefix`);
     }
+  });
+
+  await t.test("transaction keys replay before CAS and reject changed input", async () => {
+    const u = await connect(tenant());
+    const table = files(u);
+    const row = file(randomUUID(), "tx-keyed-original.pdf");
+    const other = file(randomUUID(), "tx-keyed-upsert.pdf");
+    await table.insert(row);
+    const key = { file_id: row.file_id };
+    const read = async () => {
+      const result = await u.core.unary<any>(DATABROKER, "Select", { message_type: FILE, filter: key, fields: ["filename"], include_revision: true });
+      assert.equal(result.record_revisions.length, 1, "Select omitted the row revision");
+      return result.record_revisions[0] as string;
+    };
+    const before = await read();
+    const replayKey = randomUUID();
+    const attempt = (filename: string) => (scope: TxScope) => {
+      scope.upsert(FILE, other);
+      scope.updateIf(FILE, key, { filename: row.filename }, { filename });
+    };
+    await u.tx(attempt("tx-keyed-v2.pdf"), { replayKey });
+    const committed = await read();
+    assert.notEqual(committed, before, "the keyed transaction did not write");
+    // The stored row no longer holds `expected`: only a replay that skips CAS succeeds.
+    await u.tx(attempt("tx-keyed-v2.pdf"), { replayKey });
+    assert.equal(await read(), committed, "a replayed transaction rechecked CAS or wrote again");
+    assert.equal((await table.get(key)).filename, "tx-keyed-v2.pdf");
+    let reuse: unknown;
+    await u.tx(attempt("tx-keyed-v3.pdf"), { replayKey }).catch((err) => {
+      reuse = err;
+    });
+    const info = inspect(reuse);
+    assert.equal(info.reason, "UDB_IDEMPOTENCY_REUSE", `changed input under a reused key: ${reuse}`);
+    assert.equal(info.code, ErrorCode.Precondition);
+    assert.equal(await read(), committed, "a refused key reuse changed the row");
+    assert.equal((await table.get(key)).filename, "tx-keyed-v2.pdf");
+    assert.equal((await table.get({ file_id: other.file_id })).filename, other.filename);
   });
 
   await t.test("secondary uniqueness refuses insert and rolls back a multirow update", async () => {

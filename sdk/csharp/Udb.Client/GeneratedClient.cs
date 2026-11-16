@@ -3,10 +3,10 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.6.20
+//   UDB version:      0.6.21
 //   Protocol version: 1.0.0
 //   Services:         29
-//   RPCs:             426
+//   RPCs:             427
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -109,6 +109,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.authn.services.v1.AuthnService/EmergencyRevoke"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/EmergencyRevoke", "AuthnService", "EmergencyRevoke", "emergency_revoke", "emergencyRevoke", "destructive", "post", "/v1/auth/admin:emergencyRevoke");
         map["/udb.core.authn.services.v1.AuthnService/EnrollMFA"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/EnrollMFA", "AuthnService", "EnrollMFA", "enroll_mfa", "enrollMfa", "mutation", "post", "/v1/auth/users/{user_id}/mfa:enroll");
         map["/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant", "AuthnService", "ExchangeServiceTokenForTenant", "exchange_service_token_for_tenant", "exchangeServiceTokenForTenant", "mutation", "post", "/v1/auth/service-tokens:exchangeForTenant");
+        map["/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob", "AuthnService", "ExchangeTokenForJob", "exchange_token_for_job", "exchangeTokenForJob", "mutation", "post", "/v1/auth/tokens:exchangeForJob");
         map["/udb.core.authn.services.v1.AuthnService/FinishOidcLogin"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/FinishOidcLogin", "AuthnService", "FinishOidcLogin", "finish_oidc_login", "finishOidcLogin", "mutation", "post", "/v1/auth/sessions:finishOidcLogin");
         map["/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication", "AuthnService", "FinishWebAuthnAuthentication", "finish_web_authn_authentication", "finishWebAuthnAuthentication", "mutation", "post", "/v1/auth/webauthn/authentication:finish");
         map["/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration", "AuthnService", "FinishWebAuthnRegistration", "finish_web_authn_registration", "finishWebAuthnRegistration", "mutation", "post", "/v1/auth/webauthn/registration:finish");
@@ -582,7 +583,7 @@ public sealed partial class GeneratedAssetServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.authn.services.v1.AuthnService</c> service
-/// (81 RPCs). Forwards to the buf-generated
+/// (82 RPCs). Forwards to the buf-generated
 /// <c>AuthnServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedAuthnServiceClient : GeneratedServiceBase
@@ -2335,6 +2336,29 @@ public sealed partial class GeneratedAuthnServiceClient
         return InvokeUnaryAsync(
             "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant",
             co => (object)_stub.ExchangeServiceTokenForTenantAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedAuthnServiceClient
+{
+    /// <summary>
+    /// <c>exchange_token_for_job</c> (unary) — forwards to <c>AuthnServiceClient.ExchangeTokenForJobAsync</c>.
+    /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ExchangeTokenForJobAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ExchangeTokenForJobAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob",
+            co => (object)_stub.ExchangeTokenForJobAsync(request, co),
             deadline,
             cancellationToken,
             "mutation" == "read_only",

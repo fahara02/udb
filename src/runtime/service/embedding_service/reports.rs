@@ -223,10 +223,16 @@ async fn process_report(
     // time. A non-Matryoshka model has serving_dim == dimensions ⇒ no truncation.
     let serving_dim = model.serving_dim();
     let stored_vector = truncate_embedding_vector(req.vector, serving_dim);
+    // A global source's vectors are shared reference data: they carry the
+    // shared marker, so every tenant's retrieval finds them.
+    let vector_tenant = source
+        .as_ref()
+        .map_or(tenant_id.as_str(), |source| source.vector_tenant_id())
+        .to_string();
     let point = build_embedding_point_with_metadata(
         &row_pk,
         stored_vector,
-        &tenant_id,
+        &vector_tenant,
         &source_name,
         metadata,
     )?;

@@ -1195,13 +1195,18 @@ pub(crate) fn qdrant_client_from_instance(instance: &BackendInstance) -> Option<
         .get("timeout_secs")
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(30);
+    let api_key = instance_label_or_env(instance, &["api_key"]);
+    // The api-key header goes out on every request: with UDB_OUTBOUND_TLS_REQUIRED
+    // on, a non-loopback http:// URL gets an https-only client.
+    let https_only = crate::runtime::transport_policy::https_only_for(&url, api_key.is_some());
     let http = crate::runtime::executors::http::HttpClientSpec::with_timeout(Duration::from_secs(
         timeout_secs,
     ))
+    .https_only(https_only)
     .build();
     Some(QdrantHttpClient {
         base_url: url.trim_end_matches('/').to_string(),
-        api_key: instance_label_or_env(instance, &["api_key"]),
+        api_key,
         http,
     })
 }

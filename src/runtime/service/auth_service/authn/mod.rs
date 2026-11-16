@@ -2476,6 +2476,21 @@ impl AuthnServiceImpl {
         {
             return Ok(JwtPersistedState::Rejected);
         }
+        // A delegated job token carries every delegation claim, no service
+        // identity and no membership claims; any other combination is not a
+        // token UDB mints. It is validated as its user's token, plus its actor.
+        let delegation = if claims.is_delegated() {
+            match super::delegated_tokens::DelegatedTokenClaims::from_claims(claims) {
+                Some(delegation)
+                    if !is_service && membership_pin.is_none() && home_tenant.is_none() =>
+                {
+                    Some(delegation)
+                }
+                _ => return Ok(JwtPersistedState::Rejected),
+            }
+        } else {
+            None
+        };
         if is_service {
             let subject = claims.sub.as_deref().unwrap_or_default().trim();
             let tenant = claims.tenant_id.as_deref().unwrap_or_default().trim();
@@ -2569,6 +2584,17 @@ impl AuthnServiceImpl {
                 }
             }
         }
+        if let Some(delegation) = delegation.as_ref() {
+            // The user is active and the jti, user and tenant are not revoked
+            // (checked above); the acting service must still be allowed too.
+            if !self
+                .delegated_actor_still_allowed(claims, delegation)
+                .await?
+            {
+                return Ok(JwtPersistedState::Rejected);
+            }
+            self.emit_delegated_use_event(claims, delegation).await;
+        }
         if let Some(jti) = claims.jti.as_deref().filter(|j| j.starts_with("sess_")) {
             let expected = authn::SessionValidationScope {
                 principal_id: claims.sub.clone().unwrap_or_default(),
@@ -2607,6 +2633,86 @@ impl AuthnServiceImpl {
             return Ok(JwtPersistedState::Rejected);
         }
         Ok(JwtPersistedState::Valid { user: loaded_user })
+    }
+
+    /// Is the service a delegated job token acts as still allowed to act?
+    /// Its grant must be ACTIVE with `udb:token:delegate` on an ACTIVE service
+    /// account, and (where the cluster denylist runs) the account must not be
+    /// on the principal kill list since the token was issued.
+    async fn delegated_actor_still_allowed(
+        &self,
+        claims: &crate::runtime::security::SecurityClaims,
+        delegation: &super::delegated_tokens::DelegatedTokenClaims,
+    ) -> Result<bool, Status> {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Err(authn_capability_status(
+                "jwt_delegated_actor_validation",
+                "native_postgres_auth_store",
+                "delegated job token validation requires the durable typed-grant store",
+            ));
+        };
+        if !super::delegated_tokens::validate_delegated_actor(pool, delegation)
+            .await
+            .map_err(|error| authn_internal_status("jwt_delegated_actor_validate", error))?
+        {
+            return Ok(false);
+        }
+        // The principal kill list lives only in the cluster denylist; without
+        // it, deactivating the account (checked above) is the actor kill.
+        #[cfg(feature = "redis")]
+        if self.jti_denylist.is_some() {
+            let (revoked, reason) = self
+                .is_token_revoked(
+                    &delegation.jti,
+                    &delegation.tenant_id,
+                    &delegation.actor_account_id.to_string(),
+                    claims.iat.unwrap_or(0).max(0) as u64,
+                )
+                .await;
+            match crate::runtime::authn::revocation::revocation_verdict(revoked, &reason) {
+                crate::runtime::authn::revocation::RevocationVerdict::NotRevoked => {}
+                crate::runtime::authn::revocation::RevocationVerdict::Revoked(_) => {
+                    return Ok(false);
+                }
+                crate::runtime::authn::revocation::RevocationVerdict::StoreUnavailable => {
+                    return Err(crate::runtime::executor_utils::retryable_status(
+                        "authn",
+                        "revocation_lookup",
+                        crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                        "the revocation store did not answer; the call is refused \
+                         (fail-closed) and can be retried",
+                    ));
+                }
+            }
+        }
+        #[cfg(not(feature = "redis"))]
+        let _ = claims;
+        Ok(true)
+    }
+
+    /// Publish that a delegated job token was accepted, with its actor,
+    /// subject and jti. Unlike [`Self::emit_event`] this does NOT drop the
+    /// remembered verdicts: it runs while a verdict is being computed, and a
+    /// use changes no auth state. It fires when the token's live state is
+    /// (re)checked, so at most once per verdict-cache window per token; each
+    /// request is also logged on the `udb.audit.authn` target.
+    async fn emit_delegated_use_event(
+        &self,
+        claims: &crate::runtime::security::SecurityClaims,
+        delegation: &super::delegated_tokens::DelegatedTokenClaims,
+    ) {
+        let event = super::delegated_tokens::build_delegation_event(
+            super::delegated_tokens::TOPIC_DELEGATED_TOKEN_USED,
+            "delegated_token_use",
+            delegation,
+            claims.project_id.as_deref().unwrap_or_default(),
+            &claims.resolved_scopes(),
+            claims.exp.unwrap_or_default(),
+        );
+        let topic = event.topic;
+        if let Err(err) = self.event_sink.emit(event).await {
+            tracing::warn!(topic, error = %err, "failed to publish authn event");
+        }
     }
 
     #[cfg(feature = "webauthn")]
@@ -2709,6 +2815,18 @@ impl AuthnServiceImpl {
             return Err(Status::unauthenticated("invalid credential"));
         }
         let issuer = trusted_issuer;
+        // The issuer and its JWKS are the trust anchor: fetched over plaintext, a
+        // network attacker could swap the signing keys. Refuse a non-loopback
+        // http:// issuer or JWKS URL while UDB_OUTBOUND_TLS_REQUIRED is on.
+        crate::runtime::transport_policy::check_secret_url(&issuer, "OIDC issuer")
+            .map_err(Self::invalid_oidc_issuer_status)?;
+        if !registered_jwks_url.trim().is_empty() {
+            crate::runtime::transport_policy::check_secret_url(
+                registered_jwks_url.trim(),
+                "OIDC provider jwks_url",
+            )
+            .map_err(Self::invalid_oidc_issuer_status)?;
+        }
         let client_id = if !req.client_id.trim().is_empty() {
             req.client_id.trim().to_string()
         } else if !req.audience.trim().is_empty() {
@@ -2756,6 +2874,9 @@ impl AuthnServiceImpl {
         tokio::task::spawn_blocking(move || {
             let http_client = reqwest::blocking::ClientBuilder::new()
                 .redirect(reqwest::redirect::Policy::none())
+                // Bounded so an unresponsive IdP cannot pin a blocking thread.
+                .connect_timeout(std::time::Duration::from_secs(5))
+                .timeout(std::time::Duration::from_secs(15))
                 .build()
                 .map_err(|err| {
                     authn_internal_status(
@@ -4191,6 +4312,13 @@ impl AuthnService for AuthnServiceImpl {
     ) -> Result<Response<authn_pb::ExchangeServiceTokenForTenantResponse>, Status> {
         let pool = self.require_pool()?.clone();
         super::memberships::exchange_service_token_for_tenant(self, &pool, request).await
+    }
+    async fn exchange_token_for_job(
+        &self,
+        request: Request<authn_pb::ExchangeTokenForJobRequest>,
+    ) -> Result<Response<authn_pb::ExchangeTokenForJobResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::delegated_tokens::exchange_token_for_job(self, &pool, request).await
     }
     async fn list_own_tenant_memberships(
         &self,

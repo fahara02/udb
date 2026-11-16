@@ -417,15 +417,24 @@ impl Neo4jConfig {
             return dsn.to_string();
         }
         // bolt://[user:pass@]host:7687 → http://host:7474
-        let rest = dsn.strip_prefix("bolt://").unwrap_or(dsn);
+        // neo4j+s:// / bolt+s:// (and +ssc) → https://host:7473, or https://host
+        // for Aura. A TLS Bolt DSN must never turn into a plaintext HTTP base.
+        let (scheme, rest) = dsn.split_once("://").unwrap_or(("bolt", dsn));
+        let secure = scheme.ends_with("+s") || scheme.ends_with("+ssc");
         let rest = if rest.contains('@') {
-            rest.split_once('@').map(|(_, r)| r).unwrap_or(rest)
+            rest.rsplit_once('@').map(|(_, r)| r).unwrap_or(rest)
         } else {
             rest
         };
         let host_port = rest.split('/').next().unwrap_or(rest);
         let (host, _) = host_port.split_once(':').unwrap_or((host_port, "7687"));
-        format!("http://{host}:7474")
+        if !secure {
+            format!("http://{host}:7474")
+        } else if host.ends_with(".databases.neo4j.io") {
+            format!("https://{host}")
+        } else {
+            format!("https://{host}:7473")
+        }
     }
 }
 
@@ -489,9 +498,22 @@ impl Neo4jExecutor {
                 "Neo4j HTTP base uses plain HTTP — Basic Auth credentials will be sent unencrypted"
             );
         }
+        // Basic Auth goes out on every request, so a non-loopback http:// base is
+        // refused whenever UDB_OUTBOUND_TLS_REQUIRED is on (production default),
+        // not only in cloud mode.
+        let https_only = config.is_cloud
+            || crate::runtime::transport_policy::https_only_for(&config.http_base, true);
+        if https_only && config.http_base.starts_with("http://") && !config.is_cloud {
+            tracing::error!(
+                http_base = %config.http_base,
+                "Neo4j HTTP base uses plaintext http:// to a non-loopback host while \
+                 UDB_OUTBOUND_TLS_REQUIRED is on — all requests will fail. Use neo4j+s:// \
+                 or https://, or set UDB_OUTBOUND_TLS_REQUIRED=false"
+            );
+        }
         let timeout = std::time::Duration::from_secs(config.timeout_secs.max(1));
         let http = super::http::HttpClientSpec::with_timeout(timeout)
-            .https_only(config.is_cloud)
+            .https_only(https_only)
             .build();
         Self { config, http }
     }
@@ -999,14 +1021,19 @@ impl GraphTraversalScope {
         Ok(parsed)
     }
 
-    /// `x._tenant_id = $scope_tenant_id AND <project predicate on x>`.
+    /// `x._tenant_id IN $scope_tenant_ids AND <project predicate on x>`.
+    ///
+    /// `$scope_tenant_ids` is the caller's own tenant plus the shared marker
+    /// carried by nodes and relationships projected from a shared (global)
+    /// table, so a path may cross between shared reference nodes and the
+    /// caller's own nodes, but never into another tenant's graph.
     fn predicate(&self, var: &str) -> String {
         let project = if self.unset_project_is_default {
             format!("({var}._project_id = $scope_project_id OR {var}._project_id IS NULL)")
         } else {
             format!("{var}._project_id = $scope_project_id")
         };
-        format!("{var}._tenant_id = $scope_tenant_id AND {project}")
+        format!("{var}._tenant_id IN $scope_tenant_ids AND {project}")
     }
 }
 
@@ -1129,8 +1156,9 @@ impl GraphTraversalSpec {
 /// Build the parameterized, tenant-scoped Cypher for a typed traversal.
 ///
 /// Every node on each matched path (the start node included) and every
-/// relationship on it must carry the verified `_tenant_id` / `_project_id`,
-/// so a traversal can never step into, or through, another tenant's graph.
+/// relationship on it must carry the verified `_project_id` and a
+/// `_tenant_id` that is the caller's own tenant or the shared marker, so a
+/// traversal can never step into, or through, another tenant's graph.
 /// Labels, relationship types and property keys are validated identifiers
 /// (backtick-quoted); every value is a parameter. Depth is bounded by
 /// [`GRAPH_TRAVERSAL_MAX_DEPTH`] and the row count by
@@ -1237,6 +1265,10 @@ pub fn build_graph_traversal_cypher(
         Json::String(scope.tenant_id.trim().to_string()),
     );
     params.insert(
+        "scope_tenant_ids".to_string(),
+        json!([scope.tenant_id.trim(), crate::broker::SHARED_TENANT_MARKER]),
+    );
+    params.insert(
         "scope_project_id".to_string(),
         Json::String(scope.project_id.trim().to_string()),
     );
@@ -1246,7 +1278,11 @@ pub fn build_graph_traversal_cypher(
         rel_conditions.push(format!("r.`{key}` = ${param}"));
         params.insert(param, value.clone());
     }
+    // The start node's own scope comes first so the planner can seek it on
+    // the (id, _tenant_id, _project_id) key; the `all(x IN nodes(p) ...)`
+    // condition then checks it again with every other node on the path.
     let mut conditions = vec![
+        scope.predicate("s"),
         format!("all(x IN nodes(p) WHERE {})", scope.predicate("x")),
         format!(
             "all(r IN relationships(p) WHERE {})",
@@ -1267,9 +1303,11 @@ pub fn build_graph_traversal_cypher(
         conditions.push(format!("m.`{key}` = ${param}"));
         params.insert(param, value.clone());
     }
+    // The start node may be the caller's own or a shared node; its tenant is
+    // checked in the WHERE conditions above, not in the pattern key.
     let label = &spec.start_label;
     let mut cypher = format!(
-        "MATCH p = (s:`{label}` {{id: $start_id, _tenant_id: $scope_tenant_id}}){left}{rel_pattern}{right}(m) WHERE {}",
+        "MATCH p = (s:`{label}` {{id: $start_id}}){left}{rel_pattern}{right}(m) WHERE {}",
         conditions.join(" AND ")
     );
     if spec.return_relationships {
@@ -1798,6 +1836,22 @@ mod tests {
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
+    #[test]
+    fn tls_bolt_dsn_maps_to_https_base() {
+        assert_eq!(
+            Neo4jConfig::http_base_from_dsn("bolt://neo4j:pw@g.example.com:7687"),
+            "http://g.example.com:7474"
+        );
+        assert_eq!(
+            Neo4jConfig::http_base_from_dsn("bolt+s://neo4j:pw@g.example.com:7687"),
+            "https://g.example.com:7473"
+        );
+        assert_eq!(
+            Neo4jConfig::http_base_from_dsn("neo4j+s://abc.databases.neo4j.io"),
+            "https://abc.databases.neo4j.io"
+        );
+    }
+
     fn test_executor() -> Neo4jExecutor {
         Neo4jExecutor::new(Neo4jConfig {
             http_base: "http://localhost:7474".to_string(),
@@ -2188,24 +2242,30 @@ mod tests {
             build_graph_traversal_cypher(&base_traversal(), &traversal_scope()).unwrap();
         assert!(
             cypher.starts_with(
-                "MATCH p = (s:`Doc` {id: $start_id, _tenant_id: $scope_tenant_id})-[*1..1]->(m)"
+                "MATCH p = (s:`Doc` {id: $start_id})-[*1..1]->(m) WHERE s._tenant_id IN $scope_tenant_ids AND s._project_id = $scope_project_id AND "
             ),
             "{cypher}"
         );
         assert!(
             cypher.contains(
-                "all(x IN nodes(p) WHERE x._tenant_id = $scope_tenant_id AND x._project_id = $scope_project_id)"
+                "all(x IN nodes(p) WHERE x._tenant_id IN $scope_tenant_ids AND x._project_id = $scope_project_id)"
             ),
             "{cypher}"
         );
         assert!(
             cypher.contains(
-                "all(r IN relationships(p) WHERE r._tenant_id = $scope_tenant_id AND r._project_id = $scope_project_id)"
+                "all(r IN relationships(p) WHERE r._tenant_id IN $scope_tenant_ids AND r._project_id = $scope_project_id)"
             ),
             "{cypher}"
         );
         assert!(cypher.ends_with("LIMIT 100"), "default limit: {cypher}");
         assert_eq!(params["scope_tenant_id"], "t1");
+        // A path may cross the caller's own nodes and shared reference nodes
+        // (the shared marker), and nothing else: no other tenant matches.
+        assert_eq!(
+            params["scope_tenant_ids"],
+            json!(["t1", crate::broker::SHARED_TENANT_MARKER])
+        );
         assert_eq!(params["scope_project_id"], "p1");
         assert_eq!(params["start_id"], "d1");
         // Values never reach the Cypher text.
@@ -2270,7 +2330,7 @@ mod tests {
         // inside the same all() as the scope predicate.
         assert!(
             cypher.contains(
-                "all(r IN relationships(p) WHERE r._tenant_id = $scope_tenant_id AND r._project_id = $scope_project_id AND r.`kind` = $rel_prop_0)"
+                "all(r IN relationships(p) WHERE r._tenant_id IN $scope_tenant_ids AND r._project_id = $scope_project_id AND r.`kind` = $rel_prop_0)"
             ),
             "{cypher}"
         );

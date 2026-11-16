@@ -30,6 +30,24 @@ pub(crate) struct StoredSource {
 }
 
 impl StoredSource {
+    /// Whether the source reads a shared (global) table. A global source is
+    /// registered without a tenant column: every tenant reads its rows, so its
+    /// vectors belong to no tenant and carry the shared marker instead.
+    pub(crate) fn is_global(&self) -> bool {
+        self.tenant_column.trim().is_empty()
+    }
+
+    /// The `_tenant_id` this source's vectors are stamped with and deleted
+    /// by: the shared marker for a global source, else the owning tenant.
+    /// Work items, jobs and events stay under the owning tenant either way.
+    pub(crate) fn vector_tenant_id(&self) -> &str {
+        if self.is_global() {
+            crate::broker::SHARED_TENANT_MARKER
+        } else {
+            self.tenant_id.trim()
+        }
+    }
+
     /// The effective vector collection (falls back to the asset default only if a
     /// row was persisted without one, which register-time validation prevents).
     pub(crate) fn collection(&self) -> String {
@@ -502,6 +520,26 @@ pub(crate) fn merge_retrieve_filter(
     Ok(serde_json::Value::Object(out))
 }
 
+/// The retrieval tenant clause: the caller's own tenant OR the shared marker
+/// carried by vectors of a shared (global) source, never another tenant.
+/// Pure.
+pub(crate) fn retrieve_tenant_clause(tenant_id: &str) -> serde_json::Value {
+    serde_json::json!({
+        "key": "_tenant_id",
+        "match": { "any": [tenant_id, crate::broker::SHARED_TENANT_MARKER] }
+    })
+}
+
+/// Swap the exact tenant clause [`merge_retrieve_filter`] puts first in `must`
+/// for the read-side [`retrieve_tenant_clause`]. Deletes keep the exact clause.
+fn widen_tenant_clause_for_read(must: &mut [serde_json::Value], tenant_id: &str) {
+    if let Some(first) = must.first_mut()
+        && first.get("key").and_then(serde_json::Value::as_str) == Some("_tenant_id")
+    {
+        *first = retrieve_tenant_clause(tenant_id);
+    }
+}
+
 pub(crate) fn merge_retrieve_scope_filter(
     tenant_id: &str,
     source_name: &str,
@@ -521,6 +559,7 @@ pub(crate) fn merge_retrieve_scope_filter(
                 "embedding retrieve lost its mandatory tenant filter",
             )
         })?;
+    widen_tenant_clause_for_read(must, tenant_id);
     must.push(serde_json::json!({
         "key": "_source", "match": { "value": source_name }
     }));
@@ -563,6 +602,7 @@ pub(crate) fn merge_retrieve_parent_window_filter(
                 "embedding parent-window retrieve lost its mandatory tenant filter",
             )
         })?;
+    widen_tenant_clause_for_read(must, tenant_id);
     must.push(serde_json::json!({
         "key": "_source", "match": { "value": source_name }
     }));
@@ -595,4 +635,77 @@ fn reject_internal_filter_key(condition: &serde_json::Value) -> Result<(), Statu
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod shared_source_tests {
+    use super::*;
+
+    fn source(tenant_column: &str) -> StoredSource {
+        StoredSource {
+            source_id: "src-1".to_string(),
+            tenant_id: "acme".to_string(),
+            source_name: "countries".to_string(),
+            source_message_type: "ref.v1.Country".to_string(),
+            text_fields_json: "[]".to_string(),
+            target_collection: "countries_vec".to_string(),
+            model_id: "m1".to_string(),
+            tenant_column: tenant_column.to_string(),
+            source_cdc_topic: "ref.country".to_string(),
+            status: "ACTIVE".to_string(),
+        }
+    }
+
+    #[test]
+    fn global_source_vectors_carry_the_shared_marker() {
+        let global = source("");
+        assert!(global.is_global());
+        assert_eq!(
+            global.vector_tenant_id(),
+            crate::broker::SHARED_TENANT_MARKER
+        );
+        let tenant = source("tenant_id");
+        assert!(!tenant.is_global());
+        assert_eq!(tenant.vector_tenant_id(), "acme");
+
+        // A shared vector point is stamped with the marker and its id is
+        // scoped to the marker, never to the registering tenant.
+        let point =
+            build_embedding_point("row-1", vec![0.1], global.vector_tenant_id(), "countries")
+                .expect("marker is a valid vector tenant");
+        let payload = crate::runtime::executor_utils::struct_to_json(
+            point.payload.as_ref().expect("payload"),
+        );
+        assert_eq!(payload["_tenant_id"], crate::broker::SHARED_TENANT_MARKER);
+        assert!(!point.id.contains("acme"), "{}", point.id);
+    }
+
+    #[test]
+    fn retrieval_matches_caller_or_shared_but_deletes_stay_exact() {
+        let filter = merge_retrieve_scope_filter("acme", "countries", "", None).unwrap();
+        let must = filter["must"].as_array().unwrap();
+        assert_eq!(must[0]["key"], "_tenant_id");
+        assert_eq!(
+            must[0]["match"]["any"],
+            serde_json::json!(["acme", crate::broker::SHARED_TENANT_MARKER])
+        );
+        assert_eq!(must[1]["key"], "_source");
+
+        let window = merge_retrieve_parent_window_filter("acme", "countries", &["r1".into()])
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            window["must"][0]["match"]["any"],
+            serde_json::json!(["acme", crate::broker::SHARED_TENANT_MARKER])
+        );
+
+        // Teardown filters keep the exact tenant they are given.
+        let teardown =
+            source_teardown_filter(crate::broker::SHARED_TENANT_MARKER, "countries").unwrap();
+        assert_eq!(
+            teardown["must"][0]["match"]["value"],
+            crate::broker::SHARED_TENANT_MARKER
+        );
+        assert!(teardown["must"][0]["match"].get("any").is_none());
+    }
 }

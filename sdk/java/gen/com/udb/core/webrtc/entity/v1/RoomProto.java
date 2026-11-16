@@ -45,7 +45,7 @@ public final class RoomProto {
       "uf/timestamp.proto\032\033udb/core/common/v1/d" +
       "b.proto\032!udb/core/common/v1/security.pro" +
       "to\032\036udb/core/common/v1/types.proto\032%udb/" +
-      "core/webrtc/entity/v1/enums.proto\"\371\n\n\004Ro" +
+      "core/webrtc/entity/v1/enums.proto\"\206\013\n\004Ro" +
       "om\022C\n\007room_id\030\001 \001(\tB*\202\267\030&\n\007room_id\022\004UUID" +
       "\030\001(\001:\021gen_random_uuid()R\006roomId\0227\n\ttenan" +
       "t_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002\001R\010" +
@@ -69,25 +69,25 @@ public final class RoomProto {
       "estampB4\202\267\0300\n\ndeleted_at\022\013TIMESTAMPTZZ\025S" +
       "oft delete timestampR\tdeletedAt\022H\n\ndelet" +
       "ed_by\030\013 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Sof" +
-      "t delete actorR\tdeletedBy:\301\003\372\266\030\237\002\n\005rooms" +
+      "t delete actorR\tdeletedBy:\316\003\372\266\030\254\002\n\005rooms" +
       "\022\nudb_webrtc\030\001 \001*\031WebRTC conferencing ro" +
-      "oms0\0018\001@\001b\226\001\n\026rooms_tenant_isolation\032z(t" +
-      "enant_id::text = current_setting(\'app.cu" +
-      "rrent_tenant_id\', true) OR current_setti" +
-      "ng(\'app.platform_admin\', true) = \'true\')" +
-      "(\001h\001\212\001$\n\020idx_rooms_tenant\022\005BTREEZ\ttenant" +
-      "_id\362\001\024udb.webrtc.rooms.cdc\372\001\013webrtc:read" +
-      "\212\262\031\230\001\n\006tenant\032\ttenant_id*4tenant_id = cu" +
-      "rrent_setting(\'app.current_tenant_id\')2\013" +
-      "soft_delete:\022webrtc.operational@\373\023H\002R\006te" +
-      "nantZ\010standardr\025tenant.data_residencyB\372\001" +
-      "\n\035com.udb.core.webrtc.entity.v1B\tRoomPro" +
-      "toP\001ZEgithub.com/fahara02/udb/sdk/go/gen" +
-      "/udb/core/webrtc/entity/v1;entityv1\242\002\004UC" +
-      "WE\252\002\031Udb.Core.Webrtc.Entity.V1\312\002\031Udb\\Cor" +
-      "e\\Webrtc\\Entity\\V1\342\002%Udb\\GPBMetadata\\Cor" +
-      "e\\Webrtc\\Entity\\V1\352\002\035Udb::Core::Webrtc::" +
-      "Entity::V1b\006proto3"
+      "oms0\0018\001@\001b\243\001\n\026rooms_tenant_isolation\032\206\001(" +
+      "tenant_id = NULLIF(current_setting(\'app." +
+      "current_tenant_id\', true), \'\')::uuid OR " +
+      "current_setting(\'app.platform_admin\', tr" +
+      "ue) = \'true\')(\001h\001\212\001$\n\020idx_rooms_tenant\022\005" +
+      "BTREEZ\ttenant_id\362\001\024udb.webrtc.rooms.cdc\372" +
+      "\001\013webrtc:read\212\262\031\230\001\n\006tenant\032\ttenant_id*4t" +
+      "enant_id = current_setting(\'app.current_" +
+      "tenant_id\')2\013soft_delete:\022webrtc.operati" +
+      "onal@\373\023H\002R\006tenantZ\010standardr\025tenant.data" +
+      "_residencyB\372\001\n\035com.udb.core.webrtc.entit" +
+      "y.v1B\tRoomProtoP\001ZEgithub.com/fahara02/u" +
+      "db/sdk/go/gen/udb/core/webrtc/entity/v1;" +
+      "entityv1\242\002\004UCWE\252\002\031Udb.Core.Webrtc.Entity" +
+      ".V1\312\002\031Udb\\Core\\Webrtc\\Entity\\V1\342\002%Udb\\GP" +
+      "BMetadata\\Core\\Webrtc\\Entity\\V1\352\002\035Udb::C" +
+      "ore::Webrtc::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

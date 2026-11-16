@@ -19,10 +19,10 @@ use Grpc\BaseStub;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.6.20
+ *   UDB version ...... 0.6.21
  *   Protocol version . 1.0.0
  *   Services ......... 29
- *   RPCs ............. 426
+ *   RPCs ............. 427
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -111,6 +111,7 @@ final class GeneratedClient
         "EmergencyRevoke" => "destructive",
         "EnrollMFA" => "mutation",
         "ExchangeServiceTokenForTenant" => "mutation",
+        "ExchangeTokenForJob" => "mutation",
         "FinishOidcLogin" => "mutation",
         "FinishWebAuthnAuthentication" => "mutation",
         "FinishWebAuthnRegistration" => "mutation",
@@ -546,6 +547,7 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "destructive",
         "AuthnService/EnrollMFA" => "mutation",
         "AuthnService/ExchangeServiceTokenForTenant" => "mutation",
+        "AuthnService/ExchangeTokenForJob" => "mutation",
         "AuthnService/FinishOidcLogin" => "mutation",
         "AuthnService/FinishWebAuthnAuthentication" => "mutation",
         "AuthnService/FinishWebAuthnRegistration" => "mutation",
@@ -981,6 +983,7 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "emergency_revoke",
         "AuthnService/EnrollMFA" => "enroll_mfa",
         "AuthnService/ExchangeServiceTokenForTenant" => "exchange_service_token_for_tenant",
+        "AuthnService/ExchangeTokenForJob" => "exchange_token_for_job",
         "AuthnService/FinishOidcLogin" => "finish_oidc_login",
         "AuthnService/FinishWebAuthnAuthentication" => "finish_web_authn_authentication",
         "AuthnService/FinishWebAuthnRegistration" => "finish_web_authn_registration",
@@ -1415,6 +1418,7 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "emergencyRevoke",
         "AuthnService/EnrollMFA" => "enrollMfa",
         "AuthnService/ExchangeServiceTokenForTenant" => "exchangeServiceTokenForTenant",
+        "AuthnService/ExchangeTokenForJob" => "exchangeTokenForJob",
         "AuthnService/FinishOidcLogin" => "finishOidcLogin",
         "AuthnService/FinishWebAuthnAuthentication" => "finishWebAuthnAuthentication",
         "AuthnService/FinishWebAuthnRegistration" => "finishWebAuthnRegistration",
@@ -1849,6 +1853,7 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "post",
         "AuthnService/EnrollMFA" => "post",
         "AuthnService/ExchangeServiceTokenForTenant" => "post",
+        "AuthnService/ExchangeTokenForJob" => "post",
         "AuthnService/FinishOidcLogin" => "post",
         "AuthnService/FinishWebAuthnAuthentication" => "post",
         "AuthnService/FinishWebAuthnRegistration" => "post",
@@ -2283,6 +2288,7 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "/v1/auth/admin:emergencyRevoke",
         "AuthnService/EnrollMFA" => "/v1/auth/users/{user_id}/mfa:enroll",
         "AuthnService/ExchangeServiceTokenForTenant" => "/v1/auth/service-tokens:exchangeForTenant",
+        "AuthnService/ExchangeTokenForJob" => "/v1/auth/tokens:exchangeForJob",
         "AuthnService/FinishOidcLogin" => "/v1/auth/sessions:finishOidcLogin",
         "AuthnService/FinishWebAuthnAuthentication" => "/v1/auth/webauthn/authentication:finish",
         "AuthnService/FinishWebAuthnRegistration" => "/v1/auth/webauthn/registration:finish",
@@ -2822,6 +2828,7 @@ final class GeneratedClient
         "enroll_mfa" => "enrollMfa",
         "enroll_m_f_a" => "enrollMfa",
         "exchange_service_token_for_tenant" => "exchangeServiceTokenForTenant",
+        "exchange_token_for_job" => "exchangeTokenForJob",
         "finish_oidc_login" => "finishOidcLogin",
         "finish_web_authn_authentication" => "finishWebAuthnAuthentication",
         "finish_web_authn_registration" => "finishWebAuthnRegistration",
@@ -4266,6 +4273,27 @@ final class GeneratedClient
             'AuthnService',
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ExchangeServiceTokenForTenant($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / ExchangeTokenForJob (unary), public alias exchange_token_for_job.
+     *
+     * Forwards to {@see stubFor()}->ExchangeTokenForJob(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ExchangeTokenForJobResponse
+     */
+    public function exchangeTokenForJob($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ExchangeTokenForJob',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ExchangeTokenForJob($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -12225,7 +12253,7 @@ final class GeneratedClient
         return $this->stubFor('AssetService', 'udb.core.asset.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (81 RPC(s)).
+     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (82 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a AuthnServiceClient

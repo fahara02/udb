@@ -42,13 +42,16 @@ from udb_client import (
     code_of,
     consume,
     decode_record,
+    decode_records,
     encode_record,
     inspect,
     is_cas_conflict,
     is_unique,
     table_spec_of,
+    to_struct,
     topic,
 )
+from udb.entity.v1 import types_pb2
 from udb_client.generated_client import RetryPolicy, UdbDetailedRpcError
 from udb_client.udbtest import conformance
 
@@ -275,6 +278,29 @@ def test_live_entity_verbs(project: UdbProject) -> None:
     assert entity.select(where=where)[0]["current_step"] == REPEATS
     with pytest.raises(ValueError, match="non-empty expected"):
         entity.update(where, {"current_step": 0}, expected={})
+
+
+def test_live_select_many_runs_several_reads_in_one_call(project: UdbProject) -> None:
+    entity = project.entity(WORKFLOW, key=["workflow_id"])
+
+    def read(workflow_id: str) -> types_pb2.SelectRequest:
+        return types_pb2.SelectRequest(
+            message_type=WORKFLOW, filter=to_struct({"workflow_id": workflow_id}), limit=1
+        )
+
+    for _ in range(REPEATS):
+        first, second = workflow_row(project), workflow_row(project)
+        entity.upsert(first)
+        entity.upsert(second)
+        results = project.select_many([read(second["workflow_id"]), read(first["workflow_id"]), read(str(uuid.uuid4()))])
+        assert len(results) == 3
+        assert decode_records(results[0])[0]["workflow_type"] == second["workflow_type"], "request order"
+        assert decode_records(results[1])[0]["workflow_type"] == first["workflow_type"]
+        assert decode_records(results[2]) == [], "a read matching nothing returns no rows"
+    # Negative: one bad read fails the whole call; no reads, no call.
+    with pytest.raises(UdbRpcError):
+        project.select_many([read(str(uuid.uuid4())), types_pb2.SelectRequest(message_type="udb.nope.v1.Missing")])
+    assert project.select_many([]) == []
 
 
 # ── read-your-writes ─────────────────────────────────────────────────────────

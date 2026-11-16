@@ -200,50 +200,199 @@ pub(crate) async fn run_cache_invalidation_once(
         let Some(namespace) = namespace_for_source_table(&event.source_table) else {
             continue;
         };
-        let deleted = match redis_engine::flush_namespace(redis, &tenant, &namespace).await {
-            Ok(deleted) => deleted,
-            Err(err) => {
-                tracing::warn!(
-                    tenant = %tenant,
-                    namespace = %namespace,
-                    error = %err,
-                    "cache invalidation sweep failed; skipping event"
-                );
-                first_failed.get_or_insert(index);
-                continue;
+        // A change to a shared (global) table carries the reserved shared marker
+        // instead of a tenant: every tenant may have cached its rows, so every
+        // tenant holding this namespace is swept, not only the platform writer.
+        let tenants: Vec<String> = if crate::broker::is_shared_tenant_marker(&tenant) {
+            match tenants_holding_namespace(redis, &namespace).await {
+                Ok(mut found) => {
+                    found.insert(tenant.clone());
+                    found.into_iter().collect()
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        namespace = %namespace,
+                        error = %err,
+                        "cache invalidation tenant discovery failed; skipping event"
+                    );
+                    first_failed.get_or_insert(index);
+                    continue;
+                }
             }
+        } else {
+            vec![tenant]
         };
-        total = total.saturating_add(deleted);
-        // Emit the invalidation event so downstream consumers (and live-query/
-        // read-fence machinery) observe the namespace turn over.
-        // Best-effort by nature: the durable effect of this pass is the cache
-        // sweep itself (Redis/memcached), not a Postgres write, so there is no
-        // transaction for the event to join.
-        enqueue_outbox_event_with_context(
-            outbox_pool,
-            outbox_relation,
-            TOPIC_INVALIDATED,
-            &namespace,
-            &tenant,
-            "",
-            serde_json::json!({
-                "tenant_id": tenant,
-                "namespace": namespace,
-                "keys_invalidated": deleted,
-                "source_event_id": event.event_id,
-                "source_table": event.source_table,
-                "reason": "cdc_source_change",
-            }),
-            NativeEventContext {
-                operation: "cache.invalidate".to_string(),
-                target_resource: namespace.clone(),
-                ..NativeEventContext::default()
-            },
-            metrics,
-        )
-        .await;
+        // Sweep every tenant first and emit only when all sweeps succeeded: the
+        // emitted event marks the source event done, so emitting after a partial
+        // sweep would leave the remaining tenants stale for good. A retry
+        // re-sweeps all of them, which is harmless.
+        let mut swept = Vec::with_capacity(tenants.len());
+        let mut failed = false;
+        for tenant in tenants {
+            match redis_engine::flush_namespace(redis, &tenant, &namespace).await {
+                Ok(deleted) => swept.push((tenant, deleted)),
+                Err(err) => {
+                    tracing::warn!(
+                        tenant = %tenant,
+                        namespace = %namespace,
+                        error = %err,
+                        "cache invalidation sweep failed; skipping event"
+                    );
+                    failed = true;
+                    break;
+                }
+            }
+        }
+        if failed {
+            first_failed.get_or_insert(index);
+            continue;
+        }
+        for (tenant, deleted) in swept {
+            total = total.saturating_add(deleted);
+            // Emit the invalidation event so downstream consumers (and live-query/
+            // read-fence machinery) observe the namespace turn over.
+            // Best-effort by nature: the durable effect of this pass is the cache
+            // sweep itself (Redis/memcached), not a Postgres write, so there is no
+            // transaction for the event to join.
+            enqueue_outbox_event_with_context(
+                outbox_pool,
+                outbox_relation,
+                TOPIC_INVALIDATED,
+                &namespace,
+                &tenant,
+                "",
+                serde_json::json!({
+                    "tenant_id": tenant,
+                    "namespace": namespace,
+                    "keys_invalidated": deleted,
+                    "source_event_id": event.event_id,
+                    "source_table": event.source_table,
+                    "reason": "cdc_source_change",
+                }),
+                NativeEventContext {
+                    operation: "cache.invalidate".to_string(),
+                    target_resource: namespace.clone(),
+                    ..NativeEventContext::default()
+                },
+                metrics,
+            )
+            .await;
+        }
     }
     Ok((total, first_failed))
+}
+
+/// The Redis `SCAN MATCH` pattern for `namespace` under ANY tenant. Glob
+/// metacharacters in the namespace are escaped so it matches literally.
+#[cfg(any(test, feature = "redis"))]
+pub(crate) fn any_tenant_namespace_pattern(namespace: &str) -> String {
+    let mut escaped = String::with_capacity(namespace.len());
+    for ch in namespace.chars() {
+        if matches!(ch, '\\' | '*' | '?' | '[' | ']') {
+            escaped.push('\\');
+        }
+        escaped.push(ch);
+    }
+    format!("{}:*:{escaped}:*", super::config::KEY_ROOT)
+}
+
+/// The tenants that hold `namespace`, recovered from full cache keys. A key is
+/// `udb:cache:<tenant>:<namespace>:<rest>`; a tenant id may itself contain `:`,
+/// so every split point is tried and kept only when the key is exactly one of
+/// that (tenant, namespace)'s data, byte-counter or meta keys. A key of another
+/// namespace that merely contains `:<namespace>:` is never attributed.
+#[cfg(any(test, feature = "redis"))]
+pub(crate) fn namespace_key_tenants(
+    keys: &[String],
+    namespace: &str,
+) -> std::collections::BTreeSet<String> {
+    use super::keys::{bytes_counter_key, meta_key, strip_data_prefix};
+    let root = format!("{}:", super::config::KEY_ROOT);
+    let needle = format!(":{namespace}:");
+    let mut tenants = std::collections::BTreeSet::new();
+    for key in keys {
+        let Some(rest) = key.strip_prefix(&root) else {
+            continue;
+        };
+        let mut from = 0;
+        while let Some(found) = rest[from..].find(&needle) {
+            let at = from + found;
+            let tenant = &rest[..at];
+            if !tenant.trim().is_empty()
+                && (strip_data_prefix(key, tenant, namespace).is_some()
+                    || *key == bytes_counter_key(tenant, namespace)
+                    || *key == meta_key(tenant, namespace))
+            {
+                tenants.insert(tenant.to_string());
+            }
+            from = at + 1;
+        }
+    }
+    tenants
+}
+
+/// Every tenant currently holding keys under `namespace` (a bounded `SCAN`,
+/// never `KEYS`). Used only for changes to shared tables.
+#[cfg(feature = "redis")]
+async fn tenants_holding_namespace(
+    redis: &redis::Client,
+    namespace: &str,
+) -> Result<std::collections::BTreeSet<String>, String> {
+    use super::config::{SWEEP_COMMAND, SWEEP_COUNT};
+    let mut conn = crate::runtime::redis_shared::connection(redis)
+        .await
+        .map_err(|err| format!("redis connection failed: {err}"))?;
+    let pattern = any_tenant_namespace_pattern(namespace);
+    let mut cursor: u64 = 0;
+    let mut tenants = std::collections::BTreeSet::new();
+    loop {
+        let (next, keys): (u64, Vec<String>) = redis::cmd(SWEEP_COMMAND)
+            .arg(cursor)
+            .arg("MATCH")
+            .arg(&pattern)
+            .arg("COUNT")
+            .arg(SWEEP_COUNT)
+            .query_async(&mut conn)
+            .await
+            .map_err(|err| format!("redis SCAN failed: {err}"))?;
+        tenants.extend(namespace_key_tenants(&keys, namespace));
+        if next == 0 {
+            break;
+        }
+        cursor = next;
+    }
+    Ok(tenants)
+}
+
+#[cfg(test)]
+mod shared_invalidation_tests {
+    use super::super::config::KEY_ROOT;
+    use super::super::keys::{bytes_counter_key, data_key, meta_key};
+    use super::{any_tenant_namespace_pattern, namespace_key_tenants};
+
+    #[test]
+    fn shared_sweep_finds_every_tenant_holding_the_namespace() {
+        let keys = vec![
+            data_key("tenant-a", "concepts", "c1"),
+            bytes_counter_key("tenant-b", "concepts"),
+            meta_key("org:tenant-c", "concepts"),
+            // Another namespace whose local key happens to contain the name.
+            data_key("tenant-d", "orders", "x:concepts:y"),
+            "unrelated:key".to_string(),
+        ];
+        let tenants: Vec<String> = namespace_key_tenants(&keys, "concepts")
+            .into_iter()
+            .collect();
+        assert_eq!(tenants, vec!["org:tenant-c", "tenant-a", "tenant-b"]);
+    }
+
+    #[test]
+    fn any_tenant_pattern_escapes_glob_characters() {
+        assert_eq!(
+            any_tenant_namespace_pattern("con*cepts"),
+            format!("{KEY_ROOT}:*:con\\*cepts:*")
+        );
+    }
 }
 
 /// One full worker tick: CDC-driven namespace invalidation, then a bounded

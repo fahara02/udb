@@ -350,8 +350,38 @@ async fn authorize_tx_mutations(
     Ok(())
 }
 
+/// A transactional update/delete selects rows by `filter`, and an upsert,
+/// update or delete may assert `expected` values (compare-and-swap). Both read
+/// the columns they name, so a PII or encrypted column there needs the same
+/// scope as filtering a Select on it. Checked for every mutation before any is
+/// applied.
+fn enforce_tx_mutation_export_controls(
+    manifest: &crate::generation::CatalogManifest,
+    security: &SecurityContext,
+    mutations: &[Mutation],
+) -> Result<(), Status> {
+    for mutation in mutations {
+        let operation = mutation.operation.trim().to_ascii_lowercase();
+        let filter = match operation.as_str() {
+            "update" | "delete" => mutation.filter.as_ref(),
+            "upsert" | "insert" => None,
+            // Other operations carry no relational predicate.
+            _ => continue,
+        };
+        crate::runtime::security::enforce_write_predicate_export_controls(
+            manifest,
+            security,
+            &mutation.message_type,
+            filter,
+            mutation.expected.as_ref(),
+        )?;
+    }
+    Ok(())
+}
+
 async fn drain_and_authorize_tx_mutations(
     mut stream: tonic::Streaming<Mutation>,
+    manifest: &crate::generation::CatalogManifest,
     snapshot: &AuthzSnapshot,
     security: &SecurityContext,
 ) -> Result<Vec<Mutation>, Status> {
@@ -360,6 +390,7 @@ async fn drain_and_authorize_tx_mutations(
         mutations.push(item?);
     }
     authorize_tx_mutations(snapshot, security, &mutations).await?;
+    enforce_tx_mutation_export_controls(manifest, security, &mutations)?;
     Ok(mutations)
 }
 
@@ -386,6 +417,7 @@ impl DataBrokerService {
                 || async move {
                     let mutations = drain_and_authorize_tx_mutations(
                         request.into_inner(),
+                        manifest,
                         authz_snapshot.as_ref(),
                         &authz_security,
                     )
@@ -1149,6 +1181,72 @@ mod tests {
             operation: operation.to_string(),
             message_type: message_type.to_string(),
             ..Mutation::default()
+        }
+    }
+
+    #[test]
+    fn tx_filters_and_expected_values_on_pii_columns_need_the_pii_scope() {
+        use crate::generation::{ManifestColumn, ManifestColumnSecurity, ManifestTable};
+        let manifest = crate::generation::CatalogManifest {
+            tables: vec![ManifestTable {
+                message_name: "Customer".to_string(),
+                schema: "billing".to_string(),
+                table: "customers".to_string(),
+                columns: vec![
+                    ManifestColumn {
+                        field_name: "id".to_string(),
+                        column_name: "id".to_string(),
+                        ..ManifestColumn::default()
+                    },
+                    ManifestColumn {
+                        field_name: "email".to_string(),
+                        column_name: "email".to_string(),
+                        security: ManifestColumnSecurity {
+                            is_pii: true,
+                            ..ManifestColumnSecurity::default()
+                        },
+                        ..ManifestColumn::default()
+                    },
+                ],
+                ..ManifestTable::default()
+            }],
+            ..crate::generation::CatalogManifest::default()
+        };
+        let on = |key: &str| prost_types::Struct {
+            fields: [(
+                key.to_string(),
+                prost_types::Value {
+                    kind: Some(prost_types::value::Kind::StringValue("x".to_string())),
+                },
+            )]
+            .into_iter()
+            .collect(),
+        };
+        let security = tx_security();
+        let by_id = Mutation {
+            filter: Some(on("id")),
+            ..mutation("update", "Customer")
+        };
+        enforce_tx_mutation_export_controls(&manifest, &security, &[by_id])
+            .expect("a filter on a column that is not PII");
+        let by_email = Mutation {
+            filter: Some(on("email")),
+            ..mutation("delete", "Customer")
+        };
+        let cas_on_email = Mutation {
+            expected: Some(on("email")),
+            ..mutation("upsert", "Customer")
+        };
+        for probe in [by_email, cas_on_email] {
+            let err = enforce_tx_mutation_export_controls(&manifest, &security, &[probe.clone()])
+                .expect_err("a PII column in a write predicate needs the scope");
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            let scoped = SecurityContext {
+                scopes: vec!["udb:write".to_string(), "udb:pii:read".to_string()],
+                ..tx_security()
+            };
+            enforce_tx_mutation_export_controls(&manifest, &scoped, &[probe])
+                .expect("udb:pii:read may name a PII column");
         }
     }
 

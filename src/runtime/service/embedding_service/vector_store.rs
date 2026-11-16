@@ -615,10 +615,11 @@ impl TenantVectorTarget {
 
 /// The filter a hard tenant purge deletes by: every point stamped with the
 /// tenant. `None` for a blank tenant — an empty filter would erase the whole
-/// collection across tenants. Pure.
+/// collection across tenants — and for the shared marker: shared vectors
+/// belong to no tenant, so no tenant purge may erase them. Pure.
 pub(crate) fn tenant_vector_purge_filter(tenant_id: &str) -> Option<JsonValue> {
     let tenant = tenant_id.trim();
-    (!tenant.is_empty()).then(|| {
+    (!tenant.is_empty() && !crate::broker::is_shared_tenant_marker(tenant)).then(|| {
         json!({
             "must": [ { "key": "_tenant_id", "match": { "value": tenant } } ]
         })
@@ -883,6 +884,8 @@ mod tests {
             json!({ "must": [ { "key": "_tenant_id", "match": { "value": "acme" } } ] })
         );
         assert!(tenant_vector_purge_filter("  ").is_none());
+        // Shared vectors are never a tenant's to purge.
+        assert!(tenant_vector_purge_filter(crate::broker::SHARED_TENANT_MARKER).is_none());
         // The portable translation keeps the tenant term (no unscoped delete).
         let spec = portable_delete_by_filter_spec("pinecone", "p1", "c", &filter).expect("spec");
         assert_eq!(

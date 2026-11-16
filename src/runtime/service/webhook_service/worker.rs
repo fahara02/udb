@@ -104,6 +104,11 @@ async fn terminal_delivery_exists(
 /// `$7`/`$8` the journal position window `(from, to]` the dispatcher's reader
 /// cursor allows, so a tick never joins the whole retained journal.
 ///
+/// Shared events: a change to a shared (global) table carries the reserved
+/// shared tenant marker and is delivered to every tenant's matching endpoint,
+/// as the CDC stream delivers it to every tenant. Any other event still joins
+/// only its own tenant's endpoints.
+///
 /// Delivery window: an endpoint receives only journal events published at or
 /// after its own `created_at`. Without that bound a newly created endpoint was
 /// joined against the tenant's ENTIRE retained journal and received its whole
@@ -129,7 +134,8 @@ pub(super) fn webhook_delivery_jobs_sql(journal_relation: &str) -> String {
             j.journal_position AS journal_position \
          FROM {journal_relation} j \
          JOIN {endpoint_rel} e \
-           ON e.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', '') \
+           ON (e.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', '') \
+               OR COALESCE(j.payload->>'tenant_id', '') = '{shared}') \
           AND e.{active} = true \
           AND e.{deleted_at} IS NULL \
           AND j.published_at >= e.{created_at} \
@@ -166,6 +172,7 @@ pub(super) fn webhook_delivery_jobs_sql(journal_relation: &str) -> String {
         delivery_endpoint_id = delivery.q("endpoint_id"),
         delivery_event_id = delivery.q("event_id"),
         delivery_status = delivery.q("status"),
+        shared = crate::broker::SHARED_TENANT_MARKER,
     )
 }
 

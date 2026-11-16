@@ -255,6 +255,7 @@ fn validated_role_token_scopes(raw: &[String]) -> Result<Vec<String>, Status> {
         if scope.contains('*')
             || super::grants::is_forbidden_service_scope(scope)
             || scope.eq_ignore_ascii_case(super::memberships::EXCHANGE_TENANT_TOKEN_SCOPE)
+            || scope.eq_ignore_ascii_case(super::delegated_tokens::DELEGATE_TOKEN_SCOPE)
         {
             return Err(refuse(
                 format!("token scope '{scope}' cannot be conferred by a role"),
@@ -6188,6 +6189,7 @@ mod validation_tests {
             "udb:read*",
             "tenant:owner",
             "udb:authn:exchange-tenant-token",
+            "udb:token:delegate",
         ] {
             let err = validated_role_token_scopes(&["udb:read".to_string(), scope.to_string()])
                 .expect_err(scope);

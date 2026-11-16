@@ -22,6 +22,9 @@ pub(crate) mod audit_export;
 mod authn;
 pub(crate) mod authz;
 mod control_plane;
+// Delegated job tokens: a service exchanges a user's access token for a token
+// that lets a durable job act for that user (`ExchangeTokenForJob`).
+pub(crate) mod delegated_tokens;
 // `pub(crate)` so the native data-plane helper (`service::native_helpers`) can
 // reuse the ONE shared compliance-envelope builder/validator (Phase 10 telemetry
 // coherence) instead of emitting a second divergent envelope shape.

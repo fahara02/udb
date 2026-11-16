@@ -103,6 +103,8 @@ _REASON_CODES = {
     "UDB_RATE_LIMITED": ErrorCode.RATE_LIMITED,
     "UDB_UNKNOWN_MESSAGE_TYPE": ErrorCode.INVALID,
     "UDB_ENVELOPE_VERSION_UNSUPPORTED": ErrorCode.PRECONDITION,
+    "UDB_TOKEN_EXPIRED": ErrorCode.UNAUTHENTICATED,
+    "UDB_TOKEN_REVOKED": ErrorCode.UNAUTHENTICATED,
 }
 
 _KIND_CODES = {
@@ -248,6 +250,19 @@ def error_reason(error: BaseException | None) -> str:
     if detail is None:
         return ""
     return detail.reason or detail.policy_decision_id or detail.capability_required
+
+
+def is_token_expired(error: BaseException | None) -> bool:
+    """The broker refused the bearer because it expired (``UDB_TOKEN_EXPIRED``):
+    refresh it or sign in again. A delegated job token cannot be refreshed; mint
+    a new one from a fresh user token."""
+    return inspect(error).reason == "UDB_TOKEN_EXPIRED"
+
+
+def is_token_revoked(error: BaseException | None) -> bool:
+    """The broker refused the bearer because it is revoked or no longer backed
+    by live state (``UDB_TOKEN_REVOKED``): do not retry with it."""
+    return inspect(error).reason == "UDB_TOKEN_REVOKED"
 
 
 def is_cas_conflict(error: BaseException | None) -> bool:

@@ -46,7 +46,7 @@ public final class ScheduledJobProto {
       "ore/common/v1/db.proto\032!udb/core/common/" +
       "v1/security.proto\032\036udb/core/common/v1/ty" +
       "pes.proto\032(udb/core/scheduler/entity/v1/" +
-      "enums.proto\"\360\020\n\014ScheduledJob\022@\n\006job_id\030\001" +
+      "enums.proto\"\375\020\n\014ScheduledJob\022@\n\006job_id\030\001" +
       " \001(\tB)\202\267\030%\n\006job_id\022\004UUID\030\001(\001:\021gen_random" +
       "_uuid()R\005jobId\0227\n\ttenant_id\030\002 \001(\tB\032\202\267\030\026\n" +
       "\ttenant_id\022\004UUID\030\001\230\002\001R\010tenantId\022P\n\nproje" +
@@ -85,29 +85,29 @@ public final class ScheduledJobProto {
       "\0300\n\ndeleted_at\022\013TIMESTAMPTZZ\025Soft delete" +
       " timestampR\tdeletedAt\022H\n\ndeleted_by\030\021 \001(" +
       "\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft delete a" +
-      "ctorR\tdeletedBy:\324\004\372\266\030\257\003\n\016scheduled_jobs\022" +
+      "ctorR\tdeletedBy:\341\004\372\266\030\274\003\n\016scheduled_jobs\022" +
       "\rudb_scheduler\030\001 \001*IDurable cron and one" +
       "-shot jobs fired by the leader-elected s" +
-      "cheduler tick0\0018\001@\001b\232\001\n\032scheduler_tenant" +
-      "_isolation\032z(tenant_id::text = current_s" +
-      "etting(\'app.current_tenant_id\', true) OR" +
-      " current_setting(\'app.platform_admin\', t" +
-      "rue) = \'true\')(\001h\001\212\001-\n\031idx_scheduled_job" +
-      "s_tenant\022\005BTREEZ\ttenant_id\212\0015\n\026idx_sched" +
-      "uled_jobs_due\022\005BTREEZ\006statusZ\014next_fire_" +
-      "at\362\001 udb.scheduler.scheduled_jobs.cdc\372\001\016" +
-      "scheduler:read\212\262\031\233\001\n\006tenant\032\ttenant_id*4" +
-      "tenant_id = current_setting(\'app.current" +
-      "_tenant_id\')2\013soft_delete:\025scheduler.ope" +
-      "rational@\373\023H\002R\006tenantZ\010standardr\025tenant." +
-      "data_residencyB\224\002\n com.udb.core.schedule" +
-      "r.entity.v1B\021ScheduledJobProtoP\001ZHgithub" +
-      ".com/fahara02/udb/sdk/go/gen/udb/core/sc" +
-      "heduler/entity/v1;entityv1\242\002\004UCSE\252\002\034Udb." +
-      "Core.Scheduler.Entity.V1\312\002\034Udb\\Core\\Sche" +
-      "duler\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\S" +
-      "cheduler\\Entity\\V1\352\002 Udb::Core::Schedule" +
-      "r::Entity::V1b\006proto3"
+      "cheduler tick0\0018\001@\001b\247\001\n\032scheduler_tenant" +
+      "_isolation\032\206\001(tenant_id = NULLIF(current" +
+      "_setting(\'app.current_tenant_id\', true)," +
+      " \'\')::uuid OR current_setting(\'app.platf" +
+      "orm_admin\', true) = \'true\')(\001h\001\212\001-\n\031idx_" +
+      "scheduled_jobs_tenant\022\005BTREEZ\ttenant_id\212" +
+      "\0015\n\026idx_scheduled_jobs_due\022\005BTREEZ\006statu" +
+      "sZ\014next_fire_at\362\001 udb.scheduler.schedule" +
+      "d_jobs.cdc\372\001\016scheduler:read\212\262\031\233\001\n\006tenant" +
+      "\032\ttenant_id*4tenant_id = current_setting" +
+      "(\'app.current_tenant_id\')2\013soft_delete:\025" +
+      "scheduler.operational@\373\023H\002R\006tenantZ\010stan" +
+      "dardr\025tenant.data_residencyB\224\002\n com.udb." +
+      "core.scheduler.entity.v1B\021ScheduledJobPr" +
+      "otoP\001ZHgithub.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/core/scheduler/entity/v1;entityv1\242" +
+      "\002\004UCSE\252\002\034Udb.Core.Scheduler.Entity.V1\312\002\034" +
+      "Udb\\Core\\Scheduler\\Entity\\V1\342\002(Udb\\GPBMe" +
+      "tadata\\Core\\Scheduler\\Entity\\V1\352\002 Udb::C" +
+      "ore::Scheduler::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -40,7 +40,7 @@ func (e *entity) queryFilter(filter map[string]any) (map[string]any, error) {
 		if _, duplicate := out[column]; duplicate {
 			return nil, refuse(codes.InvalidArgument, "", "filter column supplied through two aliases: "+column)
 		}
-		resolved, err := canonicalOperators(condition)
+		resolved, err := e.canonicalOperators(condition, column)
 		if err != nil {
 			return nil, err
 		}
@@ -49,7 +49,7 @@ func (e *entity) queryFilter(filter map[string]any) (map[string]any, error) {
 	return out, nil
 }
 
-func canonicalOperators(value any) (any, error) {
+func (e *entity) canonicalOperators(value any, column string) (any, error) {
 	ops, ok := value.(map[string]any)
 	if !ok {
 		return copyValue(value), nil
@@ -57,12 +57,18 @@ func canonicalOperators(value any) (any, error) {
 	out := make(map[string]any, len(ops))
 	for op, arg := range ops {
 		name := strings.ToLower(op)
+		if arrayOperators[name] {
+			var err error
+			if name, err = e.arrayOperator(name, column, arg); err != nil {
+				return nil, err
+			}
+		}
 		if _, duplicate := out[name]; duplicate {
 			return nil, refuse(codes.InvalidArgument, "", "filter operator supplied through two aliases: "+name)
 		}
 		if strings.EqualFold(op, "$not") {
 			var err error
-			arg, err = canonicalOperators(arg)
+			arg, err = e.canonicalOperators(arg, column)
 			if err != nil {
 				return nil, err
 			}
@@ -70,6 +76,34 @@ func canonicalOperators(value any) (any, error) {
 		out[name] = copyValue(arg)
 	}
 	return out, nil
+}
+
+// arrayOperator resolves the broker's `$contains`/`$contained_by`/`$overlaps`
+// (`@>`/`<@`/`&&`) for a column: a JSON column takes jsonb containment, an
+// array (repeated) column SQL array semantics with an array value; any other
+// column has no such operator.
+func (e *entity) arrayOperator(name, column string, arg any) (string, error) {
+	canonical := name
+	if canonical == "$overlap" {
+		canonical = "$overlaps"
+	}
+	if jsonColumn(e.options[column]) {
+		switch canonical {
+		case "$overlaps":
+			return "", refuse(codes.InvalidArgument, "", "filter operator "+name+" needs an array column; "+column+" is JSON (use $contains)")
+		case "$contains":
+			return jsonContainsOp, nil
+		default:
+			return jsonContainedByOp, nil
+		}
+	}
+	if field, ok := e.columns[column]; !ok || !field.IsList() {
+		return "", refuse(codes.InvalidArgument, "", "filter operator "+name+" needs an array (repeated) or JSON column; "+column+" is neither")
+	}
+	if _, isList := arg.([]any); arg != nil && !isList {
+		return "", refuse(codes.InvalidArgument, "", "filter operator "+name+" on array column "+column+" requires an array value")
+	}
+	return canonical, nil
 }
 
 func (e *entity) expectedColumns(values map[string]any) (map[string]any, error) {

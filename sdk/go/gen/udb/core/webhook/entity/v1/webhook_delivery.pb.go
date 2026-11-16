@@ -184,7 +184,7 @@ var File_udb_core_webhook_entity_v1_webhook_delivery_proto protoreflect.FileDesc
 
 const file_udb_core_webhook_entity_v1_webhook_delivery_proto_rawDesc = "" +
 	"\n" +
-	"1udb/core/webhook/entity/v1/webhook_delivery.proto\x12\x1audb.core.webhook.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\xf7\f\n" +
+	"1udb/core/webhook/entity/v1/webhook_delivery.proto\x12\x1audb.core.webhook.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\x84\r\n" +
 	"\x0fWebhookDelivery\x12O\n" +
 	"\vdelivery_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vdelivery_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -219,9 +219,9 @@ const file_udb_core_webhook_entity_v1_webhook_delivery_proto_rawDesc = "" +
 	"\n" +
 	"audit_info\x18\r \x01(\v2\x1d.udb.core.common.v1.AuditInfoBD\x82\xb7\x18@\n" +
 	"\n" +
-	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xc4\x04\xfa\xb6\x18\xae\x03\n" +
-	"\x12webhook_deliveries\x12\vudb_webhook\x18\x02 \x01*2Durable webhook delivery journal (master-plan 9.4)8\x01@\x01b\xa1\x01\n" +
-	"!webhook_delivery_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x011\n" +
+	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xd1\x04\xfa\xb6\x18\xbb\x03\n" +
+	"\x12webhook_deliveries\x12\vudb_webhook\x18\x02 \x01*2Durable webhook delivery journal (master-plan 9.4)8\x01@\x01b\xae\x01\n" +
+	"!webhook_delivery_tenant_isolation\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x011\n" +
 	"\x1didx_webhook_deliveries_tenant\x12\x05BTREEZ\ttenant_id\x8a\x01@\n" +
 	"\x1fidx_webhook_deliveries_endpoint\x12\x05BTREEZ\ttenant_idZ\vendpoint_id\xf2\x01\"udb.webhook.webhook_deliveries.cdc\xfa\x01\fwebhook:read\x8a\xb2\x19\x8c\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\rwebhook.audit@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x8b\x02\n" +

@@ -1052,6 +1052,15 @@ impl QdrantHttpClient {
         let Some(api_key) = &self.api_key else {
             return builder;
         };
+        // Never put the api-key on a plaintext wire to a non-loopback host while
+        // UDB_OUTBOUND_TLS_REQUIRED is on: the request goes out without it and
+        // Qdrant answers 401, with the reason logged here.
+        if let Err(reason) =
+            crate::runtime::transport_policy::check_secret_url(&self.base_url, "UDB_QDRANT_URL")
+        {
+            tracing::error!("Qdrant api-key withheld: {reason}");
+            return builder;
+        }
         // Validate the value up front so an invalid key fails with a message that
         // NAMES the header and the likely cause, instead of an opaque reqwest
         // "builder error" surfaced later at send() (UDB_FRICTION §3).

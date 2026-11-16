@@ -131,7 +131,31 @@ impl PostgresAuditLogSink {
             &self.relation,
             &AUTH_AUDIT_BOUND_COLUMNS,
         )
-        .await
+        .await?;
+        // The cleanup service deletes by `occurred_at`. Build its index without
+        // blocking audit writes: CONCURRENTLY, outside any transaction, in the
+        // background (on a large existing log this takes minutes). A failure
+        // only slows the cleanup down, so it is logged, not raised.
+        let pool = self.pool.clone();
+        let relation = self.relation.clone();
+        tokio::spawn(async move {
+            let index = format!(
+                "{}_occurred_at_idx",
+                relation
+                    .rsplit('.')
+                    .next()
+                    .unwrap_or("auth_audit_log")
+                    .trim_matches('"')
+            );
+            let sql = format!(
+                "CREATE INDEX CONCURRENTLY IF NOT EXISTS \"{}\" ON {relation} (occurred_at)",
+                index.replace('"', "")
+            );
+            if let Err(err) = sqlx::Executor::execute(&pool, sqlx::raw_sql(&sql)).await {
+                tracing::warn!(error = %err, relation = %relation, "auth audit log occurred_at index not built");
+            }
+        });
+        Ok(())
     }
 
     /// Lazy self-create: the durable audit table has no migration, so create
@@ -303,8 +327,16 @@ pub(crate) struct WebhookAuditSink {
 #[cfg(feature = "http-client")]
 impl WebhookAuditSink {
     pub(crate) fn new(url: impl Into<String>, auth_header: Option<String>) -> Self {
+        // Bounded so a stalled SIEM cannot hold export tasks forever, and no
+        // redirects so an https:// endpoint cannot bounce events to plaintext.
+        let client = reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .timeout(std::time::Duration::from_secs(15))
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .unwrap_or_else(|err| panic!("SIEM webhook HTTP client could not be built: {err}"));
         Self {
-            client: reqwest::Client::new(),
+            client,
             url: url.into(),
             auth_header,
         }
@@ -319,6 +351,13 @@ impl AuditExportSink for WebhookAuditSink {
     }
 
     async fn export(&self, _topic: &str, envelope: &Value) -> Result<(), String> {
+        // Audit events and the bearer token never go out over plaintext to a
+        // non-loopback host while UDB_OUTBOUND_TLS_REQUIRED is on; the export
+        // fails loudly instead.
+        crate::runtime::transport_policy::check_secret_url(
+            &self.url,
+            "UDB_AUDIT_EXPORT_WEBHOOK_URL",
+        )?;
         let mut req = self
             .client
             .post(&self.url)

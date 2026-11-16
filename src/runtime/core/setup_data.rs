@@ -2450,11 +2450,17 @@ impl DataBrokerRuntime {
         } else {
             context.correlation_id.clone()
         };
+        // A shared (global) table's row belongs to no tenant: its change event
+        // carries the reserved shared marker instead of the writer's tenant, so
+        // every tenant's subscribers and cache namespaces see it, not only the
+        // platform writer's. The writer stays attributed via user_id /
+        // service_identity / decision_id.
+        let envelope_tenant = mutation_event_tenant(table, &context.tenant_id);
         let mut envelope = serde_json::json!({
             "event_id": event_id.to_string(),
             "event_type": topic,
             "topic": topic,
-            "tenant_id": context.tenant_id,
+            "tenant_id": envelope_tenant,
             "project_id": context.project_id,
             "operation": operation,
             "message_type": message_type,
@@ -14002,6 +14008,43 @@ fn text_search_dispatch_spec(
         .map_err(|err| setup_data_internal_status("text_search_spec_encode", err.to_string()))
 }
 
+/// The tenant a data-plane mutation event is stamped with: the writer's tenant
+/// for a tenant table, the reserved shared marker for a shared (global) table.
+fn mutation_event_tenant<'a>(table: &ManifestTable, writer_tenant: &'a str) -> &'a str {
+    if crate::broker::is_global_table(table) {
+        crate::broker::SHARED_TENANT_MARKER
+    } else {
+        writer_tenant
+    }
+}
+
+#[cfg(test)]
+mod mutation_event_tenant_tests {
+    use super::mutation_event_tenant;
+    use crate::generation::ManifestTable;
+    use crate::generation::manifest::ManifestTableSecurity;
+
+    #[test]
+    fn shared_table_events_carry_the_shared_marker() {
+        let shared = ManifestTable {
+            table_security: ManifestTableSecurity {
+                tenant_isolation_mode: "global".to_string(),
+                ..ManifestTableSecurity::default()
+            },
+            ..ManifestTable::default()
+        };
+        assert_eq!(
+            mutation_event_tenant(&shared, "tenant-a"),
+            crate::broker::SHARED_TENANT_MARKER
+        );
+        // A table that does not declare itself shared keeps the writer's tenant.
+        assert_eq!(
+            mutation_event_tenant(&ManifestTable::default(), "tenant-a"),
+            "tenant-a"
+        );
+    }
+}
+
 /// Return a clone of `request` with `_tenant_id`/`_project_id` stamped onto every
 /// point payload, mirroring the Qdrant executor's write-time tenant stamp so the
 /// generic HTTP backends (Elasticsearch/Weaviate/Pinecone) store a tenant tag the
@@ -14028,7 +14071,14 @@ fn qdrant_and_tenant_filter(
         must.push(user_filter);
     }
     if !tenant_id.trim().is_empty() {
-        must.push(serde_json::json!({"key": "_tenant_id", "match": {"value": tenant_id}}));
+        // The caller's own points OR the shared points projected from a shared
+        // (global) table, never another tenant's. A tenant point can never carry
+        // the shared marker: writes under that tenant id are refused and every
+        // write path overwrites `_tenant_id` with the verified tenant.
+        must.push(serde_json::json!({
+            "key": "_tenant_id",
+            "match": {"any": [tenant_id, crate::broker::SHARED_TENANT_MARKER]},
+        }));
     }
     if !project_id.trim().is_empty() {
         must.push(serde_json::json!({"key": "_project_id", "match": {"value": project_id}}));
@@ -14081,10 +14131,8 @@ mod qdrant_tenant_filter_tests {
         let must = scoped["must"].as_array().expect("must array");
         assert_eq!(must.len(), 3, "{scoped}");
         assert_eq!(must[0], user);
-        assert!(
-            must.iter()
-                .any(|c| c["key"] == "_tenant_id" && c["match"]["value"] == "t1")
-        );
+        assert!(must.iter().any(|c| c["key"] == "_tenant_id"
+            && c["match"]["any"] == json!(["t1", crate::broker::SHARED_TENANT_MARKER])));
         assert!(
             must.iter()
                 .any(|c| c["key"] == "_project_id" && c["match"]["value"] == "p1")
@@ -14104,10 +14152,17 @@ mod qdrant_tenant_filter_tests {
     fn ands_tenant_and_project_into_must() {
         let f = qdrant_and_tenant_filter(json!({}), "t1", "p1");
         let must = f["must"].as_array().expect("must array");
+        // Own tenant OR the shared marker, and nothing else.
         assert!(
-            must.iter()
-                .any(|c| c["key"] == "_tenant_id" && c["match"]["value"] == "t1"),
+            must.iter().any(|c| c["key"] == "_tenant_id"
+                && c["match"]["any"] == json!(["t1", crate::broker::SHARED_TENANT_MARKER])),
             "tenant clause missing: {f}"
+        );
+        assert!(
+            !must
+                .iter()
+                .any(|c| c["key"] == "_tenant_id" && c["match"].get("value").is_some()),
+            "{f}"
         );
         assert!(
             must.iter()

@@ -3138,13 +3138,13 @@ fn rows_to_record_set(
         .scopes
         .iter()
         .any(|scope| scope == "udb:pii:read" || scope == "udb:*" || scope == "*");
-    // Same rule as the planner's `masked_columns(table)`: PII plus anything
-    // flagged mask-in-logs.
+    // PII, anything flagged mask-in-logs, and every encrypted column: see
+    // `is_client_masked_column`.
     let masked_columns: Vec<String> = match (masking, table) {
         (PiiMasking::ClientVisible, Some(table)) => table
             .columns
             .iter()
-            .filter(|column| column.security.is_pii || column.security.mask_in_logs)
+            .filter(|column| is_client_masked_column(column))
             .map(|column| column.column_name.clone())
             .collect(),
         (PiiMasking::ClientVisibleAliased(columns), _) => columns.to_vec(),
@@ -3241,11 +3241,102 @@ pub(crate) fn mask_record_for_client(
     for column in table
         .columns
         .iter()
-        .filter(|column| column.security.is_pii || column.security.mask_in_logs)
+        .filter(|column| is_client_masked_column(column))
     {
         if let Some(value) = record.get_mut(&column.column_name) {
-            *value = JsonValue::String("***MASKED***".to_string());
+            *value = JsonValue::String(
+                crate::runtime::executor_utils::REDACTION_PLACEHOLDER.to_string(),
+            );
         }
+    }
+}
+
+/// A column whose stored value reaches a client only when the caller holds
+/// `udb:pii:read`: PII, anything flagged mask-in-logs, and every encrypted
+/// column. An encrypted column is decrypted on the way out, so without this a
+/// read that named it (or an Upsert/Update `return_record`, which returns the
+/// whole row) handed the plaintext to a caller the export controls refuse.
+fn is_client_masked_column(column: &crate::generation::ManifestColumn) -> bool {
+    column.security.is_pii || column.security.mask_in_logs || is_encrypted_column(column)
+}
+
+#[cfg(test)]
+mod client_mask_tests {
+    use super::*;
+    use crate::generation::{ManifestColumn, ManifestColumnSecurity};
+
+    fn column(name: &str) -> ManifestColumn {
+        ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            ..ManifestColumn::default()
+        }
+    }
+
+    fn table() -> ManifestTable {
+        let mut legacy = column("legacy_secret");
+        legacy.encrypted = true;
+        ManifestTable {
+            message_name: "Customer".to_string(),
+            columns: vec![
+                column("id"),
+                ManifestColumn {
+                    security: ManifestColumnSecurity {
+                        is_encrypted: true,
+                        ..ManifestColumnSecurity::default()
+                    },
+                    ..column("national_id")
+                },
+                legacy,
+                ManifestColumn {
+                    security: ManifestColumnSecurity {
+                        is_pii: true,
+                        ..ManifestColumnSecurity::default()
+                    },
+                    ..column("email")
+                },
+            ],
+            ..ManifestTable::default()
+        }
+    }
+
+    fn record() -> serde_json::Map<String, JsonValue> {
+        serde_json::json!({
+            "id": "c-1",
+            "national_id": "1234",
+            "legacy_secret": "s3cret",
+            "email": "a@example.com"
+        })
+        .as_object()
+        .cloned()
+        .unwrap_or_default()
+    }
+
+    #[test]
+    fn a_returned_record_masks_encrypted_columns_without_the_pii_scope() {
+        let reader = RequestContext {
+            scopes: vec!["udb:write".to_string()],
+            ..RequestContext::default()
+        };
+        let mut returned = record();
+        mask_record_for_client(&table(), &reader, &mut returned);
+        assert_eq!(returned["id"], "c-1");
+        for masked in ["national_id", "legacy_secret", "email"] {
+            assert_eq!(
+                returned[masked],
+                crate::runtime::executor_utils::REDACTION_PLACEHOLDER,
+                "{masked} must be masked"
+            );
+        }
+
+        let scoped = RequestContext {
+            scopes: vec!["udb:pii:read".to_string()],
+            ..RequestContext::default()
+        };
+        let mut returned = record();
+        mask_record_for_client(&table(), &scoped, &mut returned);
+        assert_eq!(returned["national_id"], "1234");
+        assert_eq!(returned["legacy_secret"], "s3cret");
     }
 }
 

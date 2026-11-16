@@ -15,6 +15,8 @@ export interface RefusalDetail {
   retryable?: boolean;
   retry_after_ms?: number;
   operation?: string;
+  backend?: string;
+  capability_required?: string;
   missing?: Record<string, string>;
   field_violations?: { field: string; description: string }[];
 }

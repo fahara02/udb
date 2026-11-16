@@ -18,8 +18,9 @@ Through the broker's public RPCs, as those administrators, it creates:
 1. a service account ``UDB_LIVE_SERVICE_USERNAME`` (password
    ``UDB_LIVE_SERVICE_PASSWORD``) in the home tenant, activated, with a typed
    grant carrying exactly the scopes the conformance tests exercise:
-   ``udb:authz:check-access``, ``udb:authz:check-access-for`` and
-   ``udb:authn:exchange-tenant-token``;
+   ``udb:authz:check-access``, ``udb:authz:check-access-for``,
+   ``udb:authn:exchange-tenant-token`` and ``udb:token:delegate`` (delegated
+   job tokens for the human administrator);
 2. two roles bound to the account: ``UDB_LIVE_SERVICE_ROLE`` (an ordinary
    role a service bearer carries) and ``UDB_LIVE_SERVICE_WITHHELD_ROLE`` (an
    admin-segment code a service bearer must never carry);
@@ -58,12 +59,14 @@ from udb_client.auth import UdbAuthClient
 from udb_client.metadata import Metadata
 
 #: Scopes of the service account's typed grant: the caller's own CheckAccess,
-#: the literal delegation scope, and the tenant-token exchange scope.
+#: the literal delegation scope, the tenant-token exchange scope, and the scope
+#: that mints delegated job tokens (ExchangeTokenForJob).
 SERVICE_SCOPES = (
     "udb:authz:check-access",
     "udb:authz:check-access-for",
     "udb:authn:exchange-tenant-token",
     "udb:authn:read-auth-policy",
+    "udb:token:delegate",
 )
 #: What the target tenant approves the account for.
 MEMBERSHIP_SCOPES = ("udb:authz:check-access",)

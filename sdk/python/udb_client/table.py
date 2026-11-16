@@ -33,6 +33,7 @@ from .record_codec import (
     _is_json,
     _text_column,
     enum_common_prefix,
+    enum_stored_text,
     is_repeated,
     json_column_text,
 )
@@ -694,6 +695,7 @@ def table_spec_of(message: Any) -> TableSpec[dict[str, Any]]:
     descriptor = message.DESCRIPTOR
     fields: list[str] = []
     enums: dict[str, str] = {}
+    enum_values: dict[str, tuple[str, ...]] = {}
     big_ints: list[str] = []
     no_insert: list[str] = []
     empty_unset: list[str] = []
@@ -719,12 +721,14 @@ def table_spec_of(message: Any) -> TableSpec[dict[str, Any]]:
             excluded.append(name)
         if field_descriptor.type == FieldDescriptor.TYPE_ENUM and _text_column(column):
             enums[name] = enum_common_prefix(field_descriptor.enum_type)
+            if column.enum_values:
+                enum_values[name] = tuple(column.enum_values)
         if field_descriptor.type in _INT64_TYPES:
             big_ints.append(name)
     names = tuple(fields)
 
     def to_fields(row: Mapping[str, Any]) -> dict[str, Any]:
-        return udb_record_fields(row, names, enums)
+        return udb_record_fields(row, names, enums, enum_values)
 
     def to_record(row: Mapping[str, Any]) -> dict[str, Any]:
         record = to_fields(row)
@@ -756,9 +760,10 @@ def table_spec_of(message: Any) -> TableSpec[dict[str, Any]]:
 class Column(Generic[Row]):
     """A typed predicate on one column. Each method returns a filter."""
 
-    def __init__(self, field_name: str, enum_prefix: str = ""):
+    def __init__(self, field_name: str, enum_prefix: str = "", enum_values: Sequence[str] = ()):
         self.field = field_name
         self._enum_prefix = enum_prefix
+        self._enum_values = tuple(enum_values)
 
     def _value(self, value: Any) -> Any:
         if value is None:
@@ -766,7 +771,9 @@ class Column(Generic[Row]):
         if isinstance(value, int) and not isinstance(value, bool) and abs(value) > _EXACT_FILTER_NUMBER:
             # A Struct number is a double, so the exact digits travel as text.
             return str(value)
-        return udb_enum_to_text(value, self._enum_prefix) if self._enum_prefix else value
+        if self._enum_prefix or self._enum_values:
+            return udb_enum_to_text(value, self._enum_prefix, self._enum_values)
+        return value
 
     def _compare(self, op: str, value: Any) -> dict[str, Any]:
         return {self.field: {op: self._value(value)}}
@@ -802,13 +809,24 @@ class Column(Generic[Row]):
         return {self.field: {"$not_null": True}}
 
 
-def udb_enum_to_text(value: Any, prefix: str) -> Any:
-    """Stored text of an enum value: the value name without the common prefix."""
-    return value[len(prefix) :] if isinstance(value, str) and value.startswith(prefix) else value
+def udb_enum_to_text(value: Any, prefix: str, allowed: Sequence[str] = ()) -> Any:
+    """Stored text of an enum value (a full name or a short token). With ``allowed`` (the
+    column's ``enum_values``, which its CHECK lists) it is the matching list entry, and a
+    value outside the list raises ``ValueError``; without, it is the short token (the name
+    without the common prefix)."""
+    if not isinstance(value, str):
+        return value
+    stored = enum_stored_text(value, prefix, allowed)
+    if stored is None:
+        raise ValueError(
+            f"enum value {value} is not in the column's enum_values ({', '.join(allowed)}); "
+            "the value breaks its CHECK constraint"
+        )
+    return stored
 
 
 def udb_enum_from_text(value: Any, prefix: str) -> Any:
-    """The enum value name for stored text."""
+    """The enum value name for stored text, which may be the full name or the short token."""
     return prefix + value if isinstance(value, str) and not value.startswith(prefix) else value
 
 
@@ -823,15 +841,20 @@ def udb_big_int(value: Any) -> Any:
 
 
 def udb_record_fields(
-    row: Mapping[str, Any], fields: Sequence[str], enums: Mapping[str, str]
+    row: Mapping[str, Any],
+    fields: Sequence[str],
+    enums: Mapping[str, str],
+    enum_values: Mapping[str, Sequence[str]] | None = None,
 ) -> dict[str, Any]:
-    """The known columns of ``row`` with enum values as stored text. An absent key
-    is omitted and ``None`` is kept, so it writes SQL NULL."""
+    """The known columns of ``row`` with enum values as stored text: the matching entry of
+    the column's ``enum_values`` when it declares them, else the short token. An absent
+    key is omitted and ``None`` is kept, so it writes SQL NULL."""
+    declared = enum_values or {}
     out: dict[str, Any] = {}
     for name in fields:
         if name in row:
             value = row[name]
-            out[name] = udb_enum_to_text(value, enums[name]) if name in enums else value
+            out[name] = udb_enum_to_text(value, enums[name], declared.get(name, ())) if name in enums else value
     return out
 
 

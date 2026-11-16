@@ -68,6 +68,12 @@ pub struct VerifiedPrincipal {
     pub account_kind: Option<i32>,
     /// The bearer's `acr` (assurance level) claim, carried for step-up gates.
     pub acr: Option<String>,
+    /// The `purpose` claim of a verified bearer token. A purpose the signed
+    /// token asserts is trusted (it may unlock PII reads for export,
+    /// verification or audit); a purpose sent only in the `x-purpose` header
+    /// never lands here. `None` for API keys and certificates, which carry no
+    /// purpose.
+    pub purpose: Option<String>,
 }
 
 impl VerifiedPrincipal {
@@ -106,6 +112,11 @@ impl VerifiedPrincipal {
             rate_limit_per_minute: 0,
             account_kind: claims.account_kind,
             acr: claims.acr.clone(),
+            // A blank claim is no purpose, so it can never count as verified.
+            purpose: claims
+                .purpose
+                .clone()
+                .filter(|purpose| !purpose.trim().is_empty()),
         }
     }
 }
@@ -260,6 +271,26 @@ fn first_peer_cert_der(extensions: &http::Extensions) -> Option<Vec<u8>> {
         .map(|cert| cert.as_ref().to_vec())
 }
 
+/// Audit one request served with a delegated job token: who acted (the
+/// service), for whom (the user), with which token and for which job. A log
+/// line on the audit target, never a store write, so a busy job adds no
+/// round trip per call; the durable `udb.authn.token.delegated.used.v1`
+/// event is published when the token's live state is (re)checked.
+fn audit_delegated_token_use(claims: &crate::runtime::security::SecurityClaims) {
+    let actor = claims.act.as_ref();
+    tracing::info!(
+        target: "udb.audit.authn",
+        subject = %claims.sub.as_deref().unwrap_or_default(),
+        tenant_id = %claims.tenant_id.as_deref().unwrap_or_default(),
+        actor = %actor.and_then(|act| act.sub.as_deref()).unwrap_or_default(),
+        actor_account_id = %actor.and_then(|act| act.account_id.as_deref()).unwrap_or_default(),
+        jti = %claims.jti.as_deref().unwrap_or_default(),
+        job_id = %claims.job_id.as_deref().unwrap_or_default(),
+        purpose = %claims.purpose.as_deref().unwrap_or_default(),
+        "delegated job token used"
+    );
+}
+
 /// Resolve every async credential present on the request. Never denies —
 /// annotation only; failures surface as fail-closed outcomes for the sync
 /// enforcement layer.
@@ -309,11 +340,20 @@ async fn resolve_credentials(
                         .jwt_persisted_state_valid(&claims, now_unix())
                         .await
                     {
-                        Ok(true) => Ok(principal),
-                        Ok(false) => Err(
-                            "bearer credential is revoked, expired, inactive, or no longer granted"
-                                .to_string(),
-                        ),
+                        Ok(true) => {
+                            if claims.is_delegated() {
+                                audit_delegated_token_use(&claims);
+                            }
+                            Ok(principal)
+                        }
+                        // Signature and expiry already passed, so the token is
+                        // refused because its live state no longer stands:
+                        // revoked jti, session or family, inactive or revoked
+                        // user or tenant, a lost grant or delegation.
+                        Ok(false) => Err(format!(
+                            "{}: it is revoked, inactive, or no longer granted",
+                            crate::runtime::security::BEARER_REVOKED_MESSAGE
+                        )),
                         Err(status) => {
                             // Durable validation reports adapter/store failures as
                             // Internal in a few legacy seams. They are still an
@@ -391,6 +431,8 @@ async fn resolve_credentials(
                         rate_limit_per_minute: record.rate_limit_per_minute,
                         account_kind: None,
                         acr: None,
+                        // An API key carries no signed purpose.
+                        purpose: None,
                     })),
                     // Grant revoked / owner inactive / empty intersection —
                     // the key no longer authenticates (fail closed).
@@ -438,6 +480,8 @@ async fn resolve_credentials(
                             rate_limit_per_minute: 0,
                             account_kind: None,
                             acr: None,
+                            // A certificate binding carries no signed purpose.
+                            purpose: None,
                         });
                     }
                     Ok(None) => {
@@ -474,12 +518,15 @@ async fn resolve_credentials(
 
 impl CredentialRevalidator {
     fn bearer_resolution_status(operation: &str, reason: String) -> tonic::Status {
-        let typed = crate::runtime::executor_utils::status_from_store_string(reason);
+        let typed = crate::runtime::executor_utils::status_from_store_string(reason.clone());
         if typed.code() == tonic::Code::Unavailable {
             typed
         } else {
-            crate::runtime::executor_utils::unauthenticated_status(
+            // An expired or revoked bearer says so (UDB_TOKEN_EXPIRED /
+            // UDB_TOKEN_REVOKED); any other refusal stays generic.
+            crate::runtime::security::bearer_refusal_status(
                 operation,
+                &reason,
                 "CDC subscription credential is no longer valid; authenticate again",
             )
         }

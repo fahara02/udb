@@ -7,6 +7,213 @@ release line was tagged.
 
 ## [Unreleased]
 
+## [0.6.21] - 2026-11-16
+
+### Breaking for callers
+
+- **SDKs write an enum column the way the column declares it.** A text enum column whose proto
+  declares `enum_values` (which generates its CHECK and DEFAULT) now receives exactly the
+  declared form, normally the full proto value name (`ADMIN_FILE_KIND_EQUIPMENT`). The SDKs
+  wrote the short token (`EQUIPMENT`), which the CHECK refused. Columns without `enum_values`,
+  UDB's own included, keep short tokens. Decoders read both forms and return full names.
+  - detect: sql: rows holding short tokens in a column whose CHECK lists full names
+  - fix: `udb migrate-enum-tokens --to full`
+- **Partitions carry their parent's row-level security.** A partition UDB or pg_partman creates
+  had no row-level security, so a direct query on it skipped the parent's policies. Now every
+  partition gets the parent's flags and policies when UDB creates it, and the cleanup worker
+  brings every partition in line on each pass.
+  - detect: sql: a role that reads a partition table directly now sees only its tenant's rows
+  - fix: read through the parent table, or give that role the same settings the policies use
+
+- **Writes to shared (global) tables need `udb:global:write` or platform admin.** A table that
+  declares `tenant_isolation_mode` none/global/disabled/off and has no tenant column is shared
+  reference data. Any tenant with a write grant could change or delete its rows. Now every
+  data-plane write (Upsert, Update, Delete, BulkCas, BatchUpsert, BeginTx) needs
+  `udb:platform_admin` or the new `udb:global:write`; a tenant-bound `udb:admin` is not enough.
+  The tenant id `*shared*` is reserved, and a call made under it is refused.
+  - detect: code: `PERMISSION_DENIED` with reason `shared_table_write_denied`
+  - fix: grant `udb:global:write` to the service that loads the shared data
+- **A purpose sent only in the `x-purpose` header no longer unlocks PII or encrypted data.**
+  `export`, `verification` and `audit` relax the PII and encryption rules only when the signed
+  token carries the purpose. Encrypted columns are masked for callers without `udb:pii:read`,
+  including in `return_record`, cache hits and joins.
+  - detect: code: a read, filter or `expected` value on a PII or encrypted column that relied on
+    the header now gets `PERMISSION_DENIED`, `UDB_SCOPE_MISSING`
+  - fix: grant `udb:pii:read`, or use a token that carries the purpose (see delegated job
+    tokens below)
+- **The PII rule covers writes, compare-and-swap and LiveQuery too.** Update, Delete, BulkCas,
+  BeginTx and PurgeSubject filters, and `expected` values, that name a PII, encrypted or
+  `mask_in_logs` column need `udb:pii:read`, as does a LiveQuery predicate on one.
+  - detect: code: such a write or subscription gets `PERMISSION_DENIED`, `UDB_SCOPE_MISSING`
+  - fix: grant that service `udb:pii:read`
+- **Outbound connections are refused in production unless they are encrypted and verified.**
+  Under `UDB_ENV=production`, `UDB_PG_TLS_REQUIRED`, `UDB_REDIS_TLS_REQUIRED` and the new
+  `UDB_OUTBOUND_TLS_REQUIRED` default on, and the broker refuses to start on a plaintext or
+  unverified connection to a non-loopback host. PostgreSQL needs `sslmode=verify-ca` or
+  `verify-full` (`require` does not check the certificate). Redis needs `rediss://`. HTTP
+  backends, webhooks and secret-carrying clients need https. Cloud deploy mode now refuses
+  plaintext in every environment. Production no longer honours `UDB_DEV_MODE` for a plaintext
+  Vault address or `UDB_LIVEKIT_ALLOW_INSECURE`. Kafka is not checked yet.
+  - detect: config: the startup error names the backend, the setting and the flag
+  - fix: `sslmode=verify-full` plus `sslrootcert=` for a private CA, `rediss://`, https; or set
+    the named flag to `false`
+- **Store-RPC fields the broker cannot honour are refused.** `AnalyticalQuery.dry_run` and
+  `parameters`, `TimeSeriesQuery.group_by`/`aggregate`/`window`/`page_token`,
+  `DocumentFind.page_token`, `idempotency_key` on CacheSet, CacheDelete, DocumentUpsert and
+  TimeSeriesWrite, `CacheSet.metadata`, a binary `CacheSet.content_type` and
+  `CacheGet.touch` returned success while doing nothing (a `dry_run` query even ran).
+  - detect: code: `UNIMPLEMENTED` naming the field
+  - fix: leave the field unset; aggregate with AnalyticalQuery; use the relational Upsert for
+    replay protection
+- **CacheSet refuses a value that is not UTF-8.** It was stored lossily, changing the bytes.
+  - detect: code: `INVALID_ARGUMENT` on `value`
+  - fix: encode binary values (for example base64)
+- **The verified purpose and user win over the request body.** A `purpose` or `user_id` in the
+  request body overrode the header the call was authorized with, so the audit could record a
+  value that was never authorized.
+  - detect: code: a warning log naming the field
+  - fix: send purpose and user in the headers
+- **Projections leave out PII and encrypted columns by default.** Qdrant, Elasticsearch, Neo4j,
+  document, Redis and S3 projections copied every column in plaintext.
+  - detect: code: a projected record no longer has a PII field
+  - fix: list the field in the store's `payload_fields`
+- **CDC hash redaction is keyed.** Hash mode used an unsalted SHA-256, so short values could be
+  recovered by guessing. It is now HMAC-SHA256 keyed from `UDB_CDC_ENCRYPTION_KEY_B64`
+  (prefix `hmac-sha256:`), and masks when no key is set.
+  - detect: code: consumers comparing hashed values see new digests
+  - fix: compare against the new digests
+- **UDB's own row-level-security policies cast less.** Fourteen UDB tables with UUID tenant
+  columns now use `tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid`,
+  so the index serves the policy. A non-UUID tenant setting now fails instead of matching
+  nothing.
+  - detect: sql: `app.current_tenant_id` set to a non-UUID value
+  - fix: set it to the tenant UUID (the broker always does)
+
+- **Filtering or sorting on a PII or encrypted column needs `udb:pii:read`.** Selecting such a
+  column already did, but `Select`, `SelectV2` and `BatchSelect` accepted a filter or sort on it
+  from any reader, so a caller that could not see a national ID could still test whether a row
+  with a guessed one exists. A filter or sort naming a PII or encrypted column (including a
+  blind-index equality lookup) now needs `udb:pii:read` or a purpose of `export`,
+  `verification` or `audit`, like selecting it. The refusal is `PERMISSION_DENIED` with reason
+  `UDB_SCOPE_MISSING` and the column named.
+  - detect: code: a read filters or sorts on a column marked `is_pii` or `is_encrypted` from a
+    caller without `udb:pii:read`
+  - fix: grant that service `udb:pii:read`, or send the matching purpose
+
+### Added
+
+- **`$overlaps` (and `$overlap`) on array columns** renders `col && $N` with a typed array.
+- **Test fakes** (TypeScript, Go and Python): array and JSON `$contains` / `$contained_by` /
+  `$overlaps`; partial unique indexes whose `WHERE` is an `AND` of `IS [NOT] NULL` and
+  `= / <> 'literal'` terms; and the enum CHECK of columns that declare `enum_values`.
+- **`udbtest start()` can approve review-required migrations** for a test broker
+  (`approveReviewRequired`), through a real approval plan.
+
+- **Shared projections for global tables.** Rows of a shared table are projected with the
+  shared marker, and vector, hybrid and text search, typed document reads, aggregates and the
+  graph traversal match the caller's tenant OR shared, never another tenant. Change events of
+  a shared table reach every tenant's subscribers, webhooks, live queries and cache. Embedding
+  sources can be registered on a shared table (platform admin or `udb:global:write`); their
+  vectors are shared.
+- **Delegated job tokens.** `AuthnService.ExchangeTokenForJob` lets a service holding
+  `udb:token:delegate` exchange a user's current token for a job token: subject the user, actor
+  the service, a verified purpose, a job id and a `jti`, valid up to
+  `UDB_DELEGATED_TOKEN_MAX_TTL` (default 24h), not refreshable. Every mint and use is audited.
+  New error reasons `UDB_TOKEN_EXPIRED` and `UDB_TOKEN_REVOKED` for every token. SDK helpers in
+  TypeScript, Go and Python.
+- **Retention for every UDB table that grew without bound.** Expired sessions, webhook
+  deliveries, token revocations (only after the token expired), MFA challenges, devices and the
+  other UDB tables that declare a retention; resolved CDC dead letters and the CDC journal's
+  dead-letter rows; completed projection tasks; finished sagas and XA records; old catalog
+  versions (the newest `UDB_CLEANUP_KEEP_VERSIONS`, default 20, and every active one are kept).
+  New settings: `UDB_CLEANUP_SWEEP_INTERVAL`, `UDB_CLEANUP_KEEP_VERSIONS`,
+  `UDB_CDC_JOURNAL_DLQ_RETENTION`, `UDB_CDC_JOURNAL_SWEEP_MAX_ROWS`,
+  `UDB_IDEMPOTENCY_SWEEP_MAX_ROWS`; each table's retention is overridable in
+  `UDB_CLEANUP_RETENTION`.
+- **Cache caps are settings.** `UDB_AUTHZ_ENFORCER_CACHE_CAP` (default 1024, was a fixed 256)
+  and `UDB_SELECT_PLAN_CACHE_CAP` (evicts the least recently used half instead of clearing).
+- **Named TypeScript enum types.** Generated entities get one `as const` object and type per
+  proto enum (`PatientStatus.ACTIVE`), used for text-stored enum columns.
+- **`BatchSelect` in the test fakes** (TypeScript, Go and Python), so `selectMany` works against
+  `createFake`.
+- **CacheSet `only_if_absent` / `only_if_present`** on Redis (Memcached refuses them), and text
+  content types.
+- **Redis over TLS** (`rediss://`), and OTLP export to an https collector.
+
+- **Many reads in one call: `selectMany`.** TypeScript `selectMany(plane, reads)` (and
+  `UdbProject.selectMany`), Go `Client.SelectMany` and Python `select_many` (sync and async) send
+  several reads, across tables, over one `BatchSelect` stream and return the results in request
+  order. One failing read fails the call with that read's error. Each read is still authorized,
+  quota-charged and PII-checked on its own.
+- **`BatchSelect` runs its reads concurrently.** Up to `UDB_BATCH_SELECT_CONCURRENCY` (default 8,
+  1 to 64) items of one stream run at once, so a screen that loads several reads waits for the
+  slowest instead of the sum. Results keep request order.
+- **Partition upkeep for app tables.** The cleanup worker now also keeps every application
+  catalogue's time-partitioned PostgreSQL tables ahead of writes: the current period and the
+  declared `partition_premake` future partitions, named as the migration names them. Without
+  pg_partman, writes past the migration's window no longer fail. A table pg_partman manages is
+  left to it. Old app partitions are dropped only with `UDB_CLEANUP_APP_RETENTION=declared`
+  (then past the table's declared `retention_days`); by default nothing is dropped.
+
+### Fixed
+
+- **`udb cleanup run` trims the CDC journal itself.** The journal was pruned only by a running
+  broker's CDC worker, so a maintenance window without a broker left it untouched. A manual
+  run now applies the same retention (`UDB_CDC_JOURNAL_RETENTION`, its topic overrides and the
+  dead-letter retention), removing only published and acknowledged rows and respecting named
+  consumers.
+- **A database or role `statement_timeout` no longer cancels cleanup.** Cleanup's deletes,
+  sweeps and VACUUMs run with their own timeout, `UDB_CLEANUP_STATEMENT_TIMEOUT` (default none),
+  and the sweep range is a setting, `UDB_CLEANUP_SWEEP_PAGES`.
+
+- **`--dsn` commands say why PostgreSQL is unreachable.** `udb cleanup run`, `verify --live`
+  and the other commands that open the database printed "PostgreSQL is not configured" even
+  when `UDB_PG_DSN` or `--dsn` was set but the connection failed. They now say the DSN is set,
+  print the recorded startup reason, and point at the usual causes (an unencoded password
+  character, an overriding `.env` or `UDB_PG_DSN_PRIMARY`).
+- **The test fakes honour idempotency keys inside a transaction**, like the broker: the same key
+  and request replay the first reply, a changed request is refused with `UDB_IDEMPOTENCY_REUSE`.
+
+- **No orphan enum types.** `CREATE TYPE … AS ENUM` is emitted only when the column's
+  `sql_type` names that type, so adding a value to a text enum column is no longer a
+  review-required `ALTER TYPE`.
+- **`notification_logs` keeps its platform-admin escape** in its row-level-security policy, so
+  the cleanup worker can prune its forced partitions.
+
+- **An emitted event can no longer claim another tenant.** A `tenant_id` or `project_id` in a
+  `TxScope.emit` payload overrode the caller's; a different one is now refused
+  (`UDB_TENANT_MISMATCH`) and a missing one is filled in.
+- **Time-series writes keep the point timestamp, and queries honour `from`/`to` and `fields`.**
+- **`DocumentUpsert.merge_fields` and `DocumentGet`/`DocumentFind` `fields` and `sort` are
+  applied.**
+- **`UDB_CDC_TLS` is enforced when set**, and `UDB_CDC_MAX_WAL_LAG_BYTES` is compared with the
+  measured lag.
+- **Settings that did nothing are reported.** Proto options UDB records but does not enforce
+  (consent, data class, residency, KMS key, ACL and others) now give one lint warning each;
+  `.env.example` no longer documents variables nothing reads.
+- **HTTP clients that carry secrets** (OTP delivery, audit sink and export, rerank, schema
+  registry, OIDC, migration webhook, JWKS proxy, Qdrant and Elasticsearch with credentials)
+  have timeouts, do not follow redirects, and refuse plaintext non-loopback URLs under the
+  outbound TLS rule. `neo4j+s://` and `bolt+s://` map to https.
+- **The fallback row-level-security policy** UDB generates for a table without a declared one
+  compares the tenant column as stored, so its index serves the policy.
+- **The idempotency-key sweep deletes in batches**, with an index on `created_at`;
+  `usage_events` and `auth_audit_log` get the time indexes the cleanup uses (the auth audit
+  log's is built concurrently in the background).
+- **Rate-limit buckets are swept once a minute**, not on every call.
+
+- **The derived row-level-security policy can use the tenant index.** The isolation policy
+  generated from `db_table_security` compared `tenant_id::text` with the setting, so every
+  query under row-level security (a non-owner role, or `force_rls`) was a sequential scan, even
+  with a tenant filter. It now compares the column as stored:
+  `tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid` for a UUID
+  column, without a cast for a text column; an unset setting matches no row. The next migration
+  replaces the policy.
+- **A declared row-level-security policy is no longer widened.** A table that declares its own
+  policy for every command no longer also gets the derived `table_security_isolation` policy.
+  PostgreSQL ORs permissive policies, so the derived one granted what the declared one meant
+  to restrict. The next migration drops it from such tables.
+
 ## [0.6.20] - 2026-11-16
 
 ### Breaking for callers

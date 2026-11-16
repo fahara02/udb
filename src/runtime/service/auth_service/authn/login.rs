@@ -477,9 +477,10 @@ impl AuthnServiceImpl {
         // Native UDB JWT.
         if !req.bearer_token.trim().is_empty() {
             let claims = validate_bearer_token(&self.security, &req.bearer_token).map_err(|e| {
-                crate::runtime::executor_utils::unauthenticated_status(
+                crate::runtime::security::bearer_refusal_status(
                     "bearer_verification_failed",
-                    e.to_string(),
+                    &e,
+                    &e,
                 )
             })?;
             // Phase 3: a UDB-issued JWT must still be backed by live persisted
@@ -497,9 +498,15 @@ impl AuthnServiceImpl {
                         .await?
                 }
                 super::JwtPersistedState::Rejected => {
-                    return Err(crate::runtime::executor_utils::unauthenticated_status(
-                        "subject_inactive",
-                        "token subject is no longer active",
+                    // No longer backed by live state: UDB_TOKEN_REVOKED.
+                    return Err(crate::runtime::error_reasons::annotate(
+                        crate::runtime::executor_utils::unauthenticated_status(
+                            "subject_inactive",
+                            "token subject is no longer active, or the token was revoked",
+                        ),
+                        crate::runtime::error_reasons::TOKEN_REVOKED,
+                        None,
+                        None,
                     ));
                 }
             };

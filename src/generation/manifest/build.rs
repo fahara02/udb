@@ -194,9 +194,43 @@ pub(crate) fn pg_table_security_conflicts(schema: &ProtoSchema) -> Vec<String> {
     conflicts
 }
 
+/// `<column> = <the GUC as the column's type>`: the column is compared as it
+/// is stored, so an index on it serves the policy. Casting the column instead
+/// (`tenant_id::text = ...`) made every query under the policy a sequential
+/// scan. An unset or empty GUC is NULL, which matches no row. A column whose
+/// type is unknown keeps the text comparison.
+fn scope_predicate(column: &str, guc: &str, columns: &[ManifestColumn]) -> String {
+    let setting = format!("current_setting('{guc}', true)");
+    let sql_type = columns
+        .iter()
+        .find(|candidate| candidate.column_name.eq_ignore_ascii_case(column))
+        .map(|candidate| {
+            let base = candidate.sql_type.trim().to_ascii_uppercase();
+            base.split('(')
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_string()
+        })
+        .unwrap_or_default();
+    match sql_type.as_str() {
+        "TEXT" | "VARCHAR" | "CHARACTER VARYING" | "CITEXT" => {
+            format!("{column} = NULLIF({setting}, '')")
+        }
+        "UUID" | "BIGINT" | "INT8" | "INTEGER" | "INT" | "INT4" => {
+            format!(
+                "{column} = NULLIF({setting}, '')::{}",
+                sql_type.to_ascii_lowercase()
+            )
+        }
+        _ => format!("{column}::text = {setting}::text"),
+    }
+}
+
 fn derive_security_rls_policies(
     table_name: &str,
     security: &ManifestTableSecurity,
+    columns: &[ManifestColumn],
     warnings: &mut Vec<String>,
 ) -> Vec<ManifestPolicy> {
     let mut predicates = Vec::new();
@@ -204,22 +238,31 @@ fn derive_security_rls_policies(
         predicates.push(normalize_rls_policy_template(
             security.rls_policy_template.trim(),
             security,
+            columns,
         ));
     } else {
         if tenant_isolation_enabled(&security.tenant_isolation_mode)
             && !security.tenant_column.trim().is_empty()
         {
             predicates.push(format!(
-                "({}::text = current_setting('app.current_tenant_id', true)::text)",
-                security.tenant_column
+                "({})",
+                scope_predicate(
+                    security.tenant_column.trim(),
+                    "app.current_tenant_id",
+                    columns
+                )
             ));
         }
         if tenant_isolation_enabled(&security.project_isolation_mode)
             && !security.project_column.trim().is_empty()
         {
             predicates.push(format!(
-                "({}::text = current_setting('app.current_project_id', true)::text)",
-                security.project_column
+                "({})",
+                scope_predicate(
+                    security.project_column.trim(),
+                    "app.current_project_id",
+                    columns
+                )
             ));
         }
     }
@@ -251,7 +294,11 @@ fn derive_security_rls_policies(
     }]
 }
 
-fn normalize_rls_policy_template(template: &str, security: &ManifestTableSecurity) -> String {
+fn normalize_rls_policy_template(
+    template: &str,
+    security: &ManifestTableSecurity,
+    columns: &[ManifestColumn],
+) -> String {
     let mut normalized = template.trim().to_string();
     for (column, guc) in [
         (security.tenant_column.trim(), "app.current_tenant_id"),
@@ -260,7 +307,7 @@ fn normalize_rls_policy_template(template: &str, security: &ManifestTableSecurit
         if column.is_empty() {
             continue;
         }
-        let casted = format!("{column}::text = current_setting('{guc}', true)::text");
+        let casted = scope_predicate(column, guc, columns);
         for pattern in [
             format!("{column} = current_setting('{guc}')"),
             format!("{column}=current_setting('{guc}')"),
@@ -447,8 +494,15 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
             }
         })
         .collect::<Vec<_>>();
-    let mut derived_policies =
-        derive_security_rls_policies(&schema.table_name, &table_security, &mut warnings);
+    // Permissive policies OR together: a derived isolation policy next to the
+    // table's own policy for every command would widen it (and its scan cost
+    // adds up). The table's own ALL policy stands alone.
+    let declares_all = rls_policies.iter().any(|policy| policy.command == "ALL");
+    let mut derived_policies = if declares_all {
+        Vec::new()
+    } else {
+        derive_security_rls_policies(&schema.table_name, &table_security, &columns, &mut warnings)
+    };
     derived_policies.retain(|derived| !rls_policies.iter().any(|p| p.name == derived.name));
     rls_policies.extend(derived_policies);
     rls_policies.sort_by(|a, b| a.name.cmp(&b.name));
@@ -1664,6 +1718,82 @@ mod oneof_check_tests {
     }
 
     #[test]
+    fn derived_isolation_policy_is_sargable_and_never_widens_a_declared_one() {
+        let column = |name: &str, sql_type: &str| ManifestColumn {
+            column_name: name.to_string(),
+            sql_type: sql_type.to_string(),
+            ..ManifestColumn::default()
+        };
+        let columns = vec![
+            column("tenant_id", "UUID"),
+            column("project_id", "VARCHAR(64)"),
+            column("org", "JSONB"),
+        ];
+        assert_eq!(
+            scope_predicate("tenant_id", "app.current_tenant_id", &columns),
+            "tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid"
+        );
+        assert_eq!(
+            scope_predicate("project_id", "app.current_project_id", &columns),
+            "project_id = NULLIF(current_setting('app.current_project_id', true), '')"
+        );
+        // An unknown type keeps the old text comparison.
+        assert_eq!(
+            scope_predicate("org", "app.current_tenant_id", &columns),
+            "org::text = current_setting('app.current_tenant_id', true)::text"
+        );
+
+        // A table that declares its own policy for every command keeps it alone.
+        let mut schema = ProtoSchema::new("Person");
+        schema.table_name = "persons".to_string();
+        schema.schema_name = "patient".to_string();
+        schema.is_table = true;
+        schema.table_security = ProtoTableSecurity {
+            tenant_isolation_mode: "tenant".to_string(),
+            tenant_column: "tenant_id".to_string(),
+            ..ProtoTableSecurity::default()
+        };
+        schema.columns = vec![
+            col("id", 1, ""),
+            ProtoColumn {
+                field_name: "tenant_id".to_string(),
+                column_name: "tenant_id".to_string(),
+                proto_type: "string".to_string(),
+                sql_type: "UUID".to_string(),
+                field_number: 2,
+                is_tenant: true,
+                ..ProtoColumn::default()
+            },
+        ];
+        let derived = table_from_schema(&schema);
+        assert!(
+            derived
+                .rls_policies
+                .iter()
+                .any(|policy| policy.name == "table_security_isolation"),
+            "without a declared policy the isolation policy is derived"
+        );
+        schema.rls_policies = vec![crate::schema::ast::RlsPolicy {
+            name: "tenant_isolation".to_string(),
+            using_expression:
+                "tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid"
+                    .to_string(),
+            permissive: true,
+            ..Default::default()
+        }];
+        let declared = table_from_schema(&schema);
+        assert_eq!(
+            declared
+                .rls_policies
+                .iter()
+                .map(|policy| policy.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["tenant_isolation"],
+            "a declared ALL policy is never ORed with a derived one"
+        );
+    }
+
+    #[test]
     fn db_table_security_derives_rls_but_still_validates_columns() {
         let mut schema = ProtoSchema::new("Session");
         schema.table_name = "sessions".to_string();
@@ -1710,7 +1840,8 @@ mod oneof_check_tests {
             .expect("derived policy");
         assert_eq!(
             policy.using_expression,
-            "tenant_id::text = current_setting('app.current_tenant_id', true)::text"
+            "tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid",
+            "the column is compared as stored, so its index serves the policy"
         );
         assert!(manifest.validation_errors.iter().any(|error| {
             error.contains("tenant_column")

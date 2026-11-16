@@ -361,6 +361,11 @@ pub struct ServiceSettings {
     /// big enough to need it. `UDB_GRPC_MAX_RECV_BYTES` was documented in
     /// `.env.example` but read nowhere, so raising it did nothing.
     pub grpc_max_message_bytes: usize,
+    /// How many items of one `BatchSelect` stream run at once
+    /// (`UDB_BATCH_SELECT_CONCURRENCY`, 1..=64). Results keep request order;
+    /// every item still takes its own admission permit, quota charge and
+    /// authorization.
+    pub batch_select_concurrency: usize,
     pub allow_degraded_backends: bool,
     pub catalog_compat_warn_only: bool,
     pub catalog_compatibility_level: String,
@@ -408,6 +413,7 @@ impl Default for ServiceSettings {
             grpc_max_concurrent: 200,
             // 10 MB: comfortably above real manifests, still a bound.
             grpc_max_message_bytes: 10 * 1024 * 1024,
+            batch_select_concurrency: 8,
             allow_degraded_backends: false,
             catalog_compat_warn_only: false,
             catalog_compatibility_level: "backward".to_string(),
@@ -507,6 +513,9 @@ impl ServiceSettings {
         }
         if let Some(value) = env_u32("UDB_GRPC_MAX_MESSAGE_BYTES") {
             self.grpc_max_message_bytes = (value as usize).max(1024);
+        }
+        if let Some(value) = env_u32("UDB_BATCH_SELECT_CONCURRENCY") {
+            self.batch_select_concurrency = (value as usize).clamp(1, 64);
         }
         if let Some(value) = bool_env("UDB_ALLOW_DEGRADED_BACKENDS") {
             self.allow_degraded_backends = value;
@@ -1599,6 +1608,142 @@ pub fn parse_two_phase_toggle(value: Option<&str>) -> bool {
         value.map(|v| v.trim().to_ascii_lowercase()).as_deref(),
         Some("1") | Some("true") | Some("yes") | Some("on")
     )
+}
+
+// ── Cache sizes and sweep limits ─────────────────────────────────────────────
+//
+// Each setting is read from the environment once, the first time it is used
+// (at startup in practice), and kept for the life of the process. A missing,
+// malformed or out-of-range value falls back to the default (or the nearest
+// bound); the pure `parse_*` helpers are what the tests exercise.
+
+/// Casbin enforcers one broker keeps in memory (one per distinct policy set).
+pub const AUTHZ_ENFORCER_CACHE_CAP_ENV: &str = "UDB_AUTHZ_ENFORCER_CACHE_CAP";
+pub const DEFAULT_AUTHZ_ENFORCER_CACHE_CAP: usize = 1024;
+/// Typed Select plans one broker keeps in memory.
+pub const SELECT_PLAN_CACHE_CAP_ENV: &str = "UDB_SELECT_PLAN_CACHE_CAP";
+pub const DEFAULT_SELECT_PLAN_CACHE_CAP: usize = 512;
+/// Most CDC journal rows one retention sweep deletes per maintenance tick.
+pub const CDC_JOURNAL_SWEEP_MAX_ROWS_ENV: &str = "UDB_CDC_JOURNAL_SWEEP_MAX_ROWS";
+pub const DEFAULT_CDC_JOURNAL_SWEEP_MAX_ROWS: u64 = 100_000;
+/// How long dead-lettered CDC journal rows are kept (`30d`, `12h`, `keep`).
+pub const CDC_JOURNAL_DLQ_RETENTION_ENV: &str = "UDB_CDC_JOURNAL_DLQ_RETENTION";
+pub const DEFAULT_CDC_JOURNAL_DLQ_RETENTION_SECS: u64 = 30 * 86_400;
+/// Most idempotency-key rows one sweep deletes per maintenance tick.
+pub const IDEMPOTENCY_SWEEP_MAX_ROWS_ENV: &str = "UDB_IDEMPOTENCY_SWEEP_MAX_ROWS";
+pub const DEFAULT_IDEMPOTENCY_SWEEP_MAX_ROWS: u64 = 100_000;
+
+/// A count setting: a whole number within `min..=max` (clamped), else `default`.
+pub fn parse_count_setting(raw: Option<&str>, default: u64, min: u64, max: u64) -> u64 {
+    raw.and_then(|raw| raw.trim().parse::<u64>().ok())
+        .map(|value| value.clamp(min, max))
+        .unwrap_or(default)
+}
+
+/// A retention setting: `30d`, `12h`, `90m`, `3600` (seconds) or `keep`/`off`
+/// (`None`: rows are kept). Unset or malformed → `default`.
+pub fn parse_retention_setting(raw: Option<&str>, default: Option<u64>) -> Option<u64> {
+    match raw.map(str::trim) {
+        None | Some("") => default,
+        Some(value) if matches!(value.to_ascii_lowercase().as_str(), "keep" | "off" | "0") => None,
+        Some(value) => crate::runtime::executor_utils::parse_ttl_secs(value).or(default),
+    }
+}
+
+fn cached_count(
+    cell: &'static std::sync::OnceLock<u64>,
+    key: &str,
+    default: u64,
+    min: u64,
+    max: u64,
+) -> u64 {
+    *cell.get_or_init(|| parse_count_setting(std::env::var(key).ok().as_deref(), default, min, max))
+}
+
+/// `UDB_AUTHZ_ENFORCER_CACHE_CAP` (default 1024, 16..=1_000_000).
+pub fn authz_enforcer_cache_cap() -> usize {
+    static CELL: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    cached_count(
+        &CELL,
+        AUTHZ_ENFORCER_CACHE_CAP_ENV,
+        DEFAULT_AUTHZ_ENFORCER_CACHE_CAP as u64,
+        16,
+        1_000_000,
+    ) as usize
+}
+
+/// `UDB_SELECT_PLAN_CACHE_CAP` (default 512, 16..=1_000_000).
+pub fn select_plan_cache_cap() -> usize {
+    static CELL: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    cached_count(
+        &CELL,
+        SELECT_PLAN_CACHE_CAP_ENV,
+        DEFAULT_SELECT_PLAN_CACHE_CAP as u64,
+        16,
+        1_000_000,
+    ) as usize
+}
+
+/// `UDB_CDC_JOURNAL_SWEEP_MAX_ROWS` (default 100000, 1000..=100_000_000).
+pub fn cdc_journal_sweep_max_rows() -> u64 {
+    static CELL: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    cached_count(
+        &CELL,
+        CDC_JOURNAL_SWEEP_MAX_ROWS_ENV,
+        DEFAULT_CDC_JOURNAL_SWEEP_MAX_ROWS,
+        1_000,
+        100_000_000,
+    )
+}
+
+/// `UDB_IDEMPOTENCY_SWEEP_MAX_ROWS` (default 100000, 1000..=100_000_000).
+pub fn idempotency_sweep_max_rows() -> u64 {
+    static CELL: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    cached_count(
+        &CELL,
+        IDEMPOTENCY_SWEEP_MAX_ROWS_ENV,
+        DEFAULT_IDEMPOTENCY_SWEEP_MAX_ROWS,
+        1_000,
+        100_000_000,
+    )
+}
+
+/// `UDB_CDC_JOURNAL_DLQ_RETENTION` in seconds (default 30 days; `keep` → `None`).
+pub fn cdc_journal_dlq_retention_secs() -> Option<u64> {
+    static CELL: std::sync::OnceLock<Option<u64>> = std::sync::OnceLock::new();
+    *CELL.get_or_init(|| {
+        parse_retention_setting(
+            std::env::var(CDC_JOURNAL_DLQ_RETENTION_ENV).ok().as_deref(),
+            Some(DEFAULT_CDC_JOURNAL_DLQ_RETENTION_SECS),
+        )
+    })
+}
+
+#[cfg(test)]
+mod limit_setting_tests {
+    use super::*;
+
+    #[test]
+    fn count_settings_clamp_and_fall_back() {
+        assert_eq!(parse_count_setting(None, 1024, 16, 100), 1024);
+        assert_eq!(parse_count_setting(Some(" 64 "), 1024, 16, 100), 64);
+        assert_eq!(parse_count_setting(Some("2"), 1024, 16, 100), 16);
+        assert_eq!(parse_count_setting(Some("5000"), 1024, 16, 100), 100);
+        assert_eq!(parse_count_setting(Some("lots"), 1024, 16, 100), 1024);
+    }
+
+    #[test]
+    fn retention_settings_take_durations_or_keep() {
+        let month = Some(30 * 86_400);
+        assert_eq!(parse_retention_setting(None, month), month);
+        assert_eq!(parse_retention_setting(Some("7d"), month), Some(7 * 86_400));
+        assert_eq!(
+            parse_retention_setting(Some("12h"), month),
+            Some(12 * 3_600)
+        );
+        assert_eq!(parse_retention_setting(Some("keep"), month), None);
+        assert_eq!(parse_retention_setting(Some("soon"), month), month);
+    }
 }
 
 /// Merge `source` (file config) into `base` (defaults), returning the result.

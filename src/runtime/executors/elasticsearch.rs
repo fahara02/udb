@@ -75,9 +75,34 @@ impl ElasticsearchHttpClient {
         auth: ElasticsearchAuth,
         timeout: Duration,
     ) -> Self {
-        let http = HttpClientSpec::with_timeout(timeout).build();
+        let base_url = base_url.into().trim_end_matches('/').to_string();
+        // Basic auth (`http://user:pass@host`) and API keys go out on every
+        // request. With UDB_OUTBOUND_TLS_REQUIRED on (production default) a
+        // non-loopback http:// base gets an https-only client, so no request
+        // carries the credentials in plaintext.
+        let sends_secrets = !matches!(auth, ElasticsearchAuth::None);
+        let https_only = crate::runtime::transport_policy::https_only_for(&base_url, sends_secrets);
+        if sends_secrets
+            && base_url.starts_with("http://")
+            && !crate::runtime::transport_policy::is_local_url(&base_url)
+        {
+            if https_only {
+                tracing::error!(
+                    "UDB_ELASTIC_DSN sends credentials over plaintext http:// to a non-loopback \
+                     host while UDB_OUTBOUND_TLS_REQUIRED is on — all requests will fail. Use \
+                     https://, or set UDB_OUTBOUND_TLS_REQUIRED=false"
+                );
+            } else {
+                tracing::warn!(
+                    "UDB_ELASTIC_DSN sends credentials over plaintext http://; use https://"
+                );
+            }
+        }
+        let http = HttpClientSpec::with_timeout(timeout)
+            .https_only(https_only)
+            .build();
         Self {
-            base_url: base_url.into().trim_end_matches('/').to_string(),
+            base_url,
             auth,
             http,
         }

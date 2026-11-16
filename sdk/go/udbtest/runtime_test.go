@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/fahara02/udb/sdk/go/udbtest"
 	"github.com/fahara02/udb/sdk/go/udbtest/conformance"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -65,6 +67,13 @@ func TestDescriptorFakeRunsTheEntireSharedContract(t *testing.T) {
     resource: udb.core.storage.entity.v1.File
     purpose: test
     required_scopes: [udb:write, udb:read]
+  # The broker authorizes every transaction mutation before it checks keys, so
+  # the keyed-outbox refusal case needs the outbox write to be permitted.
+  - id: typed-table-outbox-test
+    action: EnqueueOutboxEvent
+    resource: udb.conformance.v1
+    purpose: test
+    required_scopes: [udb:write]
 `)
 	connect := func(t testing.TB, tenant string) *udbclient.Udb { return fake.Client(t, tenant) }
 	conformance.RunTable(t, connect)
@@ -413,5 +422,66 @@ func TestFakeInjectsCredentialRefreshFailureThroughTheRealSDK(t *testing.T) {
 	}
 	if errors.Is(u.CredentialErr(), context.Canceled) {
 		t.Fatal("refresh failed only because test context ended")
+	}
+}
+
+// checkedFileDescriptors is the File set with the status column declaring
+// enumValues, so its CHECK lists them.
+func checkedFileDescriptors(t testing.TB, enumValues []string) *descriptorpb.FileDescriptorSet {
+	t.Helper()
+	set := fileDescriptors(&storagev1.File{})
+	for _, file := range set.GetFile() {
+		for _, message := range file.GetMessageType() {
+			if message.GetName() != "File" || file.GetPackage() != "udb.core.storage.entity.v1" {
+				continue
+			}
+			for _, field := range message.GetField() {
+				if field.GetName() != "status" {
+					continue
+				}
+				column := proto.Clone(proto.GetExtension(field.GetOptions(), commonv1.E_PgColumn).(*commonv1.ColumnOptions)).(*commonv1.ColumnOptions)
+				column.EnumValues = enumValues
+				proto.SetExtension(field.Options, commonv1.E_PgColumn, column)
+				return set
+			}
+		}
+	}
+	t.Fatal("File.status not found")
+	return nil
+}
+
+func TestDescriptorFakeStoresTheDeclaredEnumFormAndEnforcesItsCheck(t *testing.T) {
+	for _, declared := range [][]string{{"FILE_STATUS_PENDING", "FILE_STATUS_ACTIVE"}, {"PENDING", "ACTIVE"}} {
+		fake := fakeFromPolicy(t, checkedFileDescriptors(t, declared), `policies:
+  - id: checked
+    action: '*'
+    resource: udb.core.storage.entity.v1.File
+    purpose: test
+    required_scopes: [udb:write, udb:read]
+`)
+		tenant := conformance.NewID()
+		files := udbclient.TableOf[*storagev1.File](fake.Client(t, tenant))
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		row := &storagev1.File{FileId: conformance.NewID(), Filename: "checked.pdf", ObjectKey: "checked/" + conformance.NewID(), Status: storagev1.FileStatus_FILE_STATUS_PENDING}
+		if err := files.Insert(ctx, row); err != nil {
+			cancel()
+			t.Fatalf("%v: a declared value must be accepted: %v", declared, err)
+		}
+		for _, stored := range fake.Rows("udb.core.storage.entity.v1.File", tenant) {
+			if stored["file_id"] == row.GetFileId() && stored["status"] != declared[0] {
+				t.Errorf("%v: stored %v, want the declared form %q", declared, stored["status"], declared[0])
+			}
+		}
+		got, err := files.Get(ctx, udbclient.RowKey{"file_id": row.GetFileId()})
+		if err != nil || got.GetStatus() != storagev1.FileStatus_FILE_STATUS_PENDING {
+			t.Errorf("%v: the declared form must read back as the enum value: %v, %v", declared, got, err)
+		}
+		// Negative: a value outside the list breaks the CHECK, as on the broker.
+		deleted := &storagev1.File{FileId: conformance.NewID(), Filename: "x.pdf", ObjectKey: "checked/" + conformance.NewID(), Status: storagev1.FileStatus_FILE_STATUS_DELETED}
+		err = files.Insert(ctx, deleted)
+		cancel()
+		if status.Code(err) != codes.FailedPrecondition || !strings.Contains(err.Error(), "breaks constraint chk_files_status_enum") {
+			t.Errorf("%v: a value outside enum_values must break the CHECK, got %v", declared, err)
+		}
 	}
 }

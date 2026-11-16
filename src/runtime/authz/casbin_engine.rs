@@ -711,17 +711,21 @@ impl AuthzSnapshot {
     }
 }
 
-/// Upper bound on cached enforcers (item 16). Eviction past the cap removes
-/// ONLY the least-recently-used entry — never the whole cache — so a burst of
+/// Upper bound on cached enforcers (item 16): `UDB_AUTHZ_ENFORCER_CACHE_CAP`
+/// (default 1024), read once at first use. Eviction past the cap removes ONLY
+/// the least-recently-used entry — never the whole cache — so a burst of
 /// distinct policy sets cannot evict every hot enforcer at once.
-const ENFORCER_CACHE_CAP: usize = 256;
+fn enforcer_cache_cap() -> usize {
+    crate::runtime::config::authz_enforcer_cache_cap()
+}
 
 /// Bound uninterrupted policy loading for operator models and cold caches.
 const POLICY_LOAD_YIELD_INTERVAL: usize = 64;
 
 /// Minimal bounded LRU. `tick` is a monotonic use counter: lookups and inserts
 /// stamp the entry, and a capacity-exceeding insert evicts the smallest stamp.
-/// Eviction is O(cap) but cap is small (256) and inserts are cache misses only.
+/// Eviction is O(cap) (the cap defaults to 1024) and runs only on a cache
+/// miss at capacity, which builds an enforcer anyway (far costlier).
 /// Generic over the value so the eviction logic is unit-testable without
 /// constructing real `Enforcer`s.
 struct LruCache<V> {
@@ -773,7 +777,7 @@ impl<V: Clone> LruCache<V> {
 
 fn enforcer_cache() -> &'static tokio::sync::Mutex<LruCache<Arc<Enforcer>>> {
     static CACHE: OnceLock<tokio::sync::Mutex<LruCache<Arc<Enforcer>>>> = OnceLock::new();
-    CACHE.get_or_init(|| tokio::sync::Mutex::new(LruCache::new(ENFORCER_CACHE_CAP)))
+    CACHE.get_or_init(|| tokio::sync::Mutex::new(LruCache::new(enforcer_cache_cap())))
 }
 
 /// Test-only visibility into cache effectiveness: monotonic hit counter, so a
@@ -1490,6 +1494,20 @@ m = (p.dom == "*" || r.dom == p.dom)
                 "recent key p{i} must not be dropped by older inserts"
             );
         }
+    }
+
+    /// The enforcer cache cap is a setting with a 1024 default, not a
+    /// hardcoded 256.
+    #[test]
+    fn enforcer_cache_cap_is_a_setting() {
+        let cap = enforcer_cache_cap();
+        if std::env::var(crate::runtime::config::AUTHZ_ENFORCER_CACHE_CAP_ENV).is_err() {
+            assert_eq!(
+                cap,
+                crate::runtime::config::DEFAULT_AUTHZ_ENFORCER_CACHE_CAP
+            );
+        }
+        assert!(cap >= 16);
     }
 
     /// Item 17: the steady-state decision path serves the SAME cached model

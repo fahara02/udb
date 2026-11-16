@@ -1729,6 +1729,13 @@ def requires_service_account_perf_identity(client_cls, method_name: str) -> bool
         "ExchangeServiceTokenForTenant", "ListOwnTenantMemberships")
 
 
+def requires_delegating_service_perf_identity(client_cls, method_name: str) -> bool:
+    """ExchangeTokenForJob is callable only by a service account presenting its
+    own bearer whose ACTIVE grant holds ``udb:token:delegate``, in the tenant of
+    the user token it exchanges (the benchmark user's ``token`` seed)."""
+    return client_cls is AuthnServiceClient and method_name == "ExchangeTokenForJob"
+
+
 def test_platform_perf_identity_routing_is_narrow():
     assert requires_platform_perf_identity(DataBrokerClient, "ListProjects")
     assert requires_platform_perf_identity(AnalyticsServiceClient, "GetExecutorPerformance")
@@ -1748,6 +1755,13 @@ def test_platform_perf_identity_routing_is_narrow():
                  "Login", "ValidateToken"):
         assert not requires_service_account_perf_identity(AuthnServiceClient, name)
     assert not requires_service_account_perf_identity(DataBrokerClient, "ListProjects")
+    assert requires_delegating_service_perf_identity(AuthnServiceClient, "ExchangeTokenForJob")
+    assert not requires_service_account_perf_identity(AuthnServiceClient, "ExchangeTokenForJob")
+    assert not requires_platform_perf_identity(AuthnServiceClient, "ExchangeTokenForJob")
+    for name in ("ExchangeServiceTokenForTenant", "ListOwnTenantMemberships",
+                 "CreateServiceAccountGrant", "Login", "ValidateToken"):
+        assert not requires_delegating_service_perf_identity(AuthnServiceClient, name)
+    assert not requires_delegating_service_perf_identity(DataBrokerClient, "ExchangeTokenForJob")
 
 
 def test_timeseries_benchmark_body_keeps_resource_authority():
@@ -2589,6 +2603,15 @@ MEMBERSHIP_FIXTURE_KEYS = (
     "membership_exchange_project_id",
 )
 
+#: The delegating service account `scripts/prepare-benchmark-fixtures.py`
+#: provisions for ExchangeTokenForJob (same list in every harness): a service
+#: account in the bench tenant whose ACTIVE grant holds ``udb:token:delegate``.
+#: Its password is ``UDB_LIVE_PASSWORD`` and is never written to the file.
+DELEGATE_FIXTURE_KEYS = (
+    "delegate_service_username",
+    "delegate_service_project_id",
+)
+
 #: The 0.6.6 identity-flow bench-body fixtures (tenant auth policy, passwordless
 #: sign-in, invitations, step-up, OIDC) `scripts/prepare-benchmark-fixtures.py`
 #: provisions (same list in every harness): single-use codes, invitation accept
@@ -2653,6 +2676,12 @@ def perf_seed(
         # Per-tenant service-account membership fixtures; absent when the
         # benchmark broker predates tenant memberships (0.6.4).
         for key in MEMBERSHIP_FIXTURE_KEYS:
+            value = prepared.get("fixtures", {}).get(key)
+            if isinstance(value, str) and value:
+                fix.set(key, value)
+        # The bench-tenant delegating service for ExchangeTokenForJob; absent
+        # when the prepared fixtures predate delegated job tokens.
+        for key in DELEGATE_FIXTURE_KEYS:
             value = prepared.get("fixtures", {}).get(key)
             if isinstance(value, str) and value:
                 fix.set(key, value)
@@ -4658,6 +4687,7 @@ def test_live_perf():
     clients = {}
     platform_clients = {}
     service_account_state: dict = {"resolved": False, "client": None, "meta": None}
+    delegate_service_state: dict = {"resolved": False, "client": None, "meta": None}
     seed_cleanup = lambda: None
     try:
         target = required_env("UDB_GRPC_TARGET")
@@ -4874,6 +4904,52 @@ def test_live_perf():
             service_account_state["meta"] = sa_meta
             return service_account_state["client"], sa_meta
 
+        # ExchangeTokenForJob is callable only by a service account presenting
+        # its own bearer whose ACTIVE grant holds udb:token:delegate, in the
+        # bench tenant. The prepared fixtures name such an account
+        # (delegate_service_username, password UDB_LIVE_PASSWORD); the row's
+        # subject_token is the benchmark user's current `token` seed. Built
+        # lazily like the caller above; when the fixture is absent or the login
+        # fails the row is measured with the ordinary client and fails honestly.
+        def delegate_service_caller():
+            if delegate_service_state["resolved"]:
+                return delegate_service_state["client"], delegate_service_state["meta"]
+            delegate_service_state["resolved"] = True
+            username = fixtures.m.get("delegate_service_username", "")
+            if not username:
+                print("[PERF-NOTE] delegating-service bench caller: prepared fixture "
+                      "delegate_service_username is absent; measuring with the tenant admin", flush=True)
+                return None, None
+            bench_meta = replace(
+                metadata(),
+                tenant_id=authed_meta.tenant_id,
+                project_id=fixtures.m.get("delegate_service_project_id", "") or authed_meta.project_id,
+                client_catalog_version="",
+            )
+            try:
+                ds_login = auth.login(
+                    username,
+                    required_env("UDB_LIVE_PASSWORD"),
+                    device_name="python-sdk-perf-delegating-service",
+                    metadata=bench_meta,
+                )
+                ds_principal = auth.authenticate_bearer(ds_login.access_token, metadata=bench_meta).principal
+            except Exception as exc:  # noqa: BLE001 - logged; the row then fails honestly
+                print(f"[PERF-NOTE] delegating-service bench caller: login failed: {exc}", flush=True)
+                return None, None
+            ds_meta = replace(
+                metadata(bearer_token=ds_login.access_token),
+                tenant_id=ds_principal.tenant_id,
+                project_id=ds_principal.project_id,
+                user_id=ds_principal.user_id,
+                service_identity=ds_principal.service_identity,
+                scopes=tuple(ds_principal.scopes),
+                client_catalog_version="",
+            )
+            delegate_service_state["client"] = AuthnServiceClient(auth_target, ds_meta, timeout=20.0)
+            delegate_service_state["meta"] = ds_meta
+            return delegate_service_state["client"], ds_meta
+
         def iters_for(kind):
             return 10 if kind == "read_only" else 1
 
@@ -4888,6 +4964,9 @@ def test_live_perf():
             if (requires_service_account_perf_identity(client_cls, method.name)
                     and service_account_state["meta"] is not None):
                 call_meta = service_account_state["meta"]
+            elif (requires_delegating_service_perf_identity(client_cls, method.name)
+                    and delegate_service_state["meta"] is not None):
+                call_meta = delegate_service_state["meta"]
             elif not requires_platform_perf_identity(client_cls, method.name):
                 call_meta = authed_meta
             rpc_callable = getattr(client.stub, method.name)
@@ -4952,6 +5031,10 @@ def test_live_perf():
                 sa_client, sa_meta = service_account_caller()
                 if sa_client is not None:
                     client, call_meta = sa_client, sa_meta
+            elif requires_delegating_service_perf_identity(client_cls, method.name):
+                ds_client, ds_meta = delegate_service_caller()
+                if ds_client is not None:
+                    client, call_meta = ds_client, ds_meta
             streaming = method.client_streaming or method.server_streaming
             if is_cdc_subscription(client_cls, method):
                 kind, n = "cdc_first_event", 1
@@ -5013,5 +5096,7 @@ def test_live_perf():
             c.close()
         if service_account_state["client"] is not None:
             service_account_state["client"].close()
+        if delegate_service_state["client"] is not None:
+            delegate_service_state["client"].close()
 
     write_python_perf_report(samples, fixtures, authed_meta)

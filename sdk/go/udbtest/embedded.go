@@ -28,24 +28,79 @@ import (
 // Each call owns a temporary project and separate loopback ports. PostgreSQL
 // downloads use the ordinary shared cache or UDB_HOME, including configured
 // UDB_POSTGRES_BINARIES_URL mirrors and UDB_EMBEDDED_PG_ARCHIVE offline archives.
-func Start(t testing.TB, protoRoot, policyFile string) *udbclient.Udb {
+// An optional StartOptions changes how the broker starts.
+func Start(t testing.TB, protoRoot, policyFile string, options ...StartOptions) *udbclient.Udb {
 	t.Helper()
-	first, _ := start(t, protoRoot, policyFile, false)
+	first, _ := start(t, protoRoot, policyFile, false, mergeStartOptions(options))
 	return first
 }
 
 // StartPair starts one isolated embedded broker with two independently
 // provisioned tenant administrators, for the full shared isolation contract.
-func StartPair(t testing.TB, protoRoot, policyFile string) (*udbclient.Udb, *udbclient.Udb) {
+func StartPair(t testing.TB, protoRoot, policyFile string, options ...StartOptions) (*udbclient.Udb, *udbclient.Udb) {
 	t.Helper()
-	return start(t, protoRoot, policyFile, true)
+	return start(t, protoRoot, policyFile, true, mergeStartOptions(options))
+}
+
+// StartOptions changes how Start and StartPair start the broker.
+type StartOptions struct {
+	// ApproveReviewRequired approves the migration work the broker marks
+	// review-required, so a fresh cluster starts: `udb plan --emit-approval-plan`
+	// writes the plan before `dev up`, and the broker reads it through
+	// UDB_MIGRATION_APPROVAL_PLAN. Off by default: a test that does not ask for it
+	// sees the same refusal a production deploy would.
+	ApproveReviewRequired bool
+}
+
+func mergeStartOptions(options []StartOptions) StartOptions {
+	var merged StartOptions
+	for _, option := range options {
+		merged.ApproveReviewRequired = merged.ApproveReviewRequired || option.ApproveReviewRequired
+	}
+	return merged
+}
+
+// approvalPlanArgs are the udb arguments that write the approval plan for the
+// current schema.
+func approvalPlanArgs(planFile string) []string {
+	return []string{"plan", "--emit-approval-plan", planFile}
+}
+
+// embeddedEnvironment is the child environment: the caller's environment
+// without another project's listeners, database DSNs or credentials (every UDB_*
+// variable and DATABASE_URL), then the acquisition settings isolated brokers may
+// share, the proto root and, when given, the approval plan.
+func embeddedEnvironment(source []string, protoRoot, approvalPlan string) []string {
+	environment := make([]string, 0, len(source)+8)
+	shared := map[string]string{}
+	for _, value := range source {
+		key, rest, _ := strings.Cut(value, "=")
+		upper := strings.ToUpper(key)
+		if !strings.HasPrefix(upper, "UDB_") && upper != "DATABASE_URL" {
+			environment = append(environment, value)
+		}
+		switch upper {
+		case "UDB_HOME", "UDB_POSTGRES_BINARIES_URL", "UDB_EMBEDDED_PG_ARCHIVE":
+			shared[upper] = rest
+		}
+	}
+	for _, key := range []string{"UDB_HOME", "UDB_POSTGRES_BINARIES_URL", "UDB_EMBEDDED_PG_ARCHIVE"} {
+		if value, ok := shared[key]; ok {
+			environment = append(environment, key+"="+value)
+		}
+	}
+	environment = append(environment, "UDB_PROTO_ROOT="+protoRoot)
+	if approvalPlan != "" {
+		environment = append(environment, "UDB_MIGRATION_APPROVAL_PLAN="+approvalPlan)
+	}
+	return environment
 }
 
 // authzReloadInterval is the broker's shortest shared authz snapshot reload
 // period (UDB_AUTHZ_SNAPSHOT_TTL_SECS, floored at 5 seconds for the warmer).
 const authzReloadInterval = 5 * time.Second
 
-func start(t testing.TB, protoRoot, policyFile string, withPeer bool) (*udbclient.Udb, *udbclient.Udb) {
+func start(t testing.TB, protoRoot, policyFile string, withPeer bool, options StartOptions) (*udbclient.Udb, *udbclient.Udb) {
 	t.Helper()
 	binary := os.Getenv("UDB_TEST_BINARY")
 	if binary == "" {
@@ -76,20 +131,24 @@ func start(t testing.TB, protoRoot, policyFile string, withPeer bool) (*udbclien
 	}
 	// Avoid inheriting another project's listeners, database DSNs or credentials.
 	// Acquisition settings alone may be shared between isolated test brokers.
-	environment := make([]string, 0, len(os.Environ())+8)
-	for _, value := range os.Environ() {
-		key, _, _ := strings.Cut(value, "=")
-		upper := strings.ToUpper(key)
-		if !strings.HasPrefix(upper, "UDB_") && upper != "DATABASE_URL" {
-			environment = append(environment, value)
+	environment := embeddedEnvironment(os.Environ(), protoRoot, "")
+	approvalPlan := ""
+	if options.ApproveReviewRequired {
+		// A fresh cluster can hold review-required work, which the broker runs
+		// only under an approved plan. Write that plan with the same binary and
+		// proto root, before the broker that reads it starts.
+		approvalPlan = filepath.Join(project, "approval.json")
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		plan := exec.CommandContext(ctx, binary, approvalPlanArgs(approvalPlan)...)
+		var output strings.Builder
+		plan.Dir, plan.Env, plan.Stdout, plan.Stderr = project, environment, &output, &output
+		err := plan.Run()
+		cancel()
+		if err != nil {
+			t.Fatalf("udbtest.Start: write the approval plan: %v: %s", err, output.String())
 		}
+		environment = embeddedEnvironment(os.Environ(), protoRoot, approvalPlan)
 	}
-	for _, key := range []string{"UDB_HOME", "UDB_POSTGRES_BINARIES_URL", "UDB_EMBEDDED_PG_ARCHIVE"} {
-		if value, ok := os.LookupEnv(key); ok {
-			environment = append(environment, key+"="+value)
-		}
-	}
-	environment = append(environment, "UDB_PROTO_ROOT="+protoRoot)
 	// Hold reservations until every port is selected, so listeners in the same
 	// child cannot accidentally receive the same ephemeral port.
 	var reservations []net.Listener

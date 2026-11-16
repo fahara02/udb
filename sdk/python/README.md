@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.20 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.6.21 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,13 +18,13 @@ every broker RPC, and a version-matched `udb` CLI launcher.
 ## Install
 
 ```bash
-pip install udb-client==0.6.20
+pip install udb-client==0.6.21
 ```
 
 Optional validated command models:
 
 ```bash
-pip install "udb-client[pydantic]==0.6.20"
+pip install "udb-client[pydantic]==0.6.21"
 ```
 
 Runtime: Python 3.10+
@@ -150,6 +150,23 @@ with UdbClient("127.0.0.1:50051", meta) as udb:
         limit=1,
     )
     print(decode_records(rows))
+```
+
+### Several reads in one call
+
+`select_many` sends several reads, across tables, over one `BatchSelect` stream. The
+broker runs them concurrently and returns the results in request order; one failing
+read raises. `UdbAsyncProject.select_many` is the async form.
+
+```python
+from udb.entity.v1 import types_pb2
+from udb_client import decode_records, to_struct
+
+visit, drafts = project.select_many([
+    types_pb2.SelectRequest(message_type="acme.visits.entity.v1.Visit", filter=to_struct({"visit_id": visit_id}), limit=1),
+    types_pb2.SelectRequest(message_type="acme.visits.entity.v1.Draft", filter=to_struct({"visit_id": visit_id})),
+])
+print(decode_records(visit)[0], len(decode_records(drafts)))
 ```
 
 ## Async
@@ -449,6 +466,32 @@ The generated protobuf modules are included for request/response types:
 from udb.entity.v1 import types_pb2
 from udb.services.v1 import data_broker_pb2_grpc
 ```
+
+## Testing with the real embedded broker
+
+`udbtest.start(proto_root, policy_file)` starts an installed embedded-capable
+UDB binary with PostgreSQL and logs in as its bootstrapped administrator; use the
+result as a context manager, and `broker.client` as the authenticated client.
+`udbtest.start_pair` adds a second, independently provisioned tenant. Set
+`UDB_TEST_BINARY` to select a CI build; otherwise `udb` on PATH is used.
+
+A fresh cluster can hold migration work the broker marks review-required, and
+the broker refuses to run it without an approved plan
+(`migration.require_approval_plan`). Pass `approve_review_required=True` to
+approve it for the test: the helper runs
+`udb plan --emit-approval-plan <project>/approval.json` with the same binary and
+proto root before `dev up`, and passes the file to the broker as
+`UDB_MIGRATION_APPROVAL_PLAN`. It is off by default, so a test sees the refusal
+a production deploy would.
+
+```python
+with udbtest.start("./proto", approve_review_required=True) as broker:
+    files = broker.client.entity("udb.core.storage.entity.v1.File")
+```
+
+The in-memory fake (`udbtest.new_fake`) enforces partial unique indexes whose
+predicate is an `AND` of `col IS [NOT] NULL` and `col = | <> | != 'literal'`
+terms; any other predicate is refused, so use `start()` for it.
 
 ## Local SDK Development
 

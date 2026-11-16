@@ -122,6 +122,12 @@ reasons! {
     AUTHENTICATION_FAILED = "UDB_AUTHENTICATION_FAILED", Policy, Unauthenticated,
         "The request could not be authenticated; policy_decision_id identifies the refusal.",
         "Authenticate again and send a valid credential for this listener.";
+    TOKEN_EXPIRED = "UDB_TOKEN_EXPIRED", Policy, Unauthenticated,
+        "The access token's expiry (exp) has passed, beyond the allowed clock skew.",
+        "Refresh the token (or sign in again) and repeat the request; a delegated job token cannot be refreshed, so ask the service to mint a new one from a fresh user token.";
+    TOKEN_REVOKED = "UDB_TOKEN_REVOKED", Policy, Unauthenticated,
+        "The access token is no longer backed by live state: its jti, session or refresh family was revoked, its user or tenant was revoked or deactivated, or (for a delegated token) the acting service lost its grant or udb:token:delegate.",
+        "Sign in again; do not retry with the same token. For a delegated job token, mint a new one only if the user and the service are still allowed to act.";
     POLICY_REFUSED = "UDB_POLICY_REFUSED", Policy, FailedPrecondition,
         "A policy precondition refused the request; policy_decision_id identifies the decision.",
         "Satisfy the named policy decision before repeating the request.";

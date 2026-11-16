@@ -21,7 +21,9 @@
 //!
 //! The compiler reads `ctx.tenant_id` / `ctx.project_id` from
 //! `CompileContext` and ANDs them into every `bool/must` clause as
-//! `term` predicates on `_tenant_id` / `_project_id`. Writes stamp
+//! `term` predicates on `_tenant_id` / `_project_id` (reads use a
+//! `terms` tenant clause that also matches the shared marker carried by
+//! shared reference documents; deletes stay exact). Writes stamp
 //! the same fields onto each document so the read-side predicate
 //! has something to match. Mirrors the Mongo / Neo4j / Qdrant
 //! enforcement model — Elasticsearch is `Enforced` from day one.
@@ -37,6 +39,7 @@ use crate::ir::operations::{
 };
 use crate::ir::value::LogicalValue;
 
+use super::util::TenantMatch;
 use super::{CompileContext, CompileError, CompiledRendering, Compiler, HttpMethod};
 
 /// Elasticsearch Query DSL compiler.
@@ -208,18 +211,28 @@ impl ElasticsearchCompiler {
     /// AND the active request context (tenant/project) into a query.
     /// C7/C8: tenant boundary protocol-enforced at the ES layer; reads
     /// can't cross tenants even with a permissive user filter.
+    ///
+    /// `tenant_match` decides the tenant clause: reads use
+    /// `terms: { _tenant_id: [tid, "*shared*"] }` so shared reference
+    /// documents are visible to every tenant; deletes keep the exact `term`.
     fn and_with_context(
         &self,
         user_query: Json,
         table: &ManifestTable,
         ctx: &CompileContext<'_>,
+        tenant_match: TenantMatch,
     ) -> Json {
         let mut ctx_terms: Vec<Json> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
             && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            ctx_terms.push(json!({ "term": { column: tid } }));
+            ctx_terms.push(match tenant_match {
+                TenantMatch::Exact => json!({ "term": { column: tid } }),
+                TenantMatch::CallerOrShared => {
+                    json!({ "terms": { column: super::util::shared_read_tenants(tid) } })
+                }
+            });
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
@@ -254,7 +267,7 @@ impl Compiler for ElasticsearchCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => json!({ "match_all": {} }),
         };
-        let query = self.and_with_context(user_query, table, ctx);
+        let query = self.and_with_context(user_query, table, ctx, TenantMatch::CallerOrShared);
         let mut body = json!({ "query": query });
 
         // _source projection.
@@ -330,6 +343,7 @@ impl Compiler for ElasticsearchCompiler {
             });
         }
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Elasticsearch)?;
         let index = Self::index_for(table);
 
         // Validate every field name once.
@@ -413,6 +427,7 @@ impl Compiler for ElasticsearchCompiler {
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Elasticsearch)?;
         let index = Self::index_for(table);
         let user_query = self.render_filter(&op.filter, table, &op.message_type)?;
         // Refuse empty / match-all to avoid wiping the index.
@@ -424,7 +439,7 @@ impl Compiler for ElasticsearchCompiler {
         }
         // C7/C8: AND the tenant predicate so a permissive caller
         // filter can't delete another tenant's documents.
-        let query = self.and_with_context(user_query, table, ctx);
+        let query = self.and_with_context(user_query, table, ctx, TenantMatch::Exact);
         Ok(CompiledRendering::Json {
             backend: BackendKind::Elasticsearch,
             method: HttpMethod::Post,
@@ -460,7 +475,7 @@ impl Compiler for ElasticsearchCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => json!({ "match_all": {} }),
         };
-        let query = self.and_with_context(user_query, table, ctx);
+        let query = self.and_with_context(user_query, table, ctx, TenantMatch::CallerOrShared);
 
         // Build the `aggs` block. When `group_by` is non-empty, wrap
         // every aggregate inside a `terms` bucket over the first
@@ -563,6 +578,7 @@ impl Compiler for ElasticsearchCompiler {
             user_query.unwrap_or_else(|| json!({ "match_all": {} })),
             table,
             ctx,
+            TenantMatch::CallerOrShared,
         );
 
         let has_vector = op.vector.is_some();
@@ -939,10 +955,14 @@ mod tests {
         let must = body["query"]["bool"]["must"]
             .as_array()
             .expect("must array");
-        // [0] = user query (match_all), [1] = tenant term, [2] = project term
+        // [0] = user query (match_all), [1] = tenant terms (caller OR the
+        // shared marker), [2] = project term
         assert_eq!(must.len(), 3);
         assert_eq!(must[0]["match_all"], json!({}));
-        assert_eq!(must[1]["term"]["_tenant_id"], "acme");
+        assert_eq!(
+            must[1]["terms"]["_tenant_id"],
+            json!(["acme", crate::broker::SHARED_TENANT_MARKER])
+        );
         assert_eq!(must[2]["term"]["_project_id"], "p1");
     }
 
@@ -965,6 +985,13 @@ mod tests {
         assert!(ndjson.contains("\"_index\":\"documents\""));
         assert!(ndjson.contains("\"_id\":\"acme:doc1\""));
         assert!(ndjson.contains("\"_tenant_id\":\"acme\""));
+
+        let marker = CompileContext::new(&m).with_tenant(crate::broker::SHARED_TENANT_MARKER);
+        assert!(
+            ElasticsearchCompiler
+                .compile_write(&write, &marker)
+                .is_err()
+        );
     }
 
     #[test]
@@ -984,7 +1011,13 @@ mod tests {
         assert_eq!(path, "/documents/_delete_by_query");
         let must = body["query"]["bool"]["must"].as_array().expect("must");
         assert_eq!(must[0]["term"]["id"], "doc1");
+        // Deletes stay strict to the caller's own tenant.
         assert_eq!(must[1]["term"]["_tenant_id"], "acme");
+        assert!(must[1].get("terms").is_none());
+
+        // The shared marker can never be a write or delete scope.
+        let marker = CompileContext::new(&m).with_tenant(crate::broker::SHARED_TENANT_MARKER);
+        assert!(ElasticsearchCompiler.compile_delete(&del, &marker).is_err());
     }
 
     #[test]

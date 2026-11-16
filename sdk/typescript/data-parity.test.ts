@@ -20,6 +20,8 @@ import {
   consume,
   inspect,
   isCasConflict,
+  isTokenExpired,
+  isTokenRevoked,
   missingScope,
   tx,
 } from "./stores";
@@ -68,6 +70,19 @@ test("missingScope names the scope only for a missing-scope failure", () => {
   assert.equal(missingScope(failure(7, { reason: "UDB_SCOPE_MISSING", missing: { scope: "udb:pii:read" } })), "udb:pii:read");
   assert.equal(missingScope(failure(7, { reason: "UDB_POLICY_DENIED", missing: { rule: "x" } })), "");
   assert.equal(missingScope(new Error("plain")), "");
+});
+
+test("an expired or revoked bearer is told apart by its reason and stays unauthenticated", () => {
+  const expired = failure(16, { kind: 2, reason: "UDB_TOKEN_EXPIRED" });
+  const revoked = failure(16, { kind: 2, reason: "UDB_TOKEN_REVOKED" });
+  assert.equal(codeOf(expired), ErrorCode.Unauthenticated);
+  assert.equal(codeOf(revoked), ErrorCode.Unauthenticated);
+  assert.equal(isTokenExpired(expired), true);
+  assert.equal(isTokenRevoked(expired), false);
+  assert.equal(isTokenRevoked(revoked), true);
+  assert.equal(isTokenExpired(revoked), false);
+  assert.equal(isTokenExpired(failure(16, { kind: 2, reason: "UDB_AUTHENTICATION_FAILED" })), false);
+  assert.equal(isTokenExpired(new Error("UDB_TOKEN_EXPIRED")), false, "text is never matched");
 });
 
 test("inspect follows reason, then kind except validation, then the sentinel, then the code", () => {

@@ -152,8 +152,7 @@ var File_udb_core_webrtc_entity_v1_room_proto protoreflect.FileDescriptor
 
 const file_udb_core_webrtc_entity_v1_room_proto_rawDesc = "" +
 	"\n" +
-	"$udb/core/webrtc/entity/v1/room.proto\x12\x19udb.core.webrtc.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/webrtc/entity/v1/enums.proto\"\xf9\n" +
-	"\n" +
+	"$udb/core/webrtc/entity/v1/room.proto\x12\x19udb.core.webrtc.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/webrtc/entity/v1/enums.proto\"\x86\v\n" +
 	"\x04Room\x12C\n" +
 	"\aroom_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\aroom_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06roomId\x127\n" +
@@ -186,10 +185,10 @@ const file_udb_core_webrtc_entity_v1_room_proto_rawDesc = "" +
 	"\n" +
 	"deleted_by\x18\v \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xc1\x03\xfa\xb6\x18\x9f\x02\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xce\x03\xfa\xb6\x18\xac\x02\n" +
 	"\x05rooms\x12\n" +
-	"udb_webrtc\x18\x01 \x01*\x19WebRTC conferencing rooms0\x018\x01@\x01b\x96\x01\n" +
-	"\x16rooms_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01$\n" +
+	"udb_webrtc\x18\x01 \x01*\x19WebRTC conferencing rooms0\x018\x01@\x01b\xa3\x01\n" +
+	"\x16rooms_tenant_isolation\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01$\n" +
 	"\x10idx_rooms_tenant\x12\x05BTREEZ\ttenant_id\xf2\x01\x14udb.webrtc.rooms.cdc\xfa\x01\vwebrtc:read\x8a\xb2\x19\x98\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x12webrtc.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfa\x01\n" +
 	"\x1dcom.udb.core.webrtc.entity.v1B\tRoomProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x19Udb.Core.Webrtc.Entity.V1\xca\x02\x19Udb\\Core\\Webrtc\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1\xea\x02\x1dUdb::Core::Webrtc::Entity::V1b\x06proto3"

@@ -32,7 +32,7 @@ u, err := udbclient.ConnectFromEnv(ctx, "UDB_", udbclient.Expect{
 
 | Wrapper code | Replacement |
 |---|---|
-| `EncodeRecord` / `DecodeRecord` driven by the column annotations | `udbclient.EncodeRecord` / `DecodeRecord` (same rules; enums in text columns use udb's short tokens both ways) |
+| `EncodeRecord` / `DecodeRecord` driven by the column annotations | `udbclient.EncodeRecord` / `DecodeRecord` (same rules; an enum in a text column is written as the entry of the column's `enum_values` that matches it, full name or short token, or as the short token when the column declares none; reads accept either form) |
 | Annotation readers (`PrimaryKeys`, `Topic`, `OwnerColumns`, `MaxLen`, ...) | `udbclient.PrimaryKeys`, `Topic`, `PartitionKeyField`, `EventType`, `OwnerColumns`, `TenantColumn`, `ExportEligible`, `RetentionClass`, `SoftDelete`, `MaxLen`, `ApplyColumnDefaults` |
 | A store type with `Get`/`Select`/`Upsert`/`Delete` over `map[string]any` | `udbclient.TableOf[*pb.Entity]` called with your `*Udb`, or the generated `<Entity>Table` |
 | Flattening `$and` groups into a primary-key equality for CAS | `RowKey{...}` or the generated `<Entity>Key{...}.Row()`; the broker also accepts nested equalities |

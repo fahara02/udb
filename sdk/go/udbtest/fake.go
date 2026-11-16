@@ -327,6 +327,39 @@ func (f *Fake) Select(ctx context.Context, req *entityv1.SelectRequest) (*entity
 	return out, nil
 }
 
+// BatchSelect is the broker's many-reads stream: each SelectRequest is charged,
+// authorized as a Select of its own message type and answered by the same logic
+// as Select, one RecordSet per request in order. The first failing request ends
+// the stream with its error.
+func (f *Fake) BatchSelect(stream servicesv1.DataBroker_BatchSelectServer) error {
+	ctx := stream.Context()
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if err := bindBody(ctx, req.GetContext()); err != nil {
+			return err
+		}
+		if err := f.admit(ctx, "BatchSelect", req); err != nil {
+			return err
+		}
+		if err := f.authorize(ctx, req.GetMessageType(), "Select"); err != nil {
+			return err
+		}
+		out, err := f.Select(ctx, req)
+		if err != nil {
+			return err
+		}
+		if err := stream.Send(out); err != nil {
+			return err
+		}
+	}
+}
+
 // Upsert inserts or replaces a whole row by primary key.
 func (f *Fake) Upsert(ctx context.Context, req *entityv1.UpsertRequest) (*entityv1.MutationResponse, error) {
 	f.mu.Lock()
@@ -639,6 +672,8 @@ func (f *Fake) deleteLocked(identity Identity, req *entityv1.DeleteRequest) (*en
 func (f *Fake) BeginTx(stream servicesv1.DataBroker_BeginTxServer) error {
 	ctx := stream.Context()
 	var muts []*entityv1.Mutation
+	// Every frame, in stream order: the broker's guard indexes the whole stream.
+	var received []*entityv1.Mutation
 	var terminal *entityv1.Mutation
 	for {
 		m, err := stream.Recv()
@@ -651,6 +686,7 @@ func (f *Fake) BeginTx(stream servicesv1.DataBroker_BeginTxServer) error {
 		if terminal != nil {
 			return refuse(codes.InvalidArgument, "", "mutation after transaction terminal marker")
 		}
+		received = append(received, m)
 		if err := bindBody(ctx, m.GetContext()); err != nil {
 			return err
 		}
@@ -677,13 +713,6 @@ func (f *Fake) BeginTx(stream servicesv1.DataBroker_BeginTxServer) error {
 			default:
 				return refuse(codes.InvalidArgument, "", "unsupported transaction operation "+operation)
 			}
-			if strings.TrimSpace(m.GetIdempotencyKey()) != "" {
-				field := fmt.Sprintf("mutations[%d].idempotency_key", len(muts))
-				return &refusal{code: codes.InvalidArgument,
-					message: "this transaction path cannot honour idempotency_key; nothing was written",
-					detail: &entityv1.ErrorDetail{Kind: entityv1.ErrorKind_ERROR_KIND_VALIDATION,
-						FieldViolations: []*entityv1.ErrorFieldViolation{{Field: field, Description: "not supported on this operation inside BeginTx; leave it empty"}}}}
-			}
 			if err := f.authorize(ctx, resource, action); err != nil {
 				return err
 			}
@@ -702,17 +731,26 @@ func (f *Fake) BeginTx(stream servicesv1.DataBroker_BeginTxServer) error {
 	if terminal.GetRollback() {
 		return stream.Send(&entityv1.TxStatus{TxId: terminal.GetTxId(), State: entityv1.TxStatus_TX_STATE_ROLLED_BACK})
 	}
+	if err := validateTxGuards(received); err != nil {
+		return err
+	}
 	f.mu.Lock()
 	snapshot := f.snapshot()
 	revisions := make(map[revisionKey]int64, len(f.revisions))
 	for key, value := range f.revisions {
 		revisions[key] = value
 	}
+	// Receipts are written in the transaction, so a rollback drops them too.
+	receipts := make(map[mutationKey]mutationReceipt, len(f.receipts))
+	for key, value := range f.receipts {
+		receipts[key] = value
+	}
 	events := len(f.events)
 	err := f.applyTx(callerIdentity(ctx), muts)
 	if err != nil {
 		f.rows = snapshot
 		f.revisions = revisions
+		f.receipts = receipts
 		f.events = f.events[:events]
 	}
 	f.mu.Unlock()
@@ -726,40 +764,75 @@ func (f *Fake) applyTx(identity Identity, muts []*entityv1.Mutation) error {
 	for _, m := range muts {
 		var err error
 		switch m.GetOperation() {
-		case "upsert", "insert":
-			_, err = f.writeLocked(identity, &entityv1.UpsertRequest{MessageType: m.GetMessageType(), RecordJson: m.GetRecordJson(), Payload: m.GetPayload(), Expected: m.GetExpected()}, m.GetOperation() == "insert")
-		case "update":
-			_, err = f.updateLocked(identity, &entityv1.UpdateRequest{MessageType: m.GetMessageType(), Filter: m.GetFilter(), Changes: m.GetChanges(), Expected: m.GetExpected(), Increments: m.GetIncrements()})
-		case "delete":
-			_, err = f.deleteLocked(identity, &entityv1.DeleteRequest{MessageType: m.GetMessageType(), Filter: m.GetFilter(), Expected: m.GetExpected()})
-		case "enqueue_outbox_event":
-			envelope := m.GetPayload().AsMap()
-			if envelope["document_id"] != m.GetObjectKey() || m.GetObjectKey() == "" {
-				return refuse(codes.InvalidArgument, "", "outbox partition_key must equal payload.document_id")
+		case "upsert", "update", "delete":
+			if m.GetIdempotencyKey() != "" {
+				err = f.keyedTxMutationLocked(identity, m)
+				break
 			}
-			if given, ok := envelope["tenant_id"].(string); ok && given != "" && given != identity.TenantID {
-				return refuse(codes.PermissionDenied, "UDB_TENANT_MISMATCH", "outbox tenant differs from verified tenant")
-			}
-			if given, ok := envelope["project_id"].(string); ok && given != "" && given != identity.ProjectID {
-				return refuse(codes.PermissionDenied, "UDB_POLICY_DENIED", "outbox project differs from verified project")
-			}
-			if envelope["event_id"] == nil || envelope["event_type"] == nil || envelope["envelope_version"] != float64(udbclient.EventEnvelopeVersion) {
-				return refuse(codes.InvalidArgument, "", "outbox needs a versioned event envelope")
-			}
-			envelope["tenant_id"], envelope["project_id"] = identity.TenantID, identity.ProjectID
-			topic := m.GetCollection()
-			if topic == "" {
-				topic = m.GetMessageType()
-			}
-			f.events = append(f.events, Event{Topic: topic, PartitionKey: m.GetObjectKey(), Envelope: copyRow(envelope)})
+			_, err = f.applyTxMutation(identity, m)
 		default:
-			err = refuse(codes.InvalidArgument, "", "unsupported transaction operation "+m.GetOperation())
+			_, err = f.applyTxMutation(identity, m)
 		}
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// applyTxMutation applies one transaction mutation and, like the broker, checks
+// require_affected against the rows it actually matched. A mismatch refuses the
+// mutation; BeginTx then rolls the whole transaction back. A replayed keyed
+// mutation never reaches here, so a retry skips the check as on the broker.
+func (f *Fake) applyTxMutation(identity Identity, m *entityv1.Mutation) (*entityv1.MutationResponse, error) {
+	response, err := f.applyTxMutationUnchecked(identity, m)
+	if err != nil {
+		return nil, err
+	}
+	if want := m.GetRequireAffected(); want > 0 && response.GetAffectedRows() != int64(want) {
+		return nil, refuse(codes.NotFound, "UDB_NO_ROWS_AFFECTED", txRequireAffectedMessage(response.GetAffectedRows(), want))
+	}
+	return response, nil
+}
+
+// txRequireAffectedMessage is the broker's BeginTx message for a require_affected
+// miss: the enforce_require_affected text behind the rollback's compensation note.
+func txRequireAffectedMessage(affected int64, want uint32) string {
+	return fmt.Sprintf("no external compensation was needed: the write matched %d row(s) but require_affected is %d; nothing was changed", affected, want)
+}
+
+func (f *Fake) applyTxMutationUnchecked(identity Identity, m *entityv1.Mutation) (*entityv1.MutationResponse, error) {
+	switch m.GetOperation() {
+	case "upsert", "insert":
+		return f.writeLocked(identity, &entityv1.UpsertRequest{MessageType: m.GetMessageType(), RecordJson: m.GetRecordJson(), Payload: m.GetPayload(), Expected: m.GetExpected()}, m.GetOperation() == "insert")
+	case "update":
+		return f.updateLocked(identity, &entityv1.UpdateRequest{MessageType: m.GetMessageType(), Filter: m.GetFilter(), Changes: m.GetChanges(), Expected: m.GetExpected(), Increments: m.GetIncrements()})
+	case "delete":
+		return f.deleteLocked(identity, &entityv1.DeleteRequest{MessageType: m.GetMessageType(), Filter: m.GetFilter(), Expected: m.GetExpected()})
+	case "enqueue_outbox_event":
+		envelope := m.GetPayload().AsMap()
+		if envelope["document_id"] != m.GetObjectKey() || m.GetObjectKey() == "" {
+			return nil, refuse(codes.InvalidArgument, "", "outbox partition_key must equal payload.document_id")
+		}
+		if given, ok := envelope["tenant_id"].(string); ok && given != "" && given != identity.TenantID {
+			return nil, refuse(codes.PermissionDenied, "UDB_TENANT_MISMATCH", "outbox tenant differs from verified tenant")
+		}
+		if given, ok := envelope["project_id"].(string); ok && given != "" && given != identity.ProjectID {
+			return nil, refuse(codes.PermissionDenied, "UDB_POLICY_DENIED", "outbox project differs from verified project")
+		}
+		if envelope["event_id"] == nil || envelope["event_type"] == nil || envelope["envelope_version"] != float64(udbclient.EventEnvelopeVersion) {
+			return nil, refuse(codes.InvalidArgument, "", "outbox needs a versioned event envelope")
+		}
+		envelope["tenant_id"], envelope["project_id"] = identity.TenantID, identity.ProjectID
+		topic := m.GetCollection()
+		if topic == "" {
+			topic = m.GetMessageType()
+		}
+		f.events = append(f.events, Event{Topic: topic, PartitionKey: m.GetObjectKey(), Envelope: copyRow(envelope)})
+		return &entityv1.MutationResponse{AffectedRows: 1}, nil
+	default:
+		return nil, refuse(codes.InvalidArgument, "", "unsupported transaction operation "+m.GetOperation())
+	}
 }
 
 // Emit appends an event as if a transaction of tenant had committed it, for
@@ -878,6 +951,137 @@ var supportedOperators = map[string]bool{
 	"$eq": true, "$ne": true, "$gt": true, "$gte": true, "$lt": true, "$lte": true,
 	"$in": true, "$nin": true, "$between": true, "$is_null": true, "$not_null": true,
 	"$not": true, "$like": true, "$ilike": true,
+	"$contains": true, "$contained_by": true, "$overlaps": true, "$overlap": true,
+}
+
+// arrayOperators are the broker's `@>`/`<@`/`&&` filters; `$overlap` is an
+// alias of `$overlaps`.
+var arrayOperators = map[string]bool{"$contains": true, "$contained_by": true, "$overlaps": true, "$overlap": true}
+
+// On a JSON column the broker evaluates `$contains`/`$contained_by` as jsonb
+// containment. queryFilter rewrites the operator to these internal names once
+// the column is known to be JSON; validateFilter refuses them from callers.
+const (
+	jsonContainsOp    = "$contains:json"
+	jsonContainedByOp = "$contained_by:json"
+)
+
+func isJSONScalar(value any) bool {
+	switch value.(type) {
+	case map[string]any, []any:
+		return false
+	}
+	return true
+}
+
+// jsonScalarEqual is jsonb scalar equality: the same JSON type, numbers by value.
+func jsonScalarEqual(a, b any) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	_, aText := a.(string)
+	_, bText := b.(string)
+	if aText || bText {
+		return aText && bText && a.(string) == b.(string)
+	}
+	if left, right, ok := numberPair(a, b); ok {
+		return left.Cmp(right) == 0
+	}
+	if left, ok := a.(bool); ok {
+		right, ok := b.(bool)
+		return ok && left == right
+	}
+	return false
+}
+
+// jsonContains is jsonb `container @> contained`: objects by key
+// (recursively), arrays by element (each contained element is contained in
+// some container element), and, at the top level only, an array contains a
+// bare scalar it holds.
+func jsonContains(container, contained any, top bool) bool {
+	switch have := container.(type) {
+	case []any:
+		if want, ok := contained.([]any); ok {
+			for _, w := range want {
+				found := false
+				for _, h := range have {
+					if jsonContains(h, w, false) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return false
+				}
+			}
+			return true
+		}
+		if top && isJSONScalar(contained) {
+			for _, h := range have {
+				if isJSONScalar(h) && jsonScalarEqual(h, contained) {
+					return true
+				}
+			}
+		}
+		return false
+	case map[string]any:
+		want, ok := contained.(map[string]any)
+		if !ok {
+			return false
+		}
+		for key, w := range want {
+			h, present := have[key]
+			if !present || !jsonContains(h, w, false) {
+				return false
+			}
+		}
+		return true
+	}
+	return isJSONScalar(contained) && jsonScalarEqual(container, contained)
+}
+
+// elementEqual is SQL array element equality: a NULL element equals nothing.
+func elementEqual(a, b any) bool {
+	return a != nil && b != nil && equal(a, b)
+}
+
+// arrayContains is SQL array `container @> contained`.
+func arrayContains(container, contained any) bool {
+	have, ok := container.([]any)
+	want, ok2 := contained.([]any)
+	if !ok || !ok2 {
+		return false
+	}
+	for _, w := range want {
+		found := false
+		for _, h := range have {
+			if elementEqual(h, w) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// arrayOverlaps is SQL array `a && b`: the arrays share an element.
+func arrayOverlaps(a, b any) bool {
+	left, ok := a.([]any)
+	right, ok2 := b.([]any)
+	if !ok || !ok2 {
+		return false
+	}
+	for _, l := range left {
+		for _, r := range right {
+			if elementEqual(l, r) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // validateFilter refuses the shapes the broker refuses at plan time, before
@@ -1084,6 +1288,16 @@ func columnTruth(value, cond any) (filterTruth, error) {
 				pattern, text = strings.ToLower(pattern), strings.ToLower(text)
 			}
 			ok = likeMatch(text, pattern)
+		case "$contains":
+			ok = arrayContains(value, arg)
+		case "$contained_by":
+			ok = arrayContains(arg, value)
+		case "$overlaps", "$overlap":
+			ok = arrayOverlaps(value, arg)
+		case jsonContainsOp:
+			ok = jsonContains(value, arg, true)
+		case jsonContainedByOp:
+			ok = jsonContains(arg, value, true)
 		default:
 			return filterFalse, refuse(codes.InvalidArgument, "UDB_UNSUPPORTED_FILTER_OPERATOR", "unsupported filter operator "+op)
 		}

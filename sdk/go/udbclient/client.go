@@ -2,6 +2,8 @@ package udbclient
 
 import (
 	"context"
+	"fmt"
+	"io"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	servicesv1 "github.com/fahara02/udb/sdk/go/gen/udb/services/v1"
@@ -137,6 +139,51 @@ func firstNonEmptyValue(reqVal, clientVal string) string {
 
 func (c *Client) Select(ctx context.Context, req *entityv1.SelectRequest) (*entityv1.RecordSet, error) {
 	return c.Broker.Select(c.Context(ctx), req)
+}
+
+// SelectMany runs several reads, across tables, in ONE broker call
+// (BatchSelect). Every read is authorized, quota-charged and PII-checked on its
+// own; the broker runs them concurrently and the results come back in the
+// order of reqs. One failing read fails the whole call with that read's error.
+func (c *Client) SelectMany(ctx context.Context, reqs []*entityv1.SelectRequest) ([]*entityv1.RecordSet, error) {
+	return selectMany(c.Context(ctx), c.Broker, reqs)
+}
+
+func selectMany(ctx context.Context, broker servicesv1.DataBrokerClient, reqs []*entityv1.SelectRequest) ([]*entityv1.RecordSet, error) {
+	if len(reqs) == 0 {
+		return nil, nil
+	}
+	stream, err := broker.BatchSelect(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, req := range reqs {
+		if err := stream.Send(req); err != nil {
+			// The broker's reason arrives with the next Recv.
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+	}
+	if err := stream.CloseSend(); err != nil {
+		return nil, err
+	}
+	out := make([]*entityv1.RecordSet, 0, len(reqs))
+	for {
+		set, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, set)
+	}
+	if len(out) != len(reqs) {
+		return nil, fmt.Errorf("udb: SelectMany sent %d read(s) and received %d result(s)", len(reqs), len(out))
+	}
+	return out, nil
 }
 
 func (c *Client) Upsert(ctx context.Context, req *entityv1.UpsertRequest) (*entityv1.MutationResponse, error) {

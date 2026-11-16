@@ -294,6 +294,35 @@ fn delivery_scope_is_tenant_bound() {
     ));
 }
 
+/// A change to a shared (global) table carries the shared marker and reaches
+/// EVERY tenant's matching endpoint; the topic pattern still applies, and an
+/// endpoint with no tenant still receives nothing.
+#[test]
+fn shared_table_events_reach_every_tenants_matching_endpoint() {
+    let shared_event =
+        serde_json::json!({ "tenant_id": crate::broker::SHARED_TENANT_MARKER, "x": 1 });
+    for endpoint_tenant in ["tenant-a", "tenant-b"] {
+        assert!(webhook_event_matches_endpoint_scope(
+            endpoint_tenant,
+            "ref.*",
+            "ref.country.updated.v1",
+            &shared_event
+        ));
+        assert!(!webhook_event_matches_endpoint_scope(
+            endpoint_tenant,
+            "udb.payment.*",
+            "ref.country.updated.v1",
+            &shared_event
+        ));
+    }
+    assert!(!webhook_event_matches_endpoint_scope(
+        "  ",
+        "*",
+        "ref.country.updated.v1",
+        &shared_event
+    ));
+}
+
 /// The `X-Udb-Signature` verifies against an in-test receiver recomputing the
 /// HMAC with the shared secret; a wrong secret or tampered body does not.
 #[test]
@@ -504,7 +533,16 @@ fn delivery_loader_window_starts_at_endpoint_creation() {
     let tenant = endpoint.q("tenant_id");
     assert!(
         sql.contains(&format!(
-            "ON e.{tenant}::TEXT = COALESCE(j.payload->>'tenant_id', '')"
+            "ON (e.{tenant}::TEXT = COALESCE(j.payload->>'tenant_id', '')"
+        )),
+        "{sql}"
+    );
+    // A shared-table change (the reserved shared marker) joins every tenant's
+    // endpoints; nothing else widens the tenant join.
+    assert!(
+        sql.contains(&format!(
+            "OR COALESCE(j.payload->>'tenant_id', '') = '{}')",
+            crate::broker::SHARED_TENANT_MARKER
         )),
         "{sql}"
     );

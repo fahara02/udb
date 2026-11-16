@@ -463,7 +463,8 @@ impl Default for CdcConfig {
             retry_topic_prefix: "workflow.retry".to_string(),
             max_retry_attempts: 3,
             retry_delay_secs: vec![10, 60, 300], // 10s, 1m, 5m
-            replication_tls_required: true,
+            // Off unless the operator sets UDB_CDC_TLS, as documented.
+            replication_tls_required: false,
             max_wal_lag_bytes: 1_073_741_824,
             exactly_once_mode: CdcExactlyOnceMode::default(),
             journal_only: false,
@@ -1314,7 +1315,19 @@ pub fn preview_manifest_cdc_redaction(
                     &resolver,
                     &nonce,
                 ) {
-                    Ok(()) => encrypted,
+                    Ok(()) => {
+                        // Field encryption covers keys only; an update's
+                        // `{"column", "delta"}` increment names the column as a
+                        // value, so its delta is masked here.
+                        let keys = sensitive_field_keys(&sensitive_fields);
+                        redact_sensitive_increment_deltas(
+                            &mut encrypted,
+                            &keys,
+                            CdcRedactionMode::Mask,
+                            None,
+                        );
+                        encrypted
+                    }
                     Err(err) => {
                         tracing::warn!(
                             "CDC field encryption failed ({err}); masking instead to avoid \
@@ -1397,57 +1410,170 @@ fn sensitive_fields_for_candidates(manifest: &CatalogManifest, candidates: &[&st
 }
 
 pub fn redact_cdc_payload_fields(
-    mut value: serde_json::Value,
+    value: serde_json::Value,
     sensitive_fields: &[String],
     mode: CdcRedactionMode,
 ) -> serde_json::Value {
-    let keys = sensitive_fields
+    // Hash mode needs the deployment's secret: a plain SHA-256 of a phone
+    // number or national id is reversed by hashing every candidate value.
+    let hash_key = if mode == CdcRedactionMode::Hash {
+        cdc_redaction_hash_key()
+    } else {
+        None
+    };
+    redact_cdc_payload_fields_with_hash_key(value, sensitive_fields, mode, hash_key.as_ref())
+}
+
+/// [`redact_cdc_payload_fields`] with the hash key passed in. Hash mode with no
+/// key masks instead: an unkeyed digest of a short value is not redaction.
+fn redact_cdc_payload_fields_with_hash_key(
+    mut value: serde_json::Value,
+    sensitive_fields: &[String],
+    mode: CdcRedactionMode,
+    hash_key: Option<&[u8; 32]>,
+) -> serde_json::Value {
+    let mode = if mode == CdcRedactionMode::Hash && hash_key.is_none() {
+        warn_cdc_hash_key_missing();
+        CdcRedactionMode::Mask
+    } else {
+        mode
+    };
+    let keys = sensitive_field_keys(sensitive_fields);
+    redact_value(&mut value, &keys, mode, hash_key);
+    redact_sensitive_increment_deltas(&mut value, &keys, mode, hash_key);
+    value
+}
+
+fn sensitive_field_keys(sensitive_fields: &[String]) -> std::collections::HashSet<String> {
+    sensitive_fields
         .iter()
         .map(|field| field.to_ascii_lowercase())
-        .collect::<std::collections::HashSet<_>>();
-    redact_value(&mut value, &keys, mode);
-    value
+        .collect()
+}
+
+fn warn_cdc_hash_key_missing() {
+    static WARNED: std::sync::Once = std::sync::Once::new();
+    WARNED.call_once(|| {
+        tracing::warn!(
+            "CDC redaction_mode=hash needs a deployment secret (set \
+             UDB_CDC_ENCRYPTION_KEY_B64); masking sensitive fields instead"
+        );
+    });
+}
+
+/// The secret hash mode keys its HMAC with, derived from the CDC field
+/// encryption key so the same secret is never used directly for two purposes.
+/// `None` when no CDC key is configured.
+fn cdc_redaction_hash_key() -> Option<[u8; 32]> {
+    use crate::runtime::cdc::encryption::CdcKeyResolver as _;
+    let key = crate::runtime::cdc::encryption::StaticKeyResolver::from_env()?.active_key()?;
+    Some(hmac_sha256(&key.key_bytes, b"udb-cdc-redaction-hash-v1"))
+}
+
+/// HMAC-SHA256 (RFC 2104) over the `sha2` digest the crate already uses.
+fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {
+    use sha2::{Digest, Sha256};
+    const BLOCK: usize = 64;
+    let mut block = [0u8; BLOCK];
+    if key.len() > BLOCK {
+        block[..32].copy_from_slice(&Sha256::digest(key));
+    } else {
+        block[..key.len()].copy_from_slice(key);
+    }
+    let mut inner = Sha256::new();
+    inner.update(block.map(|byte| byte ^ 0x36));
+    inner.update(message);
+    let inner = inner.finalize();
+    let mut outer = Sha256::new();
+    outer.update(block.map(|byte| byte ^ 0x5c));
+    outer.update(inner);
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&outer.finalize());
+    out
+}
+
+/// Replace one sensitive entry of `obj` according to `mode`.
+fn redact_entry(
+    obj: &mut serde_json::Map<String, serde_json::Value>,
+    key: &str,
+    mode: CdcRedactionMode,
+    hash_key: Option<&[u8; 32]>,
+) {
+    match (mode, hash_key) {
+        (CdcRedactionMode::Drop, _) => {
+            obj.remove(key);
+        }
+        (CdcRedactionMode::Hash, Some(hash_key)) => {
+            let hash = obj
+                .get(key)
+                .map(|value| hash_json_value(hash_key, value))
+                .unwrap_or_else(|| "hmac-sha256:".to_string());
+            obj.insert(key.to_string(), serde_json::Value::String(hash));
+        }
+        // Mask, hash without a key, and Encrypt (dispatched in
+        // apply_manifest_cdc_redaction, which owns the key resolver this pure
+        // fn lacks) all mask here: never leak plaintext.
+        _ => {
+            obj.insert(
+                key.to_string(),
+                serde_json::Value::String("***MASKED***".to_string()),
+            );
+        }
+    }
 }
 
 fn redact_value(
     value: &mut serde_json::Value,
     sensitive_fields: &std::collections::HashSet<String>,
     mode: CdcRedactionMode,
+    hash_key: Option<&[u8; 32]>,
 ) {
     match value {
         serde_json::Value::Object(obj) => {
             let keys = obj.keys().cloned().collect::<Vec<_>>();
             for key in keys {
                 if sensitive_fields.contains(&key.to_ascii_lowercase()) {
-                    match mode {
-                        CdcRedactionMode::Drop => {
-                            obj.remove(&key);
-                        }
-                        CdcRedactionMode::Mask => {
-                            obj.insert(key, serde_json::Value::String("***MASKED***".to_string()));
-                        }
-                        CdcRedactionMode::Hash => {
-                            let hash = obj
-                                .get(&key)
-                                .map(hash_json_value)
-                                .unwrap_or_else(|| "sha256:".to_string());
-                            obj.insert(key, serde_json::Value::String(hash));
-                        }
-                        // Encrypt is dispatched in apply_manifest_cdc_redaction
-                        // (it needs a key resolver this pure fn lacks). If it
-                        // ever reaches here, mask — never leak plaintext.
-                        CdcRedactionMode::Encrypt => {
-                            obj.insert(key, serde_json::Value::String("***MASKED***".to_string()));
-                        }
-                    }
+                    redact_entry(obj, &key, mode, hash_key);
                 } else if let Some(child) = obj.get_mut(&key) {
-                    redact_value(child, sensitive_fields, mode);
+                    redact_value(child, sensitive_fields, mode, hash_key);
                 }
             }
         }
         serde_json::Value::Array(items) => {
             for item in items {
-                redact_value(item, sensitive_fields, mode);
+                redact_value(item, sensitive_fields, mode, hash_key);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// An update event names an incremented column as a VALUE, not a key:
+/// `{"column": "balance", "delta": 5}`. Key-based redaction never sees it, yet
+/// the delta tells a consumer how the sensitive value moved, so the delta of an
+/// increment on a sensitive column is redacted like the column itself.
+fn redact_sensitive_increment_deltas(
+    value: &mut serde_json::Value,
+    sensitive_fields: &std::collections::HashSet<String>,
+    mode: CdcRedactionMode,
+    hash_key: Option<&[u8; 32]>,
+) {
+    match value {
+        serde_json::Value::Object(obj) => {
+            let names_sensitive_column = obj
+                .get("column")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|column| sensitive_fields.contains(&column.to_ascii_lowercase()));
+            if names_sensitive_column && obj.contains_key("delta") {
+                redact_entry(obj, "delta", mode, hash_key);
+            }
+            for child in obj.values_mut() {
+                redact_sensitive_increment_deltas(child, sensitive_fields, mode, hash_key);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                redact_sensitive_increment_deltas(item, sensitive_fields, mode, hash_key);
             }
         }
         _ => {}
@@ -1483,11 +1609,17 @@ fn annotate_redaction(
     value
 }
 
-fn hash_json_value(value: &serde_json::Value) -> String {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(value.to_string().as_bytes());
-    format!("sha256:{:x}", hasher.finalize())
+/// Keyed digest of a redacted value: equal values still compare equal across
+/// events, but nobody without the deployment secret can test a guess.
+fn hash_json_value(hash_key: &[u8; 32], value: &serde_json::Value) -> String {
+    use std::fmt::Write as _;
+    let digest = hmac_sha256(hash_key, value.to_string().as_bytes());
+    let mut out = String::with_capacity("hmac-sha256:".len() + 64);
+    out.push_str("hmac-sha256:");
+    for byte in digest {
+        let _ = write!(out, "{byte:02x}");
+    }
+    out
 }
 
 fn normalize_manifest_match_key(value: &str) -> String {
@@ -1669,7 +1801,7 @@ impl fmt::Debug for CdcEngine {
 // Phase I: impl CdcEngine split into continuation impl modules.
 mod engine_dlq;
 mod engine_tail;
-pub(crate) use engine_tail::{CdcStreamOptions, JournalRetention};
+pub(crate) use engine_tail::{CdcStreamOptions, JournalRetention, sweep_journal_now};
 pub(crate) mod journal;
 pub(crate) mod topic_filter;
 // U21: Kafka transactional exactly-once publish.
@@ -2026,17 +2158,105 @@ mod tests {
     }
 
     #[test]
+    fn hmac_sha256_matches_the_rfc_4231_vector() {
+        let digest = hmac_sha256(&[0x0b; 20], b"Hi There");
+        let hex = digest
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        assert_eq!(
+            hex,
+            "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
+        );
+    }
+
+    #[test]
+    fn cdc_hash_redaction_is_keyed_and_masks_without_a_key() {
+        let payload = json!({"payload": {"national_id": "1234", "age": 42}});
+        let fields = ["national_id".to_string()];
+        let key_a = [7u8; 32];
+        let key_b = [9u8; 32];
+        let hashed_a = redact_cdc_payload_fields_with_hash_key(
+            payload.clone(),
+            &fields,
+            CdcRedactionMode::Hash,
+            Some(&key_a),
+        );
+        let digest_a = hashed_a["payload"]["national_id"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(digest_a.starts_with("hmac-sha256:"));
+        // A guesser hashing "1234" without the secret cannot reproduce it.
+        let unkeyed = {
+            use sha2::{Digest, Sha256};
+            format!("{:x}", Sha256::digest(json!("1234").to_string().as_bytes()))
+        };
+        assert!(!digest_a.contains(&unkeyed));
+        // Same key, same value: still comparable across events.
+        let again = redact_cdc_payload_fields_with_hash_key(
+            payload.clone(),
+            &fields,
+            CdcRedactionMode::Hash,
+            Some(&key_a),
+        );
+        assert_eq!(
+            again["payload"]["national_id"],
+            hashed_a["payload"]["national_id"]
+        );
+        // Another deployment's secret gives another digest.
+        let hashed_b = redact_cdc_payload_fields_with_hash_key(
+            payload.clone(),
+            &fields,
+            CdcRedactionMode::Hash,
+            Some(&key_b),
+        );
+        assert_ne!(
+            hashed_b["payload"]["national_id"],
+            hashed_a["payload"]["national_id"]
+        );
+        assert_eq!(hashed_a["payload"]["age"], 42);
+        // No secret: masked, never an unkeyed digest.
+        let masked =
+            redact_cdc_payload_fields_with_hash_key(payload, &fields, CdcRedactionMode::Hash, None);
+        assert_eq!(masked["payload"]["national_id"], "***MASKED***");
+    }
+
+    #[test]
+    fn cdc_redaction_covers_increment_deltas_on_sensitive_columns() {
+        let event = json!({
+            "filter": {"id": "a-1"},
+            "increments": [
+                {"column": "Balance", "delta": 250.0},
+                {"column": "visits", "delta": 1.0}
+            ]
+        });
+        let masked = redact_cdc_payload_fields(
+            event.clone(),
+            &["balance".to_string()],
+            CdcRedactionMode::Mask,
+        );
+        assert_eq!(masked["increments"][0]["column"], "Balance");
+        assert_eq!(masked["increments"][0]["delta"], "***MASKED***");
+        assert_eq!(masked["increments"][1]["delta"], 1.0);
+        let dropped =
+            redact_cdc_payload_fields(event, &["balance".to_string()], CdcRedactionMode::Drop);
+        assert!(dropped["increments"][0].get("delta").is_none());
+        assert_eq!(dropped["increments"][1]["delta"], 1.0);
+    }
+
+    #[test]
     fn cdc_redaction_can_hash_or_drop_fields() {
-        let hashed = redact_cdc_payload_fields(
+        let hashed = redact_cdc_payload_fields_with_hash_key(
             json!({"payload": {"email": "a@example.com", "age": 42}}),
             &["email".to_string()],
             CdcRedactionMode::Hash,
+            Some(&[1u8; 32]),
         );
         assert!(
             hashed["payload"]["email"]
                 .as_str()
                 .unwrap_or_default()
-                .starts_with("sha256:")
+                .starts_with("hmac-sha256:")
         );
 
         let dropped = redact_cdc_payload_fields(

@@ -2015,6 +2015,14 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             qi(&format!("idx_{}_tenant_created", config.idempotency_keys_table)),
             config.idempotency_keys_relation()
         ),
+        // The expiry sweep deletes across every tenant by age alone: this
+        // index lets each bounded batch find its oldest rows without reading
+        // the whole table.
+        format!(
+            "CREATE INDEX IF NOT EXISTS {} ON {} (created_at)",
+            qi(&format!("idx_{}_created", config.idempotency_keys_table)),
+            config.idempotency_keys_relation()
+        ),
         // #5 — broker-maintained opaque row revision / ETag map. `revision_key` is
         // the salted SHA-256 of (tenant_id, project_id, message_type, primary-key
         // tuple) so the PRIMARY KEY enforces per-(tenant,project,type,row) identity

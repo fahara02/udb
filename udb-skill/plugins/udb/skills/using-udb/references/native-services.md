@@ -9,7 +9,7 @@ Contract version `9.0.0` · 28 native services.
 | `analytics` | Analytics | analytics | yes | postgres | 7 | control-plane |
 | `apikey` | API Keys | auth | yes | postgres | 9 | control-plane |
 | `asset` | Assets | storage | yes | postgres, object_store | 8 | control-plane |
-| `authn` | Authentication | auth | yes | postgres | 81 | control-plane |
+| `authn` | Authentication | auth | yes | postgres | 82 | control-plane |
 | `authz` | Authorization | governance | yes | postgres | 41 | control-plane |
 | `backup` | Backup | backup | yes | postgres | 8 | control-plane |
 | `cache` | Cache | cache | yes | postgres, redis | 8 | control-plane |
@@ -106,6 +106,7 @@ Each table lists the scope that admits an RPC; `udb:admin` (and, for authn, auth
 | `EmergencyRevoke` | destructive | `udb:authn:emergency-revoke` | bearer JWT, session | required |
 | `EnrollMFA` | mutation | `udb:authn:enroll-mfa` | bearer JWT, session, service account | required |
 | `ExchangeServiceTokenForTenant` | mutation | `udb:authn:exchange-tenant-token` | service account | required |
+| `ExchangeTokenForJob` | mutation | `udb:token:delegate` | service account | required |
 | `FinishOidcLogin` | mutation | — | none (public) | — |
 | `FinishWebAuthnAuthentication` | mutation | — | none (public) | — |
 | `FinishWebAuthnRegistration` | mutation | `udb:authn:finish-web-authn-registration` | bearer JWT, session | required |

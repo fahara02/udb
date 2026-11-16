@@ -176,6 +176,16 @@ public final class AuthnServiceProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_authn_services_v1_ExchangeServiceTokenForTenantResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_ExchangeTokenForJobRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_ExchangeTokenForJobRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_ExchangeTokenForJobResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_ExchangeTokenForJobResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -362,1280 +372,1312 @@ public final class AuthnServiceProto {
       "rship_id\030\006 \001(\tR\014membershipId\022\030\n\007message\030" +
       "\007 \001(\tR\007message\0222\n\005error\030\010 \001(\0132\034.udb.core" +
       ".common.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\005authnP\0012\314\213\003\n\014AuthnService\022\305\004\n\nC" +
-      "reateUser\022-.udb.core.authn.services.v1.C" +
-      "reateUserRequest\032..udb.core.authn.servic" +
-      "es.v1.CreateUserResponse\"\327\003\312\363\0305\010\002\032\025udb:a" +
-      "uthn:create-user \001J\003\001\002\004j\020authn.CreateUse" +
-      "r\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\013create_user\032\003udb(\260" +
-      "\352\0010\003@\001J\004authP\001Z\ncreateUser\342\363\030\253\001\n\004auth\022\017u" +
-      "db/native/auth\032\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED\032\017UDB_GRPC_TARGET\"\'udb.native.auth.cr" +
-      "eate_user.boilerplate*\013create_user2\010udb_" +
-      "auth:\005authnJ\013UDB_API_KEYZ\020udb native smo" +
-      "ke\352\363\030L\n\020authn.CreateUser\022\014authn.events\032\t" +
-      "tenant_id\"\010standard*\rat_least_once2\006stab" +
-      "le\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\023\"" +
-      "\016/v1/auth/users:\001*\022\256\004\n\007GetUser\022*.udb.cor" +
-      "e.authn.services.v1.GetUserRequest\032+.udb" +
-      ".core.authn.services.v1.GetUserResponse\"" +
-      "\311\003\312\363\030/\010\002\032\022udb:authn:get-user \001J\003\001\002\004j\raut" +
-      "hn.GetUser\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030*\010\001\022\010get_user\032" +
-      "\003udb(\260\352\0010\003@\001J\004authP\001Z\007getUser\342\363\030\245\001\n\004auth" +
-      "\022\017udb/native/auth\032\033UDB_NATIVE_SERVICES_E" +
-      "NABLED\032\017UDB_GRPC_TARGET\"$udb.native.auth" +
-      ".get_user.boilerplate*\010get_user2\010udb_aut" +
-      "h:\005authnJ\013UDB_API_KEYZ\020udb native smoke\352" +
-      "\363\030I\n\rauthn.GetUser\022\014authn.events\032\ttenant" +
-      "_id\"\010standard*\rat_least_once2\006stable\362\363\030?" +
-      "\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
-      "NABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\032\022\030/v1/a" +
-      "uth/users/{user_id}\022\270\004\n\tListUsers\022,.udb." +
-      "core.authn.services.v1.ListUsersRequest\032" +
-      "-.udb.core.authn.services.v1.ListUsersRe" +
-      "sponse\"\315\003\312\363\0303\010\002\032\024udb:authn:list-users \001J" +
-      "\003\001\002\004j\017authn.ListUsers\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001" +
-      "\022\nlist_users\032\003udb(\260\352\0010\003@\001J\004authP\001Z\tlistU" +
-      "sers\342\363\030\251\001\n\004auth\022\017udb/native/auth\032\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"&" +
-      "udb.native.auth.list_users.boilerplate*\n" +
-      "list_users2\010udb_auth:\005authnJ\013UDB_API_KEY" +
-      "Z\020udb native smoke\352\363\030K\n\017authn.ListUsers\022" +
-      "\014authn.events\032\ttenant_id\"\010standard*\rat_l" +
-      "east_once2\006stable\362\363\030?\n\005authn\032\010postgres2\033" +
-      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
-      "RGET\370\363\030\001\202\323\344\223\002\020\022\016/v1/auth/users\022\317\004\n\nUpdat" +
-      "eUser\022-.udb.core.authn.services.v1.Updat" +
-      "eUserRequest\032..udb.core.authn.services.v" +
-      "1.UpdateUserResponse\"\341\003\312\363\0305\010\002\032\025udb:authn" +
-      ":update-user \001J\003\001\002\004j\020authn.UpdateUser\220\001\001" +
-      "\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\013update_user\032\003udb(\260\352\0010\003" +
-      "@\001J\004authP\001Z\nupdateUser\342\363\030\253\001\n\004auth\022\017udb/n" +
-      "ative/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032" +
-      "\017UDB_GRPC_TARGET\"\'udb.native.auth.update" +
-      "_user.boilerplate*\013update_user2\010udb_auth" +
-      ":\005authnJ\013UDB_API_KEYZ\020udb native smoke\352\363" +
-      "\030L\n\020authn.UpdateUser\022\014authn.events\032\ttena" +
-      "nt_id\"\010standard*\rat_least_once2\006stable\362\363" +
-      "\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES" +
-      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\0352\030/v1" +
-      "/auth/users/{user_id}:\001*\022\234\005\n\020ChangeUserS" +
-      "tatus\0223.udb.core.authn.services.v1.Chang" +
-      "eUserStatusRequest\0324.udb.core.authn.serv" +
-      "ices.v1.ChangeUserStatusResponse\"\234\004\312\363\030B\010" +
-      "\002\032\034udb:authn:change-user-status \001J\003\001\002\004j\026" +
-      "authn.ChangeUserStatus\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030=\010" +
-      "\001\022\022change_user_status\032\003udb(\260\352\0010\003@\001J\004auth" +
-      "P\001Z\020changeUserStatus\342\363\030\271\001\n\004auth\022\017udb/nat" +
+      "\260\352\0010\003@\001J\005authnP\001\"\261\001\n\032ExchangeTokenForJob" +
+      "Request\022#\n\rsubject_token\030\001 \001(\tR\014subjectT" +
+      "oken\022\030\n\007purpose\030\002 \001(\tR\007purpose\022\025\n\006job_id" +
+      "\030\003 \001(\tR\005jobId\022\037\n\013ttl_seconds\030\004 \001(\003R\nttlS" +
+      "econds:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\233\003\n" +
+      "\033ExchangeTokenForJobResponse\022!\n\014access_t" +
+      "oken\030\001 \001(\tR\013accessToken\022\020\n\003jti\030\002 \001(\tR\003jt" +
+      "i\022&\n\017expires_at_unix\030\003 \001(\003R\rexpiresAtUni" +
+      "x\022\030\n\007subject\030\004 \001(\tR\007subject\022\024\n\005actor\030\005 \001" +
+      "(\tR\005actor\022\030\n\007purpose\030\006 \001(\tR\007purpose\022\025\n\006j" +
+      "ob_id\030\007 \001(\tR\005jobId\022\026\n\006scopes\030\010 \003(\tR\006scop" +
+      "es\022\033\n\ttenant_id\030\t \001(\tR\010tenantId\022\035\n\nproje" +
+      "ct_id\030\n \001(\tR\tprojectId\022\030\n\007message\030\013 \001(\tR" +
+      "\007message\0222\n\005error\030\014 \001(\0132\034.udb.core.commo" +
+      "n.v1.ApiErrorR\005error:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@" +
+      "\001J\005authnP\0012\363\220\003\n\014AuthnService\022\305\004\n\nCreateU" +
+      "ser\022-.udb.core.authn.services.v1.CreateU" +
+      "serRequest\032..udb.core.authn.services.v1." +
+      "CreateUserResponse\"\327\003\312\363\0305\010\002\032\025udb:authn:c" +
+      "reate-user \001J\003\001\002\004j\020authn.CreateUser\220\001\001\322\363" +
+      "\030\006\010\001\020\001 \001\332\363\0300\010\001\022\013create_user\032\003udb(\260\352\0010\003@\001" +
+      "J\004authP\001Z\ncreateUser\342\363\030\253\001\n\004auth\022\017udb/nat" +
       "ive/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
-      "DB_GRPC_TARGET\".udb.native.auth.change_u" +
-      "ser_status.boilerplate*\022change_user_stat" +
-      "us2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb na" +
-      "tive smoke\352\363\030R\n\026authn.ChangeUserStatus\022\014" +
-      "authn.events\032\ttenant_id\"\010standard*\rat_le" +
-      "ast_once2\006stable\362\363\030?\n\005authn\032\010postgres2\033U" +
-      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\370\363\030\003\202\323\344\223\002*\"%/v1/auth/users/{user_id}:" +
-      "changeStatus:\001*\022\262\005\n\022AdminResetPassword\0225" +
-      ".udb.core.authn.services.v1.AdminResetPa" +
-      "sswordRequest\0326.udb.core.authn.services." +
-      "v1.AdminResetPasswordResponse\"\254\004\312\363\030E\010\002\032\036" +
-      "udb:authn:admin-reset-password \001J\002\001\002j\030au" +
-      "thn.AdminResetPassword\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030A\010" +
-      "\001\022\024admin_reset_password\032\003udb(\260\352\0010\003@\001J\004au" +
-      "thP\001Z\022adminResetPassword\342\363\030\275\001\n\004auth\022\017udb" +
-      "/native/auth\032\033UDB_NATIVE_SERVICES_ENABLE" +
-      "D\032\017UDB_GRPC_TARGET\"0udb.native.auth.admi" +
-      "n_reset_password.boilerplate*\024admin_rese" +
-      "t_password2\010udb_auth:\005authnJ\013UDB_API_KEY" +
-      "Z\020udb native smoke\352\363\030T\n\030authn.AdminReset" +
-      "Password\022\014authn.events\032\ttenant_id\"\010stand" +
-      "ard*\rat_least_once2\006stable\362\363\030?\n\005authn\032\010p" +
-      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
-      "B_GRPC_TARGET\370\363\030\003\202\323\344\223\002-\"(/v1/auth/users/" +
-      "{user_id}/passwords:reset:\001*\022\370\005\n\031SetServ" +
-      "iceAccountPassword\022<.udb.core.authn.serv" +
-      "ices.v1.SetServiceAccountPasswordRequest" +
-      "\032=.udb.core.authn.services.v1.SetService" +
-      "AccountPasswordResponse\"\335\004\312\363\030L\010\002\032\036udb:au" +
-      "thn:admin-reset-password \001J\002\001\002j\037authn.Se" +
-      "tServiceAccountPassword\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030P" +
-      "\010\001\022\034set_service_account_password\032\003udb(\260\352" +
-      "\0010\001@\001J\004authP\001Z\031setServiceAccountPassword" +
-      "\342\363\030\315\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE" +
-      "_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"8udb." +
-      "native.auth.set_service_account_password" +
-      ".boilerplate*\034set_service_account_passwo" +
-      "rd2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb na" +
-      "tive smoke\352\363\030[\n\037authn.SetServiceAccountP" +
-      "assword\022\014authn.events\032\ttenant_id\"\010standa" +
-      "rd*\rat_least_once2\006stable\362\363\030?\n\005authn\032\010po" +
-      "stgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
-      "_GRPC_TARGET\370\363\030\003\202\323\344\223\0021\",/v1/auth/service" +
-      "-accounts/{user_id}/password:\001*\022\253\004\n\007Send" +
-      "OTP\022*.udb.core.authn.services.v1.SendOTP" +
-      "Request\032+.udb.core.authn.services.v1.Sen" +
-      "dOTPResponse\"\306\003\312\363\030/\010\002\032\022udb:authn:send-ot" +
-      "p \001J\003\001\002\004j\rauthn.SendOTP\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030*" +
-      "\010\001\022\010send_otp\032\003udb(\260\352\0010\003@\001J\004authP\001Z\007sendO" +
-      "tp\342\363\030\245\001\n\004auth\022\017udb/native/auth\032\033UDB_NATI" +
-      "VE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"$ud" +
-      "b.native.auth.send_otp.boilerplate*\010send" +
-      "_otp2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb " +
-      "native smoke\352\363\030I\n\rauthn.SendOTP\022\014authn.e" +
-      "vents\032\ttenant_id\"\010standard*\rat_least_onc" +
-      "e2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATI" +
-      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002" +
-      "\202\323\344\223\002\027\"\022/v1/auth/otps:send:\001*\022\301\004\n\tVerify" +
-      "OTP\022,.udb.core.authn.services.v1.VerifyO" +
-      "TPRequest\032-.udb.core.authn.services.v1.V" +
-      "erifyOTPResponse\"\326\003\312\363\0303\010\002\032\024udb:authn:ver" +
-      "ify-otp \001J\003\001\002\004j\017authn.VerifyOTP\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030.\010\001\022\nverify_otp\032\003udb(\260\352\0010\003@\001J\004aut" +
-      "hP\001Z\tverifyOtp\342\363\030\251\001\n\004auth\022\017udb/native/au" +
-      "th\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRP" +
-      "C_TARGET\"&udb.native.auth.verify_otp.boi" +
-      "lerplate*\nverify_otp2\010udb_auth:\005authnJ\013U" +
-      "DB_API_KEYZ\020udb native smoke\352\363\030K\n\017authn." +
-      "VerifyOTP\022\014authn.events\032\ttenant_id\"\010stan" +
-      "dard*\rat_least_once2\006stable\362\363\030?\n\005authn\032\010" +
-      "postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017U" +
-      "DB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\031\"\024/v1/auth/otps:" +
-      "verify:\001*\022\301\004\n\tResendOTP\022,.udb.core.authn" +
-      ".services.v1.ResendOTPRequest\032-.udb.core" +
-      ".authn.services.v1.ResendOTPResponse\"\326\003\312" +
-      "\363\0303\010\002\032\024udb:authn:resend-otp \001J\003\001\002\004j\017auth" +
-      "n.ResendOTP\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001\022\nresend_o" +
-      "tp\032\003udb(\260\352\0010\003@\001J\004authP\001Z\tresendOtp\342\363\030\251\001\n" +
-      "\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SERVI" +
-      "CES_ENABLED\032\017UDB_GRPC_TARGET\"&udb.native" +
-      ".auth.resend_otp.boilerplate*\nresend_otp" +
-      "2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb nati" +
-      "ve smoke\352\363\030K\n\017authn.ResendOTP\022\014authn.eve" +
-      "nts\032\ttenant_id\"\010standard*\rat_least_once2" +
-      "\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323" +
-      "\344\223\002\031\"\024/v1/auth/otps:resend:\001*\022\360\004\n\014Authen" +
-      "ticate\022(.udb.core.authn.services.v1.Auth" +
-      "nRequest\032).udb.core.authn.services.v1.Au" +
-      "thnResponse\"\212\004\312\363\030N\010\001R\031authn.authenticate" +
-      ".publicZ\030authn.authenticate.abuseb\022authn" +
-      ".authenticate\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\014authen" +
-      "ticate\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014authenticat" +
-      "e\342\363\030\255\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIV" +
-      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"(udb" +
-      ".native.auth.authenticate.boilerplate*\014a" +
-      "uthenticate2\010udb_auth:\005authnJ\013UDB_API_KE" +
-      "YZ\020udb native smoke\352\363\030N\n\022authn.Authentic" +
-      "ate\022\014authn.events\032\ttenant_id\"\010standard*\r" +
-      "at_least_once2\006stable\362\363\030?\n\005authn\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\370\363\030\001\202\323\344\223\002&\"!/v1/auth/credentials" +
-      ":authenticate:\001*\022\267\004\n\005Login\022(.udb.core.au" +
-      "thn.services.v1.LoginRequest\032).udb.core." +
-      "authn.services.v1.LoginResponse\"\330\003\312\363\030F\010\001" +
-      "R\022authn.login.publicZ\021authn.login.abuseb" +
-      "\013authn.loginj\013authn.Login\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\030%\010\001\022\005login\032\003udb(\260\352\0010\003@\001J\004authP\001Z\005login\342" +
-      "\363\030\237\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_" +
-      "SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"!udb.n" +
-      "ative.auth.login.boilerplate*\005login2\010udb" +
-      "_auth:\005authnJ\013UDB_API_KEYZ\020udb native sm" +
-      "oke\352\363\030G\n\013authn.Login\022\014authn.events\032\ttena" +
-      "nt_id\"\010standard*\rat_least_once2\006stable\362\363" +
-      "\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES" +
-      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\037\"\032/v1" +
-      "/auth/password-sessions:\001*\022\216\005\n\014RefreshTo" +
-      "ken\022/.udb.core.authn.services.v1.Refresh" +
-      "TokenRequest\0320.udb.core.authn.services.v" +
-      "1.RefreshTokenResponse\"\232\004\312\363\030e\010\001R\032authn.r" +
-      "efresh_token.publicZ\031authn.refresh_token" +
-      ".abuseb\023authn.refresh_tokenj\022authn.Refre" +
-      "shToken\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\rrefresh_toke" +
-      "n\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014refreshToken\342\363\030\257" +
-      "\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SER" +
-      "VICES_ENABLED\032\017UDB_GRPC_TARGET\")udb.nati" +
-      "ve.auth.refresh_token.boilerplate*\rrefre" +
-      "sh_token2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020" +
-      "udb native smoke\352\363\030N\n\022authn.RefreshToken" +
-      "\022\014authn.events\032\ttenant_id\"\010standard*\rat_" +
-      "least_once2\006stable\362\363\030?\n\005authn\032\010postgres2" +
-      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
-      "ARGET\370\363\030\002\202\323\344\223\002\034\"\027/v1/auth/tokens:refresh" +
-      ":\001*\022\242\004\n\006Logout\022).udb.core.authn.services" +
-      ".v1.LogoutRequest\032*.udb.core.authn.servi" +
-      "ces.v1.LogoutResponse\"\300\003\312\363\030+\010\002\032\020udb:auth" +
-      "n:logout \001J\002\001\002j\014authn.Logout\220\001\001\322\363\030\006\010\001\020\001 " +
-      "\001\332\363\030\'\010\001\022\006logout\032\003udb(\260\352\0010\003@\001J\004authP\001Z\006lo" +
-      "gout\342\363\030\241\001\n\004auth\022\017udb/native/auth\032\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\"" +
-      "udb.native.auth.logout.boilerplate*\006logo" +
-      "ut2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb na" +
-      "tive smoke\352\363\030H\n\014authn.Logout\022\014authn.even" +
-      "ts\032\ttenant_id\"\010standard*\rat_least_once2\006" +
-      "stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_" +
-      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344" +
-      "\223\002\035\"\030/v1/auth/sessions:logout:\001*\022\367\004\n\016Cha" +
-      "ngePassword\0221.udb.core.authn.services.v1" +
-      ".ChangePasswordRequest\0322.udb.core.authn." +
-      "services.v1.ChangePasswordResponse\"\375\003\312\363\030" +
-      "<\010\002\032\031udb:authn:change-password \001J\002\001\002j\024au" +
-      "thn.ChangePassword\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\017c" +
-      "hange_password\032\003udb(\260\352\0010\003@\001J\004authP\001Z\016cha" +
-      "ngePassword\342\363\030\263\001\n\004auth\022\017udb/native/auth\032" +
-      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T",
-      "ARGET\"+udb.native.auth.change_password.b" +
-      "oilerplate*\017change_password2\010udb_auth:\005a" +
-      "uthnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030P\n" +
-      "\024authn.ChangePassword\022\014authn.events\032\tten" +
-      "ant_id\"\010standard*\rat_least_once2\006stable\362" +
-      "\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICE" +
-      "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\036\"\031/v" +
-      "1/auth/passwords:change:\001*\022\356\004\n\rValidateT" +
-      "oken\0220.udb.core.authn.services.v1.Valida" +
-      "teTokenRequest\0321.udb.core.authn.services" +
-      ".v1.ValidateTokenResponse\"\367\003\312\363\030<\010\002\032\030udb:" +
-      "authn:validate-token \001J\004\001\002\005\004j\023authn.Vali" +
-      "dateToken\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\016validate_t" +
-      "oken\032\003udb(\260\352\0010\003@\001J\004authP\001Z\rvalidateToken" +
-      "\342\363\030\261\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE" +
-      "_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"*udb." +
-      "native.auth.validate_token.boilerplate*\016" +
-      "validate_token2\010udb_auth:\005authnJ\013UDB_API" +
-      "_KEYZ\020udb native smoke\352\363\030O\n\023authn.Valida" +
-      "teToken\022\014authn.events\032\ttenant_id\"\010standa" +
-      "rd*\rat_least_once2\006stable\362\363\030?\n\005authn\032\010po" +
-      "stgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
-      "_GRPC_TARGET\370\363\030\001\202\323\344\223\002\035\"\030/v1/auth/tokens:" +
-      "validate:\001*\022\346\004\n\rCreateSession\0220.udb.core" +
-      ".authn.services.v1.CreateSessionRequest\032" +
-      "1.udb.core.authn.services.v1.CreateSessi" +
-      "onResponse\"\357\003\312\363\030;\010\002\032\030udb:authn:create-se" +
-      "ssion \001J\003\001\002\004j\023authn.CreateSession\220\001\001\322\363\030\006" +
-      "\010\001\020\001 \001\332\363\0306\010\001\022\016create_session\032\003udb(\260\352\0010\003@" +
-      "\001J\004authP\001Z\rcreateSession\342\363\030\261\001\n\004auth\022\017udb" +
-      "/native/auth\032\033UDB_NATIVE_SERVICES_ENABLE" +
-      "D\032\017UDB_GRPC_TARGET\"*udb.native.auth.crea" +
-      "te_session.boilerplate*\016create_session2\010" +
-      "udb_auth:\005authnJ\013UDB_API_KEYZ\020udb native" +
-      " smoke\352\363\030O\n\023authn.CreateSession\022\014authn.e" +
-      "vents\032\ttenant_id\"\010standard*\rat_least_onc" +
-      "e2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATI" +
-      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002" +
-      "\202\323\344\223\002\026\"\021/v1/auth/sessions:\001*\022\205\005\n\016Refresh" +
-      "Session\0221.udb.core.authn.services.v1.Ref" +
-      "reshSessionRequest\0322.udb.core.authn.serv" +
-      "ices.v1.RefreshSessionResponse\"\213\004\312\363\030=\010\002\032" +
-      "\031udb:authn:refresh-session \001J\003\001\002\004j\024authn" +
-      ".RefreshSession\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\017refr" +
-      "esh_session\032\003udb(\260\352\0010\003@\001J\004authP\001Z\016refres" +
-      "hSession\342\363\030\263\001\n\004auth\022\017udb/native/auth\032\033UD" +
-      "B_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARG" +
-      "ET\"+udb.native.auth.refresh_session.boil" +
-      "erplate*\017refresh_session2\010udb_auth:\005auth" +
-      "nJ\013UDB_API_KEYZ\020udb native smoke\352\363\030P\n\024au" +
-      "thn.RefreshSession\022\014authn.events\032\ttenant" +
+      "DB_GRPC_TARGET\"\'udb.native.auth.create_u" +
+      "ser.boilerplate*\013create_user2\010udb_auth:\005" +
+      "authnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030L" +
+      "\n\020authn.CreateUser\022\014authn.events\032\ttenant" +
       "_id\"\010standard*\rat_least_once2\006stable\362\363\030?" +
       "\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
-      "NABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002+\"&/v1/a" +
-      "uth/sessions/{session_id}:refresh:\001*\022\322\004\n" +
-      "\nGetSession\022-.udb.core.authn.services.v1" +
-      ".GetSessionRequest\032..udb.core.authn.serv" +
-      "ices.v1.GetSessionResponse\"\344\003\312\363\0305\010\002\032\025udb" +
-      ":authn:get-session \001J\003\001\002\004j\020authn.GetSess" +
-      "ion\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\013get_session\032\003udb" +
-      "(\260\352\0010\003@\001J\004authP\001Z\ngetSession\342\363\030\253\001\n\004auth\022" +
-      "\017udb/native/auth\032\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED\032\017UDB_GRPC_TARGET\"\'udb.native.auth." +
-      "get_session.boilerplate*\013get_session2\010ud" +
-      "b_auth:\005authnJ\013UDB_API_KEYZ\020udb native s" +
-      "moke\352\363\030L\n\020authn.GetSession\022\014authn.events" +
-      "\032\ttenant_id\"\010standard*\rat_least_once2\006st" +
-      "able\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SE" +
-      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002" +
-      " \022\036/v1/auth/sessions/{session_id}\022\351\004\n\014Li" +
-      "stSessions\022/.udb.core.authn.services.v1." +
-      "ListSessionsRequest\0320.udb.core.authn.ser" +
-      "vices.v1.ListSessionsResponse\"\365\003\312\363\0309\010\002\032\027" +
-      "udb:authn:list-sessions \001J\003\001\002\004j\022authn.Li" +
-      "stSessions\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\rlist_sess" +
-      "ions\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014listSessions\342" +
-      "\363\030\257\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_" +
-      "SERVICES_ENABLED\032\017UDB_GRPC_TARGET\")udb.n" +
-      "ative.auth.list_sessions.boilerplate*\rli" +
-      "st_sessions2\010udb_auth:\005authnJ\013UDB_API_KE" +
-      "YZ\020udb native smoke\352\363\030N\n\022authn.ListSessi" +
-      "ons\022\014authn.events\032\ttenant_id\"\010standard*\r" +
-      "at_least_once2\006stable\362\363\030?\n\005authn\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\370\363\030\001\202\323\344\223\002#\022!/v1/auth/users/{user" +
-      "_id}/sessions\022\360\004\n\rRevokeSession\0220.udb.co" +
-      "re.authn.services.v1.RevokeSessionReques" +
-      "t\0321.udb.core.authn.services.v1.RevokeSes" +
-      "sionResponse\"\371\003\312\363\030;\010\002\032\030udb:authn:revoke-" +
-      "session \001J\003\001\002\004j\023authn.RevokeSession\220\001\001\322\363" +
-      "\030\006\010\001\020\001 \001\332\363\0306\010\001\022\016revoke_session\032\003udb(\260\352\0010" +
-      "\003@\001J\004authP\001Z\rrevokeSession\342\363\030\261\001\n\004auth\022\017u" +
-      "db/native/auth\032\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED\032\017UDB_GRPC_TARGET\"*udb.native.auth.re" +
-      "voke_session.boilerplate*\016revoke_session" +
-      "2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb nati" +
-      "ve smoke\352\363\030O\n\023authn.RevokeSession\022\014authn" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\023\"\016/v1/a" +
+      "uth/users:\001*\022\256\004\n\007GetUser\022*.udb.core.auth" +
+      "n.services.v1.GetUserRequest\032+.udb.core." +
+      "authn.services.v1.GetUserResponse\"\311\003\312\363\030/" +
+      "\010\002\032\022udb:authn:get-user \001J\003\001\002\004j\rauthn.Get" +
+      "User\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030*\010\001\022\010get_user\032\003udb(\260" +
+      "\352\0010\003@\001J\004authP\001Z\007getUser\342\363\030\245\001\n\004auth\022\017udb/" +
+      "native/auth\032\033UDB_NATIVE_SERVICES_ENABLED" +
+      "\032\017UDB_GRPC_TARGET\"$udb.native.auth.get_u" +
+      "ser.boilerplate*\010get_user2\010udb_auth:\005aut" +
+      "hnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030I\n\ra" +
+      "uthn.GetUser\022\014authn.events\032\ttenant_id\"\010s" +
+      "tandard*\rat_least_once2\006stable\362\363\030?\n\005auth" +
+      "n\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
+      "2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\032\022\030/v1/auth/us" +
+      "ers/{user_id}\022\270\004\n\tListUsers\022,.udb.core.a" +
+      "uthn.services.v1.ListUsersRequest\032-.udb." +
+      "core.authn.services.v1.ListUsersResponse" +
+      "\"\315\003\312\363\0303\010\002\032\024udb:authn:list-users \001J\003\001\002\004j\017" +
+      "authn.ListUsers\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001\022\nlist" +
+      "_users\032\003udb(\260\352\0010\003@\001J\004authP\001Z\tlistUsers\342\363" +
+      "\030\251\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\"&udb.na" +
+      "tive.auth.list_users.boilerplate*\nlist_u" +
+      "sers2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb " +
+      "native smoke\352\363\030K\n\017authn.ListUsers\022\014authn" +
       ".events\032\ttenant_id\"\010standard*\rat_least_o" +
       "nce2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NA" +
       "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
-      "\030\002\202\323\344\223\002 *\036/v1/auth/sessions/{session_id}" +
-      "\022\347\004\n\014ValidateCSRF\022/.udb.core.authn.servi" +
-      "ces.v1.ValidateCSRFRequest\0320.udb.core.au" +
-      "thn.services.v1.ValidateCSRFResponse\"\363\003\312" +
-      "\363\0308\010\002\032\027udb:authn:validate-csrf \001J\002\001\002j\022au" +
-      "thn.ValidateCSRF\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\rval" +
-      "idate_csrf\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014validat" +
-      "eCsrf\342\363\030\257\001\n\004auth\022\017udb/native/auth\032\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
-      ")udb.native.auth.validate_csrf.boilerpla" +
-      "te*\rvalidate_csrf2\010udb_auth:\005authnJ\013UDB_" +
-      "API_KEYZ\020udb native smoke\352\363\030N\n\022authn.Val" +
-      "idateCSRF\022\014authn.events\032\ttenant_id\"\010stan" +
-      "dard*\rat_least_once2\006stable\362\363\030?\n\005authn\032\010" +
-      "postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017U" +
-      "DB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\"\"\035/v1/auth/csrf-" +
-      "tokens:validate:\001*\022\320\004\n\tEnrollMFA\022,.udb.c" +
-      "ore.authn.services.v1.EnrollMFARequest\032-" +
-      ".udb.core.authn.services.v1.EnrollMFARes" +
-      "ponse\"\345\003\312\363\0303\010\002\032\024udb:authn:enroll-mfa \001J\003" +
-      "\001\002\004j\017authn.EnrollMFA\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001\022" +
-      "\nenroll_mfa\032\003udb(\260\352\0010\003@\001J\004authP\001Z\tenroll" +
-      "Mfa\342\363\030\251\001\n\004auth\022\017udb/native/auth\032\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"&u" +
-      "db.native.auth.enroll_mfa.boilerplate*\ne" +
-      "nroll_mfa2\010udb_auth:\005authnJ\013UDB_API_KEYZ" +
-      "\020udb native smoke\352\363\030K\n\017authn.EnrollMFA\022\014" +
-      "authn.events\032\ttenant_id\"\010standard*\rat_le" +
-      "ast_once2\006stable\362\363\030?\n\005authn\032\010postgres2\033U" +
-      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
-      "GET\370\363\030\002\202\323\344\223\002(\"#/v1/auth/users/{user_id}/" +
-      "mfa:enroll:\001*\022\300\005\n\024ConfirmMFAEnrollment\0227" +
-      ".udb.core.authn.services.v1.ConfirmMFAEn" +
-      "rollmentRequest\0328.udb.core.authn.service" +
-      "s.v1.ConfirmMFAEnrollmentResponse\"\264\004\312\363\030J" +
-      "\010\002\032 udb:authn:confirm-mfa-enrollment \001J\003" +
-      "\001\002\004j\032authn.ConfirmMFAEnrollment\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030D\010\001\022\025confirm_mfaenrollment\032\003udb(\260" +
-      "\352\0010\003@\001J\004authP\001Z\024confirmMfaenrollment\342\363\030\277" +
+      "\030\001\202\323\344\223\002\020\022\016/v1/auth/users\022\317\004\n\nUpdateUser\022" +
+      "-.udb.core.authn.services.v1.UpdateUserR" +
+      "equest\032..udb.core.authn.services.v1.Upda" +
+      "teUserResponse\"\341\003\312\363\0305\010\002\032\025udb:authn:updat" +
+      "e-user \001J\003\001\002\004j\020authn.UpdateUser\220\001\001\322\363\030\006\010\001" +
+      "\020\001 \001\332\363\0300\010\001\022\013update_user\032\003udb(\260\352\0010\003@\001J\004au" +
+      "thP\001Z\nupdateUser\342\363\030\253\001\n\004auth\022\017udb/native/" +
+      "auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_G" +
+      "RPC_TARGET\"\'udb.native.auth.update_user." +
+      "boilerplate*\013update_user2\010udb_auth:\005auth" +
+      "nJ\013UDB_API_KEYZ\020udb native smoke\352\363\030L\n\020au" +
+      "thn.UpdateUser\022\014authn.events\032\ttenant_id\"" +
+      "\010standard*\rat_least_once2\006stable\362\363\030?\n\005au" +
+      "thn\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\0352\030/v1/auth/" +
+      "users/{user_id}:\001*\022\234\005\n\020ChangeUserStatus\022" +
+      "3.udb.core.authn.services.v1.ChangeUserS" +
+      "tatusRequest\0324.udb.core.authn.services.v" +
+      "1.ChangeUserStatusResponse\"\234\004\312\363\030B\010\002\032\034udb" +
+      ":authn:change-user-status \001J\003\001\002\004j\026authn." +
+      "ChangeUserStatus\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030=\010\001\022\022cha" +
+      "nge_user_status\032\003udb(\260\352\0010\003@\001J\004authP\001Z\020ch" +
+      "angeUserStatus\342\363\030\271\001\n\004auth\022\017udb/native/au" +
+      "th\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRP" +
+      "C_TARGET\".udb.native.auth.change_user_st" +
+      "atus.boilerplate*\022change_user_status2\010ud" +
+      "b_auth:\005authnJ\013UDB_API_KEYZ\020udb native s" +
+      "moke\352\363\030R\n\026authn.ChangeUserStatus\022\014authn." +
+      "events\032\ttenant_id\"\010standard*\rat_least_on" +
+      "ce2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
+      "\003\202\323\344\223\002*\"%/v1/auth/users/{user_id}:change" +
+      "Status:\001*\022\262\005\n\022AdminResetPassword\0225.udb.c" +
+      "ore.authn.services.v1.AdminResetPassword" +
+      "Request\0326.udb.core.authn.services.v1.Adm" +
+      "inResetPasswordResponse\"\254\004\312\363\030E\010\002\032\036udb:au" +
+      "thn:admin-reset-password \001J\002\001\002j\030authn.Ad" +
+      "minResetPassword\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030A\010\001\022\024adm" +
+      "in_reset_password\032\003udb(\260\352\0010\003@\001J\004authP\001Z\022" +
+      "adminResetPassword\342\363\030\275\001\n\004auth\022\017udb/nativ" +
+      "e/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB" +
+      "_GRPC_TARGET\"0udb.native.auth.admin_rese" +
+      "t_password.boilerplate*\024admin_reset_pass" +
+      "word2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb " +
+      "native smoke\352\363\030T\n\030authn.AdminResetPasswo" +
+      "rd\022\014authn.events\032\ttenant_id\"\010standard*\ra" +
+      "t_least_once2\006stable\362\363\030?\n\005authn\032\010postgre" +
+      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
+      "_TARGET\370\363\030\003\202\323\344\223\002-\"(/v1/auth/users/{user_" +
+      "id}/passwords:reset:\001*\022\370\005\n\031SetServiceAcc" +
+      "ountPassword\022<.udb.core.authn.services.v" +
+      "1.SetServiceAccountPasswordRequest\032=.udb" +
+      ".core.authn.services.v1.SetServiceAccoun" +
+      "tPasswordResponse\"\335\004\312\363\030L\010\002\032\036udb:authn:ad" +
+      "min-reset-password \001J\002\001\002j\037authn.SetServi" +
+      "ceAccountPassword\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030P\010\001\022\034se" +
+      "t_service_account_password\032\003udb(\260\352\0010\001@\001J" +
+      "\004authP\001Z\031setServiceAccountPassword\342\363\030\315\001\n" +
+      "\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED\032\017UDB_GRPC_TARGET\"8udb.native" +
+      ".auth.set_service_account_password.boile" +
+      "rplate*\034set_service_account_password2\010ud" +
+      "b_auth:\005authnJ\013UDB_API_KEYZ\020udb native s" +
+      "moke\352\363\030[\n\037authn.SetServiceAccountPasswor" +
+      "d\022\014authn.events\032\ttenant_id\"\010standard*\rat" +
+      "_least_once2\006stable\362\363\030?\n\005authn\032\010postgres" +
+      "2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_" +
+      "TARGET\370\363\030\003\202\323\344\223\0021\",/v1/auth/service-accou" +
+      "nts/{user_id}/password:\001*\022\253\004\n\007SendOTP\022*." +
+      "udb.core.authn.services.v1.SendOTPReques" +
+      "t\032+.udb.core.authn.services.v1.SendOTPRe" +
+      "sponse\"\306\003\312\363\030/\010\002\032\022udb:authn:send-otp \001J\003\001" +
+      "\002\004j\rauthn.SendOTP\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030*\010\001\022\010se" +
+      "nd_otp\032\003udb(\260\352\0010\003@\001J\004authP\001Z\007sendOtp\342\363\030\245" +
       "\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SER" +
-      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"1udb.nati" +
-      "ve.auth.confirm_mfaenrollment.boilerplat" +
-      "e*\025confirm_mfaenrollment2\010udb_auth:\005auth" +
-      "nJ\013UDB_API_KEYZ\020udb native smoke\352\363\030V\n\032au" +
-      "thn.ConfirmMFAEnrollment\022\014authn.events\032\t" +
-      "tenant_id\"\010standard*\rat_least_once2\006stab" +
-      "le\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002)\"" +
-      "$/v1/auth/users/{user_id}/mfa:confirm:\001*" +
-      "\022\331\005\n\025GenerateRecoveryCodes\0228.udb.core.au" +
-      "thn.services.v1.GenerateRecoveryCodesReq" +
-      "uest\0329.udb.core.authn.services.v1.Genera" +
-      "teRecoveryCodesResponse\"\312\004\312\363\030L\010\002\032!udb:au" +
-      "thn:generate-recovery-codes \001J\003\001\002\004j\033auth" +
-      "n.GenerateRecoveryCodes\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030G" +
-      "\010\001\022\027generate_recovery_codes\032\003udb(\260\352\0010\003@\001" +
-      "J\004authP\001Z\025generateRecoveryCodes\342\363\030\303\001\n\004au" +
-      "th\022\017udb/native/auth\032\033UDB_NATIVE_SERVICES" +
-      "_ENABLED\032\017UDB_GRPC_TARGET\"3udb.native.au" +
-      "th.generate_recovery_codes.boilerplate*\027" +
-      "generate_recovery_codes2\010udb_auth:\005authn" +
-      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030W\n\033aut" +
-      "hn.GenerateRecoveryCodes\022\014authn.events\032\t" +
-      "tenant_id\"\010standard*\rat_least_once2\006stab" +
-      "le\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0025\"" +
-      "0/v1/auth/users/{user_id}/recovery-codes" +
-      ":generate:\001*\022\365\004\n\014PutMfaPolicy\022/.udb.core" +
-      ".authn.services.v1.PutMfaPolicyRequest\0320" +
-      ".udb.core.authn.services.v1.PutMfaPolicy" +
-      "Response\"\201\004\312\363\0309\010\002\032\030udb:authn:put-mfa-pol" +
-      "icy \001J\002\001\002j\022authn.PutMfaPolicy\220\001\001\322\363\030\006\010\001\020\001" +
-      " \001\332\363\0305\010\001\022\016put_mfa_policy\032\003udb(\260\352\0010\003@\001J\004a" +
-      "uthP\001Z\014putMfaPolicy\342\363\030\261\001\n\004auth\022\017udb/nati" +
-      "ve/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
-      "B_GRPC_TARGET\"*udb.native.auth.put_mfa_p" +
-      "olicy.boilerplate*\016put_mfa_policy2\010udb_a" +
-      "uth:\005authnJ\013UDB_API_KEYZ\020udb native smok" +
-      "e\352\363\030N\n\022authn.PutMfaPolicy\022\014authn.events\032" +
+      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"$udb.nati" +
+      "ve.auth.send_otp.boilerplate*\010send_otp2\010" +
+      "udb_auth:\005authnJ\013UDB_API_KEYZ\020udb native" +
+      " smoke\352\363\030I\n\rauthn.SendOTP\022\014authn.events\032" +
       "\ttenant_id\"\010standard*\rat_least_once2\006sta" +
       "ble\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002," +
-      "\032\'/v1/auth/tenants/{tenant_id}/mfa-polic" +
-      "y:\001*\022\362\004\n\014GetMfaPolicy\022/.udb.core.authn.s" +
-      "ervices.v1.GetMfaPolicyRequest\0320.udb.cor" +
-      "e.authn.services.v1.GetMfaPolicyResponse" +
-      "\"\376\003\312\363\0309\010\002\032\030udb:authn:get-mfa-policy \001J\002\001" +
-      "\002j\022authn.GetMfaPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0305\010\001" +
-      "\022\016get_mfa_policy\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014g" +
-      "etMfaPolicy\342\363\030\261\001\n\004auth\022\017udb/native/auth\032" +
-      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T" +
-      "ARGET\"*udb.native.auth.get_mfa_policy.bo" +
-      "ilerplate*\016get_mfa_policy2\010udb_auth:\005aut" +
-      "hnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030N\n\022a" +
-      "uthn.GetMfaPolicy\022\014authn.events\032\ttenant_" +
-      "id\"\010standard*\rat_least_once2\006stable\362\363\030?\n" +
-      "\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002)\022\'/v1/au" +
-      "th/tenants/{tenant_id}/mfa-policy\022\232\005\n\016Fo" +
-      "rgotPassword\0221.udb.core.authn.services.v" +
-      "1.ForgotPasswordRequest\0322.udb.core.authn" +
-      ".services.v1.ForgotPasswordResponse\"\240\004\312\363" +
-      "\030_\010\001R\034authn.password.forgot.publicZ\032auth" +
-      "n.password_reset.abuseb\036authn.password_r" +
-      "eset_requested\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\017forgo" +
-      "t_password\032\003udb(\260\352\0010\003@\001J\004authP\001Z\016forgotP" +
-      "assword\342\363\030\263\001\n\004auth\022\017udb/native/auth\032\033UDB" +
-      "_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGE" +
-      "T\"+udb.native.auth.forgot_password.boile" +
-      "rplate*\017forgot_password2\010udb_auth:\005authn" +
-      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030P\n\024aut" +
-      "hn.ForgotPassword\022\014authn.events\032\ttenant_" +
-      "id\"\010standard*\rat_least_once2\006stable\362\363\030?\n" +
-      "\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\036\"\031/v1/au" +
-      "th/passwords:forgot:\001*\022\220\005\n\rResetPassword" +
-      "\0220.udb.core.authn.services.v1.ResetPassw" +
-      "ordRequest\0321.udb.core.authn.services.v1." +
-      "ResetPasswordResponse\"\231\004\312\363\030^\010\001R\033authn.pa" +
-      "ssword.reset.publicZ\032authn.password_rese" +
-      "t.abuseb\036authn.password_reset_completed\220" +
-      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\016reset_password\032\003udb(" +
-      "\260\352\0010\003@\001J\004authP\001Z\rresetPassword\342\363\030\261\001\n\004aut" +
-      "h\022\017udb/native/auth\032\033UDB_NATIVE_SERVICES_" +
-      "ENABLED\032\017UDB_GRPC_TARGET\"*udb.native.aut" +
-      "h.reset_password.boilerplate*\016reset_pass" +
-      "word2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb " +
-      "native smoke\352\363\030O\n\023authn.ResetPassword\022\014a" +
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\027" +
+      "\"\022/v1/auth/otps:send:\001*\022\301\004\n\tVerifyOTP\022,." +
+      "udb.core.authn.services.v1.VerifyOTPRequ" +
+      "est\032-.udb.core.authn.services.v1.VerifyO" +
+      "TPResponse\"\326\003\312\363\0303\010\002\032\024udb:authn:verify-ot" +
+      "p \001J\003\001\002\004j\017authn.VerifyOTP\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\030.\010\001\022\nverify_otp\032\003udb(\260\352\0010\003@\001J\004authP\001Z\tv" +
+      "erifyOtp\342\363\030\251\001\n\004auth\022\017udb/native/auth\032\033UD" +
+      "B_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARG" +
+      "ET\"&udb.native.auth.verify_otp.boilerpla" +
+      "te*\nverify_otp2\010udb_auth:\005authnJ\013UDB_API" +
+      "_KEYZ\020udb native smoke\352\363\030K\n\017authn.Verify" +
+      "OTP\022\014authn.events\032\ttenant_id\"\010standard*\r" +
+      "at_least_once2\006stable\362\363\030?\n\005authn\032\010postgr" +
+      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
+      "C_TARGET\370\363\030\001\202\323\344\223\002\031\"\024/v1/auth/otps:verify" +
+      ":\001*\022\301\004\n\tResendOTP\022,.udb.core.authn.servi" +
+      "ces.v1.ResendOTPRequest\032-.udb.core.authn" +
+      ".services.v1.ResendOTPResponse\"\326\003\312\363\0303\010\002\032" +
+      "\024udb:authn:resend-otp \001J\003\001\002\004j\017authn.Rese" +
+      "ndOTP\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001\022\nresend_otp\032\003ud" +
+      "b(\260\352\0010\003@\001J\004authP\001Z\tresendOtp\342\363\030\251\001\n\004auth\022" +
+      "\017udb/native/auth\032\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED\032\017UDB_GRPC_TARGET\"&udb.native.auth." +
+      "resend_otp.boilerplate*\nresend_otp2\010udb_" +
+      "auth:\005authnJ\013UDB_API_KEYZ\020udb native smo" +
+      "ke\352\363\030K\n\017authn.ResendOTP\022\014authn.events\032\tt" +
+      "enant_id\"\010standard*\rat_least_once2\006stabl" +
+      "e\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\031\"\024" +
+      "/v1/auth/otps:resend:\001*\022\360\004\n\014Authenticate" +
+      "\022(.udb.core.authn.services.v1.AuthnReque" +
+      "st\032).udb.core.authn.services.v1.AuthnRes" +
+      "ponse\"\212\004\312\363\030N\010\001R\031authn.authenticate.publi" +
+      "cZ\030authn.authenticate.abuseb\022authn.authe" +
+      "nticate\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\014authenticate" +
+      "\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014authenticate\342\363\030\255\001" +
+      "\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SERV" +
+      "ICES_ENABLED\032\017UDB_GRPC_TARGET\"(udb.nativ" +
+      "e.auth.authenticate.boilerplate*\014authent" +
+      "icate2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb" +
+      " native smoke\352\363\030N\n\022authn.Authenticate\022\014a" +
       "uthn.events\032\ttenant_id\"\010standard*\rat_lea" +
       "st_once2\006stable\362\363\030?\n\005authn\032\010postgres2\033UD" +
       "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
-      "ET\370\363\030\002\202\323\344\223\002\035\"\030/v1/auth/passwords:reset:\001" +
-      "*\022\201\005\n\017IntrospectToken\0222.udb.core.authn.s" +
-      "ervices.v1.IntrospectTokenRequest\0323.udb." +
-      "core.authn.services.v1.IntrospectTokenRe" +
-      "sponse\"\204\004\312\363\030=\010\002\032\032udb:authn:introspect-to" +
-      "kenJ\003\001\002\004j\025authn.IntrospectToken\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030:\010\001\022\020introspect_token\032\003udb(\260\352\0010\003@" +
-      "\001J\004authP\001Z\017introspectToken\342\363\030\265\001\n\004auth\022\017u" +
-      "db/native/auth\032\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED\032\017UDB_GRPC_TARGET\",udb.native.auth.in" +
-      "trospect_token.boilerplate*\020introspect_t" +
-      "oken2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb " +
-      "native smoke\352\363\030Q\n\025authn.IntrospectToken\022" +
-      "\014authn.events\032\ttenant_id\"\010standard*\rat_l" +
-      "east_once2\006stable\362\363\030?\n\005authn\032\010postgres2\033" +
-      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
-      "RGET\370\363\030\001\202\323\344\223\002\037\"\032/v1/auth/tokens:introspe" +
-      "ct:\001*\022\317\005\n\025SendPhoneVerification\0228.udb.co" +
-      "re.authn.services.v1.SendPhoneVerificati" +
-      "onRequest\0329.udb.core.authn.services.v1.S" +
-      "endPhoneVerificationResponse\"\300\004\312\363\030L\010\002\032!u" +
-      "db:authn:send-phone-verification \001J\003\001\002\004j" +
-      "\033authn.SendPhoneVerification\220\001\001\322\363\030\006\010\001\020\001 " +
-      "\001\332\363\030G\010\001\022\027send_phone_verification\032\003udb(\260\352" +
-      "\0010\003@\001J\004authP\001Z\025sendPhoneVerification\342\363\030\303" +
-      "\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SER" +
-      "VICES_ENABLED\032\017UDB_GRPC_TARGET\"3udb.nati" +
-      "ve.auth.send_phone_verification.boilerpl" +
-      "ate*\027send_phone_verification2\010udb_auth:\005" +
-      "authnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030W" +
-      "\n\033authn.SendPhoneVerification\022\014authn.eve" +
-      "nts\032\ttenant_id\"\010standard*\rat_least_once2" +
-      "\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323" +
-      "\344\223\002+\"&/v1/auth/users/{user_id}/phones:ve" +
-      "rify:\001*\022\255\004\n\007GetJwks\022*.udb.core.authn.ser" +
-      "vices.v1.GetJwksRequest\032+.udb.core.authn" +
-      ".services.v1.GetJwksResponse\"\310\003\312\363\030,\010\001R\021a" +
-      "uthn.jwks.publicZ\025authn.discovery.abuse\322" +
-      "\363\030\002\020\001\332\363\030*\010\001\022\010get_jwks\032\003udb(\260\352\0010\003@\001J\004auth" +
-      "P\001Z\007getJwks\342\363\030\245\001\n\004auth\022\017udb/native/auth\032" +
-      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T" +
-      "ARGET\"$udb.native.auth.get_jwks.boilerpl" +
-      "ate*\010get_jwks2\010udb_auth:\005authnJ\013UDB_API_" +
-      "KEYZ\020udb native smoke\352\363\030I\n\rauthn.GetJwks" +
-      "\022\014authn.events\032\ttenant_id\"\010standard*\rat_" +
-      "least_once2\006stable\362\363\030?\n\005authn\032\010postgres2" +
-      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
-      "ARGET\370\363\030\001\202\323\344\223\002 \022\036/v1/auth/.well-known/jw" +
-      "ks.json\022\376\005\n\031StartWebAuthnRegistration\022<." +
-      "udb.core.authn.services.v1.StartWebAuthn" +
-      "RegistrationRequest\032=.udb.core.authn.ser" +
-      "vices.v1.StartWebAuthnRegistrationRespon" +
-      "se\"\343\004\312\363\030T\010\002\032&udb:authn:start-web-authn-r" +
-      "egistration \001J\002\001\002j\037authn.StartWebAuthnRe" +
-      "gistration\220\001\001\332\363\030P\010\001\022\034start_web_authn_reg" +
-      "istration\032\003udb(\260\352\0010\003@\001J\004authP\001Z\031startWeb" +
-      "AuthnRegistration\342\363\030\315\001\n\004auth\022\017udb/native" +
-      "/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_" +
-      "GRPC_TARGET\"8udb.native.auth.start_web_a" +
-      "uthn_registration.boilerplate*\034start_web" +
-      "_authn_registration2\010udb_auth:\005authnJ\013UD" +
-      "B_API_KEYZ\020udb native smoke\352\363\030[\n\037authn.S" +
-      "tartWebAuthnRegistration\022\014authn.events\032\t" +
-      "tenant_id\"\010standard*\rat_least_once2\006stab" +
-      "le\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0029\"" +
-      "4/v1/auth/users/{user_id}/webauthn/regis" +
-      "tration:start:\001*\022\371\005\n\032FinishWebAuthnRegis" +
-      "tration\022=.udb.core.authn.services.v1.Fin" +
-      "ishWebAuthnRegistrationRequest\032>.udb.cor" +
-      "e.authn.services.v1.FinishWebAuthnRegist" +
-      "rationResponse\"\333\004\312\363\030V\010\002\032\'udb:authn:finis" +
-      "h-web-authn-registration \001J\002\001\002j authn.Fi" +
-      "nishWebAuthnRegistration\220\001\001\332\363\030R\010\001\022\035finis" +
-      "h_web_authn_registration\032\003udb(\260\352\0010\003@\001J\004a" +
-      "uthP\001Z\032finishWebAuthnRegistration\342\363\030\317\001\n\004" +
+      "ET\370\363\030\001\202\323\344\223\002&\"!/v1/auth/credentials:authe" +
+      "nticate:\001*\022\267\004\n\005Login\022(.udb.core.authn.se" +
+      "rvices.v1.LoginRequest\032).udb.core.authn." +
+      "services.v1.LoginResponse\"\330\003\312\363\030F\010\001R\022auth" +
+      "n.login.publicZ\021authn.login.abuseb\013authn" +
+      ".loginj\013authn.Login\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030%\010\001\022\005" +
+      "login\032\003udb(\260\352\0010\003@\001J\004authP\001Z\005login\342\363\030\237\001\n\004" +
       "auth\022\017udb/native/auth\032\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED\032\017UDB_GRPC_TARGET\"9udb.native." +
-      "auth.finish_web_authn_registration.boile" +
-      "rplate*\035finish_web_authn_registration2\010u" +
-      "db_auth:\005authnJ\013UDB_API_KEYZ\020udb native " +
-      "smoke\352\363\030\\\n authn.FinishWebAuthnRegistrat" +
-      "ion\022\014authn.events\032\ttenant_id\"\010standard*\r" +
-      "at_least_once2\006stable\362\363\030?\n\005authn\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\370\363\030\002\202\323\344\223\002*\"%/v1/auth/webauthn/re" +
-      "gistration:finish:\001*\022\213\006\n\033StartWebAuthnAu" +
-      "thentication\022>.udb.core.authn.services.v" +
-      "1.StartWebAuthnAuthenticationRequest\032?.u" +
-      "db.core.authn.services.v1.StartWebAuthnA" +
-      "uthenticationResponse\"\352\004\312\363\030_\010\001R\033authn.we" +
-      "bauthn.start.publicZ\024authn.webauthn.abus" +
-      "eb%authn.webauthn_authentication_started" +
-      "\220\001\001\332\363\030T\010\001\022\036start_web_authn_authenticatio" +
-      "n\032\003udb(\260\352\0010\003@\001J\004authP\001Z\033startWebAuthnAut" +
-      "hentication\342\363\030\321\001\n\004auth\022\017udb/native/auth\032" +
-      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T" +
-      "ARGET\":udb.native.auth.start_web_authn_a" +
-      "uthentication.boilerplate*\036start_web_aut" +
-      "hn_authentication2\010udb_auth:\005authnJ\013UDB_" +
-      "API_KEYZ\020udb native smoke\352\363\030]\n!authn.Sta" +
-      "rtWebAuthnAuthentication\022\014authn.events\032\t" +
-      "tenant_id\"\010standard*\rat_least_once2\006stab" +
-      "le\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002+\"" +
-      "&/v1/auth/webauthn/authentication:start:" +
-      "\001*\022\226\006\n\034FinishWebAuthnAuthentication\022?.ud" +
-      "b.core.authn.services.v1.FinishWebAuthnA" +
-      "uthenticationRequest\032@.udb.core.authn.se" +
-      "rvices.v1.FinishWebAuthnAuthenticationRe" +
-      "sponse\"\362\004\312\363\030a\010\001R\034authn.webauthn.finish.p" +
-      "ublicZ\024authn.webauthn.abuseb&authn.webau" +
-      "thn_authentication_finished\220\001\001\332\363\030V\010\001\022\037fi" +
-      "nish_web_authn_authentication\032\003udb(\260\352\0010\003" +
-      "@\001J\004authP\001Z\034finishWebAuthnAuthentication" +
-      "\342\363\030\323\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE" +
-      "_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\";udb." +
-      "native.auth.finish_web_authn_authenticat" +
-      "ion.boilerplate*\037finish_web_authn_authen" +
-      "tication2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020" +
-      "udb native smoke\352\363\030^\n\"authn.FinishWebAut" +
-      "hnAuthentication\022\014authn.events\032\ttenant_i" +
-      "d\"\010standard*\rat_least_once2\006stable\362\363\030?\n\005" +
-      "authn\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002,\"\'/v1/aut" +
-      "h/webauthn/authentication:finish:\001*\022\227\002\n\013" +
-      "ListDevices\022..udb.core.authn.services.v1" +
-      ".ListDevicesRequest\032/.udb.core.authn.ser" +
-      "vices.v1.ListDevicesResponse\"\246\001\312\363\0306\010\002\032\026u" +
-      "db:authn:list-devices \001J\002\001\002j\021authn.ListD" +
-      "evices\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014list_devices\032" +
-      "\003udb(\260\352\0010\003@\001J\004authP\001Z\013listDevices\370\363\030\001\202\323\344" +
-      "\223\002\"\022 /v1/auth/users/{user_id}/devices\022\354\002" +
-      "\n\014RevokeDevice\022/.udb.core.authn.services" +
-      ".v1.RevokeDeviceRequest\0320.udb.core.authn" +
-      ".services.v1.RevokeDeviceResponse\"\370\001\312\363\0308" +
-      "\010\002\032\027udb:authn:revoke-device \001J\002\001\002j\022authn" +
-      ".RevokeDevice\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\rrevoke" +
-      "_device\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014revokeDevi" +
-      "ce\352\363\030N\n\022authn.RevokeDevice\022\014authn.events" +
-      "\032\ttenant_id\"\010standard*\rat_least_once2\006st" +
-      "able\370\363\030\002\202\323\344\223\002\036*\034/v1/auth/devices/{device" +
-      "_id}\022\263\003\n\022AdminRevokeSession\0225.udb.core.a" +
-      "uthn.services.v1.AdminRevokeSessionReque" +
-      "st\0326.udb.core.authn.services.v1.AdminRev" +
-      "okeSessionResponse\"\255\002\312\363\030E\010\002\032\036udb:authn:a" +
-      "dmin-revoke-session \001J\002\001\002j\030authn.AdminRe" +
-      "vokeSession\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030A\010\001\022\024admin_re" +
-      "voke_session\032\003udb(\260\352\0010\003@\001J\004authP\001Z\022admin" +
-      "RevokeSession\352\363\030T\n\030authn.AdminRevokeSess" +
-      "ion\022\014authn.events\032\ttenant_id\"\010standard*\r" +
-      "at_least_once2\006stable\370\363\030\003\202\323\344\223\0023\"./v1/aut" +
-      "h/admin/users/{user_id}/sessions:revoke:" +
-      "\001*\022\373\003\n\032AdminRevokeAllUserSessions\022=.udb." +
-      "core.authn.services.v1.AdminRevokeAllUse" +
-      "rSessionsRequest\032>.udb.core.authn.servic" +
-      "es.v1.AdminRevokeAllUserSessionsResponse" +
-      "\"\335\002\312\363\030X\010\002\032(udb:authn:admin-revoke-all-us" +
-      "er-sessions \001J\003\001\002\004j authn.AdminRevokeAll" +
-      "UserSessions\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030S\010\001\022\036admin_r" +
-      "evoke_all_user_sessions\032\003udb(\260\352\0010\003@\001J\004au" +
-      "thP\001Z\032adminRevokeAllUserSessions\352\363\030\\\n au" +
-      "thn.AdminRevokeAllUserSessions\022\014authn.ev" +
-      "ents\032\ttenant_id\"\010standard*\rat_least_once" +
-      "2\006stable\370\363\030\003\202\323\344\223\0026\"1/v1/auth/admin/users" +
-      "/{user_id}/sessions:revokeAll:\001*\022\216\004\n\034Adm" +
-      "inRevokeAllTenantSessions\022?.udb.core.aut" +
-      "hn.services.v1.AdminRevokeAllTenantSessi",
-      "onsRequest\032@.udb.core.authn.services.v1." +
-      "AdminRevokeAllTenantSessionsResponse\"\352\002\312" +
-      "\363\030[\010\002\032*udb:authn:admin-revoke-all-tenant" +
-      "-sessions \001J\002\001\002j\"authn.AdminRevokeAllTen" +
-      "antSessions\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030W\010\001\022 admin_re" +
-      "voke_all_tenant_sessions\032\003udb(\260\352\0010\003@\001J\004a" +
-      "uthP\001Z\034adminRevokeAllTenantSessions\352\363\030^\n" +
-      "\"authn.AdminRevokeAllTenantSessions\022\014aut" +
-      "hn.events\032\ttenant_id\"\010standard*\rat_least" +
-      "_once2\006stable\370\363\030\003\202\323\344\223\002:\"5/v1/auth/admin/" +
-      "tenants/{tenant_id}/sessions:revokeAll:\001" +
-      "*\022\211\003\n\017EmergencyRevoke\0222.udb.core.authn.s" +
-      "ervices.v1.EmergencyRevokeRequest\0323.udb." +
-      "core.authn.services.v1.EmergencyRevokeRe" +
-      "sponse\"\214\002\312\363\030>\010\002\032\032udb:authn:emergency-rev" +
-      "oke \001J\002\001\002j\025authn.EmergencyRevoke\220\001\001\322\363\030\006\010" +
-      "\001\020\001 \001\332\363\030:\010\001\022\020emergency_revoke\032\003udb(\260\352\0010\003" +
-      "@\001J\004authP\001Z\017emergencyRevoke\352\363\030Q\n\025authn.E" +
-      "mergencyRevoke\022\014authn.events\032\ttenant_id\"" +
-      "\010standard*\rat_least_once2\006stable\370\363\030\003\202\323\344\223" +
-      "\002#\"\036/v1/auth/admin:emergencyRevoke:\001*\022\304\002" +
-      "\n\021IssueMfaChallenge\0224.udb.core.authn.ser" +
-      "vices.v1.IssueMfaChallengeRequest\0325.udb." +
-      "core.authn.services.v1.IssueMfaChallenge" +
-      "Response\"\301\001\312\363\030D\010\002\032\035udb:authn:issue-mfa-c" +
-      "hallenge \001J\003\001\002\004j\027authn.IssueMfaChallenge" +
-      "\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030?\010\001\022\023issue_mfa_challenge" +
-      "\032\003udb(\260\352\0010\003@\001J\004authP\001Z\021issueMfaChallenge" +
-      "\370\363\030\002\202\323\344\223\002\"\"\035/v1/auth/mfa/challenges:issu" +
-      "e:\001*\022\314\002\n\022VerifyMfaChallenge\0225.udb.core.a" +
-      "uthn.services.v1.VerifyMfaChallengeReque" +
-      "st\0326.udb.core.authn.services.v1.VerifyMf" +
-      "aChallengeResponse\"\306\001\312\363\030F\010\002\032\036udb:authn:v" +
-      "erify-mfa-challenge \001J\003\001\002\004j\030authn.Verify" +
-      "MfaChallenge\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030A\010\001\022\024verify_" +
-      "mfa_challenge\032\003udb(\260\352\0010\003@\001J\004authP\001Z\022veri" +
-      "fyMfaChallenge\370\363\030\002\202\323\344\223\002#\"\036/v1/auth/mfa/c" +
-      "hallenges:verify:\001*\022\263\002\n\016ListMfaFactors\0221" +
-      ".udb.core.authn.services.v1.ListMfaFacto" +
-      "rsRequest\0322.udb.core.authn.services.v1.L" +
-      "istMfaFactorsResponse\"\271\001\312\363\030>\010\002\032\032udb:auth" +
-      "n:list-mfa-factors \001J\003\001\002\004j\024authn.ListMfa" +
-      "Factors\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0309\010\001\022\020list_mfa_fac" +
-      "tors\032\003udb(\260\352\0010\003@\001J\004authP\001Z\016listMfaFactor" +
-      "s\370\363\030\001\202\323\344\223\002&\022$/v1/auth/users/{user_id}/mf" +
-      "a/factors\022\242\003\n\020DisableMfaFactor\0223.udb.cor" +
-      "e.authn.services.v1.DisableMfaFactorRequ" +
-      "est\0324.udb.core.authn.services.v1.Disable" +
-      "MfaFactorResponse\"\242\002\312\363\030B\010\002\032\034udb:authn:di" +
-      "sable-mfa-factor \001J\003\001\002\004j\026authn.DisableMf" +
-      "aFactor\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030=\010\001\022\022disable_mfa_" +
-      "factor\032\003udb(\260\352\0010\003@\001J\004authP\001Z\020disableMfaF" +
-      "actor\352\363\030R\n\026authn.DisableMfaFactor\022\014authn" +
-      ".events\032\ttenant_id\"\010standard*\rat_least_o" +
-      "nce2\006stable\370\363\030\002\202\323\344\223\0021\",/v1/auth/users/{u" +
-      "ser_id}/mfa/factors:disable:\001*\022\274\002\n\rRenam" +
-      "ePasskey\0220.udb.core.authn.services.v1.Re" +
-      "namePasskeyRequest\0321.udb.core.authn.serv" +
-      "ices.v1.RenamePasskeyResponse\"\305\001\312\363\030:\010\002\032\030" +
-      "udb:authn:rename-passkey \001J\002\001\002j\023authn.Re" +
-      "namePasskey\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\016rename_p" +
-      "asskey\032\003udb(\260\352\0010\003@\001J\004authP\001Z\rrenamePassk" +
-      "ey\370\363\030\002\202\323\344\223\0029\"4/v1/auth/users/{user_id}/w" +
-      "ebauthn/credentials:rename:\001*\022\274\003\n\023Revoke" +
-      "RecoveryCodes\0226.udb.core.authn.services." +
-      "v1.RevokeRecoveryCodesRequest\0327.udb.core" +
-      ".authn.services.v1.RevokeRecoveryCodesRe" +
-      "sponse\"\263\002\312\363\030H\010\002\032\037udb:authn:revoke-recove" +
-      "ry-codes \001J\003\001\002\004j\031authn.RevokeRecoveryCod" +
-      "es\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030C\010\001\022\025revoke_recovery_c" +
-      "odes\032\003udb(\260\352\0010\003@\001J\004authP\001Z\023revokeRecover" +
-      "yCodes\352\363\030U\n\031authn.RevokeRecoveryCodes\022\014a" +
-      "uthn.events\032\ttenant_id\"\010standard*\rat_lea" +
-      "st_once2\006stable\370\363\030\002\202\323\344\223\0023\"./v1/auth/user" +
-      "s/{user_id}/recovery-codes:revoke:\001*\022\206\003\n" +
-      "\rAdminResetMfa\0220.udb.core.authn.services" +
-      ".v1.AdminResetMfaRequest\0321.udb.core.auth" +
-      "n.services.v1.AdminResetMfaResponse\"\217\002\312\363" +
-      "\030<\010\002\032\031udb:authn:admin-reset-mfa \001J\003\001\002\004j\023" +
-      "authn.AdminResetMfa\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0307\010\001\022\017" +
-      "admin_reset_mfa\032\003udb(\260\352\0010\003@\001J\004authP\001Z\rad" +
-      "minResetMfa\352\363\030O\n\023authn.AdminResetMfa\022\014au" +
-      "thn.events\032\ttenant_id\"\010standard*\rat_leas" +
-      "t_once2\006stable\370\363\030\003\202\323\344\223\002-\"(/v1/auth/admin" +
-      "/users/{user_id}/mfa:reset:\001*\022\374\002\n\027ListWe" +
-      "bAuthnCredentials\022:.udb.core.authn.servi" +
-      "ces.v1.ListWebAuthnCredentialsRequest\032;." +
-      "udb.core.authn.services.v1.ListWebAuthnC" +
-      "redentialsResponse\"\347\001\312\363\030P\010\002\032$udb:authn:l" +
-      "ist-web-authn-credentials \001J\002\001\002j\035authn.L" +
-      "istWebAuthnCredentials\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030L\010" +
-      "\001\022\032list_web_authn_credentials\032\003udb(\260\352\0010\003" +
-      "@\001J\004authP\001Z\027listWebAuthnCredentials\370\363\030\001\202" +
-      "\323\344\223\002/\022-/v1/auth/users/{user_id}/webauthn" +
-      "/credentials\022\361\003\n\030DeleteWebAuthnCredentia" +
-      "l\022;.udb.core.authn.services.v1.DeleteWeb" +
-      "AuthnCredentialRequest\032<.udb.core.authn." +
-      "services.v1.DeleteWebAuthnCredentialResp" +
-      "onse\"\331\002\312\363\030R\010\002\032%udb:authn:delete-web-auth" +
-      "n-credential \001J\002\001\002j\036authn.DeleteWebAuthn" +
-      "Credential\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030N\010\001\022\033delete_we" +
-      "b_authn_credential\032\003udb(\260\352\0010\003@\001J\004authP\001Z" +
-      "\030deleteWebAuthnCredential\352\363\030Z\n\036authn.Del" +
-      "eteWebAuthnCredential\022\014authn.events\032\tten" +
-      "ant_id\"\010standard*\rat_least_once2\006stable\370" +
-      "\363\030\002\202\323\344\223\002?*=/v1/auth/users/{user_id}/weba" +
-      "uthn/credentials/{credential_id}\022\206\006\n\031Cre" +
-      "ateServiceAccountGrant\022<.udb.core.authn." +
-      "services.v1.CreateServiceAccountGrantReq" +
-      "uest\032=.udb.core.authn.services.v1.Create" +
-      "ServiceAccountGrantResponse\"\353\004\312\363\030]\010\002\032\027ud" +
-      "b:authn:manage-grants \001J\002\001\002j\037authn.Creat" +
-      "eServiceAccountGrantz\ttenant_id\202\001\nprojec" +
-      "t_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030P\010\001\022\034create_service_" +
-      "account_grant\032\003udb(\260\352\0010\003@\001J\004authP\001Z\031crea" +
-      "teServiceAccountGrant\342\363\030\315\001\n\004auth\022\017udb/na" +
-      "tive/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017" +
-      "UDB_GRPC_TARGET\"8udb.native.auth.create_" +
-      "service_account_grant.boilerplate*\034creat" +
-      "e_service_account_grant2\010udb_auth:\005authn" +
-      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030[\n\037aut" +
-      "hn.CreateServiceAccountGrant\022\014authn.even" +
-      "ts\032\ttenant_id\"\010standard*\rat_least_once2\006" +
-      "stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_" +
-      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344" +
-      "\223\002.\")/v1/auth/service-accounts/{user_id}" +
-      "/grant:\001*\022\375\004\n\026GetServiceAccountGrant\0229.u" +
-      "db.core.authn.services.v1.GetServiceAcco" +
-      "untGrantRequest\032:.udb.core.authn.service" +
-      "s.v1.GetServiceAccountGrantResponse\"\353\003\312\363" +
-      "\030K\010\002\032\025udb:authn:read-grants \001J\002\001\002j\034authn" +
-      ".GetServiceAccountGrantz\ttenant_id\220\001\001\322\363\030" +
-      "\006\010\001\020\001 \001\332\363\030J\010\001\022\031get_service_account_grant" +
-      "\032\003udb(\260\352\0010\003@\001J\004authP\001Z\026getServiceAccount" +
-      "Grant\342\363\030\307\001\n\004auth\022\017udb/native/auth\032\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
-      "5udb.native.auth.get_service_account_gra" +
-      "nt.boilerplate*\031get_service_account_gran" +
-      "t2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb nat" +
-      "ive smoke\362\363\030?\n\005authn\032\010postgres2\033UDB_NATI" +
-      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001" +
-      "\202\323\344\223\002+\022)/v1/auth/service-accounts/{user_" +
-      "id}/grant\022\203\005\n\030ListServiceAccountGrants\022;" +
-      ".udb.core.authn.services.v1.ListServiceA" +
-      "ccountGrantsRequest\032<.udb.core.authn.ser" +
-      "vices.v1.ListServiceAccountGrantsRespons" +
-      "e\"\353\003\312\363\030M\010\002\032\025udb:authn:read-grants \001J\002\001\002j" +
-      "\036authn.ListServiceAccountGrantsz\ttenant_" +
-      "id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030N\010\001\022\033list_service_acco" +
-      "unt_grants\032\003udb(\260\352\0010\003@\001J\004authP\001Z\030listSer" +
-      "viceAccountGrants\342\363\030\313\001\n\004auth\022\017udb/native" +
-      "/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_" +
-      "GRPC_TARGET\"7udb.native.auth.list_servic" +
-      "e_account_grants.boilerplate*\033list_servi" +
-      "ce_account_grants2\010udb_auth:\005authnJ\013UDB_" +
-      "API_KEYZ\020udb native smoke\362\363\030?\n\005authn\032\010po" +
-      "stgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB" +
-      "_GRPC_TARGET\370\363\030\001\202\323\344\223\002!\022\037/v1/auth/service" +
-      "-account-grants\022\227\006\n\032ReplaceServiceAccoun" +
-      "tGrant\022=.udb.core.authn.services.v1.Repl" +
-      "aceServiceAccountGrantRequest\032>.udb.core" +
-      ".authn.services.v1.ReplaceServiceAccount" +
-      "GrantResponse\"\371\004\312\363\030^\010\002\032\027udb:authn:manage" +
-      "-grants \001J\002\001\002j authn.ReplaceServiceAccou" +
-      "ntGrantz\ttenant_id\202\001\nproject_id\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030R\010\001\022\035replace_service_account_gran" +
-      "t\032\003udb(\260\352\0010\003@\001J\004authP\001Z\032replaceServiceAc" +
-      "countGrant\342\363\030\317\001\n\004auth\022\017udb/native/auth\032\033" +
-      "UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TA" +
-      "RGET\"9udb.native.auth.replace_service_ac" +
-      "count_grant.boilerplate*\035replace_service" +
-      "_account_grant2\010udb_auth:\005authnJ\013UDB_API" +
-      "_KEYZ\020udb native smoke\352\363\030\\\n authn.Replac" +
-      "eServiceAccountGrant\022\014authn.events\032\ttena" +
-      "nt_id\"\010standard*\rat_least_once2\006stable\362\363" +
-      "\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES" +
-      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0026\"1/v1" +
-      "/auth/service-accounts/{user_id}/grant:r" +
-      "eplace:\001*\022\243\006\n\034RotateServiceAccountIdenti" +
-      "ty\022?.udb.core.authn.services.v1.RotateSe" +
-      "rviceAccountIdentityRequest\032@.udb.core.a" +
-      "uthn.services.v1.RotateServiceAccountIde" +
-      "ntityResponse\"\377\004\312\363\030S\010\002\032\027udb:authn:manage" +
-      "-grants \001J\002\001\002j\"authn.RotateServiceAccoun" +
-      "tIdentityz\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030V\010\001\022" +
-      "\037rotate_service_account_identity\032\003udb(\260\352" +
-      "\0010\003@\001J\004authP\001Z\034rotateServiceAccountIdent" +
-      "ity\342\363\030\323\001\n\004auth\022\017udb/native/auth\032\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\";u" +
-      "db.native.auth.rotate_service_account_id" +
-      "entity.boilerplate*\037rotate_service_accou" +
-      "nt_identity2\010udb_auth:\005authnJ\013UDB_API_KE" +
-      "YZ\020udb native smoke\352\363\030^\n\"authn.RotateSer" +
-      "viceAccountIdentity\022\014authn.events\032\ttenan" +
-      "t_id\"\010standard*\rat_least_once2\006stable\362\363\030" +
-      "?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_" +
-      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002=\"8/v1/" +
-      "auth/service-accounts/{user_id}/grant:ro" +
-      "tateIdentity:\001*\022\231\006\n\033TransferServiceAccou" +
-      "ntGrant\022>.udb.core.authn.services.v1.Tra" +
-      "nsferServiceAccountGrantRequest\032?.udb.co" +
-      "re.authn.services.v1.TransferServiceAcco" +
-      "untGrantResponse\"\370\004\312\363\030R\010\002\032\027udb:authn:man" +
-      "age-grants \001J\002\001\002j!authn.TransferServiceA" +
-      "ccountGrantz\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030T\010" +
-      "\001\022\036transfer_service_account_grant\032\003udb(\260" +
-      "\352\0010\003@\001J\004authP\001Z\033transferServiceAccountGr" +
-      "ant\342\363\030\321\001\n\004auth\022\017udb/native/auth\032\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\":u" +
-      "db.native.auth.transfer_service_account_" +
-      "grant.boilerplate*\036transfer_service_acco" +
-      "unt_grant2\010udb_auth:\005authnJ\013UDB_API_KEYZ" +
-      "\020udb native smoke\352\363\030]\n!authn.TransferSer" +
-      "viceAccountGrant\022\014authn.events\032\ttenant_i" +
-      "d\"\010standard*\rat_least_once2\006stable\362\363\030?\n\005" +
-      "authn\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002<\"7/v1/aut" +
-      "h/service-accounts/{from_user_id}/grant:" +
-      "transfer:\001*\022\200\006\n\031RevokeServiceAccountGran" +
-      "t\022<.udb.core.authn.services.v1.RevokeSer" +
-      "viceAccountGrantRequest\032=.udb.core.authn" +
-      ".services.v1.RevokeServiceAccountGrantRe" +
-      "sponse\"\345\004\312\363\030P\010\002\032\027udb:authn:manage-grants" +
-      " \001J\002\001\002j\037authn.RevokeServiceAccountGrantz" +
-      "\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030P\010\001\022\034revoke_se" +
-      "rvice_account_grant\032\003udb(\260\352\0010\003@\001J\004authP\001" +
-      "Z\031revokeServiceAccountGrant\342\363\030\315\001\n\004auth\022\017" +
-      "udb/native/auth\032\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED\032\017UDB_GRPC_TARGET\"8udb.native.auth.r" +
-      "evoke_service_account_grant.boilerplate*" +
-      "\034revoke_service_account_grant2\010udb_auth:" +
+      "ES_ENABLED\032\017UDB_GRPC_TARGET\"!udb.native." +
+      "auth.login.boilerplate*\005login2\010udb_auth:" +
       "\005authnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030" +
-      "[\n\037authn.RevokeServiceAccountGrant\022\014auth" +
+      "G\n\013authn.Login\022\014authn.events\032\ttenant_id\"" +
+      "\010standard*\rat_least_once2\006stable\362\363\030?\n\005au" +
+      "thn\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\037\"\032/v1/auth/" +
+      "password-sessions:\001*\022\216\005\n\014RefreshToken\022/." +
+      "udb.core.authn.services.v1.RefreshTokenR" +
+      "equest\0320.udb.core.authn.services.v1.Refr" +
+      "eshTokenResponse\"\232\004\312\363\030e\010\001R\032authn.refresh" +
+      "_token.publicZ\031authn.refresh_token.abuse" +
+      "b\023authn.refresh_tokenj\022authn.RefreshToke" +
+      "n\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\rrefresh_token\032\003udb" +
+      "(\260\352\0010\003@\001J\004authP\001Z\014refreshToken\342\363\030\257\001\n\004aut" +
+      "h\022\017udb/native/auth\032\033UDB_NATIVE_SERVICES_" +
+      "ENABLED\032\017UDB_GRPC_TARGET\")udb.native.aut" +
+      "h.refresh_token.boilerplate*\rrefresh_tok" +
+      "en2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb na" +
+      "tive smoke\352\363\030N\n\022authn.RefreshToken\022\014auth" +
       "n.events\032\ttenant_id\"\010standard*\rat_least_" +
       "once2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_N" +
       "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\003\202\323\344\223\0025\"0/v1/auth/service-accounts/{us" +
-      "er_id}/grant:revoke:\001*\022\341\005\n\030CreateCertifi" +
-      "cateBinding\022;.udb.core.authn.services.v1" +
-      ".CreateCertificateBindingRequest\032<.udb.c" +
-      "ore.authn.services.v1.CreateCertificateB" +
-      "indingResponse\"\311\004\312\363\030O\010\002\032\027udb:authn:manag" +
-      "e-grants \001J\002\001\002j\036authn.CreateCertificateB" +
-      "indingz\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030M\010\001\022\032cr" +
-      "eate_certificate_binding\032\003udb(\260\352\0010\003@\001J\004a" +
-      "uthP\001Z\030createCertificateBinding\342\363\030\311\001\n\004au" +
-      "th\022\017udb/native/auth\032\033UDB_NATIVE_SERVICES" +
-      "_ENABLED\032\017UDB_GRPC_TARGET\"6udb.native.au" +
-      "th.create_certificate_binding.boilerplat" +
-      "e*\032create_certificate_binding2\010udb_auth:" +
-      "\005authnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030" +
-      "Z\n\036authn.CreateCertificateBinding\022\014authn" +
+      "\363\030\002\202\323\344\223\002\034\"\027/v1/auth/tokens:refresh:\001*\022\242\004" +
+      "\n\006Logout\022).udb.core.authn.services.v1.Lo" +
+      "goutRequest\032*.udb.core.authn.services.v1" +
+      ".LogoutResponse\"\300\003\312\363\030+\010\002\032\020udb:authn:logo" +
+      "ut \001J\002\001\002j\014authn.Logout\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030\'\010" +
+      "\001\022\006logout\032\003udb(\260\352\0010\003@\001J\004authP\001Z\006logout\342\363" +
+      "\030\241\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\"udb.na",
+      "tive.auth.logout.boilerplate*\006logout2\010ud" +
+      "b_auth:\005authnJ\013UDB_API_KEYZ\020udb native s" +
+      "moke\352\363\030H\n\014authn.Logout\022\014authn.events\032\tte" +
+      "nant_id\"\010standard*\rat_least_once2\006stable" +
+      "\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035\"\030/" +
+      "v1/auth/sessions:logout:\001*\022\367\004\n\016ChangePas" +
+      "sword\0221.udb.core.authn.services.v1.Chang" +
+      "ePasswordRequest\0322.udb.core.authn.servic" +
+      "es.v1.ChangePasswordResponse\"\375\003\312\363\030<\010\002\032\031u" +
+      "db:authn:change-password \001J\002\001\002j\024authn.Ch" +
+      "angePassword\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\017change_" +
+      "password\032\003udb(\260\352\0010\003@\001J\004authP\001Z\016changePas" +
+      "sword\342\363\030\263\001\n\004auth\022\017udb/native/auth\032\033UDB_N" +
+      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
+      "+udb.native.auth.change_password.boilerp" +
+      "late*\017change_password2\010udb_auth:\005authnJ\013" +
+      "UDB_API_KEYZ\020udb native smoke\352\363\030P\n\024authn" +
+      ".ChangePassword\022\014authn.events\032\ttenant_id" +
+      "\"\010standard*\rat_least_once2\006stable\362\363\030?\n\005a" +
+      "uthn\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
+      "LED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\036\"\031/v1/auth" +
+      "/passwords:change:\001*\022\356\004\n\rValidateToken\0220" +
+      ".udb.core.authn.services.v1.ValidateToke" +
+      "nRequest\0321.udb.core.authn.services.v1.Va" +
+      "lidateTokenResponse\"\367\003\312\363\030<\010\002\032\030udb:authn:" +
+      "validate-token \001J\004\001\002\005\004j\023authn.ValidateTo" +
+      "ken\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\016validate_token\032\003" +
+      "udb(\260\352\0010\003@\001J\004authP\001Z\rvalidateToken\342\363\030\261\001\n" +
+      "\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED\032\017UDB_GRPC_TARGET\"*udb.native" +
+      ".auth.validate_token.boilerplate*\016valida" +
+      "te_token2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020" +
+      "udb native smoke\352\363\030O\n\023authn.ValidateToke" +
+      "n\022\014authn.events\032\ttenant_id\"\010standard*\rat" +
+      "_least_once2\006stable\362\363\030?\n\005authn\032\010postgres" +
+      "2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_" +
+      "TARGET\370\363\030\001\202\323\344\223\002\035\"\030/v1/auth/tokens:valida" +
+      "te:\001*\022\346\004\n\rCreateSession\0220.udb.core.authn" +
+      ".services.v1.CreateSessionRequest\0321.udb." +
+      "core.authn.services.v1.CreateSessionResp" +
+      "onse\"\357\003\312\363\030;\010\002\032\030udb:authn:create-session " +
+      "\001J\003\001\002\004j\023authn.CreateSession\220\001\001\322\363\030\006\010\001\020\001 \001" +
+      "\332\363\0306\010\001\022\016create_session\032\003udb(\260\352\0010\003@\001J\004aut" +
+      "hP\001Z\rcreateSession\342\363\030\261\001\n\004auth\022\017udb/nativ" +
+      "e/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB" +
+      "_GRPC_TARGET\"*udb.native.auth.create_ses" +
+      "sion.boilerplate*\016create_session2\010udb_au" +
+      "th:\005authnJ\013UDB_API_KEYZ\020udb native smoke" +
+      "\352\363\030O\n\023authn.CreateSession\022\014authn.events\032" +
+      "\ttenant_id\"\010standard*\rat_least_once2\006sta" +
+      "ble\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SER" +
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\026" +
+      "\"\021/v1/auth/sessions:\001*\022\205\005\n\016RefreshSessio" +
+      "n\0221.udb.core.authn.services.v1.RefreshSe" +
+      "ssionRequest\0322.udb.core.authn.services.v" +
+      "1.RefreshSessionResponse\"\213\004\312\363\030=\010\002\032\031udb:a" +
+      "uthn:refresh-session \001J\003\001\002\004j\024authn.Refre" +
+      "shSession\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\017refresh_se" +
+      "ssion\032\003udb(\260\352\0010\003@\001J\004authP\001Z\016refreshSessi" +
+      "on\342\363\030\263\001\n\004auth\022\017udb/native/auth\032\033UDB_NATI" +
+      "VE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"+ud" +
+      "b.native.auth.refresh_session.boilerplat" +
+      "e*\017refresh_session2\010udb_auth:\005authnJ\013UDB" +
+      "_API_KEYZ\020udb native smoke\352\363\030P\n\024authn.Re" +
+      "freshSession\022\014authn.events\032\ttenant_id\"\010s" +
+      "tandard*\rat_least_once2\006stable\362\363\030?\n\005auth" +
+      "n\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
+      "2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002+\"&/v1/auth/se" +
+      "ssions/{session_id}:refresh:\001*\022\322\004\n\nGetSe" +
+      "ssion\022-.udb.core.authn.services.v1.GetSe" +
+      "ssionRequest\032..udb.core.authn.services.v" +
+      "1.GetSessionResponse\"\344\003\312\363\0305\010\002\032\025udb:authn" +
+      ":get-session \001J\003\001\002\004j\020authn.GetSession\220\001\001" +
+      "\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\013get_session\032\003udb(\260\352\0010\003" +
+      "@\001J\004authP\001Z\ngetSession\342\363\030\253\001\n\004auth\022\017udb/n" +
+      "ative/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032" +
+      "\017UDB_GRPC_TARGET\"\'udb.native.auth.get_se" +
+      "ssion.boilerplate*\013get_session2\010udb_auth" +
+      ":\005authnJ\013UDB_API_KEYZ\020udb native smoke\352\363" +
+      "\030L\n\020authn.GetSession\022\014authn.events\032\ttena" +
+      "nt_id\"\010standard*\rat_least_once2\006stable\362\363" +
+      "\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES" +
+      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002 \022\036/v1" +
+      "/auth/sessions/{session_id}\022\351\004\n\014ListSess" +
+      "ions\022/.udb.core.authn.services.v1.ListSe" +
+      "ssionsRequest\0320.udb.core.authn.services." +
+      "v1.ListSessionsResponse\"\365\003\312\363\0309\010\002\032\027udb:au" +
+      "thn:list-sessions \001J\003\001\002\004j\022authn.ListSess" +
+      "ions\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\rlist_sessions\032\003" +
+      "udb(\260\352\0010\003@\001J\004authP\001Z\014listSessions\342\363\030\257\001\n\004" +
+      "auth\022\017udb/native/auth\032\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED\032\017UDB_GRPC_TARGET\")udb.native." +
+      "auth.list_sessions.boilerplate*\rlist_ses" +
+      "sions2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb" +
+      " native smoke\352\363\030N\n\022authn.ListSessions\022\014a" +
+      "uthn.events\032\ttenant_id\"\010standard*\rat_lea" +
+      "st_once2\006stable\362\363\030?\n\005authn\032\010postgres2\033UD" +
+      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
+      "ET\370\363\030\001\202\323\344\223\002#\022!/v1/auth/users/{user_id}/s" +
+      "essions\022\360\004\n\rRevokeSession\0220.udb.core.aut" +
+      "hn.services.v1.RevokeSessionRequest\0321.ud" +
+      "b.core.authn.services.v1.RevokeSessionRe" +
+      "sponse\"\371\003\312\363\030;\010\002\032\030udb:authn:revoke-sessio" +
+      "n \001J\003\001\002\004j\023authn.RevokeSession\220\001\001\322\363\030\006\010\001\020\001" +
+      " \001\332\363\0306\010\001\022\016revoke_session\032\003udb(\260\352\0010\003@\001J\004a" +
+      "uthP\001Z\rrevokeSession\342\363\030\261\001\n\004auth\022\017udb/nat" +
+      "ive/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
+      "DB_GRPC_TARGET\"*udb.native.auth.revoke_s" +
+      "ession.boilerplate*\016revoke_session2\010udb_" +
+      "auth:\005authnJ\013UDB_API_KEYZ\020udb native smo" +
+      "ke\352\363\030O\n\023authn.RevokeSession\022\014authn.event" +
+      "s\032\ttenant_id\"\010standard*\rat_least_once2\006s" +
+      "table\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223" +
+      "\002 *\036/v1/auth/sessions/{session_id}\022\347\004\n\014V" +
+      "alidateCSRF\022/.udb.core.authn.services.v1" +
+      ".ValidateCSRFRequest\0320.udb.core.authn.se" +
+      "rvices.v1.ValidateCSRFResponse\"\363\003\312\363\0308\010\002\032" +
+      "\027udb:authn:validate-csrf \001J\002\001\002j\022authn.Va" +
+      "lidateCSRF\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\rvalidate_" +
+      "csrf\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014validateCsrf\342" +
+      "\363\030\257\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_" +
+      "SERVICES_ENABLED\032\017UDB_GRPC_TARGET\")udb.n" +
+      "ative.auth.validate_csrf.boilerplate*\rva" +
+      "lidate_csrf2\010udb_auth:\005authnJ\013UDB_API_KE" +
+      "YZ\020udb native smoke\352\363\030N\n\022authn.ValidateC" +
+      "SRF\022\014authn.events\032\ttenant_id\"\010standard*\r" +
+      "at_least_once2\006stable\362\363\030?\n\005authn\032\010postgr" +
+      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
+      "C_TARGET\370\363\030\001\202\323\344\223\002\"\"\035/v1/auth/csrf-tokens" +
+      ":validate:\001*\022\320\004\n\tEnrollMFA\022,.udb.core.au" +
+      "thn.services.v1.EnrollMFARequest\032-.udb.c" +
+      "ore.authn.services.v1.EnrollMFAResponse\"" +
+      "\345\003\312\363\0303\010\002\032\024udb:authn:enroll-mfa \001J\003\001\002\004j\017a" +
+      "uthn.EnrollMFA\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001\022\nenrol" +
+      "l_mfa\032\003udb(\260\352\0010\003@\001J\004authP\001Z\tenrollMfa\342\363\030" +
+      "\251\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\"&udb.nat" +
+      "ive.auth.enroll_mfa.boilerplate*\nenroll_" +
+      "mfa2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb n" +
+      "ative smoke\352\363\030K\n\017authn.EnrollMFA\022\014authn." +
+      "events\032\ttenant_id\"\010standard*\rat_least_on" +
+      "ce2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
+      "\002\202\323\344\223\002(\"#/v1/auth/users/{user_id}/mfa:en" +
+      "roll:\001*\022\300\005\n\024ConfirmMFAEnrollment\0227.udb.c" +
+      "ore.authn.services.v1.ConfirmMFAEnrollme" +
+      "ntRequest\0328.udb.core.authn.services.v1.C" +
+      "onfirmMFAEnrollmentResponse\"\264\004\312\363\030J\010\002\032 ud" +
+      "b:authn:confirm-mfa-enrollment \001J\003\001\002\004j\032a" +
+      "uthn.ConfirmMFAEnrollment\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\030D\010\001\022\025confirm_mfaenrollment\032\003udb(\260\352\0010\003@\001" +
+      "J\004authP\001Z\024confirmMfaenrollment\342\363\030\277\001\n\004aut" +
+      "h\022\017udb/native/auth\032\033UDB_NATIVE_SERVICES_" +
+      "ENABLED\032\017UDB_GRPC_TARGET\"1udb.native.aut" +
+      "h.confirm_mfaenrollment.boilerplate*\025con" +
+      "firm_mfaenrollment2\010udb_auth:\005authnJ\013UDB" +
+      "_API_KEYZ\020udb native smoke\352\363\030V\n\032authn.Co" +
+      "nfirmMFAEnrollment\022\014authn.events\032\ttenant" +
+      "_id\"\010standard*\rat_least_once2\006stable\362\363\030?" +
+      "\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002)\"$/v1/a" +
+      "uth/users/{user_id}/mfa:confirm:\001*\022\331\005\n\025G" +
+      "enerateRecoveryCodes\0228.udb.core.authn.se" +
+      "rvices.v1.GenerateRecoveryCodesRequest\0329" +
+      ".udb.core.authn.services.v1.GenerateReco" +
+      "veryCodesResponse\"\312\004\312\363\030L\010\002\032!udb:authn:ge" +
+      "nerate-recovery-codes \001J\003\001\002\004j\033authn.Gene" +
+      "rateRecoveryCodes\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030G\010\001\022\027ge" +
+      "nerate_recovery_codes\032\003udb(\260\352\0010\003@\001J\004auth" +
+      "P\001Z\025generateRecoveryCodes\342\363\030\303\001\n\004auth\022\017ud" +
+      "b/native/auth\032\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED\032\017UDB_GRPC_TARGET\"3udb.native.auth.gen" +
+      "erate_recovery_codes.boilerplate*\027genera" +
+      "te_recovery_codes2\010udb_auth:\005authnJ\013UDB_" +
+      "API_KEYZ\020udb native smoke\352\363\030W\n\033authn.Gen" +
+      "erateRecoveryCodes\022\014authn.events\032\ttenant" +
+      "_id\"\010standard*\rat_least_once2\006stable\362\363\030?" +
+      "\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0025\"0/v1/a" +
+      "uth/users/{user_id}/recovery-codes:gener" +
+      "ate:\001*\022\365\004\n\014PutMfaPolicy\022/.udb.core.authn" +
+      ".services.v1.PutMfaPolicyRequest\0320.udb.c" +
+      "ore.authn.services.v1.PutMfaPolicyRespon" +
+      "se\"\201\004\312\363\0309\010\002\032\030udb:authn:put-mfa-policy \001J" +
+      "\002\001\002j\022authn.PutMfaPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0305" +
+      "\010\001\022\016put_mfa_policy\032\003udb(\260\352\0010\003@\001J\004authP\001Z" +
+      "\014putMfaPolicy\342\363\030\261\001\n\004auth\022\017udb/native/aut" +
+      "h\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
+      "_TARGET\"*udb.native.auth.put_mfa_policy." +
+      "boilerplate*\016put_mfa_policy2\010udb_auth:\005a" +
+      "uthnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030N\n" +
+      "\022authn.PutMfaPolicy\022\014authn.events\032\ttenan" +
+      "t_id\"\010standard*\rat_least_once2\006stable\362\363\030" +
+      "?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_" +
+      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002,\032\'/v1/" +
+      "auth/tenants/{tenant_id}/mfa-policy:\001*\022\362" +
+      "\004\n\014GetMfaPolicy\022/.udb.core.authn.service" +
+      "s.v1.GetMfaPolicyRequest\0320.udb.core.auth" +
+      "n.services.v1.GetMfaPolicyResponse\"\376\003\312\363\030" +
+      "9\010\002\032\030udb:authn:get-mfa-policy \001J\002\001\002j\022aut" +
+      "hn.GetMfaPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0305\010\001\022\016get_" +
+      "mfa_policy\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014getMfaP" +
+      "olicy\342\363\030\261\001\n\004auth\022\017udb/native/auth\032\033UDB_N" +
+      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
+      "*udb.native.auth.get_mfa_policy.boilerpl" +
+      "ate*\016get_mfa_policy2\010udb_auth:\005authnJ\013UD" +
+      "B_API_KEYZ\020udb native smoke\352\363\030N\n\022authn.G" +
+      "etMfaPolicy\022\014authn.events\032\ttenant_id\"\010st" +
+      "andard*\rat_least_once2\006stable\362\363\030?\n\005authn" +
+      "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
+      "\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002)\022\'/v1/auth/ten" +
+      "ants/{tenant_id}/mfa-policy\022\232\005\n\016ForgotPa" +
+      "ssword\0221.udb.core.authn.services.v1.Forg" +
+      "otPasswordRequest\0322.udb.core.authn.servi" +
+      "ces.v1.ForgotPasswordResponse\"\240\004\312\363\030_\010\001R\034" +
+      "authn.password.forgot.publicZ\032authn.pass" +
+      "word_reset.abuseb\036authn.password_reset_r" +
+      "equested\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0308\010\001\022\017forgot_pass" +
+      "word\032\003udb(\260\352\0010\003@\001J\004authP\001Z\016forgotPasswor" +
+      "d\342\363\030\263\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIV" +
+      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"+udb" +
+      ".native.auth.forgot_password.boilerplate" +
+      "*\017forgot_password2\010udb_auth:\005authnJ\013UDB_" +
+      "API_KEYZ\020udb native smoke\352\363\030P\n\024authn.For" +
+      "gotPassword\022\014authn.events\032\ttenant_id\"\010st" +
+      "andard*\rat_least_once2\006stable\362\363\030?\n\005authn" +
+      "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
+      "\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\036\"\031/v1/auth/pas" +
+      "swords:forgot:\001*\022\220\005\n\rResetPassword\0220.udb" +
+      ".core.authn.services.v1.ResetPasswordReq" +
+      "uest\0321.udb.core.authn.services.v1.ResetP" +
+      "asswordResponse\"\231\004\312\363\030^\010\001R\033authn.password" +
+      ".reset.publicZ\032authn.password_reset.abus" +
+      "eb\036authn.password_reset_completed\220\001\001\322\363\030\006" +
+      "\010\001\020\001 \001\332\363\0306\010\001\022\016reset_password\032\003udb(\260\352\0010\003@" +
+      "\001J\004authP\001Z\rresetPassword\342\363\030\261\001\n\004auth\022\017udb" +
+      "/native/auth\032\033UDB_NATIVE_SERVICES_ENABLE" +
+      "D\032\017UDB_GRPC_TARGET\"*udb.native.auth.rese" +
+      "t_password.boilerplate*\016reset_password2\010" +
+      "udb_auth:\005authnJ\013UDB_API_KEYZ\020udb native" +
+      " smoke\352\363\030O\n\023authn.ResetPassword\022\014authn.e" +
+      "vents\032\ttenant_id\"\010standard*\rat_least_onc" +
+      "e2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATI" +
+      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002" +
+      "\202\323\344\223\002\035\"\030/v1/auth/passwords:reset:\001*\022\201\005\n\017" +
+      "IntrospectToken\0222.udb.core.authn.service" +
+      "s.v1.IntrospectTokenRequest\0323.udb.core.a" +
+      "uthn.services.v1.IntrospectTokenResponse" +
+      "\"\204\004\312\363\030=\010\002\032\032udb:authn:introspect-tokenJ\003\001" +
+      "\002\004j\025authn.IntrospectToken\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\030:\010\001\022\020introspect_token\032\003udb(\260\352\0010\003@\001J\004aut" +
+      "hP\001Z\017introspectToken\342\363\030\265\001\n\004auth\022\017udb/nat" +
+      "ive/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
+      "DB_GRPC_TARGET\",udb.native.auth.introspe" +
+      "ct_token.boilerplate*\020introspect_token2\010" +
+      "udb_auth:\005authnJ\013UDB_API_KEYZ\020udb native" +
+      " smoke\352\363\030Q\n\025authn.IntrospectToken\022\014authn" +
       ".events\032\ttenant_id\"\010standard*\rat_least_o" +
       "nce2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NA" +
       "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
-      "\030\002\202\323\344\223\002\"\"\035/v1/auth/certificate-bindings:" +
-      "\001*\022\366\004\n\027ListCertificateBindings\022:.udb.cor" +
-      "e.authn.services.v1.ListCertificateBindi" +
-      "ngsRequest\032;.udb.core.authn.services.v1." +
-      "ListCertificateBindingsResponse\"\341\003\312\363\030L\010\002" +
-      "\032\025udb:authn:read-grants \001J\002\001\002j\035authn.Lis" +
-      "tCertificateBindingsz\ttenant_id\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030K\010\001\022\031list_certificate_bindings\032\003u" +
-      "db(\260\352\0010\003@\001J\004authP\001Z\027listCertificateBindi" +
-      "ngs\342\363\030\307\001\n\004auth\022\017udb/native/auth\032\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"5u" +
-      "db.native.auth.list_certificate_bindings" +
-      ".boilerplate*\031list_certificate_bindings2" +
-      "\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb nativ" +
-      "e smoke\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323" +
-      "\344\223\002\037\022\035/v1/auth/certificate-bindings\022\365\005\n\030" +
-      "RevokeCertificateBinding\022;.udb.core.auth" +
-      "n.services.v1.RevokeCertificateBindingRe" +
-      "quest\032<.udb.core.authn.services.v1.Revok" +
-      "eCertificateBindingResponse\"\335\004\312\363\030O\010\002\032\027ud" +
-      "b:authn:manage-grants \001J\002\001\002j\036authn.Revok" +
-      "eCertificateBindingz\ttenant_id\220\001\001\322\363\030\006\010\001\020" +
-      "\001 \001\332\363\030M\010\001\022\032revoke_certificate_binding\032\003u" +
-      "db(\260\352\0010\003@\001J\004authP\001Z\030revokeCertificateBin" +
-      "ding\342\363\030\311\001\n\004auth\022\017udb/native/auth\032\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"6" +
-      "udb.native.auth.revoke_certificate_bindi" +
-      "ng.boilerplate*\032revoke_certificate_bindi" +
-      "ng2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb na" +
-      "tive smoke\352\363\030Z\n\036authn.RevokeCertificateB" +
-      "inding\022\014authn.events\032\ttenant_id\"\010standar" +
-      "d*\rat_least_once2\006stable\362\363\030?\n\005authn\032\010pos" +
-      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
-      "GRPC_TARGET\370\363\030\003\202\323\344\223\0026\"1/v1/auth/certific" +
-      "ate-bindings/{binding_id}:revoke:\001*\022\203\007\n$" +
-      "CreateServiceAccountTenantMembership\022G.u" +
-      "db.core.authn.services.v1.CreateServiceA" +
-      "ccountTenantMembershipRequest\032H.udb.core" +
-      ".authn.services.v1.CreateServiceAccountT" +
-      "enantMembershipResponse\"\307\005\312\363\030b\010\002\032\027udb:au" +
-      "thn:manage-grants \001J\002\001\002j*authn.CreateSer" +
-      "viceAccountTenantMembershipz\020target_tena" +
-      "nt_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030g\010\001\022(create_service" +
-      "_account_tenant_membership\032\003udb(\260\352\0010\003@\001J" +
-      "\004authP\001Z$createServiceAccountTenantMembe" +
-      "rship\342\363\030\345\001\n\004auth\022\017udb/native/auth\032\033UDB_N" +
+      "\030\001\202\323\344\223\002\037\"\032/v1/auth/tokens:introspect:\001*\022" +
+      "\317\005\n\025SendPhoneVerification\0228.udb.core.aut" +
+      "hn.services.v1.SendPhoneVerificationRequ" +
+      "est\0329.udb.core.authn.services.v1.SendPho" +
+      "neVerificationResponse\"\300\004\312\363\030L\010\002\032!udb:aut" +
+      "hn:send-phone-verification \001J\003\001\002\004j\033authn" +
+      ".SendPhoneVerification\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030G\010" +
+      "\001\022\027send_phone_verification\032\003udb(\260\352\0010\003@\001J" +
+      "\004authP\001Z\025sendPhoneVerification\342\363\030\303\001\n\004aut" +
+      "h\022\017udb/native/auth\032\033UDB_NATIVE_SERVICES_" +
+      "ENABLED\032\017UDB_GRPC_TARGET\"3udb.native.aut" +
+      "h.send_phone_verification.boilerplate*\027s" +
+      "end_phone_verification2\010udb_auth:\005authnJ" +
+      "\013UDB_API_KEYZ\020udb native smoke\352\363\030W\n\033auth" +
+      "n.SendPhoneVerification\022\014authn.events\032\tt" +
+      "enant_id\"\010standard*\rat_least_once2\006stabl" +
+      "e\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002+\"&" +
+      "/v1/auth/users/{user_id}/phones:verify:\001" +
+      "*\022\255\004\n\007GetJwks\022*.udb.core.authn.services." +
+      "v1.GetJwksRequest\032+.udb.core.authn.servi" +
+      "ces.v1.GetJwksResponse\"\310\003\312\363\030,\010\001R\021authn.j" +
+      "wks.publicZ\025authn.discovery.abuse\322\363\030\002\020\001\332" +
+      "\363\030*\010\001\022\010get_jwks\032\003udb(\260\352\0010\003@\001J\004authP\001Z\007ge" +
+      "tJwks\342\363\030\245\001\n\004auth\022\017udb/native/auth\032\033UDB_N" +
       "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
-      "Dudb.native.auth.create_service_account_" +
-      "tenant_membership.boilerplate*(create_se" +
-      "rvice_account_tenant_membership2\010udb_aut" +
+      "$udb.native.auth.get_jwks.boilerplate*\010g" +
+      "et_jwks2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020u" +
+      "db native smoke\352\363\030I\n\rauthn.GetJwks\022\014auth" +
+      "n.events\032\ttenant_id\"\010standard*\rat_least_" +
+      "once2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_N" +
+      "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
+      "\363\030\001\202\323\344\223\002 \022\036/v1/auth/.well-known/jwks.jso" +
+      "n\022\376\005\n\031StartWebAuthnRegistration\022<.udb.co" +
+      "re.authn.services.v1.StartWebAuthnRegist" +
+      "rationRequest\032=.udb.core.authn.services." +
+      "v1.StartWebAuthnRegistrationResponse\"\343\004\312" +
+      "\363\030T\010\002\032&udb:authn:start-web-authn-registr" +
+      "ation \001J\002\001\002j\037authn.StartWebAuthnRegistra" +
+      "tion\220\001\001\332\363\030P\010\001\022\034start_web_authn_registrat" +
+      "ion\032\003udb(\260\352\0010\003@\001J\004authP\001Z\031startWebAuthnR" +
+      "egistration\342\363\030\315\001\n\004auth\022\017udb/native/auth\032" +
+      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T" +
+      "ARGET\"8udb.native.auth.start_web_authn_r" +
+      "egistration.boilerplate*\034start_web_authn" +
+      "_registration2\010udb_auth:\005authnJ\013UDB_API_" +
+      "KEYZ\020udb native smoke\352\363\030[\n\037authn.StartWe" +
+      "bAuthnRegistration\022\014authn.events\032\ttenant" +
+      "_id\"\010standard*\rat_least_once2\006stable\362\363\030?" +
+      "\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0029\"4/v1/a" +
+      "uth/users/{user_id}/webauthn/registratio" +
+      "n:start:\001*\022\371\005\n\032FinishWebAuthnRegistratio" +
+      "n\022=.udb.core.authn.services.v1.FinishWeb" +
+      "AuthnRegistrationRequest\032>.udb.core.auth" +
+      "n.services.v1.FinishWebAuthnRegistration" +
+      "Response\"\333\004\312\363\030V\010\002\032\'udb:authn:finish-web-" +
+      "authn-registration \001J\002\001\002j authn.FinishWe" +
+      "bAuthnRegistration\220\001\001\332\363\030R\010\001\022\035finish_web_" +
+      "authn_registration\032\003udb(\260\352\0010\003@\001J\004authP\001Z" +
+      "\032finishWebAuthnRegistration\342\363\030\317\001\n\004auth\022\017" +
+      "udb/native/auth\032\033UDB_NATIVE_SERVICES_ENA" +
+      "BLED\032\017UDB_GRPC_TARGET\"9udb.native.auth.f" +
+      "inish_web_authn_registration.boilerplate" +
+      "*\035finish_web_authn_registration2\010udb_aut" +
       "h:\005authnJ\013UDB_API_KEYZ\020udb native smoke\352" +
-      "\363\030m\n*authn.CreateServiceAccountTenantMem" +
-      "bership\022\014authn.events\032\020target_tenant_id\"" +
+      "\363\030\\\n authn.FinishWebAuthnRegistration\022\014a" +
+      "uthn.events\032\ttenant_id\"\010standard*\rat_lea" +
+      "st_once2\006stable\362\363\030?\n\005authn\032\010postgres2\033UD" +
+      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
+      "ET\370\363\030\002\202\323\344\223\002*\"%/v1/auth/webauthn/registra" +
+      "tion:finish:\001*\022\213\006\n\033StartWebAuthnAuthenti" +
+      "cation\022>.udb.core.authn.services.v1.Star" +
+      "tWebAuthnAuthenticationRequest\032?.udb.cor" +
+      "e.authn.services.v1.StartWebAuthnAuthent" +
+      "icationResponse\"\352\004\312\363\030_\010\001R\033authn.webauthn" +
+      ".start.publicZ\024authn.webauthn.abuseb%aut" +
+      "hn.webauthn_authentication_started\220\001\001\332\363\030" +
+      "T\010\001\022\036start_web_authn_authentication\032\003udb" +
+      "(\260\352\0010\003@\001J\004authP\001Z\033startWebAuthnAuthentic" +
+      "ation\342\363\030\321\001\n\004auth\022\017udb/native/auth\032\033UDB_N" +
+      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
+      ":udb.native.auth.start_web_authn_authent" +
+      "ication.boilerplate*\036start_web_authn_aut" +
+      "hentication2\010udb_auth:\005authnJ\013UDB_API_KE" +
+      "YZ\020udb native smoke\352\363\030]\n!authn.StartWebA" +
+      "uthnAuthentication\022\014authn.events\032\ttenant" +
+      "_id\"\010standard*\rat_least_once2\006stable\362\363\030?" +
+      "\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
+      "NABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002+\"&/v1/a" +
+      "uth/webauthn/authentication:start:\001*\022\226\006\n" +
+      "\034FinishWebAuthnAuthentication\022?.udb.core" +
+      ".authn.services.v1.FinishWebAuthnAuthent" +
+      "icationRequest\032@.udb.core.authn.services" +
+      ".v1.FinishWebAuthnAuthenticationResponse" +
+      "\"\362\004\312\363\030a\010\001R\034authn.webauthn.finish.publicZ" +
+      "\024authn.webauthn.abuseb&authn.webauthn_au" +
+      "thentication_finished\220\001\001\332\363\030V\010\001\022\037finish_w" +
+      "eb_authn_authentication\032\003udb(\260\352\0010\003@\001J\004au" +
+      "thP\001Z\034finishWebAuthnAuthentication\342\363\030\323\001\n" +
+      "\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED\032\017UDB_GRPC_TARGET\";udb.native" +
+      ".auth.finish_web_authn_authentication.bo" +
+      "ilerplate*\037finish_web_authn_authenticati" +
+      "on2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb na" +
+      "tive smoke\352\363\030^\n\"authn.FinishWebAuthnAuth" +
+      "entication\022\014authn.events\032\ttenant_id\"\010sta" +
+      "ndard*\rat_least_once2\006stable\362\363\030?\n\005authn\032" +
+      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
+      "UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002,\"\'/v1/auth/weba" +
+      "uthn/authentication:finish:\001*\022\227\002\n\013ListDe" +
+      "vices\022..udb.core.authn.services.v1.ListD" +
+      "evicesRequest\032/.udb.core.authn.services." +
+      "v1.ListDevicesResponse\"\246\001\312\363\0306\010\002\032\026udb:aut" +
+      "hn:list-devices \001J\002\001\002j\021authn.ListDevices" +
+      "\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014list_devices\032\003udb(\260" +
+      "\352\0010\003@\001J\004authP\001Z\013listDevices\370\363\030\001\202\323\344\223\002\"\022 /" +
+      "v1/auth/users/{user_id}/devices\022\354\002\n\014Revo" +
+      "keDevice\022/.udb.core.authn.services.v1.Re" +
+      "vokeDeviceRequest\0320.udb.core.authn.servi" +
+      "ces.v1.RevokeDeviceResponse\"\370\001\312\363\0308\010\002\032\027ud" +
+      "b:authn:revoke-device \001J\002\001\002j\022authn.Revok" +
+      "eDevice\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0304\010\001\022\rrevoke_devic" +
+      "e\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014revokeDevice\352\363\030N" +
+      "\n\022authn.RevokeDevice\022\014authn.events\032\ttena" +
+      "nt_id\"\010standard*\rat_least_once2\006stable\370\363" +
+      "\030\002\202\323\344\223\002\036*\034/v1/auth/devices/{device_id}\022\263" +
+      "\003\n\022AdminRevokeSession\0225.udb.core.authn.s" +
+      "ervices.v1.AdminRevokeSessionRequest\0326.u" +
+      "db.core.authn.services.v1.AdminRevokeSes" +
+      "sionResponse\"\255\002\312\363\030E\010\002\032\036udb:authn:admin-r" +
+      "evoke-session \001J\002\001\002j\030authn.AdminRevokeSe" +
+      "ssion\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030A\010\001\022\024admin_revoke_s" +
+      "ession\032\003udb(\260\352\0010\003@\001J\004authP\001Z\022adminRevoke" +
+      "Session\352\363\030T\n\030authn.AdminRevokeSession\022\014a" +
+      "uthn.events\032\ttenant_id\"\010standard*\rat_lea" +
+      "st_once2\006stable\370\363\030\003\202\323\344\223\0023\"./v1/auth/admi" +
+      "n/users/{user_id}/sessions:revoke:\001*\022\373\003\n",
+      "\032AdminRevokeAllUserSessions\022=.udb.core.a" +
+      "uthn.services.v1.AdminRevokeAllUserSessi" +
+      "onsRequest\032>.udb.core.authn.services.v1." +
+      "AdminRevokeAllUserSessionsResponse\"\335\002\312\363\030" +
+      "X\010\002\032(udb:authn:admin-revoke-all-user-ses" +
+      "sions \001J\003\001\002\004j authn.AdminRevokeAllUserSe" +
+      "ssions\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030S\010\001\022\036admin_revoke_" +
+      "all_user_sessions\032\003udb(\260\352\0010\003@\001J\004authP\001Z\032" +
+      "adminRevokeAllUserSessions\352\363\030\\\n authn.Ad" +
+      "minRevokeAllUserSessions\022\014authn.events\032\t" +
+      "tenant_id\"\010standard*\rat_least_once2\006stab" +
+      "le\370\363\030\003\202\323\344\223\0026\"1/v1/auth/admin/users/{user" +
+      "_id}/sessions:revokeAll:\001*\022\216\004\n\034AdminRevo" +
+      "keAllTenantSessions\022?.udb.core.authn.ser" +
+      "vices.v1.AdminRevokeAllTenantSessionsReq" +
+      "uest\032@.udb.core.authn.services.v1.AdminR" +
+      "evokeAllTenantSessionsResponse\"\352\002\312\363\030[\010\002\032" +
+      "*udb:authn:admin-revoke-all-tenant-sessi" +
+      "ons \001J\002\001\002j\"authn.AdminRevokeAllTenantSes" +
+      "sions\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030W\010\001\022 admin_revoke_a" +
+      "ll_tenant_sessions\032\003udb(\260\352\0010\003@\001J\004authP\001Z" +
+      "\034adminRevokeAllTenantSessions\352\363\030^\n\"authn" +
+      ".AdminRevokeAllTenantSessions\022\014authn.eve" +
+      "nts\032\ttenant_id\"\010standard*\rat_least_once2" +
+      "\006stable\370\363\030\003\202\323\344\223\002:\"5/v1/auth/admin/tenant" +
+      "s/{tenant_id}/sessions:revokeAll:\001*\022\211\003\n\017" +
+      "EmergencyRevoke\0222.udb.core.authn.service" +
+      "s.v1.EmergencyRevokeRequest\0323.udb.core.a" +
+      "uthn.services.v1.EmergencyRevokeResponse" +
+      "\"\214\002\312\363\030>\010\002\032\032udb:authn:emergency-revoke \001J" +
+      "\002\001\002j\025authn.EmergencyRevoke\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
+      "\363\030:\010\001\022\020emergency_revoke\032\003udb(\260\352\0010\003@\001J\004au" +
+      "thP\001Z\017emergencyRevoke\352\363\030Q\n\025authn.Emergen" +
+      "cyRevoke\022\014authn.events\032\ttenant_id\"\010stand" +
+      "ard*\rat_least_once2\006stable\370\363\030\003\202\323\344\223\002#\"\036/v" +
+      "1/auth/admin:emergencyRevoke:\001*\022\304\002\n\021Issu" +
+      "eMfaChallenge\0224.udb.core.authn.services." +
+      "v1.IssueMfaChallengeRequest\0325.udb.core.a" +
+      "uthn.services.v1.IssueMfaChallengeRespon" +
+      "se\"\301\001\312\363\030D\010\002\032\035udb:authn:issue-mfa-challen" +
+      "ge \001J\003\001\002\004j\027authn.IssueMfaChallenge\220\001\001\322\363\030" +
+      "\006\010\001\020\001 \001\332\363\030?\010\001\022\023issue_mfa_challenge\032\003udb(" +
+      "\260\352\0010\003@\001J\004authP\001Z\021issueMfaChallenge\370\363\030\002\202\323" +
+      "\344\223\002\"\"\035/v1/auth/mfa/challenges:issue:\001*\022\314" +
+      "\002\n\022VerifyMfaChallenge\0225.udb.core.authn.s" +
+      "ervices.v1.VerifyMfaChallengeRequest\0326.u" +
+      "db.core.authn.services.v1.VerifyMfaChall" +
+      "engeResponse\"\306\001\312\363\030F\010\002\032\036udb:authn:verify-" +
+      "mfa-challenge \001J\003\001\002\004j\030authn.VerifyMfaCha" +
+      "llenge\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030A\010\001\022\024verify_mfa_ch" +
+      "allenge\032\003udb(\260\352\0010\003@\001J\004authP\001Z\022verifyMfaC" +
+      "hallenge\370\363\030\002\202\323\344\223\002#\"\036/v1/auth/mfa/challen" +
+      "ges:verify:\001*\022\263\002\n\016ListMfaFactors\0221.udb.c" +
+      "ore.authn.services.v1.ListMfaFactorsRequ" +
+      "est\0322.udb.core.authn.services.v1.ListMfa" +
+      "FactorsResponse\"\271\001\312\363\030>\010\002\032\032udb:authn:list" +
+      "-mfa-factors \001J\003\001\002\004j\024authn.ListMfaFactor" +
+      "s\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0309\010\001\022\020list_mfa_factors\032\003" +
+      "udb(\260\352\0010\003@\001J\004authP\001Z\016listMfaFactors\370\363\030\001\202" +
+      "\323\344\223\002&\022$/v1/auth/users/{user_id}/mfa/fact" +
+      "ors\022\242\003\n\020DisableMfaFactor\0223.udb.core.auth" +
+      "n.services.v1.DisableMfaFactorRequest\0324." +
+      "udb.core.authn.services.v1.DisableMfaFac" +
+      "torResponse\"\242\002\312\363\030B\010\002\032\034udb:authn:disable-" +
+      "mfa-factor \001J\003\001\002\004j\026authn.DisableMfaFacto" +
+      "r\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030=\010\001\022\022disable_mfa_factor" +
+      "\032\003udb(\260\352\0010\003@\001J\004authP\001Z\020disableMfaFactor\352" +
+      "\363\030R\n\026authn.DisableMfaFactor\022\014authn.event" +
+      "s\032\ttenant_id\"\010standard*\rat_least_once2\006s" +
+      "table\370\363\030\002\202\323\344\223\0021\",/v1/auth/users/{user_id" +
+      "}/mfa/factors:disable:\001*\022\274\002\n\rRenamePassk" +
+      "ey\0220.udb.core.authn.services.v1.RenamePa" +
+      "sskeyRequest\0321.udb.core.authn.services.v" +
+      "1.RenamePasskeyResponse\"\305\001\312\363\030:\010\002\032\030udb:au" +
+      "thn:rename-passkey \001J\002\001\002j\023authn.RenamePa" +
+      "sskey\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\016rename_passkey" +
+      "\032\003udb(\260\352\0010\003@\001J\004authP\001Z\rrenamePasskey\370\363\030\002" +
+      "\202\323\344\223\0029\"4/v1/auth/users/{user_id}/webauth" +
+      "n/credentials:rename:\001*\022\274\003\n\023RevokeRecove" +
+      "ryCodes\0226.udb.core.authn.services.v1.Rev" +
+      "okeRecoveryCodesRequest\0327.udb.core.authn" +
+      ".services.v1.RevokeRecoveryCodesResponse" +
+      "\"\263\002\312\363\030H\010\002\032\037udb:authn:revoke-recovery-cod" +
+      "es \001J\003\001\002\004j\031authn.RevokeRecoveryCodes\220\001\001\322" +
+      "\363\030\006\010\001\020\001 \001\332\363\030C\010\001\022\025revoke_recovery_codes\032\003" +
+      "udb(\260\352\0010\003@\001J\004authP\001Z\023revokeRecoveryCodes" +
+      "\352\363\030U\n\031authn.RevokeRecoveryCodes\022\014authn.e" +
+      "vents\032\ttenant_id\"\010standard*\rat_least_onc" +
+      "e2\006stable\370\363\030\002\202\323\344\223\0023\"./v1/auth/users/{use" +
+      "r_id}/recovery-codes:revoke:\001*\022\206\003\n\rAdmin" +
+      "ResetMfa\0220.udb.core.authn.services.v1.Ad" +
+      "minResetMfaRequest\0321.udb.core.authn.serv" +
+      "ices.v1.AdminResetMfaResponse\"\217\002\312\363\030<\010\002\032\031" +
+      "udb:authn:admin-reset-mfa \001J\003\001\002\004j\023authn." +
+      "AdminResetMfa\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0307\010\001\022\017admin_" +
+      "reset_mfa\032\003udb(\260\352\0010\003@\001J\004authP\001Z\radminRes" +
+      "etMfa\352\363\030O\n\023authn.AdminResetMfa\022\014authn.ev" +
+      "ents\032\ttenant_id\"\010standard*\rat_least_once" +
+      "2\006stable\370\363\030\003\202\323\344\223\002-\"(/v1/auth/admin/users" +
+      "/{user_id}/mfa:reset:\001*\022\374\002\n\027ListWebAuthn" +
+      "Credentials\022:.udb.core.authn.services.v1" +
+      ".ListWebAuthnCredentialsRequest\032;.udb.co" +
+      "re.authn.services.v1.ListWebAuthnCredent" +
+      "ialsResponse\"\347\001\312\363\030P\010\002\032$udb:authn:list-we" +
+      "b-authn-credentials \001J\002\001\002j\035authn.ListWeb" +
+      "AuthnCredentials\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030L\010\001\022\032lis" +
+      "t_web_authn_credentials\032\003udb(\260\352\0010\003@\001J\004au" +
+      "thP\001Z\027listWebAuthnCredentials\370\363\030\001\202\323\344\223\002/\022" +
+      "-/v1/auth/users/{user_id}/webauthn/crede" +
+      "ntials\022\361\003\n\030DeleteWebAuthnCredential\022;.ud" +
+      "b.core.authn.services.v1.DeleteWebAuthnC" +
+      "redentialRequest\032<.udb.core.authn.servic" +
+      "es.v1.DeleteWebAuthnCredentialResponse\"\331" +
+      "\002\312\363\030R\010\002\032%udb:authn:delete-web-authn-cred" +
+      "ential \001J\002\001\002j\036authn.DeleteWebAuthnCreden" +
+      "tial\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030N\010\001\022\033delete_web_auth" +
+      "n_credential\032\003udb(\260\352\0010\003@\001J\004authP\001Z\030delet" +
+      "eWebAuthnCredential\352\363\030Z\n\036authn.DeleteWeb" +
+      "AuthnCredential\022\014authn.events\032\ttenant_id" +
+      "\"\010standard*\rat_least_once2\006stable\370\363\030\002\202\323\344" +
+      "\223\002?*=/v1/auth/users/{user_id}/webauthn/c" +
+      "redentials/{credential_id}\022\206\006\n\031CreateSer" +
+      "viceAccountGrant\022<.udb.core.authn.servic" +
+      "es.v1.CreateServiceAccountGrantRequest\032=" +
+      ".udb.core.authn.services.v1.CreateServic" +
+      "eAccountGrantResponse\"\353\004\312\363\030]\010\002\032\027udb:auth" +
+      "n:manage-grants \001J\002\001\002j\037authn.CreateServi" +
+      "ceAccountGrantz\ttenant_id\202\001\nproject_id\220\001" +
+      "\001\322\363\030\006\010\001\020\001 \001\332\363\030P\010\001\022\034create_service_accoun" +
+      "t_grant\032\003udb(\260\352\0010\003@\001J\004authP\001Z\031createServ" +
+      "iceAccountGrant\342\363\030\315\001\n\004auth\022\017udb/native/a" +
+      "uth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GR" +
+      "PC_TARGET\"8udb.native.auth.create_servic" +
+      "e_account_grant.boilerplate*\034create_serv" +
+      "ice_account_grant2\010udb_auth:\005authnJ\013UDB_" +
+      "API_KEYZ\020udb native smoke\352\363\030[\n\037authn.Cre" +
+      "ateServiceAccountGrant\022\014authn.events\032\tte" +
+      "nant_id\"\010standard*\rat_least_once2\006stable" +
+      "\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002.\")/" +
+      "v1/auth/service-accounts/{user_id}/grant" +
+      ":\001*\022\375\004\n\026GetServiceAccountGrant\0229.udb.cor" +
+      "e.authn.services.v1.GetServiceAccountGra" +
+      "ntRequest\032:.udb.core.authn.services.v1.G" +
+      "etServiceAccountGrantResponse\"\353\003\312\363\030K\010\002\032\025" +
+      "udb:authn:read-grants \001J\002\001\002j\034authn.GetSe" +
+      "rviceAccountGrantz\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 " +
+      "\001\332\363\030J\010\001\022\031get_service_account_grant\032\003udb(" +
+      "\260\352\0010\003@\001J\004authP\001Z\026getServiceAccountGrant\342" +
+      "\363\030\307\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_" +
+      "SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"5udb.n" +
+      "ative.auth.get_service_account_grant.boi" +
+      "lerplate*\031get_service_account_grant2\010udb" +
+      "_auth:\005authnJ\013UDB_API_KEYZ\020udb native sm" +
+      "oke\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SER" +
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002+" +
+      "\022)/v1/auth/service-accounts/{user_id}/gr" +
+      "ant\022\203\005\n\030ListServiceAccountGrants\022;.udb.c" +
+      "ore.authn.services.v1.ListServiceAccount" +
+      "GrantsRequest\032<.udb.core.authn.services." +
+      "v1.ListServiceAccountGrantsResponse\"\353\003\312\363" +
+      "\030M\010\002\032\025udb:authn:read-grants \001J\002\001\002j\036authn" +
+      ".ListServiceAccountGrantsz\ttenant_id\220\001\001\322" +
+      "\363\030\006\010\001\020\001 \001\332\363\030N\010\001\022\033list_service_account_gr" +
+      "ants\032\003udb(\260\352\0010\003@\001J\004authP\001Z\030listServiceAc" +
+      "countGrants\342\363\030\313\001\n\004auth\022\017udb/native/auth\032" +
+      "\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_T" +
+      "ARGET\"7udb.native.auth.list_service_acco" +
+      "unt_grants.boilerplate*\033list_service_acc" +
+      "ount_grants2\010udb_auth:\005authnJ\013UDB_API_KE" +
+      "YZ\020udb native smoke\362\363\030?\n\005authn\032\010postgres" +
+      "2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_" +
+      "TARGET\370\363\030\001\202\323\344\223\002!\022\037/v1/auth/service-accou" +
+      "nt-grants\022\227\006\n\032ReplaceServiceAccountGrant" +
+      "\022=.udb.core.authn.services.v1.ReplaceSer" +
+      "viceAccountGrantRequest\032>.udb.core.authn" +
+      ".services.v1.ReplaceServiceAccountGrantR" +
+      "esponse\"\371\004\312\363\030^\010\002\032\027udb:authn:manage-grant" +
+      "s \001J\002\001\002j authn.ReplaceServiceAccountGran" +
+      "tz\ttenant_id\202\001\nproject_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\030R\010\001\022\035replace_service_account_grant\032\003udb" +
+      "(\260\352\0010\003@\001J\004authP\001Z\032replaceServiceAccountG" +
+      "rant\342\363\030\317\001\n\004auth\022\017udb/native/auth\032\033UDB_NA" +
+      "TIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"9" +
+      "udb.native.auth.replace_service_account_" +
+      "grant.boilerplate*\035replace_service_accou" +
+      "nt_grant2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020" +
+      "udb native smoke\352\363\030\\\n authn.ReplaceServi" +
+      "ceAccountGrant\022\014authn.events\032\ttenant_id\"" +
       "\010standard*\rat_least_once2\006stable\362\363\030?\n\005au" +
       "thn\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002D\"?/v1/auth/" +
-      "tenants/{target_tenant_id}/service-accou" +
-      "nt-memberships:\001*\022\205\006\n#ListServiceAccount" +
-      "TenantMemberships\022F.udb.core.authn.servi" +
-      "ces.v1.ListServiceAccountTenantMembershi" +
-      "psRequest\032G.udb.core.authn.services.v1.L" +
-      "istServiceAccountTenantMembershipsRespon" +
-      "se\"\314\004\312\363\030_\010\002\032\025udb:authn:read-grants \001J\002\001\002" +
-      "j)authn.ListServiceAccountTenantMembersh" +
-      "ipsz\020target_tenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030e\010\001" +
-      "\022\'list_service_account_tenant_membership" +
-      "s\032\003udb(\260\352\0010\003@\001J\004authP\001Z#listServiceAccou" +
-      "ntTenantMemberships\342\363\030\343\001\n\004auth\022\017udb/nati" +
-      "ve/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
-      "B_GRPC_TARGET\"Cudb.native.auth.list_serv" +
-      "ice_account_tenant_memberships.boilerpla" +
-      "te*\'list_service_account_tenant_membersh" +
-      "ips2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb n" +
-      "ative smoke\362\363\030?\n\005authn\032\010postgres2\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
-      "\030\001\202\323\344\223\002A\022?/v1/auth/tenants/{target_tenan" +
-      "t_id}/service-account-memberships\022\232\007\n$Re" +
-      "vokeServiceAccountTenantMembership\022G.udb" +
-      ".core.authn.services.v1.RevokeServiceAcc" +
-      "ountTenantMembershipRequest\032H.udb.core.a" +
-      "uthn.services.v1.RevokeServiceAccountTen" +
-      "antMembershipResponse\"\336\005\312\363\030b\010\002\032\027udb:auth" +
-      "n:manage-grants \001J\002\001\002j*authn.RevokeServi" +
-      "ceAccountTenantMembershipz\020target_tenant" +
-      "_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030g\010\001\022(revoke_service_a" +
-      "ccount_tenant_membership\032\003udb(\260\352\0010\003@\001J\004a" +
-      "uthP\001Z$revokeServiceAccountTenantMembers" +
-      "hip\342\363\030\345\001\n\004auth\022\017udb/native/auth\032\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"Du" +
-      "db.native.auth.revoke_service_account_te" +
-      "nant_membership.boilerplate*(revoke_serv" +
-      "ice_account_tenant_membership2\010udb_auth:" +
-      "\005authnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030" +
-      "m\n*authn.RevokeServiceAccountTenantMembe" +
-      "rship\022\014authn.events\032\020target_tenant_id\"\010s" +
-      "tandard*\rat_least_once2\006stable\362\363\030?\n\005auth" +
-      "n\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
-      "2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002[\"V/v1/auth/te" +
-      "nants/{target_tenant_id}/service-account" +
-      "-memberships/{membership_id}:revoke:\001*\022\201" +
-      "\005\n\030ListOwnTenantMemberships\022;.udb.core.a" +
-      "uthn.services.v1.ListOwnTenantMembership" +
-      "sRequest\032<.udb.core.authn.services.v1.Li" +
-      "stOwnTenantMembershipsResponse\"\351\003\312\363\030K\010\002\032" +
-      "\037udb:authn:exchange-tenant-token \001J\001\004j\036a" +
-      "uthn.ListOwnTenantMemberships\220\001\001\322\363\030\006\010\001\020\001" +
-      " \001\332\363\030N\010\001\022\033list_own_tenant_memberships\032\003u" +
-      "db(\260\352\0010\003@\001J\004authP\001Z\030listOwnTenantMembers" +
-      "hips\342\363\030\313\001\n\004auth\022\017udb/native/auth\032\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"7" +
-      "udb.native.auth.list_own_tenant_membersh" +
-      "ips.boilerplate*\033list_own_tenant_members" +
-      "hips2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb " +
-      "native smoke\362\363\030?\n\005authn\032\010postgres2\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\001\202\323\344\223\002!\022\037/v1/auth/own-tenant-membershi" +
-      "ps\022\243\006\n\035ExchangeServiceTokenForTenant\022@.u" +
-      "db.core.authn.services.v1.ExchangeServic" +
-      "eTokenForTenantRequest\032A.udb.core.authn." +
-      "services.v1.ExchangeServiceTokenForTenan" +
-      "tResponse\"\374\004\312\363\030P\010\002\032\037udb:authn:exchange-t" +
-      "enant-token \001J\001\004j#authn.ExchangeServiceT" +
-      "okenForTenant\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030Y\010\001\022!exchan" +
-      "ge_service_token_for_tenant\032\003udb(\260\352\0010\003@\001" +
-      "J\004authP\001Z\035exchangeServiceTokenForTenant\342" +
-      "\363\030\327\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_" +
-      "SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"=udb.n" +
-      "ative.auth.exchange_service_token_for_te" +
-      "nant.boilerplate*!exchange_service_token" +
-      "_for_tenant2\010udb_auth:\005authnJ\013UDB_API_KE" +
-      "YZ\020udb native smoke\352\363\030f\n#authn.ExchangeS" +
-      "erviceTokenForTenant\022\014authn.events\032\020targ" +
-      "et_tenant_id\"\010standard*\rat_least_once2\006s" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0026\"1/v1/auth/" +
+      "service-accounts/{user_id}/grant:replace" +
+      ":\001*\022\243\006\n\034RotateServiceAccountIdentity\022?.u" +
+      "db.core.authn.services.v1.RotateServiceA" +
+      "ccountIdentityRequest\032@.udb.core.authn.s" +
+      "ervices.v1.RotateServiceAccountIdentityR" +
+      "esponse\"\377\004\312\363\030S\010\002\032\027udb:authn:manage-grant" +
+      "s \001J\002\001\002j\"authn.RotateServiceAccountIdent" +
+      "ityz\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030V\010\001\022\037rotat" +
+      "e_service_account_identity\032\003udb(\260\352\0010\003@\001J" +
+      "\004authP\001Z\034rotateServiceAccountIdentity\342\363\030" +
+      "\323\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\";udb.nat" +
+      "ive.auth.rotate_service_account_identity" +
+      ".boilerplate*\037rotate_service_account_ide" +
+      "ntity2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb" +
+      " native smoke\352\363\030^\n\"authn.RotateServiceAc" +
+      "countIdentity\022\014authn.events\032\ttenant_id\"\010" +
+      "standard*\rat_least_once2\006stable\362\363\030?\n\005aut" +
+      "hn\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLE" +
+      "D2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002=\"8/v1/auth/s" +
+      "ervice-accounts/{user_id}/grant:rotateId" +
+      "entity:\001*\022\231\006\n\033TransferServiceAccountGran" +
+      "t\022>.udb.core.authn.services.v1.TransferS" +
+      "erviceAccountGrantRequest\032?.udb.core.aut" +
+      "hn.services.v1.TransferServiceAccountGra" +
+      "ntResponse\"\370\004\312\363\030R\010\002\032\027udb:authn:manage-gr" +
+      "ants \001J\002\001\002j!authn.TransferServiceAccount" +
+      "Grantz\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030T\010\001\022\036tra" +
+      "nsfer_service_account_grant\032\003udb(\260\352\0010\003@\001" +
+      "J\004authP\001Z\033transferServiceAccountGrant\342\363\030" +
+      "\321\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\":udb.nat" +
+      "ive.auth.transfer_service_account_grant." +
+      "boilerplate*\036transfer_service_account_gr" +
+      "ant2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb n" +
+      "ative smoke\352\363\030]\n!authn.TransferServiceAc" +
+      "countGrant\022\014authn.events\032\ttenant_id\"\010sta" +
+      "ndard*\rat_least_once2\006stable\362\363\030?\n\005authn\032" +
+      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
+      "UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002<\"7/v1/auth/serv" +
+      "ice-accounts/{from_user_id}/grant:transf" +
+      "er:\001*\022\200\006\n\031RevokeServiceAccountGrant\022<.ud" +
+      "b.core.authn.services.v1.RevokeServiceAc" +
+      "countGrantRequest\032=.udb.core.authn.servi" +
+      "ces.v1.RevokeServiceAccountGrantResponse" +
+      "\"\345\004\312\363\030P\010\002\032\027udb:authn:manage-grants \001J\002\001\002" +
+      "j\037authn.RevokeServiceAccountGrantz\ttenan" +
+      "t_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030P\010\001\022\034revoke_service_" +
+      "account_grant\032\003udb(\260\352\0010\003@\001J\004authP\001Z\031revo" +
+      "keServiceAccountGrant\342\363\030\315\001\n\004auth\022\017udb/na" +
+      "tive/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017" +
+      "UDB_GRPC_TARGET\"8udb.native.auth.revoke_" +
+      "service_account_grant.boilerplate*\034revok" +
+      "e_service_account_grant2\010udb_auth:\005authn" +
+      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030[\n\037aut" +
+      "hn.RevokeServiceAccountGrant\022\014authn.even" +
+      "ts\032\ttenant_id\"\010standard*\rat_least_once2\006" +
+      "stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_" +
+      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344" +
+      "\223\0025\"0/v1/auth/service-accounts/{user_id}" +
+      "/grant:revoke:\001*\022\341\005\n\030CreateCertificateBi" +
+      "nding\022;.udb.core.authn.services.v1.Creat" +
+      "eCertificateBindingRequest\032<.udb.core.au" +
+      "thn.services.v1.CreateCertificateBinding" +
+      "Response\"\311\004\312\363\030O\010\002\032\027udb:authn:manage-gran" +
+      "ts \001J\002\001\002j\036authn.CreateCertificateBinding" +
+      "z\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030M\010\001\022\032create_c" +
+      "ertificate_binding\032\003udb(\260\352\0010\003@\001J\004authP\001Z" +
+      "\030createCertificateBinding\342\363\030\311\001\n\004auth\022\017ud" +
+      "b/native/auth\032\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED\032\017UDB_GRPC_TARGET\"6udb.native.auth.cre" +
+      "ate_certificate_binding.boilerplate*\032cre" +
+      "ate_certificate_binding2\010udb_auth:\005authn" +
+      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030Z\n\036aut" +
+      "hn.CreateCertificateBinding\022\014authn.event" +
+      "s\032\ttenant_id\"\010standard*\rat_least_once2\006s" +
       "table\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_S" +
       "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223" +
-      "\002.\")/v1/auth/service-tokens:exchangeForT" +
-      "enant:\001*\022\274\005\n\023PutTenantAuthPolicy\0226.udb.c" +
-      "ore.authn.services.v1.PutTenantAuthPolic" +
-      "yRequest\0327.udb.core.authn.services.v1.Pu" +
-      "tTenantAuthPolicyResponse\"\263\004\312\363\030D\010\002\032\034udb:" +
-      "authn:manage-auth-policy \001J\002\001\002j\031authn.Pu" +
-      "tTenantAuthPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030D\010\001\022\026pu" +
-      "t_tenant_auth_policy\032\003udb(\260\352\0010\003@\001J\004authP" +
-      "\001Z\023putTenantAuthPolicy\342\363\030\301\001\n\004auth\022\017udb/n",
-      "ative/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032" +
-      "\017UDB_GRPC_TARGET\"2udb.native.auth.put_te" +
-      "nant_auth_policy.boilerplate*\026put_tenant" +
-      "_auth_policy2\010udb_auth:\005authnJ\013UDB_API_K" +
-      "EYZ\020udb native smoke\352\363\030U\n\031authn.PutTenan" +
-      "tAuthPolicy\022\014authn.events\032\ttenant_id\"\010st" +
-      "andard*\rat_least_once2\006stable\362\363\030?\n\005authn" +
-      "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
-      "\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002-\032(/v1/auth/ten" +
-      "ants/{tenant_id}/auth-policy:\001*\022\337\004\n\023GetT" +
-      "enantAuthPolicy\0226.udb.core.authn.service" +
-      "s.v1.GetTenantAuthPolicyRequest\0327.udb.co" +
-      "re.authn.services.v1.GetTenantAuthPolicy" +
-      "Response\"\326\003\312\363\030C\010\002\032\032udb:authn:read-auth-p" +
-      "olicy \001J\003\001\002\004j\031authn.GetTenantAuthPolicy\220" +
-      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030D\010\001\022\026get_tenant_auth_poli" +
-      "cy\032\003udb(\260\352\0010\003@\001J\004authP\001Z\023getTenantAuthPo" +
-      "licy\342\363\030\301\001\n\004auth\022\017udb/native/auth\032\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"2" +
-      "udb.native.auth.get_tenant_auth_policy.b" +
-      "oilerplate*\026get_tenant_auth_policy2\010udb_" +
-      "auth:\005authnJ\013UDB_API_KEYZ\020udb native smo" +
-      "ke\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002*\022" +
-      "(/v1/auth/tenants/{tenant_id}/auth-polic" +
-      "y\022\233\005\n\014SendLoginOtp\022/.udb.core.authn.serv" +
-      "ices.v1.SendLoginOtpRequest\0320.udb.core.a" +
-      "uthn.services.v1.SendLoginOtpResponse\"\247\004" +
-      "\312\363\030h\010\001R\033authn.login_otp.send.publicZ\032aut" +
-      "hn.login_otp.send.abuseb\024authn.login_otp" +
-      "_sentj\022authn.SendLoginOtp\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\0305\010\001\022\016send_login_otp\032\003udb(\260\352\0010\003@\001J\004authP" +
-      "\001Z\014sendLoginOtp\342\363\030\261\001\n\004auth\022\017udb/native/a" +
+      "\002\"\"\035/v1/auth/certificate-bindings:\001*\022\366\004\n" +
+      "\027ListCertificateBindings\022:.udb.core.auth" +
+      "n.services.v1.ListCertificateBindingsReq" +
+      "uest\032;.udb.core.authn.services.v1.ListCe" +
+      "rtificateBindingsResponse\"\341\003\312\363\030L\010\002\032\025udb:" +
+      "authn:read-grants \001J\002\001\002j\035authn.ListCerti" +
+      "ficateBindingsz\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\030K\010\001\022\031list_certificate_bindings\032\003udb(\260\352\001" +
+      "0\003@\001J\004authP\001Z\027listCertificateBindings\342\363\030" +
+      "\307\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\"5udb.nat" +
+      "ive.auth.list_certificate_bindings.boile" +
+      "rplate*\031list_certificate_bindings2\010udb_a" +
+      "uth:\005authnJ\013UDB_API_KEYZ\020udb native smok" +
+      "e\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVI" +
+      "CES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\037\022\035" +
+      "/v1/auth/certificate-bindings\022\365\005\n\030Revoke" +
+      "CertificateBinding\022;.udb.core.authn.serv" +
+      "ices.v1.RevokeCertificateBindingRequest\032" +
+      "<.udb.core.authn.services.v1.RevokeCerti" +
+      "ficateBindingResponse\"\335\004\312\363\030O\010\002\032\027udb:auth" +
+      "n:manage-grants \001J\002\001\002j\036authn.RevokeCerti" +
+      "ficateBindingz\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030" +
+      "M\010\001\022\032revoke_certificate_binding\032\003udb(\260\352\001" +
+      "0\003@\001J\004authP\001Z\030revokeCertificateBinding\342\363" +
+      "\030\311\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\"6udb.na" +
+      "tive.auth.revoke_certificate_binding.boi" +
+      "lerplate*\032revoke_certificate_binding2\010ud" +
+      "b_auth:\005authnJ\013UDB_API_KEYZ\020udb native s" +
+      "moke\352\363\030Z\n\036authn.RevokeCertificateBinding" +
+      "\022\014authn.events\032\ttenant_id\"\010standard*\rat_" +
+      "least_once2\006stable\362\363\030?\n\005authn\032\010postgres2" +
+      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
+      "ARGET\370\363\030\003\202\323\344\223\0026\"1/v1/auth/certificate-bi" +
+      "ndings/{binding_id}:revoke:\001*\022\203\007\n$Create" +
+      "ServiceAccountTenantMembership\022G.udb.cor" +
+      "e.authn.services.v1.CreateServiceAccount" +
+      "TenantMembershipRequest\032H.udb.core.authn" +
+      ".services.v1.CreateServiceAccountTenantM" +
+      "embershipResponse\"\307\005\312\363\030b\010\002\032\027udb:authn:ma" +
+      "nage-grants \001J\002\001\002j*authn.CreateServiceAc" +
+      "countTenantMembershipz\020target_tenant_id\220" +
+      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030g\010\001\022(create_service_accou" +
+      "nt_tenant_membership\032\003udb(\260\352\0010\003@\001J\004authP" +
+      "\001Z$createServiceAccountTenantMembership\342" +
+      "\363\030\345\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_" +
+      "SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"Dudb.n" +
+      "ative.auth.create_service_account_tenant" +
+      "_membership.boilerplate*(create_service_" +
+      "account_tenant_membership2\010udb_auth:\005aut" +
+      "hnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030m\n*a" +
+      "uthn.CreateServiceAccountTenantMembershi" +
+      "p\022\014authn.events\032\020target_tenant_id\"\010stand" +
+      "ard*\rat_least_once2\006stable\362\363\030?\n\005authn\032\010p" +
+      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
+      "B_GRPC_TARGET\370\363\030\002\202\323\344\223\002D\"?/v1/auth/tenant" +
+      "s/{target_tenant_id}/service-account-mem" +
+      "berships:\001*\022\205\006\n#ListServiceAccountTenant" +
+      "Memberships\022F.udb.core.authn.services.v1" +
+      ".ListServiceAccountTenantMembershipsRequ" +
+      "est\032G.udb.core.authn.services.v1.ListSer" +
+      "viceAccountTenantMembershipsResponse\"\314\004\312" +
+      "\363\030_\010\002\032\025udb:authn:read-grants \001J\002\001\002j)auth" +
+      "n.ListServiceAccountTenantMembershipsz\020t" +
+      "arget_tenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030e\010\001\022\'list" +
+      "_service_account_tenant_memberships\032\003udb" +
+      "(\260\352\0010\003@\001J\004authP\001Z#listServiceAccountTena" +
+      "ntMemberships\342\363\030\343\001\n\004auth\022\017udb/native/aut" +
+      "h\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
+      "_TARGET\"Cudb.native.auth.list_service_ac" +
+      "count_tenant_memberships.boilerplate*\'li" +
+      "st_service_account_tenant_memberships2\010u" +
+      "db_auth:\005authnJ\013UDB_API_KEYZ\020udb native " +
+      "smoke\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223" +
+      "\002A\022?/v1/auth/tenants/{target_tenant_id}/" +
+      "service-account-memberships\022\232\007\n$RevokeSe" +
+      "rviceAccountTenantMembership\022G.udb.core." +
+      "authn.services.v1.RevokeServiceAccountTe" +
+      "nantMembershipRequest\032H.udb.core.authn.s" +
+      "ervices.v1.RevokeServiceAccountTenantMem" +
+      "bershipResponse\"\336\005\312\363\030b\010\002\032\027udb:authn:mana" +
+      "ge-grants \001J\002\001\002j*authn.RevokeServiceAcco" +
+      "untTenantMembershipz\020target_tenant_id\220\001\001" +
+      "\322\363\030\006\010\001\020\001 \001\332\363\030g\010\001\022(revoke_service_account" +
+      "_tenant_membership\032\003udb(\260\352\0010\003@\001J\004authP\001Z" +
+      "$revokeServiceAccountTenantMembership\342\363\030" +
+      "\345\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\"Dudb.nat" +
+      "ive.auth.revoke_service_account_tenant_m" +
+      "embership.boilerplate*(revoke_service_ac" +
+      "count_tenant_membership2\010udb_auth:\005authn" +
+      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030m\n*aut" +
+      "hn.RevokeServiceAccountTenantMembership\022" +
+      "\014authn.events\032\020target_tenant_id\"\010standar" +
+      "d*\rat_least_once2\006stable\362\363\030?\n\005authn\032\010pos" +
+      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\003\202\323\344\223\002[\"V/v1/auth/tenants/" +
+      "{target_tenant_id}/service-account-membe" +
+      "rships/{membership_id}:revoke:\001*\022\201\005\n\030Lis" +
+      "tOwnTenantMemberships\022;.udb.core.authn.s" +
+      "ervices.v1.ListOwnTenantMembershipsReque" +
+      "st\032<.udb.core.authn.services.v1.ListOwnT" +
+      "enantMembershipsResponse\"\351\003\312\363\030K\010\002\032\037udb:a" +
+      "uthn:exchange-tenant-token \001J\001\004j\036authn.L" +
+      "istOwnTenantMemberships\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030N" +
+      "\010\001\022\033list_own_tenant_memberships\032\003udb(\260\352\001" +
+      "0\003@\001J\004authP\001Z\030listOwnTenantMemberships\342\363" +
+      "\030\313\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\"7udb.na" +
+      "tive.auth.list_own_tenant_memberships.bo" +
+      "ilerplate*\033list_own_tenant_memberships2\010" +
+      "udb_auth:\005authnJ\013UDB_API_KEYZ\020udb native" +
+      " smoke\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_" +
+      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344" +
+      "\223\002!\022\037/v1/auth/own-tenant-memberships\022\243\006\n" +
+      "\035ExchangeServiceTokenForTenant\022@.udb.cor" +
+      "e.authn.services.v1.ExchangeServiceToken" +
+      "ForTenantRequest\032A.udb.core.authn.servic" +
+      "es.v1.ExchangeServiceTokenForTenantRespo" +
+      "nse\"\374\004\312\363\030P\010\002\032\037udb:authn:exchange-tenant-" +
+      "token \001J\001\004j#authn.ExchangeServiceTokenFo" +
+      "rTenant\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030Y\010\001\022!exchange_ser" +
+      "vice_token_for_tenant\032\003udb(\260\352\0010\003@\001J\004auth" +
+      "P\001Z\035exchangeServiceTokenForTenant\342\363\030\327\001\n\004" +
+      "auth\022\017udb/native/auth\032\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED\032\017UDB_GRPC_TARGET\"=udb.native." +
+      "auth.exchange_service_token_for_tenant.b" +
+      "oilerplate*!exchange_service_token_for_t",
+      "enant2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb" +
+      " native smoke\352\363\030f\n#authn.ExchangeService" +
+      "TokenForTenant\022\014authn.events\032\020target_ten" +
+      "ant_id\"\010standard*\rat_least_once2\006stable\362" +
+      "\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICE" +
+      "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002.\")/v" +
+      "1/auth/service-tokens:exchangeForTenant:" +
+      "\001*\022\244\005\n\023ExchangeTokenForJob\0226.udb.core.au" +
+      "thn.services.v1.ExchangeTokenForJobReque" +
+      "st\0327.udb.core.authn.services.v1.Exchange" +
+      "TokenForJobResponse\"\233\004\312\363\0309\010\002\032\022udb:token:" +
+      "delegate \001J\001\004j\031authn.ExchangeTokenForJob" +
+      "\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030D\010\001\022\026exchange_token_for_" +
+      "job\032\003udb(\260\352\0010\003@\001J\004authP\001Z\023exchangeTokenF" +
+      "orJob\342\363\030\301\001\n\004auth\022\017udb/native/auth\032\033UDB_N" +
+      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
+      "2udb.native.auth.exchange_token_for_job." +
+      "boilerplate*\026exchange_token_for_job2\010udb" +
+      "_auth:\005authnJ\013UDB_API_KEYZ\020udb native sm" +
+      "oke\352\363\030R\n\031authn.ExchangeTokenForJob\022\014auth" +
+      "n.events\032\006job_id\"\010standard*\rat_least_onc" +
+      "e2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATI" +
+      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002" +
+      "\202\323\344\223\002#\"\036/v1/auth/tokens:exchangeForJob:\001" +
+      "*\022\274\005\n\023PutTenantAuthPolicy\0226.udb.core.aut" +
+      "hn.services.v1.PutTenantAuthPolicyReques" +
+      "t\0327.udb.core.authn.services.v1.PutTenant" +
+      "AuthPolicyResponse\"\263\004\312\363\030D\010\002\032\034udb:authn:m" +
+      "anage-auth-policy \001J\002\001\002j\031authn.PutTenant" +
+      "AuthPolicy\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030D\010\001\022\026put_tenan" +
+      "t_auth_policy\032\003udb(\260\352\0010\003@\001J\004authP\001Z\023putT" +
+      "enantAuthPolicy\342\363\030\301\001\n\004auth\022\017udb/native/a" +
       "uth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GR" +
-      "PC_TARGET\"*udb.native.auth.send_login_ot" +
-      "p.boilerplate*\016send_login_otp2\010udb_auth:" +
+      "PC_TARGET\"2udb.native.auth.put_tenant_au" +
+      "th_policy.boilerplate*\026put_tenant_auth_p" +
+      "olicy2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb" +
+      " native smoke\352\363\030U\n\031authn.PutTenantAuthPo" +
+      "licy\022\014authn.events\032\ttenant_id\"\010standard*" +
+      "\rat_least_once2\006stable\362\363\030?\n\005authn\032\010postg" +
+      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
+      "PC_TARGET\370\363\030\002\202\323\344\223\002-\032(/v1/auth/tenants/{t" +
+      "enant_id}/auth-policy:\001*\022\337\004\n\023GetTenantAu" +
+      "thPolicy\0226.udb.core.authn.services.v1.Ge" +
+      "tTenantAuthPolicyRequest\0327.udb.core.auth" +
+      "n.services.v1.GetTenantAuthPolicyRespons" +
+      "e\"\326\003\312\363\030C\010\002\032\032udb:authn:read-auth-policy \001" +
+      "J\003\001\002\004j\031authn.GetTenantAuthPolicy\220\001\001\322\363\030\006\010" +
+      "\001\020\001 \001\332\363\030D\010\001\022\026get_tenant_auth_policy\032\003udb" +
+      "(\260\352\0010\003@\001J\004authP\001Z\023getTenantAuthPolicy\342\363\030" +
+      "\301\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\"2udb.nat" +
+      "ive.auth.get_tenant_auth_policy.boilerpl" +
+      "ate*\026get_tenant_auth_policy2\010udb_auth:\005a" +
+      "uthnJ\013UDB_API_KEYZ\020udb native smoke\362\363\030?\n" +
+      "\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002*\022(/v1/au" +
+      "th/tenants/{tenant_id}/auth-policy\022\233\005\n\014S" +
+      "endLoginOtp\022/.udb.core.authn.services.v1" +
+      ".SendLoginOtpRequest\0320.udb.core.authn.se" +
+      "rvices.v1.SendLoginOtpResponse\"\247\004\312\363\030h\010\001R" +
+      "\033authn.login_otp.send.publicZ\032authn.logi" +
+      "n_otp.send.abuseb\024authn.login_otp_sentj\022" +
+      "authn.SendLoginOtp\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0305\010\001\022\016s" +
+      "end_login_otp\032\003udb(\260\352\0010\003@\001J\004authP\001Z\014send" +
+      "LoginOtp\342\363\030\261\001\n\004auth\022\017udb/native/auth\032\033UD" +
+      "B_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARG" +
+      "ET\"*udb.native.auth.send_login_otp.boile" +
+      "rplate*\016send_login_otp2\010udb_auth:\005authnJ" +
+      "\013UDB_API_KEYZ\020udb native smoke\352\363\030N\n\022auth" +
+      "n.SendLoginOtp\022\014authn.events\032\ttenant_id\"" +
+      "\010standard*\rat_least_once2\006stable\362\363\030?\n\005au" +
+      "thn\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/auth/" +
+      "sessions:sendLoginOtp:\001*\022\204\005\n\014LoginWithOt" +
+      "p\022/.udb.core.authn.services.v1.LoginWith" +
+      "OtpRequest\0320.udb.core.authn.services.v1." +
+      "LoginWithOtpResponse\"\220\004\312\363\030Q\010\001R\026authn.log" +
+      "in_otp.publicZ\021authn.login.abuseb\013authn." +
+      "loginj\022authn.LoginWithOtp\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\0305\010\001\022\016login_with_otp\032\003udb(\260\352\0010\003@\001J\004authP" +
+      "\001Z\014loginWithOtp\342\363\030\261\001\n\004auth\022\017udb/native/a" +
+      "uth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GR" +
+      "PC_TARGET\"*udb.native.auth.login_with_ot" +
+      "p.boilerplate*\016login_with_otp2\010udb_auth:" +
       "\005authnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030" +
-      "N\n\022authn.SendLoginOtp\022\014authn.events\032\tten" +
+      "N\n\022authn.LoginWithOtp\022\014authn.events\032\tten" +
       "ant_id\"\010standard*\rat_least_once2\006stable\362" +
       "\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICE" +
       "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v" +
-      "1/auth/sessions:sendLoginOtp:\001*\022\204\005\n\014Logi" +
-      "nWithOtp\022/.udb.core.authn.services.v1.Lo" +
-      "ginWithOtpRequest\0320.udb.core.authn.servi" +
-      "ces.v1.LoginWithOtpResponse\"\220\004\312\363\030Q\010\001R\026au" +
-      "thn.login_otp.publicZ\021authn.login.abuseb" +
-      "\013authn.loginj\022authn.LoginWithOtp\220\001\001\322\363\030\006\010" +
-      "\001\020\001 \001\332\363\0305\010\001\022\016login_with_otp\032\003udb(\260\352\0010\003@\001" +
-      "J\004authP\001Z\014loginWithOtp\342\363\030\261\001\n\004auth\022\017udb/n" +
-      "ative/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032" +
-      "\017UDB_GRPC_TARGET\"*udb.native.auth.login_" +
-      "with_otp.boilerplate*\016login_with_otp2\010ud" +
-      "b_auth:\005authnJ\013UDB_API_KEYZ\020udb native s" +
-      "moke\352\363\030N\n\022authn.LoginWithOtp\022\014authn.even" +
-      "ts\032\ttenant_id\"\010standard*\rat_least_once2\006" +
-      "stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_" +
-      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344" +
-      "\223\002#\"\036/v1/auth/sessions:loginWithOtp:\001*\022\325" +
-      "\004\n\016StartOidcLogin\0221.udb.core.authn.servi" +
-      "ces.v1.StartOidcLoginRequest\0322.udb.core." +
-      "authn.services.v1.StartOidcLoginResponse" +
-      "\"\333\003\312\363\030e\010\001R\035authn.oidc_login_start.public" +
-      "Z\021authn.login.abuseb\026authn.oidc_login_st" +
-      "artj\024authn.StartOidcLogin\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\0309\010\001\022\020start_oidc_login\032\003udb(\260\352\0010\003@\001J\004aut" +
-      "hP\001Z\016startOidcLogin\342\363\030\265\001\n\004auth\022\017udb/nati" +
-      "ve/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
-      "B_GRPC_TARGET\",udb.native.auth.start_oid" +
-      "c_login.boilerplate*\020start_oidc_login2\010u" +
-      "db_auth:\005authnJ\013UDB_API_KEYZ\020udb native " +
-      "smoke\362\363\030D\n\005authn\n\003idp\032\010postgres2\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
-      "\002\202\323\344\223\002\037\"\032/v1/auth/oidc-logins:start:\001*\022\250" +
-      "\005\n\017FinishOidcLogin\0222.udb.core.authn.serv" +
-      "ices.v1.FinishOidcLoginRequest\0323.udb.cor" +
-      "e.authn.services.v1.FinishOidcLoginRespo" +
-      "nse\"\253\004\312\363\030U\010\001R\027authn.oidc_login.publicZ\021a" +
-      "uthn.login.abuseb\013authn.loginj\025authn.Fin" +
-      "ishOidcLogin\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030;\010\001\022\021finish_" +
-      "oidc_login\032\003udb(\260\352\0010\003@\001J\004authP\001Z\017finishO" +
-      "idcLogin\342\363\030\267\001\n\004auth\022\017udb/native/auth\032\033UD" +
-      "B_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARG" +
-      "ET\"-udb.native.auth.finish_oidc_login.bo" +
-      "ilerplate*\021finish_oidc_login2\010udb_auth:\005" +
-      "authnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030Q" +
-      "\n\025authn.FinishOidcLogin\022\014authn.events\032\tt" +
-      "enant_id\"\010standard*\rat_least_once2\006stabl" +
-      "e\362\363\030D\n\005authn\n\003idp\032\010postgres2\033UDB_NATIVE_" +
-      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344" +
-      "\223\002&\"!/v1/auth/sessions:finishOidcLogin:\001" +
-      "*\022\351\005\n\024LoginWithOidcIdToken\0227.udb.core.au" +
-      "thn.services.v1.LoginWithOidcIdTokenRequ" +
-      "est\0328.udb.core.authn.services.v1.LoginWi" +
-      "thOidcIdTokenResponse\"\335\004\312\363\030c\010\001R authn.oi" +
-      "dc_id_token_login.publicZ\021authn.login.ab" +
-      "useb\013authn.loginj\032authn.LoginWithOidcIdT" +
-      "oken\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030G\010\001\022\030login_with_oidc" +
-      "_id_token\032\003udb(\260\352\0010\003@\001J\004authP\001Z\024loginWit" +
-      "hOidcIdToken\342\363\030\305\001\n\004auth\022\017udb/native/auth" +
+      "1/auth/sessions:loginWithOtp:\001*\022\325\004\n\016Star" +
+      "tOidcLogin\0221.udb.core.authn.services.v1." +
+      "StartOidcLoginRequest\0322.udb.core.authn.s" +
+      "ervices.v1.StartOidcLoginResponse\"\333\003\312\363\030e" +
+      "\010\001R\035authn.oidc_login_start.publicZ\021authn" +
+      ".login.abuseb\026authn.oidc_login_startj\024au" +
+      "thn.StartOidcLogin\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0309\010\001\022\020s" +
+      "tart_oidc_login\032\003udb(\260\352\0010\003@\001J\004authP\001Z\016st" +
+      "artOidcLogin\342\363\030\265\001\n\004auth\022\017udb/native/auth" +
       "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
-      "TARGET\"4udb.native.auth.login_with_oidc_" +
-      "id_token.boilerplate*\030login_with_oidc_id" +
-      "_token2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020ud" +
-      "b native smoke\352\363\030V\n\032authn.LoginWithOidcI" +
-      "dToken\022\014authn.events\032\ttenant_id\"\010standar" +
-      "d*\rat_least_once2\006stable\362\363\030D\n\005authn\n\003idp" +
-      "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
-      "\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002+\"&/v1/auth/ses" +
-      "sions:loginWithOidcIdToken:\001*\022\222\005\n\020Create" +
-      "Invitation\0223.udb.core.authn.services.v1." +
-      "CreateInvitationRequest\0324.udb.core.authn" +
-      ".services.v1.CreateInvitationResponse\"\222\004" +
-      "\312\363\030L\010\002\032\034udb:authn:manage-invitations \001J\002" +
-      "\001\002j\026authn.CreateInvitationz\ttenant_id\220\001\001" +
-      "\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021create_invitation\032\003udb" +
-      "(\260\352\0010\003@\001J\004authP\001Z\020createInvitation\342\363\030\267\001\n" +
+      "TARGET\",udb.native.auth.start_oidc_login" +
+      ".boilerplate*\020start_oidc_login2\010udb_auth" +
+      ":\005authnJ\013UDB_API_KEYZ\020udb native smoke\362\363" +
+      "\030D\n\005authn\n\003idp\032\010postgres2\033UDB_NATIVE_SER" +
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\037" +
+      "\"\032/v1/auth/oidc-logins:start:\001*\022\250\005\n\017Fini" +
+      "shOidcLogin\0222.udb.core.authn.services.v1" +
+      ".FinishOidcLoginRequest\0323.udb.core.authn" +
+      ".services.v1.FinishOidcLoginResponse\"\253\004\312" +
+      "\363\030U\010\001R\027authn.oidc_login.publicZ\021authn.lo" +
+      "gin.abuseb\013authn.loginj\025authn.FinishOidc" +
+      "Login\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030;\010\001\022\021finish_oidc_lo" +
+      "gin\032\003udb(\260\352\0010\003@\001J\004authP\001Z\017finishOidcLogi" +
+      "n\342\363\030\267\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIV" +
+      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"-udb" +
+      ".native.auth.finish_oidc_login.boilerpla" +
+      "te*\021finish_oidc_login2\010udb_auth:\005authnJ\013" +
+      "UDB_API_KEYZ\020udb native smoke\352\363\030Q\n\025authn" +
+      ".FinishOidcLogin\022\014authn.events\032\ttenant_i" +
+      "d\"\010standard*\rat_least_once2\006stable\362\363\030D\n\005" +
+      "authn\n\003idp\032\010postgres2\033UDB_NATIVE_SERVICE" +
+      "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002&\"!/v" +
+      "1/auth/sessions:finishOidcLogin:\001*\022\351\005\n\024L" +
+      "oginWithOidcIdToken\0227.udb.core.authn.ser" +
+      "vices.v1.LoginWithOidcIdTokenRequest\0328.u" +
+      "db.core.authn.services.v1.LoginWithOidcI" +
+      "dTokenResponse\"\335\004\312\363\030c\010\001R authn.oidc_id_t" +
+      "oken_login.publicZ\021authn.login.abuseb\013au" +
+      "thn.loginj\032authn.LoginWithOidcIdToken\220\001\001" +
+      "\322\363\030\006\010\001\020\001 \001\332\363\030G\010\001\022\030login_with_oidc_id_tok" +
+      "en\032\003udb(\260\352\0010\003@\001J\004authP\001Z\024loginWithOidcId" +
+      "Token\342\363\030\305\001\n\004auth\022\017udb/native/auth\032\033UDB_N" +
+      "ATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"" +
+      "4udb.native.auth.login_with_oidc_id_toke" +
+      "n.boilerplate*\030login_with_oidc_id_token2" +
+      "\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb nativ" +
+      "e smoke\352\363\030V\n\032authn.LoginWithOidcIdToken\022" +
+      "\014authn.events\032\ttenant_id\"\010standard*\rat_l" +
+      "east_once2\006stable\362\363\030D\n\005authn\n\003idp\032\010postg" +
+      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
+      "PC_TARGET\370\363\030\002\202\323\344\223\002+\"&/v1/auth/sessions:l" +
+      "oginWithOidcIdToken:\001*\022\222\005\n\020CreateInvitat" +
+      "ion\0223.udb.core.authn.services.v1.CreateI" +
+      "nvitationRequest\0324.udb.core.authn.servic" +
+      "es.v1.CreateInvitationResponse\"\222\004\312\363\030L\010\002\032" +
+      "\034udb:authn:manage-invitations \001J\002\001\002j\026aut" +
+      "hn.CreateInvitationz\ttenant_id\220\001\001\322\363\030\006\010\001\020" +
+      "\001 \001\332\363\030<\010\001\022\021create_invitation\032\003udb(\260\352\0010\003@" +
+      "\001J\004authP\001Z\020createInvitation\342\363\030\267\001\n\004auth\022\017" +
+      "udb/native/auth\032\033UDB_NATIVE_SERVICES_ENA" +
+      "BLED\032\017UDB_GRPC_TARGET\"-udb.native.auth.c" +
+      "reate_invitation.boilerplate*\021create_inv" +
+      "itation2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020u" +
+      "db native smoke\352\363\030R\n\026authn.CreateInvitat" +
+      "ion\022\014authn.events\032\ttenant_id\"\010standard*\r" +
+      "at_least_once2\006stable\362\363\030?\n\005authn\032\010postgr" +
+      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
+      "C_TARGET\370\363\030\002\202\323\344\223\002\031\"\024/v1/auth/invitations" +
+      ":\001*\022\261\004\n\017ListInvitations\0222.udb.core.authn" +
+      ".services.v1.ListInvitationsRequest\0323.ud" +
+      "b.core.authn.services.v1.ListInvitations" +
+      "Response\"\264\003\312\363\030K\010\002\032\034udb:authn:manage-invi" +
+      "tations \001J\002\001\002j\025authn.ListInvitationsz\tte" +
+      "nant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\020list_invitat" +
+      "ions\032\003udb(\260\352\0010\003@\001J\004authP\001Z\017listInvitatio" +
+      "ns\342\363\030\265\001\n\004auth\022\017udb/native/auth\032\033UDB_NATI" +
+      "VE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\",ud" +
+      "b.native.auth.list_invitations.boilerpla" +
+      "te*\020list_invitations2\010udb_auth:\005authnJ\013U" +
+      "DB_API_KEYZ\020udb native smoke\362\363\030?\n\005authn\032" +
+      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
+      "UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\026\022\024/v1/auth/invi" +
+      "tations\022\236\005\n\020RevokeInvitation\0223.udb.core." +
+      "authn.services.v1.RevokeInvitationReques" +
+      "t\0324.udb.core.authn.services.v1.RevokeInv" +
+      "itationResponse\"\236\004\312\363\030A\010\002\032\034udb:authn:mana" +
+      "ge-invitations \001J\002\001\002j\026authn.RevokeInvita" +
+      "tion\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021revoke_invitati" +
+      "on\032\003udb(\260\352\0010\003@\001J\004authP\001Z\020revokeInvitatio" +
+      "n\342\363\030\267\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIV" +
+      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"-udb" +
+      ".native.auth.revoke_invitation.boilerpla" +
+      "te*\021revoke_invitation2\010udb_auth:\005authnJ\013" +
+      "UDB_API_KEYZ\020udb native smoke\352\363\030R\n\026authn" +
+      ".RevokeInvitation\022\014authn.events\032\ttenant_" +
+      "id\"\010standard*\rat_least_once2\006stable\362\363\030?\n" +
+      "\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\0020\"+/v1/au" +
+      "th/invitations/{invitation_id}:revoke:\001*" +
+      "\022\236\005\n\020ResendInvitation\0223.udb.core.authn.s" +
+      "ervices.v1.ResendInvitationRequest\0324.udb" +
+      ".core.authn.services.v1.ResendInvitation" +
+      "Response\"\236\004\312\363\030A\010\002\032\034udb:authn:manage-invi" +
+      "tations \001J\002\001\002j\026authn.ResendInvitation\220\001\001" +
+      "\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021resend_invitation\032\003udb" +
+      "(\260\352\0010\003@\001J\004authP\001Z\020resendInvitation\342\363\030\267\001\n" +
       "\004auth\022\017udb/native/auth\032\033UDB_NATIVE_SERVI" +
       "CES_ENABLED\032\017UDB_GRPC_TARGET\"-udb.native" +
-      ".auth.create_invitation.boilerplate*\021cre" +
-      "ate_invitation2\010udb_auth:\005authnJ\013UDB_API" +
-      "_KEYZ\020udb native smoke\352\363\030R\n\026authn.Create" +
+      ".auth.resend_invitation.boilerplate*\021res" +
+      "end_invitation2\010udb_auth:\005authnJ\013UDB_API" +
+      "_KEYZ\020udb native smoke\352\363\030R\n\026authn.Resend" +
       "Invitation\022\014authn.events\032\ttenant_id\"\010sta" +
       "ndard*\rat_least_once2\006stable\362\363\030?\n\005authn\032" +
       "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
-      "UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\031\"\024/v1/auth/invi" +
-      "tations:\001*\022\261\004\n\017ListInvitations\0222.udb.cor" +
-      "e.authn.services.v1.ListInvitationsReque" +
-      "st\0323.udb.core.authn.services.v1.ListInvi" +
-      "tationsResponse\"\264\003\312\363\030K\010\002\032\034udb:authn:mana" +
-      "ge-invitations \001J\002\001\002j\025authn.ListInvitati" +
-      "onsz\ttenant_id\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\020list_" +
-      "invitations\032\003udb(\260\352\0010\003@\001J\004authP\001Z\017listIn" +
-      "vitations\342\363\030\265\001\n\004auth\022\017udb/native/auth\032\033U" +
-      "DB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TAR" +
-      "GET\",udb.native.auth.list_invitations.bo" +
-      "ilerplate*\020list_invitations2\010udb_auth:\005a" +
-      "uthnJ\013UDB_API_KEYZ\020udb native smoke\362\363\030?\n" +
-      "\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\026\022\024/v1/au" +
-      "th/invitations\022\236\005\n\020RevokeInvitation\0223.ud" +
-      "b.core.authn.services.v1.RevokeInvitatio" +
-      "nRequest\0324.udb.core.authn.services.v1.Re" +
-      "vokeInvitationResponse\"\236\004\312\363\030A\010\002\032\034udb:aut" +
-      "hn:manage-invitations \001J\002\001\002j\026authn.Revok" +
-      "eInvitation\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021revoke_i" +
-      "nvitation\032\003udb(\260\352\0010\003@\001J\004authP\001Z\020revokeIn" +
-      "vitation\342\363\030\267\001\n\004auth\022\017udb/native/auth\032\033UD" +
-      "B_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARG" +
-      "ET\"-udb.native.auth.revoke_invitation.bo" +
-      "ilerplate*\021revoke_invitation2\010udb_auth:\005" +
-      "authnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030R" +
-      "\n\026authn.RevokeInvitation\022\014authn.events\032\t" +
-      "tenant_id\"\010standard*\rat_least_once2\006stab" +
-      "le\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\0020\"" +
-      "+/v1/auth/invitations/{invitation_id}:re" +
-      "voke:\001*\022\236\005\n\020ResendInvitation\0223.udb.core." +
-      "authn.services.v1.ResendInvitationReques" +
-      "t\0324.udb.core.authn.services.v1.ResendInv" +
-      "itationResponse\"\236\004\312\363\030A\010\002\032\034udb:authn:mana" +
-      "ge-invitations \001J\002\001\002j\026authn.ResendInvita" +
-      "tion\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021resend_invitati" +
-      "on\032\003udb(\260\352\0010\003@\001J\004authP\001Z\020resendInvitatio" +
-      "n\342\363\030\267\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIV" +
-      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"-udb" +
-      ".native.auth.resend_invitation.boilerpla" +
-      "te*\021resend_invitation2\010udb_auth:\005authnJ\013" +
-      "UDB_API_KEYZ\020udb native smoke\352\363\030R\n\026authn" +
-      ".ResendInvitation\022\014authn.events\032\ttenant_" +
-      "id\"\010standard*\rat_least_once2\006stable\362\363\030?\n" +
-      "\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0020\"+/v1/au" +
-      "th/invitations/{invitation_id}:resend:\001*" +
-      "\022\327\004\n\rGetInvitation\0220.udb.core.authn.serv" +
-      "ices.v1.GetInvitationRequest\0321.udb.core." +
-      "authn.services.v1.GetInvitationResponse\"" +
-      "\340\003\312\363\030d\010\001R\027authn.invitation.publicZ\026authn" +
-      ".invitation.abuseb\027authn.invitation_view" +
-      "edj\023authn.GetInvitation\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306" +
-      "\010\001\022\016get_invitation\032\003udb(\260\352\0010\003@\001J\004authP\001Z" +
-      "\rgetInvitation\342\363\030\261\001\n\004auth\022\017udb/native/au" +
-      "th\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRP" +
-      "C_TARGET\"*udb.native.auth.get_invitation" +
-      ".boilerplate*\016get_invitation2\010udb_auth:\005" +
-      "authnJ\013UDB_API_KEYZ\020udb native smoke\362\363\030?" +
-      "\n\005authn\032\010postgres2\033UDB_NATIVE_SERVICES_E" +
-      "NABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\0021\",/v1/a" +
-      "uth/invitations/{invitation_id}:preview:" +
-      "\001*\022\264\006\n\031StartInvitationAcceptance\022<.udb.c" +
-      "ore.authn.services.v1.StartInvitationAcc" +
-      "eptanceRequest\032=.udb.core.authn.services" +
-      ".v1.StartInvitationAcceptanceResponse\"\231\005" +
-      "\312\363\030\202\001\010\001R\035authn.invitation.start.publicZ\026" +
-      "authn.invitation.abuseb#authn.invitation" +
-      "_acceptance_startedj\037authn.StartInvitati" +
-      "onAcceptance\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030O\010\001\022\033start_i" +
-      "nvitation_acceptance\032\003udb(\260\352\0010\003@\001J\004authP" +
-      "\001Z\031startInvitationAcceptance\342\363\030\313\001\n\004auth\022" +
-      "\017udb/native/auth\032\033UDB_NATIVE_SERVICES_EN" +
-      "ABLED\032\017UDB_GRPC_TARGET\"7udb.native.auth." +
-      "start_invitation_acceptance.boilerplate*" +
-      "\033start_invitation_acceptance2\010udb_auth:\005" +
-      "authnJ\013UDB_API_KEYZ\020udb native smoke\352\363\030[" +
-      "\n\037authn.StartInvitationAcceptance\022\014authn" +
-      ".events\032\ttenant_id\"\010standard*\rat_least_o" +
-      "nce2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_NA" +
-      "TIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363" +
-      "\030\002\202\323\344\223\0029\"4/v1/auth/invitations/{invitati" +
-      "on_id}:startAcceptance:\001*\022\315\005\n\020AcceptInvi" +
-      "tation\0223.udb.core.authn.services.v1.Acce" +
-      "ptInvitationRequest\0324.udb.core.authn.ser" +
-      "vices.v1.AcceptInvitationResponse\"\315\004\312\363\030p" +
-      "\010\001R\036authn.invitation.accept.publicZ\026auth" +
-      "n.invitation.abuseb\031authn.invitation_acc" +
-      "eptedj\026authn.AcceptInvitation\220\001\001\322\363\030\006\010\001\020\001" +
-      " \001\332\363\030<\010\001\022\021accept_invitation\032\003udb(\260\352\0010\003@\001" +
-      "J\004authP\001Z\020acceptInvitation\342\363\030\267\001\n\004auth\022\017u" +
-      "db/native/auth\032\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED\032\017UDB_GRPC_TARGET\"-udb.native.auth.ac" +
-      "cept_invitation.boilerplate*\021accept_invi" +
-      "tation2\010udb_auth:\005authnJ\013UDB_API_KEYZ\020ud" +
-      "b native smoke\352\363\030R\n\026authn.AcceptInvitati" +
-      "on\022\014authn.events\032\ttenant_id\"\010standard*\ra" +
-      "t_least_once2\006stable\362\363\030?\n\005authn\032\010postgre" +
-      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
-      "_TARGET\370\363\030\002\202\323\344\223\0020\"+/v1/auth/invitations/" +
-      "{invitation_id}:accept:\001*\022\332\002\n\013CheckStepU" +
-      "p\022..udb.core.authn.services.v1.CheckStep" +
-      "UpRequest\032/.udb.core.authn.services.v1.C" +
-      "heckStepUpResponse\"\351\001\312\363\0308\010\002\032\027udb:authn:c" +
-      "heck-step-up \001J\003\001\002\004j\021authn.CheckStepUp\220\001" +
-      "\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\rcheck_step_up\032\003udb(\260\352" +
-      "\0010\003@\001J\004authP\001Z\013checkStepUp\362\363\030?\n\005authn\032\010p" +
-      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
-      "B_GRPC_TARGET\370\363\030\001\202\323\344\223\002\037\"\032/v1/auth/mfa/st" +
-      "ep-up:check:\001*\032\277\002\312\360\031U\n\005authn\022\005authn\032\005aut" +
-      "hn\"\016Authentication*\004auth0\0018\001h\001z\004auth\202\001\004a" +
-      "uth\212\001\005authn\222\001\014native.authn\322\360\031\027\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\004authP\001\332\360\031\203\001\n\004auth\022\017udb/native/aut" +
-      "h\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
-      "_TARGET\"\027udb.native.authn.config:\005authnJ" +
-      "\013UDB_API_KEYZ\017udb native lint\342\360\031?\n\005authn" +
+      "UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0020\"+/v1/auth/invi" +
+      "tations/{invitation_id}:resend:\001*\022\327\004\n\rGe" +
+      "tInvitation\0220.udb.core.authn.services.v1" +
+      ".GetInvitationRequest\0321.udb.core.authn.s" +
+      "ervices.v1.GetInvitationResponse\"\340\003\312\363\030d\010" +
+      "\001R\027authn.invitation.publicZ\026authn.invita" +
+      "tion.abuseb\027authn.invitation_viewedj\023aut" +
+      "hn.GetInvitation\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0306\010\001\022\016get" +
+      "_invitation\032\003udb(\260\352\0010\003@\001J\004authP\001Z\rgetInv" +
+      "itation\342\363\030\261\001\n\004auth\022\017udb/native/auth\032\033UDB" +
+      "_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGE" +
+      "T\"*udb.native.auth.get_invitation.boiler" +
+      "plate*\016get_invitation2\010udb_auth:\005authnJ\013" +
+      "UDB_API_KEYZ\020udb native smoke\362\363\030?\n\005authn" +
       "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
-      "\017UDB_GRPC_TARGETB\212\002\n\036com.udb.core.authn." +
-      "services.v1B\021AuthnServiceProtoP\001ZHgithub" +
-      ".com/fahara02/udb/sdk/go/gen/udb/core/au" +
-      "thn/services/v1;servicesv1\242\002\004UCAS\252\002\032Udb." +
-      "Core.Authn.Services.V1\312\002\032Udb\\Core\\Authn\\" +
-      "Services\\V1\342\002&Udb\\GPBMetadata\\Core\\Authn" +
-      "\\Services\\V1\352\002\036Udb::Core::Authn::Service" +
-      "s::V1b\006proto3"
+      "\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\0021\",/v1/auth/inv" +
+      "itations/{invitation_id}:preview:\001*\022\264\006\n\031" +
+      "StartInvitationAcceptance\022<.udb.core.aut" +
+      "hn.services.v1.StartInvitationAcceptance" +
+      "Request\032=.udb.core.authn.services.v1.Sta" +
+      "rtInvitationAcceptanceResponse\"\231\005\312\363\030\202\001\010\001" +
+      "R\035authn.invitation.start.publicZ\026authn.i" +
+      "nvitation.abuseb#authn.invitation_accept" +
+      "ance_startedj\037authn.StartInvitationAccep" +
+      "tance\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030O\010\001\022\033start_invitati" +
+      "on_acceptance\032\003udb(\260\352\0010\003@\001J\004authP\001Z\031star" +
+      "tInvitationAcceptance\342\363\030\313\001\n\004auth\022\017udb/na" +
+      "tive/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017" +
+      "UDB_GRPC_TARGET\"7udb.native.auth.start_i" +
+      "nvitation_acceptance.boilerplate*\033start_" +
+      "invitation_acceptance2\010udb_auth:\005authnJ\013" +
+      "UDB_API_KEYZ\020udb native smoke\352\363\030[\n\037authn" +
+      ".StartInvitationAcceptance\022\014authn.events" +
+      "\032\ttenant_id\"\010standard*\rat_least_once2\006st" +
+      "able\362\363\030?\n\005authn\032\010postgres2\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002" +
+      "9\"4/v1/auth/invitations/{invitation_id}:" +
+      "startAcceptance:\001*\022\315\005\n\020AcceptInvitation\022" +
+      "3.udb.core.authn.services.v1.AcceptInvit" +
+      "ationRequest\0324.udb.core.authn.services.v" +
+      "1.AcceptInvitationResponse\"\315\004\312\363\030p\010\001R\036aut" +
+      "hn.invitation.accept.publicZ\026authn.invit" +
+      "ation.abuseb\031authn.invitation_acceptedj\026" +
+      "authn.AcceptInvitation\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010" +
+      "\001\022\021accept_invitation\032\003udb(\260\352\0010\003@\001J\004authP" +
+      "\001Z\020acceptInvitation\342\363\030\267\001\n\004auth\022\017udb/nati" +
+      "ve/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
+      "B_GRPC_TARGET\"-udb.native.auth.accept_in" +
+      "vitation.boilerplate*\021accept_invitation2" +
+      "\010udb_auth:\005authnJ\013UDB_API_KEYZ\020udb nativ" +
+      "e smoke\352\363\030R\n\026authn.AcceptInvitation\022\014aut" +
+      "hn.events\032\ttenant_id\"\010standard*\rat_least" +
+      "_once2\006stable\362\363\030?\n\005authn\032\010postgres2\033UDB_" +
+      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
+      "\370\363\030\002\202\323\344\223\0020\"+/v1/auth/invitations/{invita" +
+      "tion_id}:accept:\001*\022\332\002\n\013CheckStepUp\022..udb" +
+      ".core.authn.services.v1.CheckStepUpReque" +
+      "st\032/.udb.core.authn.services.v1.CheckSte" +
+      "pUpResponse\"\351\001\312\363\0308\010\002\032\027udb:authn:check-st" +
+      "ep-up \001J\003\001\002\004j\021authn.CheckStepUp\220\001\001\322\363\030\006\010\001" +
+      "\020\001 \001\332\363\0303\010\001\022\rcheck_step_up\032\003udb(\260\352\0010\003@\001J\004" +
+      "authP\001Z\013checkStepUp\362\363\030?\n\005authn\032\010postgres" +
+      "2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_" +
+      "TARGET\370\363\030\001\202\323\344\223\002\037\"\032/v1/auth/mfa/step-up:c" +
+      "heck:\001*\032\277\002\312\360\031U\n\005authn\022\005authn\032\005authn\"\016Aut" +
+      "hentication*\004auth0\0018\001h\001z\004auth\202\001\004auth\212\001\005a" +
+      "uthn\222\001\014native.authn\322\360\031\027\010\001\032\003udb(\260\352\0010\003@\001J\004" +
+      "authP\001\332\360\031\203\001\n\004auth\022\017udb/native/auth\032\033UDB_" +
+      "NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET" +
+      "\"\027udb.native.authn.config:\005authnJ\013UDB_AP" +
+      "I_KEYZ\017udb native lint\342\360\031?\n\005authn\032\010postg" +
+      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
+      "PC_TARGETB\212\002\n\036com.udb.core.authn.service" +
+      "s.v1B\021AuthnServiceProtoP\001ZHgithub.com/fa" +
+      "hara02/udb/sdk/go/gen/udb/core/authn/ser" +
+      "vices/v1;servicesv1\242\002\004UCAS\252\002\032Udb.Core.Au" +
+      "thn.Services.V1\312\002\032Udb\\Core\\Authn\\Service" +
+      "s\\V1\342\002&Udb\\GPBMetadata\\Core\\Authn\\Servic" +
+      "es\\V1\352\002\036Udb::Core::Authn::Services::V1b\006" +
+      "proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -1829,6 +1871,18 @@ public final class AuthnServiceProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_ExchangeServiceTokenForTenantResponse_descriptor,
         new java.lang.String[] { "AccessToken", "ExpiresAtUnix", "TenantId", "ProjectId", "Scopes", "MembershipId", "Message", "Error", });
+    internal_static_udb_core_authn_services_v1_ExchangeTokenForJobRequest_descriptor =
+      getDescriptor().getMessageTypes().get(30);
+    internal_static_udb_core_authn_services_v1_ExchangeTokenForJobRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_ExchangeTokenForJobRequest_descriptor,
+        new java.lang.String[] { "SubjectToken", "Purpose", "JobId", "TtlSeconds", });
+    internal_static_udb_core_authn_services_v1_ExchangeTokenForJobResponse_descriptor =
+      getDescriptor().getMessageTypes().get(31);
+    internal_static_udb_core_authn_services_v1_ExchangeTokenForJobResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_ExchangeTokenForJobResponse_descriptor,
+        new java.lang.String[] { "AccessToken", "Jti", "ExpiresAtUnix", "Subject", "Actor", "Purpose", "JobId", "Scopes", "TenantId", "ProjectId", "Message", "Error", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.api.AnnotationsProto.getDescriptor();
     com.google.protobuf.TimestampProto.getDescriptor();

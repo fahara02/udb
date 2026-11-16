@@ -113,12 +113,24 @@ impl EncryptionRuntime {
         #[cfg(feature = "http-client")]
         // GAP 17a: Reject plain-HTTP Vault addresses in non-dev mode.
         // The X-Vault-Token would be sent in cleartext, enabling token theft.
-        if addr.starts_with("http://") && !settings.dev_mode {
-            return Err(
-                "UDB_VAULT_ADDR uses plain HTTP — X-Vault-Token would be sent unencrypted. \
-                 Set https:// or set UDB_DEV_MODE=true to override."
-                    .to_string(),
-            );
+        // A Vault agent on a loopback address is allowed (the token never leaves
+        // the host). UDB_DEV_MODE does not apply under UDB_ENV=production.
+        if addr.starts_with("http://") && !crate::runtime::transport_policy::is_local_url(addr) {
+            if crate::runtime::security::udb_env_is_production() {
+                return Err(
+                    "UDB_VAULT_ADDR uses plain HTTP — X-Vault-Token would be sent unencrypted. \
+                     Set https:// (or point it at a Vault agent on a loopback address); \
+                     UDB_DEV_MODE does not override this under UDB_ENV=production."
+                        .to_string(),
+                );
+            }
+            if !settings.dev_mode {
+                return Err(
+                    "UDB_VAULT_ADDR uses plain HTTP — X-Vault-Token would be sent unencrypted. \
+                     Set https:// or set UDB_DEV_MODE=true to override."
+                        .to_string(),
+                );
+            }
         }
 
         #[cfg(feature = "http-client")]

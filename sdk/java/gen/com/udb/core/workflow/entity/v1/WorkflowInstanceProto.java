@@ -46,7 +46,7 @@ public final class WorkflowInstanceProto {
       "/core/common/v1/db.proto\032!udb/core/commo" +
       "n/v1/security.proto\032\036udb/core/common/v1/" +
       "types.proto\032\'udb/core/workflow/entity/v1" +
-      "/enums.proto\"\255\022\n\020WorkflowInstance\022O\n\013wor" +
+      "/enums.proto\"\272\022\n\020WorkflowInstance\022O\n\013wor" +
       "kflow_id\030\001 \001(\tB.\202\267\030*\n\013workflow_id\022\004UUID\030" +
       "\001(\001:\021gen_random_uuid()R\nworkflowId\0227\n\tte" +
       "nant_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002" +
@@ -89,30 +89,30 @@ public final class WorkflowInstanceProto {
       "mpB4\202\267\0300\n\ndeleted_at\022\013TIMESTAMPTZZ\025Soft " +
       "delete timestampR\tdeletedAt\022H\n\ndeleted_b" +
       "y\030\022 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft de" +
-      "lete actorR\tdeletedBy:\354\004\372\266\030\310\003\n\022workflow_" +
+      "lete actorR\tdeletedBy:\371\004\372\266\030\325\003\n\022workflow_" +
       "instances\022\014udb_workflow\030\001 \001*WDurable mul" +
       "ti-step workflow/saga instances advanced" +
       " by the leader-elected workflow tick0\0018\001" +
-      "@\001b\231\001\n\031workflow_tenant_isolation\032z(tenan" +
-      "t_id::text = current_setting(\'app.curren" +
-      "t_tenant_id\', true) OR current_setting(\'" +
-      "app.platform_admin\', true) = \'true\')(\001h\001" +
-      "\212\0011\n\035idx_workflow_instances_tenant\022\005BTRE" +
-      "EZ\ttenant_id\212\0018\n\032idx_workflow_instances_" +
-      "due\022\005BTREEZ\006statusZ\013next_run_at\362\001#udb.wo" +
-      "rkflow.workflow_instances.cdc\372\001\rworkflow" +
-      ":read\212\262\031\232\001\n\006tenant\032\ttenant_id*4tenant_id" +
-      " = current_setting(\'app.current_tenant_i" +
-      "d\')2\013soft_delete:\024workflow.operational@\373" +
-      "\023H\002R\006tenantZ\010standardr\025tenant.data_resid" +
-      "encyB\222\002\n\037com.udb.core.workflow.entity.v1" +
-      "B\025WorkflowInstanceProtoP\001ZGgithub.com/fa" +
-      "hara02/udb/sdk/go/gen/udb/core/workflow/" +
-      "entity/v1;entityv1\242\002\004UCWE\252\002\033Udb.Core.Wor" +
-      "kflow.Entity.V1\312\002\033Udb\\Core\\Workflow\\Enti" +
-      "ty\\V1\342\002\'Udb\\GPBMetadata\\Core\\Workflow\\En" +
-      "tity\\V1\352\002\037Udb::Core::Workflow::Entity::V" +
-      "1b\006proto3"
+      "@\001b\246\001\n\031workflow_tenant_isolation\032\206\001(tena" +
+      "nt_id = NULLIF(current_setting(\'app.curr" +
+      "ent_tenant_id\', true), \'\')::uuid OR curr" +
+      "ent_setting(\'app.platform_admin\', true) " +
+      "= \'true\')(\001h\001\212\0011\n\035idx_workflow_instances" +
+      "_tenant\022\005BTREEZ\ttenant_id\212\0018\n\032idx_workfl" +
+      "ow_instances_due\022\005BTREEZ\006statusZ\013next_ru" +
+      "n_at\362\001#udb.workflow.workflow_instances.c" +
+      "dc\372\001\rworkflow:read\212\262\031\232\001\n\006tenant\032\ttenant_" +
+      "id*4tenant_id = current_setting(\'app.cur" +
+      "rent_tenant_id\')2\013soft_delete:\024workflow." +
+      "operational@\373\023H\002R\006tenantZ\010standardr\025tena" +
+      "nt.data_residencyB\222\002\n\037com.udb.core.workf" +
+      "low.entity.v1B\025WorkflowInstanceProtoP\001ZG" +
+      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
+      "ore/workflow/entity/v1;entityv1\242\002\004UCWE\252\002" +
+      "\033Udb.Core.Workflow.Entity.V1\312\002\033Udb\\Core\\" +
+      "Workflow\\Entity\\V1\342\002\'Udb\\GPBMetadata\\Cor" +
+      "e\\Workflow\\Entity\\V1\352\002\037Udb::Core::Workfl" +
+      "ow::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

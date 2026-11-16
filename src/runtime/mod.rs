@@ -59,6 +59,7 @@ pub mod singleton;
 pub mod slo; // Phase 10: SLO/error-budget catalog + unified readiness contract
 pub mod system;
 pub mod tenant_movement;
+pub mod transport_policy; // startup gate: every outbound connection encrypted + verified when required
 /// Env-gated SERVED wire-codec round-trip live tests for this session's decoder
 /// fixes (W1/W2/W3/W4/W5, bug #2 bytea, #10 jsonb). Runtime-skip without
 /// `UDB_*_DSN`; each per-backend file is `*_tests.rs` for the env-reads guard.

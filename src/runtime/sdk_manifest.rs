@@ -156,8 +156,16 @@ pub struct EntityColumnDescriptor {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub oneof_group: String,
     /// Non-empty ⇒ this column is a proto enum; the generator emits a
-    /// short-token ⇄ enum map from these values.
+    /// short-token ⇄ enum map from these values (the proto enum's value names
+    /// when the enum resolves, else the column's declared `enum_values`).
     pub enum_values: Vec<String>,
+    /// The values the column's generated CHECK allows: its declared
+    /// `enum_values`, verbatim (full names or short tokens), when the column
+    /// declares them and no custom `check_constraint`. Empty ⇒ no enum CHECK,
+    /// and a text enum is stored as its short token. Emitter-only;
+    /// `#[serde(skip)]` keeps the sdk-manifest JSON surface unchanged.
+    #[serde(skip)]
+    pub check_values: Vec<String>,
     /// True when this column's enum type lives in a DIFFERENT proto package than
     /// the owning entity — so its Go type needs a distinct import alias the
     /// co-located-enum emit path does not have. Resolved Go imports qualify
@@ -689,11 +697,22 @@ fn entity_descriptor_from_table(
                     } else {
                         // Pre-annotated `enum_values` (the embedded-descriptor path, which
                         // is never rendered by the Go entity emitter): fall back to the
-                        // reference heuristic for the cross-package flag.
+                        // reference heuristic for the cross-package flag. The declared list
+                        // is the CHECK's, which may hold short tokens or a subset; the
+                        // proto enum's own names, when they resolve, give the prefix.
                         let cross =
                             enum_type_is_cross_package(&column.proto_type, &table.proto_package);
-                        (column.enum_values.clone(), cross, None)
+                        let values =
+                            resolve_enum(&column.proto_type, &table.proto_package, enum_registry)
+                                .map(|(_, values, _)| values)
+                                .unwrap_or_else(|| column.enum_values.clone());
+                        (values, cross, None)
                     };
+                let check_values = if column.check_constraint.trim().is_empty() {
+                    column.enum_values.clone()
+                } else {
+                    Vec::new()
+                };
                 EntityColumnDescriptor {
                     field_name: column.field_name.clone(),
                     column_name: column.column_name.clone(),
@@ -704,6 +723,7 @@ fn entity_descriptor_from_table(
                     has_presence: column.has_presence,
                     oneof_group: column.oneof_group.clone(),
                     enum_values,
+                    check_values,
                     enum_cross_package,
                     enum_go_import,
                     predicate_go_import: {

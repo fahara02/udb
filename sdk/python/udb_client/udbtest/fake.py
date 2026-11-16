@@ -43,7 +43,7 @@ from udb.events.v1 import udb_events_pb2
 from ..client import to_struct
 from ..record_codec import _is_json, _loads
 from ..project import UdbAsyncProject, UdbConfig, UdbProject
-from ..record_codec import _INT64_TYPES, decode_field, encode_field
+from ..record_codec import _INT64_TYPES, decode_field, encode_field, enum_check_violation
 from ..schema import (
     column_options,
     is_encrypted,
@@ -65,8 +65,16 @@ _STATUS_OK = grpc.StatusCode.OK
 _INTEGER_SQL = frozenset({"SMALLINT", "INTEGER", "INT", "INT2", "INT4", "INT8", "BIGINT", "SERIAL", "BIGSERIAL"})
 _OPERATORS = frozenset(
     {"$eq", "$ne", "$gt", "$gte", "$lt", "$lte", "$in", "$nin", "$between",
-     "$is_null", "$not_null", "$not", "$like", "$ilike"}
+     "$is_null", "$not_null", "$not", "$like", "$ilike",
+     "$contains", "$contained_by", "$overlaps", "$overlap"}
 )
+# The broker's `@>`/`<@`/`&&` filters; `$overlap` is an alias of `$overlaps`.
+_ARRAY_OPERATORS = frozenset({"$contains", "$contained_by", "$overlaps", "$overlap"})
+# On a JSON column the broker evaluates `$contains`/`$contained_by` as jsonb
+# containment. query_filter rewrites the operator to these internal names once the
+# column is known to be JSON; _validate_filter refuses them from callers.
+_JSON_CONTAINS = "$contains:json"
+_JSON_CONTAINED_BY = "$contained_by:json"
 _DLQ_METHODS = frozenset({"ListDlqEvents", "GetDlqEvent", "ReplayDlqEvent", "DismissDlqEvent", "QuarantineDlqEvent"})
 _RFC3339 = re.compile(r"^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?([Zz]|[+-]\d{2}:\d{2})$")
 _CONSUMER_CHARS = re.compile(r"^[A-Za-z0-9_.:-]+$")
@@ -282,6 +290,56 @@ def _like(text: str, pattern: str) -> bool:
     return bool(text) and text[0] == pattern[0] and _like(text[1:], pattern[1:])
 
 
+def _json_scalar_equal(a: Any, b: Any) -> bool:
+    """jsonb scalar equality: the same JSON type, numbers by value."""
+    if isinstance(a, bool) or isinstance(b, bool):
+        return isinstance(a, bool) and isinstance(b, bool) and a == b
+    left, right = _numeric(a), _numeric(b)
+    if left is not None and right is not None:
+        return left == right
+    if isinstance(a, str) and isinstance(b, str):
+        return a == b
+    return a is None and b is None
+
+
+def _json_contains(container: Any, contained: Any, top: bool = True) -> bool:
+    """jsonb ``container @> contained``: objects by key (recursively), arrays by
+    element (each contained element is contained in some container element), and, at
+    the top level only, an array contains a bare scalar it holds."""
+    if isinstance(container, list):
+        if isinstance(contained, list):
+            return all(any(_json_contains(have, want, False) for have in container) for want in contained)
+        if top and not isinstance(contained, dict):
+            return any(not isinstance(have, (list, dict)) and _json_scalar_equal(have, contained) for have in container)
+        return False
+    if isinstance(container, dict):
+        if not isinstance(contained, dict):
+            return False
+        return all(key in container and _json_contains(container[key], want, False) for key, want in contained.items())
+    if isinstance(contained, (list, dict)):
+        return False
+    return _json_scalar_equal(container, contained)
+
+
+def _element_equal(a: Any, b: Any) -> bool:
+    """SQL array element equality: a NULL element equals nothing."""
+    return a is not None and b is not None and _equal(a, b)
+
+
+def _array_contains(container: Any, contained: Any) -> bool:
+    """SQL array ``container @> contained``."""
+    if not isinstance(container, list) or not isinstance(contained, list):
+        return False
+    return all(any(_element_equal(have, want) for have in container) for want in contained)
+
+
+def _array_overlaps(a: Any, b: Any) -> bool:
+    """SQL array ``a && b``: the arrays share an element."""
+    if not isinstance(a, list) or not isinstance(b, list):
+        return False
+    return any(_element_equal(have, want) for have in a for want in b)
+
+
 def _validate_operators(condition: Any) -> None:
     if not isinstance(condition, dict):
         return
@@ -390,6 +448,16 @@ def _column_truth(value: Any, condition: Any) -> int:
             if name == "$ilike":
                 pattern, text = pattern.lower(), text.lower()
             ok = _like(text, pattern)
+        elif name == "$contains":
+            ok = _array_contains(value, arg)
+        elif name == "$contained_by":
+            ok = _array_contains(arg, value)
+        elif name in ("$overlaps", "$overlap"):
+            ok = _array_overlaps(value, arg)
+        elif name == _JSON_CONTAINS:
+            ok = _json_contains(value, arg)
+        elif name == _JSON_CONTAINED_BY:
+            ok = _json_contains(arg, value)
         else:
             raise _invalid(f"unsupported filter operator {op}", "UDB_UNSUPPORTED_FILTER_OPERATOR")
         if not ok:
@@ -443,6 +511,85 @@ class _Unique:
     name: str
     columns: list[str] = field(default_factory=list)
     where: str = ""
+
+
+_NULL_TERM = re.compile(r'^"?([A-Za-z_][A-Za-z0-9_]*)"?\s+IS\s+(NOT\s+)?NULL$', re.IGNORECASE)
+_LITERAL_TERM = re.compile(r"^\"?([A-Za-z_][A-Za-z0-9_]*)\"?\s*(=|<>|!=)\s*'((?:[^']|'')*)'$")
+
+
+def _split_on_and(where: str) -> list[str]:
+    """Split a predicate on the keyword AND (any case) where it stands outside a quoted literal."""
+    parts: list[str] = []
+    quoted = False
+    start = 0
+    i = 0
+    while i < len(where):
+        ch = where[i]
+        if ch == "'":
+            quoted = not quoted
+        elif (
+            not quoted
+            and ch.isspace()
+            and i + 4 < len(where)
+            and where[i + 1 : i + 4].upper() == "AND"
+            and where[i + 4].isspace()
+        ):
+            parts.append(where[start:i].strip())
+            start = i + 4
+            i += 3
+        i += 1
+    parts.append(where[start:].strip())
+    return parts
+
+
+def _literal_text(value: Any) -> str:
+    """The stored value as SQL compares it with a text literal."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, separators=(",", ":"))
+    return str(value)
+
+
+def _unique_predicate(where: str, resolve: Callable[[str], str | None]) -> Callable[[Mapping[str, Any]], bool]:
+    """Read a partial unique-index predicate into a row test.
+
+    The fake understands a conjunction of ``col IS [NOT] NULL`` and
+    ``col = | <> | != 'literal'`` terms. As in SQL, a NULL value makes ``=`` and ``<>``
+    false. Anything else (OR, parentheses, functions) is refused, so a predicate is
+    never silently dropped; such SQL needs start().
+    """
+    unsupported = ValueError(f"udbtest: unsupported unique-index predicate {where!r}; use start() for SQL expressions")
+    tests: list[Callable[[Mapping[str, Any]], bool]] = []
+    for part in _split_on_and(where.strip()):
+        null_term = _NULL_TERM.match(part)
+        if null_term:
+            name = resolve(null_term.group(1).lower())
+            if name is None:
+                raise unsupported
+            want_null = null_term.group(2) is None
+            tests.append(lambda row, name=name, want_null=want_null: (row.get(name) is None) == want_null)
+            continue
+        literal_term = _LITERAL_TERM.match(part)
+        if literal_term:
+            name = resolve(literal_term.group(1).lower())
+            if name is None:
+                raise unsupported
+            equal_to = literal_term.group(2) == "="
+            literal = literal_term.group(3).replace("''", "'")
+
+            def compare(row: Mapping[str, Any], name: str = name, equal_to: bool = equal_to, literal: str = literal) -> bool:
+                value = row.get(name)
+                if value is None:
+                    return False
+                return (_literal_text(value) == literal) == equal_to
+
+            tests.append(compare)
+            continue
+        raise unsupported
+    return lambda row: all(test(row) for test in tests)
 
 
 def _json_column_document(name: str, text: str) -> Any:
@@ -522,8 +669,8 @@ class _Entity:
             self.schema_error = "unique index has no columns"
             return
         key.name = key.name or f"{self.table_name}_{'_'.join(key.columns)}_key"
-        # A fake must never silently drop a partial uniqueness predicate. The common
-        # soft-delete predicates are supported; other SQL needs start().
+        # A fake must never silently drop a partial uniqueness predicate. Conjunctions
+        # of IS [NOT] NULL and literal comparisons are supported; other SQL needs start().
         if key.where:
             try:
                 self.in_unique(key, {})
@@ -535,17 +682,7 @@ class _Entity:
     def in_unique(self, key: _Unique, row: Mapping[str, Any]) -> bool:
         if not key.where:
             return True
-        parts = key.where.split()
-        if (
-            len(parts) in (3, 4)
-            and parts[1].upper() == "IS"
-            and parts[-1].upper() == "NULL"
-            and (len(parts) == 3 or parts[2].upper() == "NOT")
-        ):
-            name = self.aliases.get(parts[0].strip('"'))
-            if name is not None:
-                return (row.get(name) is None) == (len(parts) == 3)
-        raise ValueError(f"udbtest: unsupported unique-index predicate {key.where!r}; use start() for SQL expressions")
+        return _unique_predicate(key.where, self.aliases.get)(row)
 
     def normalize(self, record: Mapping[str, Any]) -> dict[str, Any]:
         if self.schema_error:
@@ -575,6 +712,17 @@ class _Entity:
             if isinstance(value, str) and _is_json(self.options[name]):
                 out[name] = _json_column_document(name, value)
                 continue
+            # A text enum column that declares enum_values has a CHECK; the broker refuses
+            # a value outside it with the database's check violation.
+            constraint = enum_check_violation(self.message_class.DESCRIPTOR, self.columns[name], value)
+            if constraint:
+                raise _Refusal(
+                    grpc.StatusCode.FAILED_PRECONDITION, "", f"the value breaks constraint {constraint}",
+                    error_pb2.ErrorDetail(
+                        kind=error_pb2.ERROR_KIND_SCHEMA, backend="database",
+                        operation="check_constraint", capability_required="check_violation",
+                    ),
+                )
             # Reuse the SDK codec for coercion, enums, timestamps, nested JSON and
             # exact integer bounds. No second lossy JSON-to-protobuf implementation.
             message = self.message_class()
@@ -647,8 +795,37 @@ class _Entity:
                 raise _invalid(f"unknown filter column {field_name}")
             if column in out:
                 raise _invalid(f"filter column supplied through two aliases: {column}")
-            out[column] = _canonical_operators(condition)
+            out[column] = self._canonical_operators(condition, column)
         return out
+
+    def _canonical_operators(self, value: Any, column: str) -> Any:
+        if not isinstance(value, dict):
+            return copy.deepcopy(value)
+        out: dict[str, Any] = {}
+        for op, arg in value.items():
+            name = op.lower()
+            if name in _ARRAY_OPERATORS:
+                name = self._array_operator(name, column, arg)
+            if name in out:
+                raise _invalid(f"filter operator supplied through two aliases: {name}")
+            out[name] = self._canonical_operators(arg, column) if name == "$not" else copy.deepcopy(arg)
+        return out
+
+    def _array_operator(self, name: str, column: str, arg: Any) -> str:
+        """The broker's ``$contains``/``$contained_by``/``$overlaps`` (``@>``/``<@``/``&&``):
+        a JSON column takes jsonb containment, an array (repeated) column SQL array
+        semantics with an array value; any other column has no such operator."""
+        canonical = "$overlaps" if name == "$overlap" else name
+        if _is_json(self.options.get(column)):
+            if canonical == "$overlaps":
+                raise _invalid(f"filter operator {name} needs an array column; {column} is JSON (use $contains)")
+            return _JSON_CONTAINS if canonical == "$contains" else _JSON_CONTAINED_BY
+        field = self.columns.get(column)
+        if field is None or not is_repeated(field):
+            raise _invalid(f"filter operator {name} needs an array (repeated) or JSON column; {column} is neither")
+        if arg is not None and not isinstance(arg, list):
+            raise _invalid(f"filter operator {name} on array column {column} requires an array value")
+        return canonical
 
     def expected_columns(self, values: Mapping[str, Any]) -> dict[str, Any]:
         out: dict[str, Any] = {}
@@ -872,20 +1049,37 @@ class _Entity:
         return inputs
 
 
+def _validate_tx_guards(received: Sequence[types_pb2.Mutation]) -> None:
+    """The broker refuses, before anything is written, a key on an operation with no
+    replay receipt and a malformed key on one that has."""
+    for index, mutation in enumerate(received):
+        operation = mutation.operation.strip().lower()
+        key = mutation.idempotency_key
+        if key and operation not in ("upsert", "update", "delete", "vector_upsert"):
+            raise _violation(
+                grpc.StatusCode.INVALID_ARGUMENT, "",
+                f"BeginTx mutation {index} ({operation}) cannot honour an idempotency_key; nothing was written",
+                error_pb2.ERROR_KIND_VALIDATION, f"mutations[{index}].idempotency_key",
+                "this operation has no replay receipt; leave the key empty",
+            )
+        if any(char.isspace() or unicodedata.category(char) == "Cc" for char in key):
+            raise _violation(
+                grpc.StatusCode.INVALID_ARGUMENT, "",
+                "idempotency_key must be empty or contain no whitespace or control characters",
+                error_pb2.ERROR_KIND_VALIDATION, "idempotency_key",
+                "must be empty or contain no whitespace or control characters",
+            )
+        if mutation.require_affected and operation not in ("upsert", "update", "delete"):
+            raise _violation(
+                grpc.StatusCode.INVALID_ARGUMENT, "",
+                "require_affected requires an upsert, update or delete mutation",
+                error_pb2.ERROR_KIND_VALIDATION, f"mutations[{index}].require_affected",
+                "only supported on relational mutations",
+            )
+
+
 def _integer_column(column: Any) -> bool:
     return column.sql_type.strip().upper() in _INTEGER_SQL
-
-
-def _canonical_operators(value: Any) -> Any:
-    if not isinstance(value, dict):
-        return copy.deepcopy(value)
-    out: dict[str, Any] = {}
-    for op, arg in value.items():
-        name = op.lower()
-        if name in out:
-            raise _invalid(f"filter operator supplied through two aliases: {name}")
-        out[name] = _canonical_operators(arg) if name == "$not" else copy.deepcopy(arg)
-    return out
 
 
 def _record_of(request: Any) -> dict[str, Any]:
@@ -1106,6 +1300,9 @@ class Fake:
             "ReplayDlqEvent": unary("ReplayDlqEvent", self._replay_dlq, t.DlqActionRequest, t.MutationResponse),
             "DismissDlqEvent": unary("DismissDlqEvent", self._dismiss_dlq, t.DlqActionRequest, t.MutationResponse),
             "QuarantineDlqEvent": unary("QuarantineDlqEvent", self._quarantine_dlq, t.DlqActionRequest, t.MutationResponse),
+            "BatchSelect": grpc.stream_stream_rpc_method_handler(
+                self._batch_select, request_deserializer=t.SelectRequest.FromString, response_serializer=t.RecordSet.SerializeToString
+            ),
             "BeginTx": grpc.stream_stream_rpc_method_handler(
                 self._begin_tx, request_deserializer=t.Mutation.FromString, response_serializer=t.TxStatus.SerializeToString
             ),
@@ -1824,6 +2021,24 @@ class Fake:
                 error_pb2.ERROR_KIND_CONFLICT, "expected_revision", "the current revision differs from the expected revision",
             )
 
+    def _batch_select(
+        self, request_iterator: Iterator[types_pb2.SelectRequest], context: grpc.ServicerContext
+    ) -> Iterator[types_pb2.RecordSet]:
+        """The broker's many-reads stream: each SelectRequest is charged, authorized
+        as a Select of its own message type and answered by the same logic as
+        Select, one RecordSet per request in order. The first failing request ends
+        the stream with its error."""
+        call = _Call(context)
+        try:
+            self._before_rpc(call, "BatchSelect", None)
+            for request in request_iterator:
+                self._bind_body(call, request.context)
+                self._admit(call, "BatchSelect", request)
+                self._authorize(call, request.message_type, "Select")
+                yield self._select(call, request)
+        except _Refusal as refusal:
+            self._abort(context, refusal)
+
     # Transactions
 
     def _begin_tx(self, request_iterator: Iterator[types_pb2.Mutation], context: grpc.ServicerContext) -> Iterator[types_pb2.TxStatus]:
@@ -1836,10 +2051,13 @@ class Fake:
 
     def _run_tx(self, call: _Call, request_iterator: Iterator[types_pb2.Mutation]) -> Iterator[types_pb2.TxStatus]:
         mutations: list[types_pb2.Mutation] = []
+        # Every frame, in stream order: the broker's guard indexes the whole stream.
+        received: list[types_pb2.Mutation] = []
         terminal: types_pb2.Mutation | None = None
         for mutation in request_iterator:
             if terminal is not None:
                 raise _invalid("mutation after transaction terminal marker")
+            received.append(mutation)
             self._bind_body(call, mutation.context)
             if mutation.commit and mutation.rollback:
                 raise _invalid("commit and rollback cannot both be set")
@@ -1858,13 +2076,6 @@ class Fake:
                     resource = mutation.collection or mutation.message_type
                 else:
                     raise _invalid(f"unsupported transaction operation {operation}")
-                if mutation.idempotency_key.strip():
-                    raise _violation(
-                        grpc.StatusCode.INVALID_ARGUMENT, "",
-                        "this transaction path cannot honour idempotency_key; nothing was written",
-                        error_pb2.ERROR_KIND_VALIDATION, f"mutations[{len(mutations)}].idempotency_key",
-                        "not supported on this operation inside BeginTx; leave it empty",
-                    )
                 self._authorize(call, resource, action)
                 mutations.append(mutation)
             if mutation.commit or mutation.rollback:
@@ -1874,14 +2085,17 @@ class Fake:
         if terminal.rollback:
             yield types_pb2.TxStatus(tx_id=terminal.tx_id, state=types_pb2.TxStatus.TX_STATE_ROLLED_BACK)
             return
+        _validate_tx_guards(received)
         with self._lock:
             rows = copy.deepcopy(self._rows)
             revisions = dict(self._revisions)
+            # Receipts are written in the transaction, so a rollback drops them too.
+            receipts = dict(self._receipts)
             events = len(self._events)
             try:
                 self._apply_tx(call.identity, mutations)
             except _Refusal:
-                self._rows, self._revisions = rows, revisions
+                self._rows, self._revisions, self._receipts = rows, revisions, receipts
                 del self._events[events:]
                 raise
         yield types_pb2.TxStatus(
@@ -1891,41 +2105,100 @@ class Fake:
         )
 
     def _apply_tx(self, identity: Identity, mutations: Sequence[types_pb2.Mutation]) -> None:
-        t = types_pb2
         for m in mutations:
-            if m.operation in ("upsert", "insert"):
-                request = t.UpsertRequest(message_type=m.message_type, record_json=m.record_json)
-                if m.HasField("payload"):
-                    request.payload.CopyFrom(m.payload)
-                if m.HasField("expected"):
-                    request.expected.CopyFrom(m.expected)
-                self._write(identity, request, m.operation == "insert")
-            elif m.operation == "update":
-                request = t.UpdateRequest(message_type=m.message_type, filter=m.filter, changes=m.changes, expected=m.expected)
-                request.increments.extend(m.increments)
-                self._update_locked(identity, request)
-            elif m.operation == "delete":
-                self._delete_locked(identity, t.DeleteRequest(message_type=m.message_type, filter=m.filter, expected=m.expected))
-            elif m.operation == "enqueue_outbox_event":
-                envelope = _struct_map(m.payload)
-                if not m.object_key or envelope.get("document_id") != m.object_key:
-                    raise _invalid("outbox partition_key must equal payload.document_id")
-                given = envelope.get("tenant_id")
-                if isinstance(given, str) and given and given != identity.tenant_id:
-                    raise _refuse(grpc.StatusCode.PERMISSION_DENIED, "UDB_TENANT_MISMATCH", "outbox tenant differs from verified tenant")
-                given = envelope.get("project_id")
-                if isinstance(given, str) and given and given != identity.project_id:
-                    raise _refuse(grpc.StatusCode.PERMISSION_DENIED, "UDB_POLICY_DENIED", "outbox project differs from verified project")
-                if (
-                    envelope.get("event_id") is None
-                    or envelope.get("event_type") is None
-                    or envelope.get("envelope_version") != float(EVENT_ENVELOPE_VERSION)
-                ):
-                    raise _invalid("outbox needs a versioned event envelope")
-                envelope["tenant_id"], envelope["project_id"] = identity.tenant_id, identity.project_id
-                self._events.append(Event(m.collection or m.message_type, m.object_key, copy.deepcopy(envelope)))
+            if m.idempotency_key and m.operation in ("upsert", "update", "delete"):
+                self._keyed_tx_mutation(identity, m)
             else:
-                raise _invalid(f"unsupported transaction operation {m.operation}")
+                self._apply_tx_mutation(identity, m)
+
+    def _keyed_tx_mutation(self, identity: Identity, m: types_pb2.Mutation) -> None:
+        """A keyed relational mutation keeps a receipt per mutation, in a
+        ``begin_tx/<op>`` namespace a unary write never shares. The claim precedes CAS,
+        so an identical retry neither rechecks ``expected`` nor writes nor bumps a
+        revision; the same key with different inputs refuses the whole transaction."""
+        entity = self._entity(m.message_type)
+        request = self._tx_request(m)
+        if isinstance(request, types_pb2.UpsertRequest):
+            request.conflict_fields.extend(m.conflict_fields)
+        inputs = entity.mutation_inputs(identity, request)
+        inputs["require_affected"], inputs["cdc_required"] = m.require_affected, m.cdc_required
+        digest = hashlib.sha256(_json_text(inputs).encode("utf-8")).hexdigest()
+        scope = (identity.tenant_id, identity.project_id, m.message_type, f"begin_tx/{m.operation}", m.idempotency_key)
+        receipt = self._receipts.get(scope)
+        if receipt is not None:
+            if receipt[0] != digest:
+                raise _violation(
+                    grpc.StatusCode.FAILED_PRECONDITION, "UDB_IDEMPOTENCY_REUSE",
+                    "idempotency_key was already used for a different request; reuse a key only to retry an identical request",
+                    error_pb2.ERROR_KIND_CONFLICT, "idempotency_key",
+                    "the same idempotency_key was already claimed by a request with different inputs",
+                    "Reuse a key only to retry identical inputs; use a new key for a different write.",
+                )
+            return
+        response = self._apply_tx_mutation(identity, m)
+        self._receipts[scope] = (
+            digest,
+            types_pb2.MutationResponse(mutation_id=response.mutation_id, affected_rows=response.affected_rows),
+        )
+
+    @staticmethod
+    def _tx_request(m: types_pb2.Mutation) -> Any:
+        t = types_pb2
+        if m.operation in ("upsert", "insert"):
+            request = t.UpsertRequest(message_type=m.message_type, record_json=m.record_json)
+            if m.HasField("payload"):
+                request.payload.CopyFrom(m.payload)
+            if m.HasField("expected"):
+                request.expected.CopyFrom(m.expected)
+            return request
+        if m.operation == "update":
+            request = t.UpdateRequest(message_type=m.message_type, filter=m.filter, changes=m.changes, expected=m.expected)
+            request.increments.extend(m.increments)
+            return request
+        return t.DeleteRequest(message_type=m.message_type, filter=m.filter, expected=m.expected)
+
+    def _apply_tx_mutation(self, identity: Identity, m: types_pb2.Mutation) -> types_pb2.MutationResponse:
+        """Apply one transaction mutation and, like the broker, check ``require_affected``
+        against the rows it actually matched. A mismatch refuses the mutation and
+        BeginTx rolls the whole transaction back. A replayed keyed mutation never
+        reaches here, so a retry skips the check as on the broker."""
+        response = self._apply_tx_mutation_unchecked(identity, m)
+        want, affected = m.require_affected, response.affected_rows
+        if want and affected != want:
+            raise _refuse(
+                grpc.StatusCode.NOT_FOUND, "UDB_NO_ROWS_AFFECTED",
+                f"no external compensation was needed: the write matched {affected} row(s) "
+                f"but require_affected is {want}; nothing was changed",
+            )
+        return response
+
+    def _apply_tx_mutation_unchecked(self, identity: Identity, m: types_pb2.Mutation) -> types_pb2.MutationResponse:
+        if m.operation in ("upsert", "insert"):
+            return self._write(identity, self._tx_request(m), m.operation == "insert")
+        if m.operation == "update":
+            return self._update_locked(identity, self._tx_request(m))
+        if m.operation == "delete":
+            return self._delete_locked(identity, self._tx_request(m))
+        if m.operation == "enqueue_outbox_event":
+            envelope = _struct_map(m.payload)
+            if not m.object_key or envelope.get("document_id") != m.object_key:
+                raise _invalid("outbox partition_key must equal payload.document_id")
+            given = envelope.get("tenant_id")
+            if isinstance(given, str) and given and given != identity.tenant_id:
+                raise _refuse(grpc.StatusCode.PERMISSION_DENIED, "UDB_TENANT_MISMATCH", "outbox tenant differs from verified tenant")
+            given = envelope.get("project_id")
+            if isinstance(given, str) and given and given != identity.project_id:
+                raise _refuse(grpc.StatusCode.PERMISSION_DENIED, "UDB_POLICY_DENIED", "outbox project differs from verified project")
+            if (
+                envelope.get("event_id") is None
+                or envelope.get("event_type") is None
+                or envelope.get("envelope_version") != float(EVENT_ENVELOPE_VERSION)
+            ):
+                raise _invalid("outbox needs a versioned event envelope")
+            envelope["tenant_id"], envelope["project_id"] = identity.tenant_id, identity.project_id
+            self._events.append(Event(m.collection or m.message_type, m.object_key, copy.deepcopy(envelope)))
+            return types_pb2.MutationResponse(affected_rows=1)
+        raise _invalid(f"unsupported transaction operation {m.operation}")
 
     # CDC
 

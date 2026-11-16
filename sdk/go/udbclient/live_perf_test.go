@@ -220,6 +220,53 @@ func TestLivePerf(t *testing.T) {
 		return serviceAccountGen
 	}
 
+	// ExchangeTokenForJob is callable only by a service account presenting its
+	// own bearer whose ACTIVE grant holds udb:token:delegate, in the same
+	// tenant as the user whose token it exchanges. The prepared fixtures name
+	// such an account in the bench tenant (delegate_service_username, password
+	// UDB_LIVE_PASSWORD); the row's subject_token is the benchmark user's
+	// current access token (`<seed:token>`). Built lazily like the client
+	// above; when the fixture is absent or the login fails the row is measured
+	// with the ordinary client and fails honestly.
+	var delegateServiceGen *GeneratedClient
+	delegateServiceResolved := false
+	delegateServiceClient := func() *GeneratedClient {
+		if delegateServiceResolved {
+			return delegateServiceGen
+		}
+		delegateServiceResolved = true
+		username, _ := fix.lookupSeed("delegate_service_username")
+		if username == "" {
+			t.Logf("delegating-service bench caller: prepared fixture delegate_service_username is absent; measuring with the tenant admin")
+			return nil
+		}
+		delegateProject, _ := fix.lookupSeed("delegate_service_project_id")
+		if delegateProject == "" {
+			delegateProject = project
+		}
+		dsLogin, err := authnv1.NewAuthnServiceClient(authConn).Login(ctx, &authnv1.LoginRequest{
+			Username: username, Password: requiredLiveEnv(t, "UDB_LIVE_PASSWORD"),
+			TenantHint: tenant, ProjectHint: delegateProject, DeviceName: "go-sdk-perf-delegating-service",
+		})
+		if err != nil {
+			t.Logf("delegating-service bench caller: Login failed: %v", err)
+			return nil
+		}
+		dsWho, err := auth.AuthenticateBearer(ctx, dsLogin.GetAccessToken())
+		if err != nil {
+			t.Logf("delegating-service bench caller: bearer validation failed: %v", err)
+			return nil
+		}
+		dsMeta := meta
+		dsMeta.TenantID = dsWho.GetPrincipal().GetTenantId()
+		dsMeta.ProjectID = dsWho.GetPrincipal().GetProjectId()
+		dsMeta.UserID = dsWho.GetPrincipal().GetUserId()
+		dsMeta.ServiceIdentity = dsWho.GetPrincipal().GetServiceIdentity()
+		dsMeta.Scopes = append([]string(nil), dsWho.GetPrincipal().GetScopes()...)
+		delegateServiceGen = NewGenerated(authConn, liveGeneratedOptions(dsMeta, "Bearer "+dsLogin.GetAccessToken()))
+		return delegateServiceGen
+	}
+
 	// Re-mint FRESH credentials right before measurement, into THREE INDEPENDENT
 	// admin sessions — one per consumer — so the session-mutating Phase-1 RPCs don't
 	// invalidate each other:
@@ -367,6 +414,10 @@ func TestLivePerf(t *testing.T) {
 		if requiresServiceAccountBenchmarkIdentity(rpc) {
 			if saGen := serviceAccountClient(); saGen != nil {
 				gen = saGen
+			}
+		} else if requiresDelegatingServiceBenchmarkIdentity(rpc) {
+			if dsGen := delegateServiceClient(); dsGen != nil {
+				gen = dsGen
 			}
 		}
 		iters, note := iterFor(rpc.OperationKind)
@@ -616,6 +667,13 @@ func requiresServiceAccountBenchmarkIdentity(rpc RPCInfo) bool {
 	}
 }
 
+// ExchangeTokenForJob is the only RPC that needs a service account presenting
+// its own bearer in the BENCH tenant: its grant must hold udb:token:delegate,
+// and the user token it exchanges is the benchmark user's.
+func requiresDelegatingServiceBenchmarkIdentity(rpc RPCInfo) bool {
+	return rpc.FullMethod == "/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob"
+}
+
 func liveBenchmarkClient(rpc RPCInfo, broker, auth, platformBroker, platformAuth *GeneratedClient) *GeneratedClient {
 	if rpc.Service == "DataBroker" {
 		if requiresPlatformBenchmarkIdentity(rpc) {
@@ -690,6 +748,25 @@ func TestServiceAccountBenchmarkIdentityRoutingIsNarrow(t *testing.T) {
 	}
 	if requiresServiceAccountBenchmarkIdentity(RPCInfo{Service: "DataBroker", Name: "ListProjects", FullMethod: "/udb.services.v1.DataBroker/ListProjects"}) {
 		t.Fatal("DataBroker/ListProjects must not use the service-account fixture")
+	}
+}
+
+func TestDelegatingServiceBenchmarkIdentityRoutingIsNarrow(t *testing.T) {
+	job := RPCInfo{Service: "AuthnService", Name: "ExchangeTokenForJob", FullMethod: "/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob"}
+	if !requiresDelegatingServiceBenchmarkIdentity(job) {
+		t.Fatal("AuthnService/ExchangeTokenForJob must use the delegating-service fixture")
+	}
+	if requiresServiceAccountBenchmarkIdentity(job) || requiresPlatformBenchmarkIdentity(job) {
+		t.Fatal("AuthnService/ExchangeTokenForJob must not use the home-tenant or platform fixture")
+	}
+	for _, name := range []string{
+		"ExchangeServiceTokenForTenant", "ListOwnTenantMemberships", "CreateServiceAccountGrant",
+		"ValidateToken", "Login", "RefreshToken",
+	} {
+		rpc := RPCInfo{Service: "AuthnService", Name: name, FullMethod: "/udb.core.authn.services.v1.AuthnService/" + name}
+		if requiresDelegatingServiceBenchmarkIdentity(rpc) {
+			t.Fatalf("AuthnService/%s must not use the delegating-service fixture", name)
+		}
 	}
 }
 

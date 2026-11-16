@@ -544,12 +544,24 @@ class UdbClient(_ClientBase):
         """Table-shaped alias of :meth:`entity` (``udb.data.table("invoice")``)."""
         return self.entity(name, key=key)
 
-    def tx(self, fn: Callable[[Any], Any], *, metadata: Metadata | None = None, timeout: float | None = None) -> None:
+    def tx(
+        self,
+        fn: Callable[[Any], Any],
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+        replay_key: str | None = None,
+    ) -> None:
         """Run ``fn(tx)`` and commit everything it collected atomically: every write
-        and every event commits together or none does. See :class:`udb_client.tx.TxScope`."""
+        and every event commits together or none does. See :class:`udb_client.tx.TxScope`.
+
+        ``replay_key`` makes a retry after a lost response safe: each write gets a key
+        derived from it and each event a stable id, so resending the same transaction
+        with the same key commits it once. ``fn`` must make the same writes on a retry;
+        reuse a key only for an identical retry. See :func:`udb_client.tx.run_tx`."""
         from .tx import run_tx
 
-        run_tx(self, fn, metadata=metadata, timeout=timeout)
+        run_tx(self, fn, metadata=metadata, timeout=timeout, replay_key=replay_key or "")
 
     def batch_select(
         self,
@@ -566,6 +578,28 @@ class UdbClient(_ClientBase):
                 timeout=self._timeout if timeout is None else timeout,
             ),
         )
+
+    def select_many(
+        self,
+        requests: Sequence[types_pb2.SelectRequest],
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> list[types_pb2.RecordSet]:
+        """Run several reads, across tables, in ONE broker call (BatchSelect).
+
+        Every read is authorized, quota-charged and PII-checked on its own; the
+        broker runs them concurrently and the results come back in the order of
+        ``requests``. One failing read raises that read's error.
+        """
+        if not requests:
+            return []
+        results = list(self.batch_select(requests, metadata=metadata, timeout=timeout))
+        if len(results) != len(requests):
+            raise RuntimeError(
+                f"udb: select_many sent {len(requests)} read(s) and received {len(results)} result(s)"
+            )
+        return results
 
     def batch_upsert(
         self,
@@ -1306,11 +1340,12 @@ class UdbAsyncClient(_ClientBase):
         *,
         metadata: Metadata | None = None,
         timeout: float | None = None,
+        replay_key: str | None = None,
     ) -> None:
-        """See :meth:`UdbClient.tx`; ``fn`` may be sync or async."""
+        """See :meth:`UdbClient.tx` (including ``replay_key``); ``fn`` may be sync or async."""
         from .tx import run_tx_async
 
-        await run_tx_async(self, fn, metadata=metadata, timeout=timeout)
+        await run_tx_async(self, fn, metadata=metadata, timeout=timeout, replay_key=replay_key or "")
 
     async def batch_select(
         self,
@@ -1329,6 +1364,26 @@ class UdbAsyncClient(_ClientBase):
                 yield item
         except grpc.RpcError as error:
             raise map_rpc_error("BatchSelect", error) from error
+
+    async def select_many(
+        self,
+        requests: Sequence[types_pb2.SelectRequest],
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> list[types_pb2.RecordSet]:
+        """See :meth:`UdbClient.select_many`."""
+        if not requests:
+            return []
+        results = [
+            item
+            async for item in self.batch_select(requests, metadata=metadata, timeout=timeout)
+        ]
+        if len(results) != len(requests):
+            raise RuntimeError(
+                f"udb: select_many sent {len(requests)} read(s) and received {len(results)} result(s)"
+            )
+        return results
 
     async def vector_upsert(
         self,

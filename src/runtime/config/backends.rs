@@ -22,8 +22,13 @@ pub struct DbConfig {
     pub role: String,
     /// Password (resolved from env; never logged or serialised in cleartext).
     pub password: String,
-    /// SSL mode: `"require"`, `"disable"`, `"prefer"`.  When empty, derived
-    /// from `deploy.mode`: Cloud → `"require"`, SelfHosted → `"prefer"`.
+    /// SSL mode: `"verify-full"`, `"verify-ca"`, `"require"`, `"prefer"`,
+    /// `"disable"`.  When empty, derived from `deploy.mode`: Cloud →
+    /// `"require"`, SelfHosted → `"prefer"`. `prefer` silently falls back to
+    /// plaintext and `require` does not verify the server certificate, so with
+    /// `UDB_PG_TLS_REQUIRED` on (the production default) only `verify-ca` /
+    /// `verify-full` pass the startup transport gate (`runtime::transport_policy`).
+    /// Point `sslrootcert=` in the DSN at the CA file for a private CA.
     pub ssl_mode: String,
     /// Pooler DSN (PgBouncer / Neon pooled endpoint) for application traffic.
     pub pooler_dsn: String,

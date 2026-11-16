@@ -4355,6 +4355,15 @@ pub async fn deliver_otp(
     };
     #[cfg(feature = "http-client")]
     {
+        // The body carries a live login code (or magic link): never send it over
+        // plaintext to a non-loopback host while UDB_OUTBOUND_TLS_REQUIRED is on.
+        if let Err(reason) = crate::runtime::transport_policy::check_secret_url(
+            url.trim(),
+            "UDB_OTP_DELIVERY_WEBHOOK_URL",
+        ) {
+            tracing::error!(channel, "OTP not delivered: {reason}");
+            return;
+        }
         let mut body = serde_json::json!({
             "channel": channel,
             "address": address,
@@ -4398,7 +4407,16 @@ pub async fn deliver_otp(
 #[cfg(feature = "http-client")]
 fn otp_delivery_client() -> &'static reqwest::Client {
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
-    CLIENT.get_or_init(reqwest::Client::new)
+    CLIENT.get_or_init(|| {
+        // Bounded so a slow relay cannot pile up OTP tasks, and no redirects so
+        // an https:// relay cannot bounce the code to a plaintext URL.
+        reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .timeout(std::time::Duration::from_secs(10))
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .unwrap_or_else(|err| panic!("OTP delivery HTTP client could not be built: {err}"))
+    })
 }
 
 pub fn hash_otp_code(code: &str, hash_key: &[u8]) -> String {

@@ -553,6 +553,18 @@
   },
   {
     "file": "authn.md",
+    "rpc": "ExchangeTokenForJob",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/ExchangeTokenForJob",
+    "api_alias": "exchange_token_for_job",
+    "operation_id": "exchangeTokenForJob",
+    "op_kind": "MUTATION",
+    "request_msg": "ExchangeTokenForJobRequest",
+    "body": "`{ \"subject_token\": \"<seed:token>\", \"purpose\": \"export\", \"job_id\": \"sdk-bench-job\", \"ttl_seconds\": 600 }`",
+    "notes": "Caller must be a service account presenting its own bearer whose ACTIVE grant holds `udb:token:delegate` in the bench tenant (human and API-key callers get PERMISSION_DENIED); `subject_token` is the benchmark user's current access token in the same tenant. Mints a delegated job token (subject the user, actor the service, purpose and job id signed, at most `UDB_DELEGATED_TOKEN_MAX_TTL`); no refresh token. The harnesses measure it as the `delegate_service_username` service account the prepared fixtures provision in the bench tenant (grant `udb:read` + `udb:token:delegate`, password `UDB_LIVE_PASSWORD`)."
+  },
+  {
+    "file": "authn.md",
     "rpc": "FinishOidcLogin",
     "service": "AuthnService",
     "wire_rpc": "AuthnService/FinishOidcLogin",

@@ -14,6 +14,12 @@ use super::errors::livequery_required_field;
 pub(crate) struct SourceBinding {
     pub(crate) tenant_field: String,
     pub(crate) cdc_topic: String,
+    /// A shared (global) table: no tenant column, rows every tenant reads. Its
+    /// change events carry the reserved shared tenant marker
+    /// ([`crate::broker::SHARED_TENANT_MARKER`]) and reach every tenant's
+    /// subscription; its snapshot has no tenant predicate (`tenant_field` is
+    /// empty).
+    pub(crate) shared: bool,
 }
 
 /// Resolve the source entity under the SHARED resolver
@@ -35,6 +41,16 @@ pub(crate) fn resolve_source(
                 )],
             )
         })?;
+    // A table that declares itself shared (tenant isolation off and no tenant
+    // column) is readable by every tenant, so every tenant may watch it. Any
+    // other table without a tenant column still fails closed.
+    if crate::broker::is_global_table(table) {
+        return Ok(SourceBinding {
+            tenant_field: String::new(),
+            cdc_topic: table.cdc_topic.trim().to_string(),
+            shared: true,
+        });
+    }
     let column = crate::runtime::postgres_helpers::tenant_column_ref(table).ok_or_else(|| {
         crate::runtime::executor_utils::invalid_argument_fields(
             format!(
@@ -47,6 +63,7 @@ pub(crate) fn resolve_source(
     Ok(SourceBinding {
         tenant_field: column.field_name.clone(),
         cdc_topic: table.cdc_topic.trim().to_string(),
+        shared: false,
     })
 }
 

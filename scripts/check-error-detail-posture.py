@@ -428,7 +428,6 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             'backend_transport_status("redis", "EXISTS", err)',
             'backend_transport_status("redis", "SCAN", err)',
             'backend_transport_status("redis", "MGET after SCAN", err)',
-            'backend_transport_status("redis", "SETEX", err)',
             'backend_transport_status("redis", "SET", err)',
             'backend_transport_status("redis", "DEL", err)',
             'backend_transport_status("redis", "EXPIRE", err)',

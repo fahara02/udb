@@ -1046,6 +1046,36 @@ class AuthnServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Delegated job tokens (RFC 8693-style token exchange): a service exchanges
+     * a user's current access token for a token a durable async job uses to act
+     * for that user. The caller is a service account's own bearer whose ACTIVE
+     * grant holds udb:token:delegate, in the SAME tenant as the user's token.
+     * The user's token must be a valid, unexpired, unrevoked USER access token
+     * (not a service, membership or delegated token). The minted token's
+     * subject, tenant and project are the user's; its RFC 8693 `act` claim
+     * names the service; it carries the requested purpose (signed, so the
+     * purpose counts as verified), the job_id and `delegated: true`; its scopes
+     * are those both the user's token and the service's grant allow (never
+     * udb:token:delegate). Lifetime: ttl_seconds, at most
+     * UDB_DELEGATED_TOKEN_MAX_TTL (24 hours by default); no refresh token, never
+     * exchanged again. Every use re-checks that the user is active and not
+     * revoked, that the jti is not revoked, and that the service still holds an
+     * ACTIVE grant with udb:token:delegate. Every mint and use is audited
+     * (udb.authn.token.delegated.v1, udb.authn.token.delegated.used.v1).
+     * @param \Udb\Core\Authn\Services\V1\ExchangeTokenForJobRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ExchangeTokenForJobResponse>
+     */
+    public function ExchangeTokenForJob(\Udb\Core\Authn\Services\V1\ExchangeTokenForJobRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ExchangeTokenForJob',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ExchangeTokenForJobResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── 0.6.6 passwordless login + tenant auth policy RPCs [PASSWORDLESS] ──
      *
      * Replace the tenant's sign-in policy: whether passwords are required, the

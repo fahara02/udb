@@ -7,5 +7,6 @@ export { loadPolicies, parsePolicies } from "./policy";
 export type { Fault, FakeEvent, Policy, TestHooks } from "./fake";
 export type { Identity } from "./entityRules";
 export { start, startPair } from "./embedded";
+export type { StartOptions } from "./embedded";
 export { runTable, runTableCases, tableCasesPath } from "./conformance";
 export type { Connect, RunTableOptions } from "./conformance";

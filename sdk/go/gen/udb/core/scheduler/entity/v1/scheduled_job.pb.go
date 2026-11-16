@@ -212,7 +212,7 @@ var File_udb_core_scheduler_entity_v1_scheduled_job_proto protoreflect.FileDescr
 
 const file_udb_core_scheduler_entity_v1_scheduled_job_proto_rawDesc = "" +
 	"\n" +
-	"0udb/core/scheduler/entity/v1/scheduled_job.proto\x12\x1cudb.core.scheduler.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a(udb/core/scheduler/entity/v1/enums.proto\"\xf0\x10\n" +
+	"0udb/core/scheduler/entity/v1/scheduled_job.proto\x12\x1cudb.core.scheduler.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a(udb/core/scheduler/entity/v1/enums.proto\"\xfd\x10\n" +
 	"\fScheduledJob\x12@\n" +
 	"\x06job_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06job_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05jobId\x127\n" +
@@ -258,9 +258,9 @@ const file_udb_core_scheduler_entity_v1_scheduled_job_proto_rawDesc = "" +
 	"\n" +
 	"deleted_by\x18\x11 \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xd4\x04\xfa\xb6\x18\xaf\x03\n" +
-	"\x0escheduled_jobs\x12\rudb_scheduler\x18\x01 \x01*IDurable cron and one-shot jobs fired by the leader-elected scheduler tick0\x018\x01@\x01b\x9a\x01\n" +
-	"\x1ascheduler_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01-\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xe1\x04\xfa\xb6\x18\xbc\x03\n" +
+	"\x0escheduled_jobs\x12\rudb_scheduler\x18\x01 \x01*IDurable cron and one-shot jobs fired by the leader-elected scheduler tick0\x018\x01@\x01b\xa7\x01\n" +
+	"\x1ascheduler_tenant_isolation\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01-\n" +
 	"\x19idx_scheduled_jobs_tenant\x12\x05BTREEZ\ttenant_id\x8a\x015\n" +
 	"\x16idx_scheduled_jobs_due\x12\x05BTREEZ\x06statusZ\fnext_fire_at\xf2\x01 udb.scheduler.scheduled_jobs.cdc\xfa\x01\x0escheduler:read\x8a\xb2\x19\x9b\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x15scheduler.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x94\x02\n" +

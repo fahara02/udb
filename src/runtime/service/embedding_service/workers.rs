@@ -103,6 +103,10 @@ struct EmbeddingTeardownJob {
     /// re-registered ACTIVE after the delete supersedes the teardown (deleting
     /// then would wipe fresh vectors).
     source_status: String,
+    /// The `_tenant_id` the deleted source's vectors carry: the shared marker
+    /// for a global source (the delete event says `shared: true`), else the
+    /// owning tenant.
+    vector_tenant_id: String,
 }
 
 /// SQL for one change-driven work-emitter journal pass. Every journal/outbox
@@ -135,7 +139,9 @@ pub(crate) fn embedding_work_jobs_sql(journal_relation: &str, outbox_relation: &
             j.journal_position AS journal_position \
          FROM {journal_relation} j \
          JOIN {source_rel} s \
-           ON s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
+           ON (s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
+               OR (COALESCE(s.{tenant_column}::TEXT, '') = '' \
+                   AND COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') = '{shared}')) \
           AND s.{status} = $1 \
           AND COALESCE(s.{source_cdc_topic}::TEXT, '') <> '' \
           AND s.{source_cdc_topic} = j.topic \
@@ -166,6 +172,7 @@ pub(crate) fn embedding_work_jobs_sql(journal_relation: &str, outbox_relation: &
         tenant_column = source.q("tenant_column"),
         source_cdc_topic = source.q("source_cdc_topic"),
         status = source.q("status"),
+        shared = crate::broker::SHARED_TENANT_MARKER,
     )
 }
 
@@ -385,7 +392,11 @@ pub(crate) fn embedding_teardown_jobs_sql(journal_relation: &str, outbox_relatio
             COALESCE(j.payload->>'target_collection', j.payload->'payload'->>'target_collection', '') AS target_collection, \
             COALESCE(j.payload->>'vector_backend', j.payload->'payload'->>'vector_backend', 'qdrant') AS vector_backend, \
             COALESCE(j.payload->>'vector_instance', j.payload->'payload'->>'vector_instance', 'default') AS vector_instance, \
-            COALESCE(s.{status}::TEXT, '') AS source_status \
+            COALESCE(s.{status}::TEXT, '') AS source_status, \
+            CASE WHEN COALESCE(j.payload->>'shared', j.payload->'payload'->>'shared', '') = 'true' \
+                 THEN '{shared}' \
+                 ELSE COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
+            END AS vector_tenant_id \
          FROM {journal_relation} j \
          LEFT JOIN {source_rel} s \
            ON s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
@@ -409,6 +420,7 @@ pub(crate) fn embedding_teardown_jobs_sql(journal_relation: &str, outbox_relatio
         status = source.q("status"),
         tenant_id = source.q("tenant_id"),
         source_name = source.q("source_name"),
+        shared = crate::broker::SHARED_TENANT_MARKER,
     )
 }
 
@@ -490,6 +502,9 @@ async fn load_embedding_source_teardown_jobs(
             source_status: row
                 .try_get("source_status")
                 .map_err(|err| format!("decode embedding teardown source status failed: {err}"))?,
+            vector_tenant_id: row
+                .try_get("vector_tenant_id")
+                .map_err(|err| format!("decode embedding teardown vector tenant failed: {err}"))?,
         });
     }
     Ok(jobs)
@@ -552,8 +567,12 @@ async fn process_embedding_teardown_job(
     // pending → retried next leader pass), never a false completion. The journal
     // enumeration still runs, as the fallback for legacy points written before
     // `_source` tagging (and points left in a since-changed target collection).
-    let source_filter = super::model::source_teardown_filter(&job.tenant_id, &job.source_name)
-        .ok_or_else(|| "embedding teardown requires a tenant and source scope".to_string())?;
+    // Vectors are deleted by the tenant they carry (the shared marker for a
+    // global source); the work events enumerated below stay keyed by the
+    // owning tenant.
+    let source_filter =
+        super::model::source_teardown_filter(&job.vector_tenant_id, &job.source_name)
+            .ok_or_else(|| "embedding teardown requires a tenant and source scope".to_string())?;
     store
         .delete_by_filter(&fallback_collection, source_filter)
         .await
@@ -614,7 +633,7 @@ async fn process_embedding_teardown_job(
             };
             let count = ids.len() as i64;
             store
-                .delete_points(&job.tenant_id, &effective_collection, ids)
+                .delete_points(&job.vector_tenant_id, &effective_collection, ids)
                 .await
                 .map_err(|err| {
                     format!(
@@ -675,12 +694,17 @@ pub(crate) fn backfill_select_request(
             fields.push(field.clone());
         }
     }
-    let mut tenant_filter = serde_json::Map::new();
-    tenant_filter.insert(
-        source.tenant_column.clone(),
-        serde_json::Value::String(source.tenant_id.clone()),
-    );
-    let mut filters = vec![serde_json::Value::Object(tenant_filter)];
+    // A global (shared) source table has no tenant column: every tenant reads
+    // all of its rows, so the backfill reads them with no tenant filter.
+    let mut filters = Vec::new();
+    if !source.is_global() {
+        let mut tenant_filter = serde_json::Map::new();
+        tenant_filter.insert(
+            source.tenant_column.clone(),
+            serde_json::Value::String(source.tenant_id.clone()),
+        );
+        filters.push(serde_json::Value::Object(tenant_filter));
+    }
     // Project isolation: the data-plane planner rejects a select over a
     // project-scoped source table unless the filter carries the project column
     // (`project isolation requires filter on <col>`). Backfill enumerates through
@@ -708,11 +732,16 @@ pub(crate) fn backfill_select_request(
         );
         filters.push(serde_json::Value::Object(cursor_filter));
     }
+    let filter = if filters.is_empty() {
+        None
+    } else {
+        crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
+            "$and": filters,
+        }))
+    };
     SelectRequest {
         message_type: source.source_message_type.clone(),
-        filter: crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
-            "$and": filters,
-        })),
+        filter,
         fields,
         limit: EMBEDDING_BACKFILL_PAGE_LIMIT,
         sort: vec![Sort {
@@ -856,7 +885,7 @@ async fn process_embedding_backfill_job(
                     .vector_store_for_model(&job.project_id, &model)
                     .map_err(|error| error.to_string())?
                     .delete_points(
-                        &job.tenant_id,
+                        job.source.vector_tenant_id(),
                         &model.active_collection,
                         result.stale_point_ids,
                     )
@@ -958,15 +987,36 @@ pub(crate) fn parse_source_text_fields(raw: &str) -> Vec<String> {
     Vec::new()
 }
 
+/// Whether a source change event applies to `source`: a tenant source takes
+/// its own tenant's changes, a global source takes the shared-marker changes
+/// its shared table emits. Never another tenant's change. Pure.
+pub(crate) fn change_applies_to_source(source: &StoredSource, event_tenant: &str) -> bool {
+    let source_tenant = source.tenant_id.trim();
+    let event_tenant = event_tenant.trim();
+    if source_tenant.is_empty() {
+        return false;
+    }
+    if source.is_global() {
+        crate::broker::is_shared_tenant_marker(event_tenant)
+    } else {
+        event_tenant == source_tenant
+    }
+}
+
 async fn process_embedding_work_job(
     service: &EmbeddingServiceImpl,
     job: &EmbeddingWorkJob,
 ) -> WorkJobOutcome {
     let source_tenant = job.source.tenant_id.trim();
-    let event_tenant = job.tenant_id.trim();
-    if source_tenant.is_empty() || event_tenant != source_tenant {
+    // A tenant source takes only its own tenant's changes; a global source
+    // takes only the shared-marker changes of its shared table. Work, events
+    // and the model stay under the owning tenant; the vectors are deleted by
+    // the tenant they carry (`vector_tenant`).
+    if !change_applies_to_source(&job.source, &job.tenant_id) {
         return WorkJobOutcome::NotApplicable;
     }
+    let work_tenant = source_tenant;
+    let vector_tenant = job.source.vector_tenant_id();
     if job.source.status != STATUS_ACTIVE || job.source.source_cdc_topic.trim().is_empty() {
         return WorkJobOutcome::NotApplicable;
     }
@@ -975,13 +1025,8 @@ async fn process_embedding_work_job(
         return WorkJobOutcome::NotApplicable;
     }
     let collection = job.source.collection();
-    let model = match load_active_model(
-        service,
-        event_tenant,
-        &job.project_id,
-        &job.source.model_id,
-    )
-    .await
+    let model = match load_active_model(service, work_tenant, &job.project_id, &job.source.model_id)
+        .await
     {
         Ok(model) => model,
         Err(error) => {
@@ -1002,14 +1047,14 @@ async fn process_embedding_work_job(
     };
     if source_change_is_delete(&job.payload) {
         if let Some(filter) =
-            super::model::row_teardown_filter(event_tenant, &job.source.source_name, &row_pk)
+            super::model::row_teardown_filter(vector_tenant, &job.source.source_name, &row_pk)
             && let Err(error) = store.delete_by_filter(&collection, filter).await
         {
             tracing::warn!(%error, "embedding row filtered delete failed");
             return WorkJobOutcome::Failed;
         }
         if let Err(error) = store
-            .delete_points(event_tenant, &collection, vec![row_pk.clone()])
+            .delete_points(vector_tenant, &collection, vec![row_pk.clone()])
             .await
         {
             tracing::warn!(%error, "embedding row point delete failed");
@@ -1018,7 +1063,7 @@ async fn process_embedding_work_job(
         service
             .emit_source_event(
                 TOPIC_SOURCE_CHANGE_COMPLETED,
-                event_tenant,
+                work_tenant,
                 &job.project_id,
                 &job.source.source_name,
                 serde_json::json!({"source_event_id": job.event_id, "deleted": true}),
@@ -1032,14 +1077,14 @@ async fn process_embedding_work_job(
     let text = extract_source_text(row, &text_fields);
     if text.trim().is_empty() {
         if let Some(filter) =
-            super::model::row_teardown_filter(event_tenant, &job.source.source_name, &row_pk)
+            super::model::row_teardown_filter(vector_tenant, &job.source.source_name, &row_pk)
             && let Err(error) = store.delete_by_filter(&collection, filter).await
         {
             tracing::warn!(%error, "embedding empty-row filtered delete failed");
             return WorkJobOutcome::Failed;
         }
         if let Err(error) = store
-            .delete_points(event_tenant, &collection, vec![row_pk.clone()])
+            .delete_points(vector_tenant, &collection, vec![row_pk.clone()])
             .await
         {
             tracing::warn!(%error, "embedding empty-row point delete failed");
@@ -1048,7 +1093,7 @@ async fn process_embedding_work_job(
         service
             .emit_source_event(
                 TOPIC_SOURCE_CHANGE_COMPLETED,
-                event_tenant,
+                work_tenant,
                 &job.project_id,
                 &job.source.source_name,
                 serde_json::json!({"source_event_id": job.event_id, "empty": true}),
@@ -1059,7 +1104,7 @@ async fn process_embedding_work_job(
     let chunks = super::chunking::chunk_source_text_for_model(&text, &model);
     let result = match service
         .persist_and_emit_work_batch(WorkBatch {
-            tenant_id: event_tenant,
+            tenant_id: work_tenant,
             project_id: &job.project_id,
             job_id: "",
             source_name: &job.source.source_name,
@@ -1082,7 +1127,7 @@ async fn process_embedding_work_job(
     };
     if !result.stale_point_ids.is_empty() {
         if let Err(error) = store
-            .delete_points(event_tenant, &collection, result.stale_point_ids)
+            .delete_points(vector_tenant, &collection, result.stale_point_ids)
             .await
         {
             tracing::warn!(%error, "embedding stale tail chunk delete failed");
@@ -1090,7 +1135,7 @@ async fn process_embedding_work_job(
         }
     }
     service.emit_source_event(
-        TOPIC_SOURCE_CHANGE_COMPLETED, event_tenant, &job.project_id,
+        TOPIC_SOURCE_CHANGE_COMPLETED, work_tenant, &job.project_id,
         &job.source.source_name,
         serde_json::json!({"source_event_id": job.event_id, "chunks_emitted": result.emitted, "chunks_unchanged": result.unchanged}),
     ).await;
@@ -1310,4 +1355,73 @@ fn extract_backfill_source_text(
         })
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+#[cfg(test)]
+mod shared_source_tests {
+    use super::*;
+
+    fn source(tenant_column: &str) -> StoredSource {
+        StoredSource {
+            source_id: "src-1".to_string(),
+            tenant_id: "acme".to_string(),
+            source_name: "countries".to_string(),
+            source_message_type: "ref.v1.Country".to_string(),
+            text_fields_json: r#"["name"]"#.to_string(),
+            target_collection: "countries_vec".to_string(),
+            model_id: "m1".to_string(),
+            tenant_column: tenant_column.to_string(),
+            source_cdc_topic: "ref.country".to_string(),
+            status: STATUS_ACTIVE.to_string(),
+        }
+    }
+
+    #[test]
+    fn global_source_takes_only_shared_changes_tenant_source_only_its_own() {
+        let shared = crate::broker::SHARED_TENANT_MARKER;
+        let global = source("");
+        assert!(change_applies_to_source(&global, shared));
+        assert!(!change_applies_to_source(&global, "acme"));
+        assert!(!change_applies_to_source(&global, "globex"));
+        let tenant = source("tenant_id");
+        assert!(change_applies_to_source(&tenant, "acme"));
+        assert!(!change_applies_to_source(&tenant, shared));
+        assert!(!change_applies_to_source(&tenant, "globex"));
+    }
+
+    #[test]
+    fn global_backfill_reads_without_a_tenant_filter() {
+        let global = source("");
+        let request =
+            backfill_select_request(&global, "code", &["name".to_string()], None, None, "");
+        assert!(request.filter.is_none(), "no tenant column to filter on");
+
+        let paged = backfill_select_request(
+            &global,
+            "code",
+            &["name".to_string()],
+            Some("DE"),
+            Some("project_id"),
+            "p1",
+        );
+        let json = crate::runtime::executor_utils::struct_to_json(paged.filter.as_ref().unwrap());
+        assert_eq!(json["$and"][0]["project_id"], "p1");
+        assert_eq!(json["$and"][1]["code"]["$gt"], "DE");
+        assert!(!json.to_string().contains("acme"), "{json}");
+    }
+
+    #[test]
+    fn loaders_route_shared_changes_and_teardowns() {
+        let work = embedding_work_jobs_sql("udb_cdc_event_journal", "udb_outbox");
+        assert!(
+            work.contains(&format!("= '{}'))", crate::broker::SHARED_TENANT_MARKER)),
+            "{work}"
+        );
+        let teardown = embedding_teardown_jobs_sql("udb_cdc_event_journal", "udb_outbox");
+        assert!(teardown.contains("AS vector_tenant_id"), "{teardown}");
+        assert!(
+            teardown.contains(&format!("THEN '{}'", crate::broker::SHARED_TENANT_MARKER)),
+            "{teardown}"
+        );
+    }
 }

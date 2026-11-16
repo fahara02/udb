@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 426 RPCs across 29 services.
+Current generated RPC surface: 427 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -52,7 +52,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 81 | 23 | 44 | 14 | 0 |
+| AuthnService | 82 | 23 | 45 | 14 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 8 | 3 | 4 | 1 | 0 |
@@ -133,6 +133,7 @@ identity surface available to benchmark reports.
 | `AuthnService/EmergencyRevoke` | `emergency_revoke` | `emergencyRevoke` | DESTRUCTIVE |
 | `AuthnService/EnrollMFA` | `enroll_mfa` | `enrollMfa` | MUTATION |
 | `AuthnService/ExchangeServiceTokenForTenant` | `exchange_service_token_for_tenant` | `exchangeServiceTokenForTenant` | MUTATION |
+| `AuthnService/ExchangeTokenForJob` | `exchange_token_for_job` | `exchangeTokenForJob` | MUTATION |
 | `AuthnService/FinishOidcLogin` | `finish_oidc_login` | `finishOidcLogin` | MUTATION |
 | `AuthnService/FinishWebAuthnAuthentication` | `finish_web_authn_authentication` | `finishWebAuthnAuthentication` | MUTATION |
 | `AuthnService/FinishWebAuthnRegistration` | `finish_web_authn_registration` | `finishWebAuthnRegistration` | MUTATION |

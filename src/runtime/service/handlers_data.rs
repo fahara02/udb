@@ -126,6 +126,15 @@ impl DataBrokerService {
         ) {
             return self.record_grpc("Select", started, Err(err));
         }
+        if let Err(err) = crate::runtime::security::enforce_filter_export_controls(
+            &self.catalog.active_for(&security.project_id).manifest,
+            &security,
+            &request.message_type,
+            request.filter.as_ref(),
+            &sort_field_names(&request.sort),
+        ) {
+            return self.record_grpc("Select", started, Err(err));
+        }
         let manifest = &self.catalog.active_for(&security.project_id).manifest;
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context_with_decision(&decision_id);
@@ -211,6 +220,15 @@ impl DataBrokerService {
         ) {
             return self.record_grpc("SelectV2", started, Err(err));
         }
+        if let Err(err) = crate::runtime::security::enforce_filter_export_controls(
+            &self.catalog.active_for(&security.project_id).manifest,
+            &security,
+            &request.message_type,
+            request.filter.as_ref(),
+            &sort_field_names(&request.sort),
+        ) {
+            return self.record_grpc("SelectV2", started, Err(err));
+        }
         // Active catalog version stamps the batch's schema_version.
         let schema_version = self
             .catalog
@@ -292,60 +310,90 @@ impl DataBrokerService {
         // stream closure can charge every item, exactly as a unary call is charged.
         let rate_limiter = self.rate_limit_handle();
         let rate_limit_enabled = self.runtime_snapshot().config().service.rate_limit_enabled;
-        // #155: batch items are admitted and executed ONE AT A TIME on purpose.
-        // The fair-admission permit is acquired PER ITEM (it drops at the end of
-        // each loop iteration, not held across the whole batch) so every item
-        // pays its own backpressure/cost, and each execute is bounded by a
-        // per-item `deadline_secs` timeout below — a slow item can't stall the
-        // channel indefinitely. This is bounded-concurrency admission for a
-        // streaming RPC, not a permit-held-across-batch serialization bug.
-        let out = async_stream::try_stream! {
-            while let Some(item) = stream.message().await? {
-                enforce_select_export_controls(&manifest, &security_for_stream, &item.message_type, &item.fields)?;
-                // Charge this item against the tenant quota BEFORE authorizing or
-                // executing it, mirroring the unary prologue.
-                if rate_limit_enabled && !security_for_stream.tenant_id.is_empty() {
-                    rate_limiter
-                        .check(
-                            &security_for_stream.tenant_id,
-                            "BatchSelect",
-                            &security_for_stream.credential_id,
-                            security_for_stream.rate_limit_per_minute,
-                            &security_for_stream.user_id,
-                        )
-                        .await?;
-                }
-                // #112: authorize THIS item's message_type and stamp its own
-                // decision id (the batch-level grant covered only "BatchSelect").
-                // The wildcard / empty message type is refused per item exactly as
-                // on the unary gate: it names no executable resource.
-                super::reject_wildcard_data_message_type(&item.message_type, "BatchSelect")?;
-                let item_decision_id = DataBrokerService::authorize_message_item(
-                    &abac_snapshot,
-                    &security_for_stream,
-                    &item.message_type,
-                    "Select",
-                )
-                .await?;
-                let item_context =
-                    security_for_stream.request_context_with_decision(&item_decision_id);
-                // FIX-77: admission + inflight gauge + per-item deadline +
-                // latency + timeout mapping all live in the shared helper.
-                let val = super::native_helpers::execute_stream_batch_item(
-                    &channels,
-                    &metrics,
-                    &metadata_context,
-                    crate::runtime::channels::OperationChannel::Read,
-                    "postgres",
-                    // 03.2.1.4: drop the typed stale-warning side-channel — the
-                    // batch stream yields bare `RecordSet`s (hard-fail modes
-                    // already errored inside `select`).
-                    async { runtime.select(&manifest, item, item_context).await.map(|(rs, _)| rs) },
-                )
-                .await?;
-                yield val;
+        // #155: every item is admitted, quota-charged, authorized and bounded by
+        // its own deadline. Up to `batch_select_concurrency` items run at once,
+        // so a screen that sends several reads waits for the slowest, not the
+        // sum; `buffered` returns the results in request order. The first
+        // failing item ends the stream with its error, as before.
+        let concurrency = runtime.config().service.batch_select_concurrency.max(1);
+        let items = futures::stream::unfold(stream, |mut stream| async move {
+            match stream.message().await {
+                Ok(Some(item)) => Some((Ok(item), stream)),
+                Ok(None) => None,
+                Err(status) => Some((Err(status), stream)),
             }
-        };
+        });
+        let out = futures::StreamExt::buffered(
+            futures::StreamExt::map(items, move |item: Result<SelectRequest, Status>| {
+                let manifest = manifest.clone();
+                let security = security_for_stream.clone();
+                let rate_limiter = rate_limiter.clone();
+                let abac_snapshot = abac_snapshot.clone();
+                let channels = channels.clone();
+                let metrics = metrics.clone();
+                let metadata_context = metadata_context.clone();
+                let runtime = runtime.clone();
+                async move {
+                    let item = item?;
+                    enforce_select_export_controls(
+                        &manifest,
+                        &security,
+                        &item.message_type,
+                        &item.fields,
+                    )?;
+                    crate::runtime::security::enforce_filter_export_controls(
+                        &manifest,
+                        &security,
+                        &item.message_type,
+                        item.filter.as_ref(),
+                        &sort_field_names(&item.sort),
+                    )?;
+                    // Charge this item against the tenant quota BEFORE authorizing
+                    // or executing it, mirroring the unary prologue.
+                    if rate_limit_enabled && !security.tenant_id.is_empty() {
+                        rate_limiter
+                            .check(
+                                &security.tenant_id,
+                                "BatchSelect",
+                                &security.credential_id,
+                                security.rate_limit_per_minute,
+                                &security.user_id,
+                            )
+                            .await?;
+                    }
+                    // #112: authorize THIS item's message_type and stamp its own
+                    // decision id (the batch-level grant covered only "BatchSelect").
+                    super::reject_wildcard_data_message_type(&item.message_type, "BatchSelect")?;
+                    let item_decision_id = DataBrokerService::authorize_message_item(
+                        &abac_snapshot,
+                        &security,
+                        &item.message_type,
+                        "Select",
+                    )
+                    .await?;
+                    let item_context = security.request_context_with_decision(&item_decision_id);
+                    // FIX-77: admission + inflight gauge + per-item deadline +
+                    // latency + timeout mapping all live in the shared helper.
+                    super::native_helpers::execute_stream_batch_item(
+                        &channels,
+                        &metrics,
+                        &metadata_context,
+                        crate::runtime::channels::OperationChannel::Read,
+                        "postgres",
+                        // 03.2.1.4: the batch stream yields bare `RecordSet`s
+                        // (hard-fail modes already errored inside `select`).
+                        async {
+                            runtime
+                                .select(&manifest, item, item_context)
+                                .await
+                                .map(|(rs, _)| rs)
+                        },
+                    )
+                    .await
+                }
+            }),
+            concurrency,
+        );
         self.record_grpc(
             "BatchSelect",
             started,
@@ -390,6 +438,15 @@ impl DataBrokerService {
             Err(err) => return self.record_grpc(method, started, Err(err)),
         };
         let manifest = &self.catalog.active_for(&security.project_id).manifest;
+        // A compare-and-swap `expected` value reads the column it names.
+        if let Err(err) = crate::runtime::security::enforce_expected_export_controls(
+            manifest,
+            &security,
+            &request.message_type,
+            request.expected.as_ref(),
+        ) {
+            return self.record_grpc(method, started, Err(err));
+        }
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context_with_decision(&decision_id);
         // One clone for the moved closure; the original is borrowed for admission
@@ -481,6 +538,13 @@ impl DataBrokerService {
                     "Upsert",
                 )
                 .await?;
+                // A compare-and-swap `expected` value reads the column it names.
+                crate::runtime::security::enforce_expected_export_controls(
+                    &manifest,
+                    &security_for_stream,
+                    &item.message_type,
+                    item.expected.as_ref(),
+                )?;
                 let item_context =
                     security_for_stream.request_context_with_decision(&item_decision_id);
                 // FIX-77: admission + inflight gauge + per-item deadline +
@@ -547,6 +611,17 @@ impl DataBrokerService {
             Ok(id) => id,
             Err(err) => return self.record_grpc("Delete", started, Err(err)),
         };
+        // The row filter and a compare-and-swap `expected` value read the
+        // columns they name, exactly as a Select filter does.
+        if let Err(err) = crate::runtime::security::enforce_write_predicate_export_controls(
+            &self.catalog.active_for(&security.project_id).manifest,
+            &security,
+            &message_type,
+            req.filter.as_ref(),
+            req.expected.as_ref(),
+        ) {
+            return self.record_grpc("Delete", started, Err(err));
+        }
         let context = security.request_context_with_decision(&decision_id);
         let response_context = context.clone();
         let filter = req
@@ -615,6 +690,17 @@ impl DataBrokerService {
             Ok(id) => id,
             Err(err) => return self.record_grpc("Update", started, Err(err)),
         };
+        // The row filter and a compare-and-swap `expected` value read the
+        // columns they name, exactly as a Select filter does.
+        if let Err(err) = crate::runtime::security::enforce_write_predicate_export_controls(
+            &self.catalog.active_for(&security.project_id).manifest,
+            &security,
+            &message_type,
+            req.filter.as_ref(),
+            req.expected.as_ref(),
+        ) {
+            return self.record_grpc("Update", started, Err(err));
+        }
         let context = security.request_context_with_decision(&decision_id);
         let response_context = context.clone();
         let filter = req
@@ -694,6 +780,19 @@ impl DataBrokerService {
             Err(err) => return self.record_grpc("BulkCas", started, Err(err)),
         };
         let manifest = &self.catalog.active_for(&security.project_id).manifest;
+        // Each item's row filter and `expected` value read the columns they
+        // name, exactly as a Select filter does.
+        for item in &request.items {
+            if let Err(err) = crate::runtime::security::enforce_write_predicate_export_controls(
+                manifest,
+                &security,
+                &request.message_type,
+                item.filter.as_ref(),
+                item.expected.as_ref(),
+            ) {
+                return self.record_grpc("BulkCas", started, Err(err));
+            }
+        }
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context_with_decision(&decision_id);
         // One clone for the moved closure; the original stays for the response
@@ -2306,6 +2405,11 @@ fn clickhouse_literal(value: &crate::ir::value::LogicalValue) -> String {
                 .join(", ")
         ),
     }
+}
+
+/// The columns a read sorts on, for the PII filter check.
+fn sort_field_names(sort: &[crate::proto::Sort]) -> Vec<String> {
+    sort.iter().map(|sort| sort.field.clone()).collect()
 }
 
 #[cfg(test)]

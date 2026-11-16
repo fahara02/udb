@@ -350,9 +350,22 @@ impl ClickHouseExecutor {
                  change to https:// or set UDB_CH_DEPLOY_MODE=self_hosted"
             );
         }
+        // Credentials go out on every request as X-ClickHouse-* headers, so a
+        // non-loopback http:// base is refused whenever UDB_OUTBOUND_TLS_REQUIRED
+        // is on (production default), not only in cloud mode.
+        let https_only = config.is_cloud
+            || crate::runtime::transport_policy::https_only_for(&config.http_base, true);
+        if https_only && config.http_base.starts_with("http://") && !config.is_cloud {
+            tracing::error!(
+                http_base = %config.http_base,
+                "ClickHouse base URL uses plaintext http:// to a non-loopback host while \
+                 UDB_OUTBOUND_TLS_REQUIRED is on — all requests will fail. Use https:// in \
+                 UDB_COLUMN_DSN / UDB_COLUMN_HTTP_URL, or set UDB_OUTBOUND_TLS_REQUIRED=false"
+            );
+        }
         let connect_timeout = std::time::Duration::from_secs(config.connect_timeout_secs.max(1));
         let http = super::http::HttpClientSpec::with_connect_timeout(connect_timeout)
-            .https_only(config.is_cloud)
+            .https_only(https_only)
             .build();
         Self { config, http }
     }

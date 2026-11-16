@@ -172,6 +172,9 @@ pub fn lint_catalog(manifest: &CatalogManifest) -> LintReport {
     // ── GAP 13: annotation key consistency ───────────────────────────────────
     lint_unknown_annotation_keys(manifest, &mut items);
 
+    // ── Options the catalog records but no runtime path acts on ──────────────
+    lint_unenforced_options(manifest, &mut items);
+
     // ── GAP 24: Cross-table FK target validation ─────────────────────────────
     // Build a set of (schema, table) pairs present in this manifest.  Any FK
     // that points outside this set is an error: either the proto is wrong or
@@ -924,6 +927,121 @@ fn sql_type_refuses_empty_string(sql_type: &str) -> bool {
             | "INET"
             | "CIDR"
     )
+}
+
+/// Lint kind for an option that is accepted and stored but changes nothing.
+pub const OPTION_NOT_ENFORCED_KIND: &str = "option_not_enforced";
+
+/// How many declaring locations one `option_not_enforced` finding names.
+const UNENFORCED_LOCATIONS_SHOWN: usize = 5;
+
+/// True when a free-text profile/policy option declares something. `none`
+/// spells out "nothing", so it is not a declaration.
+fn declares(value: &str) -> bool {
+    let value = value.trim();
+    !value.is_empty() && !value.eq_ignore_ascii_case("none")
+}
+
+/// Options the catalog accepts and stores in the manifest that no runtime path
+/// acts on in this UDB version. A schema author who sets one may believe the
+/// broker encrypts, audits, retains, restricts or shards data accordingly; it
+/// does not. Each option yields ONE warning naming how many places declare it
+/// (and the first few), so a catalog that sets it on every table — the
+/// embedded native catalogs do for the table-security profiles — stays readable.
+/// Catalogs are never refused for these.
+fn lint_unenforced_options(manifest: &CatalogManifest, items: &mut Vec<LintItem>) {
+    let mut found: BTreeMap<&'static str, Vec<String>> = BTreeMap::new();
+    let mut note = |option: &'static str, location: String| {
+        found.entry(option).or_default().push(location);
+    };
+    for table in &manifest.tables {
+        let at = || format!("{}.{}", table.schema, table.table);
+        let ts = &table.table_security;
+        if declares(&ts.encryption_profile) {
+            note("db_table_security.encryption_profile", at());
+        }
+        if declares(&ts.pii_profile) {
+            note("db_table_security.pii_profile", at());
+        }
+        if ts.break_glass_visible {
+            note("db_table_security.break_glass_visible", at());
+        }
+        if ts.export_eligible {
+            note("db_table_security.export_eligible", at());
+        }
+        if declares(&ts.data_residency_policy_ref) {
+            note("db_table_security.data_residency_policy_ref", at());
+        }
+        if table.security.audit_reads {
+            note("security.audit_reads", at());
+        }
+        if table.security.audit_writes {
+            note("security.audit_writes", at());
+        }
+        if table.security.retention_days > 0 {
+            note("security.retention_days", at());
+        }
+        for column in &table.columns {
+            let at = || format!("{}.{}.{}", table.schema, table.table, column.column_name);
+            let cs = &column.security;
+            if cs.consent_required {
+                note("requires_consent (consent_required)", at());
+            }
+            // `data_purpose` is folded into the class `PURPOSE_LIMITED`, and
+            // `sensitive` into `SENSITIVE` (its log masking IS enforced), so
+            // neither derived value is reported as a declared data_class.
+            match cs.data_class.trim() {
+                "" | "SENSITIVE" => {}
+                "PURPOSE_LIMITED" => note("data_purpose", at()),
+                _ => note("data_class (security_classification / data_category)", at()),
+            }
+            if cs.retention_days > 0 {
+                note("column retention_days", at());
+            }
+        }
+    }
+    for store in &manifest.stores {
+        let keys: &[&'static str] = match store.store_kind.as_str() {
+            "object" => &["kms_key_id", "acl", "presigned_ttl_seconds"],
+            "vector" => &["shard_count", "replica_count", "on_disk"],
+            _ => continue,
+        };
+        for option in &store.options {
+            // The manifest keeps only options that were set (non-empty, non-zero, true).
+            if let Some(key) = keys.iter().find(|key| **key == option.key) {
+                note(
+                    *key,
+                    format!("{} store {}", store.store_kind, store.logical_name),
+                );
+            }
+        }
+    }
+    for (option, locations) in found {
+        let shown = locations
+            .iter()
+            .take(UNENFORCED_LOCATIONS_SHOWN)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(", ");
+        let more = locations.len().saturating_sub(UNENFORCED_LOCATIONS_SHOWN);
+        let more = if more > 0 {
+            format!(" and {more} more")
+        } else {
+            String::new()
+        };
+        items.push(LintItem {
+            severity: LintSeverity::Warning,
+            kind: OPTION_NOT_ENFORCED_KIND.to_string(),
+            description: format!(
+                "{option} is recorded but not enforced by this UDB version (declared {} time(s): {shown}{more}).",
+                locations.len()
+            ),
+            suggestion: "Do not rely on this option for access control, retention, encryption, \
+                         audit or placement; enforce it in the application, or remove it."
+                .to_string(),
+            ..LintItem::default()
+        });
+    }
 }
 
 /// The message-level findings the parser leaves as diagnostics, because the
@@ -2353,5 +2471,99 @@ mod tests {
             line.contains("acme.authn.entity.v1.User"),
             "fully-qualified message name missing: {line}"
         );
+    }
+}
+
+#[cfg(test)]
+mod unenforced_option_tests {
+    use super::*;
+    use crate::generation::manifest::{ManifestStore, ManifestStoreOption};
+
+    fn table(name: &str) -> ManifestTable {
+        ManifestTable {
+            message_name: name.to_string(),
+            schema: "public".to_string(),
+            table: name.to_ascii_lowercase(),
+            ..ManifestTable::default()
+        }
+    }
+
+    fn unenforced(report: &LintReport) -> Vec<&LintItem> {
+        report
+            .items
+            .iter()
+            .filter(|item| item.kind == OPTION_NOT_ENFORCED_KIND)
+            .collect()
+    }
+
+    #[test]
+    fn a_catalog_without_these_options_gets_no_warning() {
+        let manifest = CatalogManifest {
+            tables: vec![table("Plain")],
+            ..CatalogManifest::default()
+        };
+        assert!(unenforced(&lint_catalog(&manifest)).is_empty());
+    }
+
+    #[test]
+    fn each_declared_but_unenforced_option_is_one_warning() {
+        let mut first = table("First");
+        first.table_security.encryption_profile = "tenant".to_string();
+        first.table_security.pii_profile = "none".to_string();
+        first.security.audit_reads = true;
+        first.columns.push(ManifestColumn {
+            column_name: "email".to_string(),
+            security: crate::generation::manifest::ManifestColumnSecurity {
+                consent_required: true,
+                data_class: "PURPOSE_LIMITED".to_string(),
+                ..Default::default()
+            },
+            ..ManifestColumn::default()
+        });
+        let mut second = table("Second");
+        second.table_security.encryption_profile = "tenant".to_string();
+        let manifest = CatalogManifest {
+            tables: vec![first, second],
+            stores: vec![ManifestStore {
+                store_kind: "vector".to_string(),
+                logical_name: "First".to_string(),
+                options: vec![ManifestStoreOption {
+                    key: "shard_count".to_string(),
+                    value: "3".to_string(),
+                }],
+                ..ManifestStore::default()
+            }],
+            ..CatalogManifest::default()
+        };
+        let report = lint_catalog(&manifest);
+        let found = unenforced(&report);
+        let named = |option: &str| {
+            found
+                .iter()
+                .filter(|item| item.description.starts_with(option))
+                .count()
+        };
+        // Two tables declare encryption_profile: still ONE finding.
+        assert_eq!(named("db_table_security.encryption_profile"), 1);
+        assert!(
+            found
+                .iter()
+                .any(|item| item.description.contains("declared 2 time(s)"))
+        );
+        // `none` declares nothing.
+        assert_eq!(named("db_table_security.pii_profile"), 0);
+        assert_eq!(named("security.audit_reads"), 1);
+        assert_eq!(named("requires_consent"), 1);
+        assert_eq!(named("data_purpose"), 1);
+        assert_eq!(named("shard_count"), 1);
+        for item in &found {
+            assert_eq!(item.severity, LintSeverity::Warning);
+            assert!(
+                item.description
+                    .contains("is recorded but not enforced by this UDB version"),
+                "{}",
+                item.description
+            );
+        }
     }
 }

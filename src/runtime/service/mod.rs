@@ -915,6 +915,38 @@ impl DataBrokerService {
                 message_type,
             ));
         }
+        // Shared (global) tables: every tenant reads them, only a platform admin
+        // or a holder of the global-write scope writes them. The write planners
+        // enforce the same rule for every write path (batch items, transaction
+        // mutations); refusing here first gives the single-message verbs a
+        // PermissionDenied before any work. The reserved shared tenant marker is
+        // never a caller identity.
+        let shared_refusal = if crate::broker::is_shared_tenant_marker(&security.tenant_id) {
+            Some(format!(
+                "permission denied: tenant id '{}' is reserved for shared data",
+                crate::broker::SHARED_TENANT_MARKER
+            ))
+        } else if matches!(
+            operation,
+            "Upsert" | "Insert" | "Update" | "Delete" | "BulkCas"
+        ) {
+            let catalog = self.catalog.active_for(&security.project_id);
+            crate::broker::resolve_table_for_message(&catalog.manifest, message_type)
+                .ok()
+                .and_then(|table| {
+                    crate::broker::global_table_write_error(&security.request_context(), table)
+                })
+        } else {
+            None
+        };
+        if let Some(message) = shared_refusal {
+            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                tonic::Code::PermissionDenied,
+                operation,
+                "shared_table_write_denied",
+                message,
+            ));
+        }
         let principal = Principal::from_security_context(security, Vec::new());
         let resource = ResourceRef::message(message_type);
         let attributes = std::collections::BTreeMap::new();
@@ -2051,6 +2083,9 @@ pub async fn serve(
     addr: SocketAddr,
 ) -> Result<(), Box<dyn std::error::Error>> {
     crate::runtime::preflight::enforce_expected_version()?;
+    crate::runtime::transport_policy::enforce_at_startup(
+        &crate::runtime::config::UdbConfig::from_merged_env(),
+    )?;
     let runtime = DataBrokerRuntime::try_from_env().await.map_err(|err| {
         std::io::Error::other(format!("UDB startup config validation failed: {err}"))
     })?;
@@ -3582,6 +3617,7 @@ pub async fn serve(
             Err(why) => tracing::error!("{why}; no table is pruned until it is fixed"),
         }
         let retention_runtime = service.runtime.load_full();
+        let cleanup_catalog = service.catalog.clone();
         if let Ok(lease_pool) = retention_runtime.native_store_pool_for_service("authz", true, "") {
             let singleton_relation = retention_runtime.config().cdc.lock_log_relation();
             crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
@@ -3593,8 +3629,24 @@ pub async fn serve(
                 move || {
                     let runtime = retention_runtime.clone();
                     let settings = cleanup_settings.clone();
+                    let catalog = cleanup_catalog.clone();
                     async move {
-                        crate::runtime::cleanup::run_cleanup_once(runtime.as_ref(), &settings).await
+                        let native =
+                            crate::runtime::cleanup::run_cleanup_once(runtime.as_ref(), &settings)
+                                .await;
+                        // App tables: partitions kept ahead of writes even
+                        // when the native pass reported a problem.
+                        let app = crate::runtime::cleanup::run_app_partition_upkeep(
+                            runtime.as_ref(),
+                            &catalog,
+                            &settings,
+                        )
+                        .await;
+                        match (native, app) {
+                            (Ok(native), Ok(app)) => Ok(native + app),
+                            (Err(why), Ok(_)) | (Ok(_), Err(why)) => Err(why),
+                            (Err(native), Err(app)) => Err(format!("{native}; {app}")),
+                        }
                     }
                 },
             );

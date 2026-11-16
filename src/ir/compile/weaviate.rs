@@ -34,6 +34,7 @@ use crate::ir::operations::{
 };
 use crate::ir::value::LogicalValue;
 
+use super::util::TenantMatch;
 use super::{CompileContext, CompileError, CompiledRendering, Compiler, HttpMethod};
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -190,22 +191,43 @@ impl WeaviateCompiler {
     }
 
     /// AND the active context (tenant/project) into a where filter.
+    ///
+    /// `tenant_match` decides the tenant operand: reads use an `Or` of two
+    /// `Equal`s (the caller's own tenant, the shared marker) so objects
+    /// projected from a shared (global) table are visible to every tenant —
+    /// the same shape `InList` renders; deletes keep the exact `Equal`.
     fn and_with_context(
         &self,
         user_where: Json,
         table: &ManifestTable,
         ctx: &CompileContext<'_>,
+        tenant_match: TenantMatch,
     ) -> Json {
         let mut ctx_operands: Vec<Json> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
             && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            ctx_operands.push(json!({
-                "operator": "Equal",
-                "path": [column],
-                "valueText": tid
-            }));
+            ctx_operands.push(match tenant_match {
+                TenantMatch::Exact => json!({
+                    "operator": "Equal",
+                    "path": [column],
+                    "valueText": tid
+                }),
+                TenantMatch::CallerOrShared => {
+                    let operands: Vec<Json> = super::util::shared_read_tenants(tid)
+                        .iter()
+                        .map(|tenant| {
+                            json!({
+                                "operator": "Equal",
+                                "path": [column],
+                                "valueText": tenant
+                            })
+                        })
+                        .collect();
+                    json!({ "operator": "Or", "operands": operands })
+                }
+            });
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
@@ -253,7 +275,8 @@ impl Compiler for WeaviateCompiler {
             Some(f) => self.render_where(f, table, &op.message_type)?,
             None => json!({}),
         };
-        let where_clause = self.and_with_context(user_where, table, ctx);
+        let where_clause =
+            self.and_with_context(user_where, table, ctx, TenantMatch::CallerOrShared);
 
         // Build the GraphQL Get query. We use the GraphQL endpoint
         // because it handles filter + sort + pagination uniformly.
@@ -314,6 +337,7 @@ impl Compiler for WeaviateCompiler {
             });
         }
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Weaviate)?;
         let class = Self::class_for(table);
         if matches!(op.conflict, ConflictStrategy::Ignore) {
             return Err(CompileError::OperatorUnsupported {
@@ -418,6 +442,7 @@ impl Compiler for WeaviateCompiler {
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Weaviate)?;
         let class = Self::class_for(table);
         let user_where = self.render_where(&op.filter, table, &op.message_type)?;
         if user_where.as_object().is_some_and(|m| m.is_empty()) {
@@ -425,7 +450,7 @@ impl Compiler for WeaviateCompiler {
                 reason: "LogicalDelete::filter cannot be empty".into(),
             });
         }
-        let where_clause = self.and_with_context(user_where, table, ctx);
+        let where_clause = self.and_with_context(user_where, table, ctx, TenantMatch::Exact);
         // Weaviate's batch delete shape:
         Ok(CompiledRendering::Json {
             backend: BackendKind::Weaviate,
@@ -449,7 +474,8 @@ impl Compiler for WeaviateCompiler {
             Some(f) => self.render_where(f, table, &op.message_type)?,
             None => json!({}),
         };
-        let where_clause = self.and_with_context(user_where, table, ctx);
+        let where_clause =
+            self.and_with_context(user_where, table, ctx, TenantMatch::CallerOrShared);
 
         // Build the GraphQL Get query with nearVector / bm25 args. Arguments
         // are INLINED as GraphQL literals: Weaviate's variable types are
@@ -830,11 +856,21 @@ mod tests {
         let (_, _, body) = extract_json(WeaviateCompiler.compile_read(&read, &ctx).unwrap());
         // No user filter + one tenant operand → the tenant predicate is emitted
         // bare (not wrapped in a single-element And) and inlined into the query.
+        // A read matches the caller's own tenant OR the shared marker.
         let q = body["query"].as_str().unwrap();
         assert!(
-            q.contains(r#"where: {operator: Equal, path: ["_tenant_id"], valueText: "acme"}"#),
+            q.contains("operator: Or"),
+            "tenant predicate not an Or: {q}"
+        );
+        assert!(
+            q.contains(r#"{operator: Equal, path: ["_tenant_id"], valueText: "acme"}"#),
             "tenant predicate not inlined: {q}"
         );
+        assert!(
+            q.contains(r#"{operator: Equal, path: ["_tenant_id"], valueText: "*shared*"}"#),
+            "shared marker not matched: {q}"
+        );
+        assert!(!q.contains("operator: And"), "{q}");
     }
 
     #[test]
@@ -904,6 +940,13 @@ mod tests {
         assert_eq!(method, HttpMethod::Delete);
         assert_eq!(body["match"]["class"], "Documents");
         assert!(body["match"]["where"].is_object());
+        // Deletes stay strict to the caller's own tenant: no shared marker.
+        let rendered = body["match"]["where"].to_string();
+        assert!(rendered.contains("\"acme\""), "{rendered}");
+        assert!(!rendered.contains("*shared*"), "{rendered}");
+
+        let marker = CompileContext::new(&m).with_tenant(crate::broker::SHARED_TENANT_MARKER);
+        assert!(WeaviateCompiler.compile_delete(&del, &marker).is_err());
     }
 
     #[test]

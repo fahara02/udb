@@ -94,6 +94,8 @@ var reasonCodes = map[string]ErrorCode{
 	"UDB_RATE_LIMITED":                 CodeRateLimited,
 	"UDB_UNKNOWN_MESSAGE_TYPE":         CodeInvalid,
 	"UDB_ENVELOPE_VERSION_UNSUPPORTED": CodePrecondition,
+	"UDB_TOKEN_EXPIRED":                CodeUnauthenticated,
+	"UDB_TOKEN_REVOKED":                CodeUnauthenticated,
 }
 
 var kindCodes = map[entityv1.ErrorKind]ErrorCode{
@@ -181,6 +183,16 @@ func IsNotFound(err error) bool { return CodeOf(err) == CodeNotFound }
 
 // IsConflict reports a lost conditional write.
 func IsConflict(err error) bool { return CodeOf(err) == CodeConflict }
+
+// IsTokenExpired reports that the broker refused the bearer because it
+// expired (UDB_TOKEN_EXPIRED): refresh it or sign in again. A delegated job
+// token cannot be refreshed; mint a new one from a fresh user token.
+func IsTokenExpired(err error) bool { return Inspect(err).Reason == "UDB_TOKEN_EXPIRED" }
+
+// IsTokenRevoked reports that the broker refused the bearer because it is
+// revoked or no longer backed by live state (UDB_TOKEN_REVOKED): do not retry
+// with it.
+func IsTokenRevoked(err error) bool { return Inspect(err).Reason == "UDB_TOKEN_REVOKED" }
 
 // MissingScope is the scope the broker said the caller lacks ("" when the
 // failure is not a missing scope).

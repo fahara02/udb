@@ -23,7 +23,7 @@ use crate::ir::operations::{
 };
 use crate::ir::value::LogicalValue;
 
-use super::util::{like_to_regex, regex_escape, value_to_json};
+use super::util::{TenantMatch, like_to_regex, regex_escape, value_to_json};
 use super::{CompileContext, CompileError, CompiledRendering, Compiler, HttpMethod};
 
 /// MongoDB (Atlas Data API) compiler.
@@ -191,7 +191,7 @@ impl Compiler for MongoDbCompiler {
         // `_tenant_id` / `_project_id` predicate so cross-tenant reads
         // are protocol-blocked. The compiler is now Enforced (not
         // Advisory) — manifest scoping was the previous best.
-        let filter = and_with_context(user_filter, table, ctx);
+        let filter = and_with_context(user_filter, table, ctx, TenantMatch::CallerOrShared);
 
         // Projection (Mongo: { field: 1 }).
         let projection = match &op.projection {
@@ -269,6 +269,7 @@ impl Compiler for MongoDbCompiler {
             });
         }
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Mongodb)?;
 
         // Validate every field name once.
         for record in &op.records {
@@ -414,6 +415,7 @@ impl Compiler for MongoDbCompiler {
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
         let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::reject_shared_marker_write(ctx, BackendKind::Mongodb)?;
         let user_filter = self.render_filter(&op.filter, table, &op.message_type)?;
         if user_filter.as_object().is_some_and(|m| m.is_empty()) {
             return Err(CompileError::Malformed {
@@ -423,7 +425,7 @@ impl Compiler for MongoDbCompiler {
         }
         // C7/C8: tenant predicate ANDed in so a cross-tenant DELETE
         // can't be issued even with a permissive user filter.
-        let filter = and_with_context(user_filter, table, ctx);
+        let filter = and_with_context(user_filter, table, ctx, TenantMatch::Exact);
         let body = json!({
             "collection": table.table,
             "filter": filter,
@@ -468,7 +470,7 @@ impl Compiler for MongoDbCompiler {
             Some(filter) => self.render_filter(filter, table, &op.message_type)?,
             None => json!({}),
         };
-        let scoped_match = and_with_context(user_match, table, ctx);
+        let scoped_match = and_with_context(user_match, table, ctx, TenantMatch::CallerOrShared);
         if !scoped_match.as_object().is_some_and(|m| m.is_empty()) {
             pipeline.push(json!({ "$match": scoped_match }));
         }
@@ -580,7 +582,7 @@ impl Compiler for MongoDbCompiler {
                 Some(f) => self.render_filter(f, table, &op.message_type)?,
                 None => Json::Object(Map::new()),
             };
-            let filter = and_with_context(user_filter, table, ctx);
+            let filter = and_with_context(user_filter, table, ctx, TenantMatch::CallerOrShared);
             if !filter.as_object().is_some_and(|m| m.is_empty()) {
                 stage.insert("filter".into(), filter);
             }
@@ -629,7 +631,10 @@ impl Compiler for MongoDbCompiler {
             && !tid.is_empty()
             && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            find_filter.insert(column.to_string(), json!(tid));
+            find_filter.insert(
+                column.to_string(),
+                tenant_predicate(tid, TenantMatch::CallerOrShared),
+            );
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
@@ -931,13 +936,22 @@ fn resolve_mongo_field<'a>(
 /// field names match the broker's write-time injection (every
 /// `compile_write` payload carries them) so a tenant boundary is
 /// genuinely enforced at the document level.
-fn and_with_context(user_filter: Json, table: &ManifestTable, ctx: &CompileContext<'_>) -> Json {
+///
+/// `tenant_match` decides the tenant predicate: reads match the caller's own
+/// tenant OR the shared marker (`{ _tenant_id: { $in: [tid, "*shared*"] } }`),
+/// deletes match the caller's own tenant only.
+fn and_with_context(
+    user_filter: Json,
+    table: &ManifestTable,
+    ctx: &CompileContext<'_>,
+    tenant_match: TenantMatch,
+) -> Json {
     let mut ctx_pred = Map::new();
     if let Some(tid) = ctx.tenant_id
         && !tid.is_empty()
         && let Some(column) = Some(super::util::tenant_system_field(table))
     {
-        ctx_pred.insert(column.to_string(), json!(tid));
+        ctx_pred.insert(column.to_string(), tenant_predicate(tid, tenant_match));
     }
     if let Some(pid) = ctx.project_id
         && !pid.is_empty()
@@ -954,6 +968,15 @@ fn and_with_context(user_filter: Json, table: &ManifestTable, ctx: &CompileConte
         return ctx_json;
     }
     json!({ "$and": [user_filter, ctx_json] })
+}
+
+/// The Mongo value matched against the tenant system field: the bare tenant
+/// for an exact match, or `{ $in: [tid, "*shared*"] }` for a read.
+fn tenant_predicate(tid: &str, tenant_match: TenantMatch) -> Json {
+    match tenant_match {
+        TenantMatch::Exact => json!(tid),
+        TenantMatch::CallerOrShared => json!({ "$in": super::util::shared_read_tenants(tid) }),
+    }
 }
 
 /// Stamps the active context's tenant + project onto the document so future
@@ -1152,7 +1175,11 @@ mod tests {
         let and = body["filter"]["$and"].as_array().expect("$and array");
         assert_eq!(and.len(), 2);
         // [0] = user filter, [1] = ctx predicate.
-        assert_eq!(and[1]["_tenant_id"], "acme");
+        // Reads match the caller's own tenant OR the shared marker.
+        assert_eq!(
+            and[1]["_tenant_id"]["$in"],
+            json!(["acme", crate::broker::SHARED_TENANT_MARKER])
+        );
         assert_eq!(and[1]["_project_id"], "p1");
     }
 
@@ -1212,7 +1239,10 @@ mod tests {
         let (path, body) = extract_json(MongoDbCompiler.compile_search(&search, &ctx).unwrap());
         assert_eq!(path, "/action/find");
         assert_eq!(body["filter"]["$text"]["$search"], "Alice");
-        assert_eq!(body["filter"]["_tenant_id"], "tenant-a");
+        assert_eq!(
+            body["filter"]["_tenant_id"]["$in"],
+            json!(["tenant-a", crate::broker::SHARED_TENANT_MARKER])
+        );
         assert_eq!(body["projection"]["name"], 1);
         assert_eq!(body["projection"]["_score"]["$meta"], "textScore");
     }
@@ -1279,5 +1309,38 @@ mod tests {
             rendered.contains("_tenant_id") && rendered.contains("acme"),
             "aggregate $match must scope tenant: {rendered}"
         );
+    }
+    /// Shared reference rows: deletes and upserts stay strict to the caller's
+    /// own tenant, and the shared marker can never be a write scope.
+    #[test]
+    fn delete_and_upsert_keep_exact_tenant_and_marker_cannot_write() {
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m).with_tenant("acme");
+        let delete = LogicalDelete {
+            message_type: "acme.billing.v1.Customer".into(),
+            filter: LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("x".into()),
+            },
+            return_fields: vec![],
+        };
+        let (_, body) = extract_json(MongoDbCompiler.compile_delete(&delete, &ctx).unwrap());
+        assert_eq!(body["filter"]["$and"][1]["_tenant_id"], "acme");
+
+        let mut rec = crate::ir::operations::LogicalRecord::new();
+        rec.insert("id".into(), LogicalValue::String("x".into()));
+        let upsert = LogicalWrite {
+            message_type: "acme.billing.v1.Customer".into(),
+            records: vec![rec],
+            conflict: ConflictStrategy::Replace,
+            return_fields: vec![],
+        };
+        let (_, body) = extract_json(MongoDbCompiler.compile_write(&upsert, &ctx).unwrap());
+        assert_eq!(body["filter"]["_tenant_id"], "acme");
+
+        let marker = CompileContext::new(&m).with_tenant(crate::broker::SHARED_TENANT_MARKER);
+        assert!(MongoDbCompiler.compile_write(&upsert, &marker).is_err());
+        assert!(MongoDbCompiler.compile_delete(&delete, &marker).is_err());
     }
 }

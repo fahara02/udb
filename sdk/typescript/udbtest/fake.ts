@@ -390,6 +390,7 @@ export class Fake {
       ReplayDlqEvent: unary("ReplayDlqEvent", (ctx, r) => this.replayDlq(ctx, r)),
       DismissDlqEvent: unary("DismissDlqEvent", (ctx, r) => this.setDlqStatus(ctx, r, "DISMISSED")),
       QuarantineDlqEvent: unary("QuarantineDlqEvent", (ctx, r) => this.setDlqStatus(ctx, r, "QUARANTINED")),
+      BatchSelect: (call: any) => this.batchSelect(call),
       BeginTx: (call: any) => this.beginTx(call),
       PublishCDC: (call: any) => this.publishCdc(call),
     });
@@ -961,6 +962,46 @@ export class Fake {
     return inputs;
   }
 
+  /** The broker's BatchSelect: each streamed SelectRequest is charged, authorized
+   *  as a Select of its own message type and answered by the same logic as Select,
+   *  one RecordSet per request in order. The first failing request ends the stream
+   *  with its error. */
+  private batchSelect(call: any): void {
+    let done = false;
+    const fail = (err: unknown) => {
+      if (!done) {
+        done = true;
+        call.emit("error", statusOf(err));
+      }
+    };
+    let ctx: Ctx;
+    try {
+      ctx = this.beforeRpc("BatchSelect", call.metadata, null);
+    } catch (err) {
+      fail(err);
+      return;
+    }
+    call.on("data", (req: any) => {
+      if (done) return;
+      try {
+        bindBody(ctx.identity, req.context);
+        this.admit("BatchSelect", ctx.identity, req);
+        this.authorize(ctx, req.message_type, "Select");
+        call.write(this.select(ctx, req));
+      } catch (err) {
+        fail(err);
+      }
+    });
+    call.on("error", () => {
+      done = true;
+    });
+    call.on("end", () => {
+      if (done) return;
+      done = true;
+      call.end();
+    });
+  }
+
   // ── Transactions ──────────────────────────────────────────────────────────
 
   /** Apply a transaction all-or-nothing: any refusal rolls every earlier mutation
@@ -981,11 +1022,14 @@ export class Fake {
       return;
     }
     const mutations: any[] = [];
+    // Every frame, in stream order: the broker's guard indexes the whole stream.
+    const received: any[] = [];
     let terminal: any;
     call.on("data", (m: any) => {
       if (done) return;
       try {
         if (terminal) throw refuse(codes.INVALID_ARGUMENT, "", "mutation after transaction terminal marker");
+        received.push(m);
         bindBody(ctx.identity, m.context);
         if (m.commit && m.rollback) throw refuse(codes.INVALID_ARGUMENT, "", "commit and rollback cannot both be set");
         if (m.operation) {
@@ -1000,12 +1044,6 @@ export class Fake {
             action = "EnqueueOutboxEvent";
             resource = m.collection || m.message_type;
           } else throw refuse(codes.INVALID_ARGUMENT, "", `unsupported transaction operation ${operation}`);
-          if (String(m.idempotency_key ?? "").trim()) {
-            throw refuse(codes.INVALID_ARGUMENT, "", "this transaction path cannot honour idempotency_key; nothing was written", {
-              kind: "ERROR_KIND_VALIDATION",
-              field_violations: [{ field: `mutations[${mutations.length}].idempotency_key`, description: "not supported on this operation inside BeginTx; leave it empty" }],
-            });
-          }
           this.authorize(ctx, resource, action);
           mutations.push(m);
         }
@@ -1024,14 +1062,19 @@ export class Fake {
         if (terminal.rollback) {
           call.write({ tx_id: terminal.tx_id, state: "TX_STATE_ROLLED_BACK" });
         } else {
+          this.validateTxGuards(received);
           const snapshot = this.snapshot();
           const revisions = new Map(this.revisions);
+          const receipts = new Map(this.receipts);
           const events = this.eventLog.length;
           try {
             this.applyTx(ctx.identity, mutations);
           } catch (err) {
             this.rowsByType = snapshot;
             this.revisions = revisions;
+            // Receipts are written in the transaction, so a rollback drops them too.
+            this.receipts.clear();
+            for (const [scope, receipt] of receipts) this.receipts.set(scope, receipt);
             this.eventLog.length = events;
             throw err;
           }
@@ -1045,41 +1088,120 @@ export class Fake {
     });
   }
 
+  /** The broker refuses, before anything is written, a key on an operation with no
+   *  replay receipt and a malformed key on one that has. */
+  private validateTxGuards(received: any[]): void {
+    for (const [index, m] of received.entries()) {
+      const operation = String(m.operation ?? "").trim().toLowerCase();
+      const key = String(m.idempotency_key ?? "");
+      if (key && !["upsert", "update", "delete", "vector_upsert"].includes(operation)) {
+        throw refuse(codes.INVALID_ARGUMENT, "", `BeginTx mutation ${index} (${operation}) cannot honour an idempotency_key; nothing was written`, {
+          kind: "ERROR_KIND_VALIDATION",
+          field_violations: [{ field: `mutations[${index}].idempotency_key`, description: "this operation has no replay receipt; leave the key empty" }],
+        });
+      }
+      if (/[\s\p{Cc}]/u.test(key)) {
+        throw refuse(codes.INVALID_ARGUMENT, "", "idempotency_key must be empty or contain no whitespace or control characters", {
+          kind: "ERROR_KIND_VALIDATION",
+          field_violations: [{ field: "idempotency_key", description: "must be empty or contain no whitespace or control characters" }],
+        });
+      }
+      if (Number(m.require_affected ?? 0) !== 0 && !["upsert", "update", "delete"].includes(operation)) {
+        throw refuse(codes.INVALID_ARGUMENT, "", "require_affected requires an upsert, update or delete mutation", {
+          kind: "ERROR_KIND_VALIDATION",
+          field_violations: [{ field: `mutations[${index}].require_affected`, description: "only supported on relational mutations" }],
+        });
+      }
+    }
+  }
+
   private applyTx(identity: Identity, mutations: any[]): void {
     for (const m of mutations) {
-      switch (m.operation) {
-        case "upsert":
-        case "insert":
-          this.write(identity, { message_type: m.message_type, record_json: m.record_json, payload: m.payload, expected: m.expected }, m.operation === "insert");
-          break;
-        case "update":
-          this.update(identity, { message_type: m.message_type, filter: m.filter, changes: m.changes, expected: m.expected, increments: m.increments });
-          break;
-        case "delete":
-          this.remove(identity, { message_type: m.message_type, filter: m.filter, expected: m.expected });
-          break;
-        case "enqueue_outbox_event": {
-          const envelope = struct(m.payload);
-          if (envelope.document_id !== m.object_key || !m.object_key) {
-            throw refuse(codes.INVALID_ARGUMENT, "", "outbox partition_key must equal payload.document_id");
-          }
-          if (typeof envelope.tenant_id === "string" && envelope.tenant_id && envelope.tenant_id !== identity.tenantId) {
-            throw refuse(codes.PERMISSION_DENIED, "UDB_TENANT_MISMATCH", "outbox tenant differs from verified tenant");
-          }
-          if (typeof envelope.project_id === "string" && envelope.project_id && envelope.project_id !== (identity.projectId ?? "")) {
-            throw refuse(codes.PERMISSION_DENIED, "UDB_POLICY_DENIED", "outbox project differs from verified project");
-          }
-          if (envelope.event_id == null || envelope.event_type == null || envelope.envelope_version !== 2) {
-            throw refuse(codes.INVALID_ARGUMENT, "", "outbox needs a versioned event envelope");
-          }
-          envelope.tenant_id = identity.tenantId;
-          envelope.project_id = identity.projectId ?? "";
-          this.eventLog.push({ topic: m.collection || m.message_type, partitionKey: m.object_key, envelope: copyValue(envelope) });
-          break;
-        }
-        default:
-          throw refuse(codes.INVALID_ARGUMENT, "", `unsupported transaction operation ${m.operation}`);
+      if (m.idempotency_key && ["upsert", "update", "delete"].includes(m.operation)) this.keyedTxMutation(identity, m);
+      else this.applyTxMutation(identity, m);
+    }
+  }
+
+  /** A keyed relational mutation keeps a receipt per mutation, in a `begin_tx/<op>`
+   *  namespace a unary write never shares. The claim precedes CAS, so an identical
+   *  retry neither rechecks `expected` nor writes nor bumps a revision; the same key
+   *  with different inputs refuses the whole transaction. */
+  private keyedTxMutation(identity: Identity, m: any): void {
+    const entity = this.entity(m.message_type);
+    const inputs = this.mutationInputs(entity, identity, m.operation, {
+      message_type: m.message_type,
+      record_json: m.record_json,
+      payload: m.payload,
+      conflict_fields: m.conflict_fields,
+      filter: m.filter,
+      changes: m.changes,
+      increments: m.increments,
+      expected: m.expected,
+    });
+    inputs.require_affected = Number(m.require_affected ?? 0);
+    inputs.cdc_required = Boolean(m.cdc_required);
+    const hash = createHash("sha256").update(recordToJson(inputs)).digest("hex");
+    const scope = [identity.tenantId, identity.projectId ?? "", m.message_type, `begin_tx/${m.operation}`, m.idempotency_key].join("\0");
+    const receipt = this.receipts.get(scope);
+    if (receipt) {
+      if (receipt.hash !== hash) {
+        throw refuse(codes.FAILED_PRECONDITION, "UDB_IDEMPOTENCY_REUSE", "idempotency_key was already used for a different request; reuse a key only to retry an identical request", {
+          reason: "UDB_IDEMPOTENCY_REUSE",
+          kind: "ERROR_KIND_CONFLICT",
+          fix_hint: "Reuse a key only to retry identical inputs; use a new key for a different write.",
+          field_violations: [{ field: "idempotency_key", description: "the same idempotency_key was already claimed by a request with different inputs" }],
+        });
       }
+      return;
+    }
+    const response = this.applyTxMutation(identity, m);
+    this.receipts.set(scope, { hash, response: { mutation_id: String(response.mutation_id ?? ""), affected_rows: Number(response.affected_rows ?? 0) } });
+  }
+
+  /** Apply one transaction mutation and, like the broker, check `require_affected`
+   *  against the rows it actually matched. A mismatch refuses the mutation and
+   *  BeginTx rolls the whole transaction back. A replayed keyed mutation never
+   *  reaches here, so a retry skips the check as on the broker. */
+  private applyTxMutation(identity: Identity, m: any): Row {
+    const response = this.applyTxMutationUnchecked(identity, m);
+    const want = Number(m.require_affected ?? 0);
+    const affected = Number(response.affected_rows ?? 0);
+    if (want > 0 && affected !== want) {
+      throw refuse(codes.NOT_FOUND, "UDB_NO_ROWS_AFFECTED", `no external compensation was needed: the write matched ${affected} row(s) but require_affected is ${want}; nothing was changed`);
+    }
+    return response;
+  }
+
+  private applyTxMutationUnchecked(identity: Identity, m: any): Row {
+    switch (m.operation) {
+      case "upsert":
+      case "insert":
+        return this.write(identity, { message_type: m.message_type, record_json: m.record_json, payload: m.payload, expected: m.expected }, m.operation === "insert");
+      case "update":
+        return this.update(identity, { message_type: m.message_type, filter: m.filter, changes: m.changes, expected: m.expected, increments: m.increments });
+      case "delete":
+        return this.remove(identity, { message_type: m.message_type, filter: m.filter, expected: m.expected });
+      case "enqueue_outbox_event": {
+        const envelope = struct(m.payload);
+        if (envelope.document_id !== m.object_key || !m.object_key) {
+          throw refuse(codes.INVALID_ARGUMENT, "", "outbox partition_key must equal payload.document_id");
+        }
+        if (typeof envelope.tenant_id === "string" && envelope.tenant_id && envelope.tenant_id !== identity.tenantId) {
+          throw refuse(codes.PERMISSION_DENIED, "UDB_TENANT_MISMATCH", "outbox tenant differs from verified tenant");
+        }
+        if (typeof envelope.project_id === "string" && envelope.project_id && envelope.project_id !== (identity.projectId ?? "")) {
+          throw refuse(codes.PERMISSION_DENIED, "UDB_POLICY_DENIED", "outbox project differs from verified project");
+        }
+        if (envelope.event_id == null || envelope.event_type == null || envelope.envelope_version !== 2) {
+          throw refuse(codes.INVALID_ARGUMENT, "", "outbox needs a versioned event envelope");
+        }
+        envelope.tenant_id = identity.tenantId;
+        envelope.project_id = identity.projectId ?? "";
+        this.eventLog.push({ topic: m.collection || m.message_type, partitionKey: m.object_key, envelope: copyValue(envelope) });
+        return { affected_rows: 1 };
+      }
+      default:
+        throw refuse(codes.INVALID_ARGUMENT, "", `unsupported transaction operation ${m.operation}`);
     }
   }
 

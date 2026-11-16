@@ -119,6 +119,27 @@ def _resource_key(resource: "authz.ResourceRef") -> str:
     return resource.message_type or resource.resource_name or resource.table
 
 
+@dataclass(frozen=True)
+class DelegatedJobToken:
+    """A delegated job token (``AuthnService.ExchangeTokenForJob``): it acts for
+    ``subject`` (the user) as ``actor`` (the service's identity)."""
+
+    access_token: str
+    #: The token's id; revoking it stops the token.
+    jti: str
+    expires_at_unix: int
+    #: The user the token acts for.
+    subject: str
+    #: The acting service's identity (the RFC 8693 ``act`` claim).
+    actor: str
+    purpose: str
+    job_id: str
+    #: The scopes both the user's token and the service's grant allow.
+    scopes: tuple[str, ...]
+    tenant_id: str
+    project_id: str
+
+
 class UdbAuthClient:
     """Convenience wrapper over AuthnService + AuthzService.
 
@@ -294,6 +315,63 @@ class UdbAuthClient:
             "ExchangeServiceTokenForTenant",
             request,
             metadata,
+        )
+
+    def exchange_token_for_job(
+        self,
+        subject_token: str,
+        *,
+        purpose: str,
+        job_id: str,
+        ttl_seconds: int = 0,
+        metadata: Metadata | None = None,
+    ) -> "DelegatedJobToken":
+        """Exchange a user's current access token for a delegated job token
+        (``AuthnService.ExchangeTokenForJob``) so a durable job acts for that user.
+
+        Call it with the SERVICE's own bearer on the metadata (its grant must hold
+        ``udb:token:delegate``, in the user's tenant). The token's subject is the
+        user, its actor (the RFC 8693 ``act`` claim) is the service; it carries
+        ``purpose`` and ``job_id`` and lives at most ``ttl_seconds`` (0 = the
+        broker's maximum, 24 hours by default). It has no refresh token and cannot
+        be exchanged again. A caller or subject token the broker will not accept
+        raises :class:`UdbRpcError` with ``PERMISSION_DENIED``.
+        """
+        if not subject_token or not subject_token.strip():
+            raise UdbConfigurationError("exchange_token_for_job: subject_token is required")
+        if not job_id or not job_id.strip():
+            raise UdbConfigurationError("exchange_token_for_job: job_id is required")
+        if not purpose or not purpose.strip():
+            raise UdbConfigurationError("exchange_token_for_job: purpose is required")
+        if ttl_seconds < 0:
+            raise UdbConfigurationError("exchange_token_for_job: ttl_seconds must not be negative")
+        request = authn_service.ExchangeTokenForJobRequest(
+            subject_token=subject_token,
+            purpose=purpose,
+            job_id=job_id,
+            ttl_seconds=int(ttl_seconds),
+        )
+        response = self._call(
+            self.authn.ExchangeTokenForJob,
+            "ExchangeTokenForJob",
+            request,
+            metadata,
+        )
+        if not response.access_token:
+            raise UdbConfigurationError(
+                f"exchange_token_for_job: the broker returned no token for job {job_id}"
+            )
+        return DelegatedJobToken(
+            access_token=response.access_token,
+            jti=response.jti,
+            expires_at_unix=int(response.expires_at_unix),
+            subject=response.subject,
+            actor=response.actor,
+            purpose=response.purpose,
+            job_id=response.job_id,
+            scopes=tuple(response.scopes),
+            tenant_id=response.tenant_id,
+            project_id=response.project_id,
         )
 
     def validate_session(self, token: str, *, metadata: Metadata | None = None) -> "UserSession":

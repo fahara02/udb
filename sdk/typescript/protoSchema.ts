@@ -28,6 +28,8 @@ export interface ColumnOptions {
   is_jsonb?: boolean;
   encrypted?: boolean;
   default_value?: string;
+  /** The values the generated CHECK constraint allows; empty when the column declares none. */
+  enum_values?: string[];
   index?: IndexOptions;
 }
 
@@ -107,7 +109,7 @@ function fieldSchema(field: protobuf.Field): FieldSchema {
   const notes = annotations(field);
   const raw = notes.column ?? notes.pg_column;
   const column: ColumnOptions | undefined = raw
-    ? { ...raw, index: raw.index ? normalizeIndex(raw.index) : undefined }
+    ? { ...raw, enum_values: asArray<string>(raw.enum_values), index: raw.index ? normalizeIndex(raw.index) : undefined }
     : undefined;
   const resolved = field.resolvedType;
   const isMap = field.map === true;

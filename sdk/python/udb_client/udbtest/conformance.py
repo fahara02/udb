@@ -27,7 +27,7 @@ from ..generated_client import UdbDetailedRpcError
 from ..record_codec import WRITE_INSERT, encode_record
 from ..schema import message_type, primary_keys
 from ..table import Table, table_spec_of
-from ..tx import EVENT_ENVELOPE_VERSION
+from ..tx import EVENT_ENVELOPE_VERSION, run_tx
 
 #: Returns a client for a tenant. A fresh tenant per call keeps runs isolated.
 Connect = Callable[[str], Any]
@@ -224,6 +224,25 @@ def _case_update_admission(connect: Connect, tenant: Callable[[], str], _: Any) 
     assert got["filename"] == row["filename"] and got.get("size_bytes", 0) == 0, "refused update changed its target"
 
 
+def _case_tx_require_affected(connect: Connect, tenant: Callable[[], str], _: Any) -> None:
+    u = connect(tenant())
+    files = _files(u)
+    missing = {"file_id": new_id()}
+    writes: dict[str, Callable[[Any], None]] = {
+        "patch": lambda tx: tx.patch(file_pb2.File, missing, {"filename": "never.pdf"}),
+        "delete": lambda tx: tx.delete(file_pb2.File, missing),
+    }
+    for name, write in writes.items():
+        prefix = _message(new_id(), "must-roll-back.pdf")
+
+        def transaction(tx: Any, write: Callable[[Any], None] = write, prefix: Any = prefix) -> None:
+            tx.insert(prefix)
+            write(tx)
+
+        _expect_code(ErrorCode.NOT_FOUND, lambda: u.tx(transaction), f"transaction {name} of a missing row (UDB_NO_ROWS_AFFECTED)")
+        _expect_error(UdbNotFound, lambda: files.get({"file_id": prefix.file_id}), f"transaction {name} refusal committed its prefix")
+
+
 def _case_keyed_replay(connect: Connect, tenant: Callable[[], str], _: Any) -> None:
     u = connect(tenant())
     row = _message(new_id(), "keyed-original.pdf")
@@ -316,6 +335,44 @@ def _case_tx_idempotency_key(connect: Connect, tenant: Callable[[], str], _: Any
         )
         assert refused, f"ignored key was not explicitly refused: {details}"
         _expect_error(UdbNotFound, lambda: _files(u).get({"file_id": row.file_id}), "refused transaction kept its prefix")
+
+
+def _case_tx_keyed_replay(connect: Connect, tenant: Callable[[], str], _: Any) -> None:
+    u = connect(tenant())
+    files = _files(u)
+    row = _message(new_id(), "tx-keyed-original.pdf")
+    other = _message(new_id(), "tx-keyed-upsert.pdf")
+    files.insert(_row(row.file_id, row.filename))
+    filter_ = to_struct({"file_id": row.file_id})
+
+    def read() -> str:
+        result = u.data.select(
+            types_pb2.SelectRequest(message_type=_FILE_TYPE, filter=filter_, fields=["filename"], include_revision=True)
+        )
+        assert len(result.record_revisions) == 1, "Select omitted the row revision"
+        return result.record_revisions[0]
+
+    def attempt(filename: str) -> Callable[[Any], None]:
+        def body(tx: Any) -> None:
+            tx.upsert(other)
+            tx.update_if(_message(row.file_id, filename), {"filename": row.filename})
+
+        return body
+
+    before = read()
+    replay_key = new_id()
+    run_tx(u.data, attempt("tx-keyed-v2.pdf"), replay_key=replay_key)
+    committed = read()
+    assert committed != before, "the keyed transaction did not write"
+    # The stored row no longer holds ``expected``: only a replay that skips CAS succeeds.
+    run_tx(u.data, attempt("tx-keyed-v2.pdf"), replay_key=replay_key)
+    assert read() == committed, "a replayed transaction rechecked CAS or wrote again"
+    error = _raises(lambda: run_tx(u.data, attempt("tx-keyed-v3.pdf"), replay_key=replay_key))
+    info = inspect(error)
+    assert info.reason == "UDB_IDEMPOTENCY_REUSE" and info.code is ErrorCode.PRECONDITION, repr(error)
+    assert read() == committed, "a refused key reuse changed the row"
+    assert files.get({"file_id": row.file_id})["filename"] == "tx-keyed-v2.pdf"
+    assert files.get({"file_id": other.file_id})["filename"] == other.filename
 
 
 def _mapped(error: grpc.RpcError) -> UdbRpcError:
@@ -587,9 +644,11 @@ def _case_delete(connect: Connect, tenant: Callable[[], str], _: Any) -> None:
 _CONTRACT: tuple[tuple[str, Callable[[Connect, Callable[[], str], Any], None]], ...] = (
     ("opaque revisions reject stale writes and survive transaction rollback", _case_revisions),
     ("update admission preserves identity and rolls back transaction prefixes", _case_update_admission),
+    ("transaction require_affected refuses a missed row and rolls back the prefix", _case_tx_require_affected),
     ("unary keys replay before CAS and reject changed input", _case_keyed_replay),
     ("explicit primary conflict target replaces the original row", _case_explicit_conflict_target),
     ("unsupported transaction idempotency key refuses the entire batch", _case_tx_idempotency_key),
+    ("transaction keys replay before CAS and reject changed input", _case_tx_keyed_replay),
     ("secondary uniqueness refuses insert and rolls back a multirow update", _case_secondary_uniqueness),
     ("NOT NULL refusal names the column", _case_not_null),
     ("int64 stays exact through storage and an atomic increment", _case_exact_int64),

@@ -335,6 +335,15 @@ pub fn init_otel() -> bool {
 
     let endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
         .unwrap_or_else(|_| "http://localhost:4317".to_string());
+    // Spans carry tenant identifiers and request attributes: with
+    // UDB_OUTBOUND_TLS_REQUIRED on, a plaintext collector must be on loopback
+    // (a local collector agent) or the export stays off.
+    if let Err(reason) =
+        crate::runtime::transport_policy::check_secret_url(&endpoint, "OTEL_EXPORTER_OTLP_ENDPOINT")
+    {
+        tracing::error!("otel: OTLP export not enabled: {reason}");
+        return false;
+    }
 
     let exporter = match opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()

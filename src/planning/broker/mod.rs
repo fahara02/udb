@@ -440,27 +440,98 @@ pub fn build_select_query_plan(
     manifest: &CatalogManifest,
     request: &SelectPlanRequest,
 ) -> QueryPlan {
-    static PLAN_CACHE: OnceLock<Mutex<HashMap<String, QueryPlan>>> = OnceLock::new();
+    static PLAN_CACHE: OnceLock<Mutex<PlanCache<QueryPlan>>> = OnceLock::new();
     let cache_key = select_plan_cache_key(manifest, request);
-    let cache = PLAN_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-    if let Ok(guard) = cache.lock()
+    let cache = PLAN_CACHE.get_or_init(|| {
+        Mutex::new(PlanCache::new(
+            crate::runtime::config::select_plan_cache_cap(),
+        ))
+    });
+    if let Ok(mut guard) = cache.lock()
         && let Some(plan) = guard.get(&cache_key)
     {
-        return plan.clone();
+        return plan;
     }
     let plan = build_select_query_plan_uncached(manifest, request);
     if let Ok(mut guard) = cache.lock() {
-        // Bound the process-global cache. The manifest checksum is part of every
-        // key, so without a cap the map grows unbounded across schema reloads.
-        // When a new key would exceed the cap, drop the whole cache and rebuild
-        // lazily (rebuilding one plan is cheap) — #136.
-        const PLAN_CACHE_CAP: usize = 512;
-        if guard.len() >= PLAN_CACHE_CAP && !guard.contains_key(&cache_key) {
-            guard.clear();
-        }
-        guard.entry(cache_key).or_insert_with(|| plan.clone());
+        guard.insert(cache_key, plan.clone());
     }
     plan
+}
+
+/// The bounded plan memo behind [`build_select_query_plan`]. The manifest
+/// checksum is part of every key, so without a cap the map would grow across
+/// schema reloads. The cap is `UDB_SELECT_PLAN_CACHE_CAP` (default 512). Each
+/// lookup stamps its entry; when an insert finds the cache full, the least
+/// recently used half goes (one sort per `cap / 2` misses), so hot plans stay
+/// and the cost per miss stays small, instead of dropping every plan at once.
+struct PlanCache<V> {
+    map: HashMap<String, (V, u64)>,
+    tick: u64,
+    cap: usize,
+}
+
+impl<V: Clone> PlanCache<V> {
+    fn new(cap: usize) -> Self {
+        Self {
+            map: HashMap::new(),
+            tick: 0,
+            cap: cap.max(2),
+        }
+    }
+
+    fn get(&mut self, key: &str) -> Option<V> {
+        self.tick += 1;
+        let tick = self.tick;
+        self.map.get_mut(key).map(|entry| {
+            entry.1 = tick;
+            entry.0.clone()
+        })
+    }
+
+    fn insert(&mut self, key: String, value: V) {
+        self.tick += 1;
+        let tick = self.tick;
+        if !self.map.contains_key(&key) && self.map.len() >= self.cap {
+            let mut used: Vec<u64> = self.map.values().map(|(_, used)| *used).collect();
+            let middle = used.len() / 2;
+            let (_, cutoff, _) = used.select_nth_unstable(middle);
+            let cutoff = *cutoff;
+            self.map.retain(|_, (_, used)| *used >= cutoff);
+        }
+        self.map.insert(key, (value, tick));
+    }
+}
+
+#[cfg(test)]
+mod plan_cache_tests {
+    use super::PlanCache;
+
+    #[test]
+    fn a_full_plan_cache_drops_the_least_recently_used_half_only() {
+        let mut cache: PlanCache<u32> = PlanCache::new(4);
+        for i in 0..4u32 {
+            cache.insert(format!("k{i}"), i);
+        }
+        // k0 and k1 are used again, so k2 and k3 are the oldest.
+        assert_eq!(cache.get("k0"), Some(0));
+        assert_eq!(cache.get("k1"), Some(1));
+        cache.insert("k4".to_string(), 4);
+        assert!(cache.map.len() <= 4, "the cache stays bounded");
+        for key in ["k0", "k1", "k4"] {
+            assert!(cache.get(key).is_some(), "{key} is recent and stays");
+        }
+        assert!(cache.get("k2").is_none() && cache.get("k3").is_none());
+
+        // Many distinct keys never empty the cache: the newest keys are there.
+        let mut cache: PlanCache<u32> = PlanCache::new(64);
+        for i in 0..1_000u32 {
+            cache.insert(format!("p{i}"), i);
+            assert!(cache.map.len() <= 64);
+        }
+        assert!(cache.map.len() >= 32);
+        assert_eq!(cache.get("p999"), Some(999));
+    }
 }
 
 /// Convert the data-plane Select planner input into the canonical neutral read
@@ -788,6 +859,7 @@ pub fn build_upsert_plan(
     let mut errors = validate_write_context(&request.context);
     // C22: per-table ABAC on the write path.
     errors.extend(table_required_scope_error(&request.context, table));
+    errors.extend(global_table_write_error(&request.context, table));
     let allowed = allowed_columns(table);
     // #117: resolve proto `field_name` aliases (record keys, conflict fields) to
     // physical `column_name`s. Idempotent on already-physical names; the runtime
@@ -1048,6 +1120,7 @@ pub(crate) fn build_upsert_logical_write(
     let mut errors = validate_write_context(&request.context);
     // C22: per-table ABAC on the write path.
     errors.extend(table_required_scope_error(&request.context, table));
+    errors.extend(global_table_write_error(&request.context, table));
     let allowed = allowed_columns(table);
     let resolver = column_resolver(table);
     let Some(record) = request.record.as_object() else {
@@ -1256,6 +1329,7 @@ pub fn build_delete_plan(
     let mut errors = validate_write_context(&request.context);
     // C22: per-table ABAC on the write path.
     errors.extend(table_required_scope_error(&request.context, table));
+    errors.extend(global_table_write_error(&request.context, table));
     let allowed = allowed_columns(table);
     // #117: resolve proto `field_name` aliases in the delete filter.
     let resolver = column_resolver(table);
@@ -1397,6 +1471,7 @@ pub fn build_update_plan(
     let mut errors = validate_write_context(&request.context);
     // C22: per-table ABAC on the write path.
     errors.extend(table_required_scope_error(&request.context, table));
+    errors.extend(global_table_write_error(&request.context, table));
     let allowed = allowed_columns(table);
     let resolver = column_resolver(table);
     let filter = normalize_filter_keys(&resolver, &request.filter);
@@ -1643,6 +1718,7 @@ pub(crate) fn build_delete_logical_delete(
     let mut errors = validate_write_context(&request.context);
     // C22: per-table ABAC on the write path.
     errors.extend(table_required_scope_error(&request.context, table));
+    errors.extend(global_table_write_error(&request.context, table));
     let allowed = allowed_columns(table);
     let resolver = column_resolver(table);
     let filter_json = normalize_filter_keys(&resolver, &request.filter);
@@ -1886,9 +1962,35 @@ pub fn build_vector_upsert_plan(
     }
 }
 
+/// Decide object access when the caller cannot show that its purpose came
+/// from a verified credential. The planning `RequestContext` carries the
+/// purpose as text only (it may come from the `x-purpose` header), so here a
+/// stated purpose never unlocks a PII object: the caller needs the
+/// `udb:object:pii` scope. Callers that hold the security context use
+/// [`evaluate_object_access_with_verified_purpose`].
 pub fn evaluate_object_access(
     manifest: &CatalogManifest,
     request: &ObjectAccessRequest,
+) -> ObjectAccessDecision {
+    evaluate_object_access_with_verified_purpose(manifest, request, false)
+}
+
+/// The purpose rule for PII objects, the same one
+/// `security::privileged_purpose` applies to PII columns: export,
+/// verification or audit counts only when the verified credential (a signed
+/// token claim) asserted it. A header-only purpose is recorded but unlocks
+/// nothing, since anyone can send a header.
+fn object_purpose_is_privileged(purpose: &str, purpose_verified: bool) -> bool {
+    purpose_verified && matches!(purpose, "export" | "verification" | "audit")
+}
+
+/// [`evaluate_object_access`] for a caller that knows whether
+/// `request.context.purpose` came from its verified credential
+/// (`SecurityContext::purpose_verified`).
+pub fn evaluate_object_access_with_verified_purpose(
+    manifest: &CatalogManifest,
+    request: &ObjectAccessRequest,
+    purpose_verified: bool,
 ) -> ObjectAccessDecision {
     let mut errors = Vec::new();
     if request.context.tenant_id.trim().is_empty() {
@@ -1945,14 +2047,12 @@ pub fn evaluate_object_access(
         .unwrap_or(false);
 
     if pii
-        && !matches!(
-            request.context.purpose.as_str(),
-            "export" | "verification" | "audit"
-        )
+        && !object_purpose_is_privileged(&request.context.purpose, purpose_verified)
         && !has_scope(&request.context, "udb:object:pii")
     {
         errors.push(
-            "PII object access requires export, verification, audit, or udb:object:pii scope"
+            "PII object access requires purpose export, verification, or audit asserted by \
+             the verified credential, or scope udb:object:pii"
                 .to_string(),
         );
     }
@@ -2219,12 +2319,74 @@ fn is_operator(value: &str) -> bool {
             | "$like" | "$is_null"
             // GAP 6: PostgreSQL-specific operators
             | "$not_null" | "$ilike" | "$contains" | "$contained_by"
-            | "$has_key" | "$overlaps" | "$matches"
+            | "$has_key" | "$overlaps" | "$overlap" | "$matches"
     )
 }
 
 fn tenant_column(table: &ManifestTable) -> String {
     resolve_tenant_column(table).unwrap_or_default().to_string()
+}
+
+/// Scope that lets a non-admin identity (a platform loader service account,
+/// say) write rows of a shared table without holding full platform authority.
+pub const GLOBAL_WRITE_SCOPE: &str = "udb:global:write";
+
+/// Reserved tenant value carried by everything derived from a shared table's
+/// rows: change events, projected documents/points/nodes. Readers match their
+/// own tenant OR this value, never another tenant. No real tenant may use it,
+/// so a tenant row can never be mistaken for a shared one.
+pub const SHARED_TENANT_MARKER: &str = "*shared*";
+
+/// Whether `tenant_id` is the reserved shared marker.
+pub fn is_shared_tenant_marker(tenant_id: &str) -> bool {
+    tenant_id.trim() == SHARED_TENANT_MARKER
+}
+
+/// A shared (global) table: it explicitly declares tenant isolation off
+/// (`none`, `global`, `disabled` or `off`) and has no tenant column at all.
+/// Its rows are reference data every tenant reads and only the platform
+/// writes. A table that leaves the mode empty is NOT treated as shared, so
+/// undeclared single-tenant tables keep their existing behaviour.
+pub fn is_global_table(table: &ManifestTable) -> bool {
+    let mode = table
+        .table_security
+        .tenant_isolation_mode
+        .trim()
+        .to_ascii_lowercase();
+    matches!(mode.as_str(), "none" | "global" | "disabled" | "off")
+        && resolve_tenant_column(table).is_none()
+        && !table_requires_tenant_column(table)
+}
+
+/// Whether the caller may write rows of a shared table: an explicit platform
+/// admin (the same rule the cross-tenant admin surfaces use) or a holder of
+/// [`GLOBAL_WRITE_SCOPE`].
+pub fn may_write_global_table(context: &RequestContext) -> bool {
+    crate::runtime::service::method_security::has_cross_tenant_platform_authority(
+        &context.tenant_id,
+        &context.project_id,
+        &context.scopes,
+        &[],
+    ) || has_scope(context, GLOBAL_WRITE_SCOPE)
+}
+
+/// The refusal for a write to a shared table by a caller who may not write it,
+/// or for any write made under the reserved shared tenant marker. `None` when
+/// the write may proceed. Every data-plane write planner calls this, so Upsert,
+/// Update, Delete, batch upserts and transaction mutations share one rule.
+pub fn global_table_write_error(context: &RequestContext, table: &ManifestTable) -> Option<String> {
+    if is_shared_tenant_marker(&context.tenant_id) {
+        return Some(format!(
+            "permission denied: tenant id '{SHARED_TENANT_MARKER}' is reserved for shared data and cannot write"
+        ));
+    }
+    if is_global_table(table) && !may_write_global_table(context) {
+        return Some(format!(
+            "permission denied: {}.{} is a shared table; writing it requires a platform admin or scope {GLOBAL_WRITE_SCOPE}",
+            table.schema, table.table
+        ));
+    }
+    None
 }
 
 /// The declared SQL type of a PHYSICAL column name, for placeholder casting.
@@ -2298,11 +2460,22 @@ fn unresolved_tenant_column_error(table: &ManifestTable) -> String {
     )
 }
 
+/// Columns a plan reports as masked for a caller without `udb:pii:read`: PII,
+/// mask-in-logs, and every encrypted column (the `security.is_encrypted` flag
+/// and the legacy `encrypted` flag). This is the rule the runtime's client
+/// output mask applies, so a plan never lists fewer masked columns than the
+/// read actually masks; an encrypted column is decrypted on the way out and
+/// would otherwise reach the caller in plaintext.
 fn masked_columns(table: &ManifestTable) -> Vec<String> {
     table
         .columns
         .iter()
-        .filter(|column| column.security.is_pii || column.security.mask_in_logs)
+        .filter(|column| {
+            column.security.is_pii
+                || column.security.mask_in_logs
+                || column.security.is_encrypted
+                || column.encrypted
+        })
         .map(|column| column.column_name.clone())
         .collect()
 }
@@ -2655,7 +2828,7 @@ fn compile_column_predicate(
         for (op, op_value) in map {
             let Some(sql_op) = sql_operator(op) else {
                 errors.push(format!(
-                    "unsupported filter operator {} (supported: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $between, $like, $ilike, $is_null, $not_null, $not, $contains, $contained_by, $has_key, $matches)",
+                    "unsupported filter operator {} (supported: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $between, $like, $ilike, $is_null, $not_null, $not, $contains, $contained_by, $overlaps, $has_key, $matches)",
                     op
                 ));
                 continue;
@@ -2745,8 +2918,10 @@ fn compile_column_predicate(
                 ));
                 continue;
             }
-            // GAP 6: JSONB containment / array overlap — bind value as JSONB/array cast
-            if matches!(sql_op, "@>" | "<@") {
+            // GAP 6: JSONB containment, array containment and array overlap. The
+            // value binds as this column's own type (JSON, or a typed array of the
+            // column's element type), so no cast is needed in the SQL text.
+            if matches!(sql_op, "@>" | "<@" | "&&") {
                 parameter_columns.push(column.to_string());
                 // The value binds as this column's own type, JSON or array.
                 parts.push(format!("{} {} ${}", qi(column), sql_op, next_param));
@@ -2774,20 +2949,6 @@ fn compile_column_predicate(
                     next_param
                 ));
                 next_param += 1;
-                continue;
-            }
-            // `$overlaps` (`&&`) is the Postgres array-overlap operator: it needs a
-            // matching array cast on the bound parameter, which the planner cannot
-            // synthesize without the column's element type. The generic `col && $N`
-            // fallthrough below would bind text and fail at execution
-            // ("operator does not exist: <type> && text"), so reject it here with a
-            // clear message rather than emitting invalid SQL.
-            if sql_op == "&&" {
-                errors.push(format!(
-                    "$overlaps on column '{}' is not supported (array-overlap requires a typed \
-                     array cast); use $contains/$contained_by (@>/<@) for JSONB columns",
-                    column
-                ));
                 continue;
             }
             // GAP 29: Guard against leading-wildcard full-table-scans via $like/$ilike.
@@ -3100,14 +3261,15 @@ fn logical_column_filter_from_json(
                 }
             }
             "$contains" | "contains" | "$contained_by" | "contained_by" | "$has_key"
-            | "has_key" | "$overlaps" | "overlaps" | "$matches" | "matches" => {
+            | "has_key" | "$overlaps" | "overlaps" | "$overlap" | "overlap" | "$matches"
+            | "matches" => {
                 errors.push(format!(
                     "filter operator '{}' on column '{}' has no neutral IR equivalent yet",
                     op, column
                 ));
             }
             _ => errors.push(format!(
-                "unsupported filter operator {} (supported: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $between, $like, $ilike, $is_null, $not_null, $not, $contains, $contained_by, $has_key, $matches)",
+                "unsupported filter operator {} (supported: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $between, $like, $ilike, $is_null, $not_null, $not, $contains, $contained_by, $overlaps, $has_key, $matches)",
                 op
             )),
         }
@@ -4408,6 +4570,178 @@ mod tests {
         assert!(ambiguous_upsert.resource_uri.is_empty());
     }
 
+    fn global_widget_manifest() -> CatalogManifest {
+        test_manifest(ManifestTable {
+            table_security: ManifestTableSecurity {
+                tenant_isolation_mode: "global".to_string(),
+                ..ManifestTableSecurity::default()
+            },
+            columns: vec![test_column("id"), test_column("status")],
+            ..ManifestTable::default()
+        })
+    }
+
+    fn assert_shared_write_refused(errors: &[String]) {
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.contains("is a shared table")
+                    && error.contains(GLOBAL_WRITE_SCOPE)
+                    && error.contains("public.widgets")),
+            "{errors:?}"
+        );
+    }
+
+    #[test]
+    fn global_table_is_only_an_explicitly_declared_tenantless_table() {
+        let manifest = global_widget_manifest();
+        assert!(is_global_table(&manifest.tables[0]));
+
+        // An undeclared mode keeps the old behaviour.
+        let undeclared = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), test_column("status")],
+            ..ManifestTable::default()
+        });
+        assert!(!is_global_table(&undeclared.tables[0]));
+
+        // A tenant column wins over a "none" mode: the table is tenant-scoped.
+        let with_tenant = test_manifest(ManifestTable {
+            table_security: ManifestTableSecurity {
+                tenant_isolation_mode: "none".to_string(),
+                ..ManifestTableSecurity::default()
+            },
+            columns: vec![test_column("id"), test_column("tenant_id")],
+            ..ManifestTable::default()
+        });
+        assert!(!is_global_table(&with_tenant.tables[0]));
+    }
+
+    #[test]
+    fn tenant_writer_cannot_change_a_shared_table() {
+        let manifest = global_widget_manifest();
+        let upsert = build_upsert_plan(
+            &manifest,
+            &UpsertPlanRequest {
+                context: write_context(),
+                message_type: "Widget".to_string(),
+                record: json!({"id": "w1", "status": "open"}),
+                ..UpsertPlanRequest::default()
+            },
+        );
+        assert_shared_write_refused(&upsert.errors);
+
+        let delete = build_delete_plan(
+            &manifest,
+            &DeletePlanRequest {
+                context: write_context(),
+                message_type: "Widget".to_string(),
+                filter: json!({"id": "w1"}),
+            },
+        );
+        assert_shared_write_refused(&delete.errors);
+
+        let update = build_update_plan(
+            &manifest,
+            &UpdatePlanRequest {
+                context: write_context(),
+                message_type: "Widget".to_string(),
+                filter: json!({"id": "w1"}),
+                changes: json!({"status": "closed"}),
+                ..UpdatePlanRequest::default()
+            },
+        );
+        assert_shared_write_refused(&update.errors);
+
+        let tx = build_transaction_plan(
+            &manifest,
+            &TransactionPlanRequest {
+                context: RequestContext {
+                    scopes: vec!["udb:write".to_string(), "udb:stream".to_string()],
+                    ..write_context()
+                },
+                tx_id: "tx-1".to_string(),
+                mutations: vec![TransactionMutation {
+                    operation: "upsert".to_string(),
+                    message_type: "Widget".to_string(),
+                    record: json!({"id": "w1", "status": "open"}),
+                    ..TransactionMutation::default()
+                }],
+                ..TransactionPlanRequest::default()
+            },
+        );
+        assert_shared_write_refused(&tx.errors);
+    }
+
+    #[test]
+    fn platform_admin_or_global_write_scope_may_change_a_shared_table() {
+        let manifest = global_widget_manifest();
+        for scope in [GLOBAL_WRITE_SCOPE, "udb:platform_admin"] {
+            let context = RequestContext {
+                scopes: vec!["udb:write".to_string(), scope.to_string()],
+                ..write_context()
+            };
+            let upsert = build_upsert_plan(
+                &manifest,
+                &UpsertPlanRequest {
+                    context: context.clone(),
+                    message_type: "Widget".to_string(),
+                    record: json!({"id": "w1", "status": "open"}),
+                    ..UpsertPlanRequest::default()
+                },
+            );
+            assert!(upsert.errors.is_empty(), "{scope}: {:?}", upsert.errors);
+            assert!(global_table_write_error(&context, &manifest.tables[0]).is_none());
+        }
+        // A tenant-bound admin scope is an action privilege inside its tenant,
+        // not platform authority.
+        let tenant_admin = RequestContext {
+            scopes: vec!["udb:write".to_string(), "udb:admin".to_string()],
+            ..write_context()
+        };
+        assert!(global_table_write_error(&tenant_admin, &manifest.tables[0]).is_some());
+    }
+
+    #[test]
+    fn reads_of_a_shared_table_stay_open_to_tenants() {
+        let manifest = global_widget_manifest();
+        let select = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "Widget".to_string(),
+                filter: json!({"status": "open"}),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert!(select.errors.is_empty(), "{:?}", select.errors);
+    }
+
+    #[test]
+    fn the_shared_marker_is_never_a_writing_tenant() {
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), test_column("tenant_id")],
+            ..ManifestTable::default()
+        });
+        let context = RequestContext {
+            tenant_id: SHARED_TENANT_MARKER.to_string(),
+            ..write_context()
+        };
+        let upsert = build_upsert_plan(
+            &manifest,
+            &UpsertPlanRequest {
+                context,
+                message_type: "Widget".to_string(),
+                record: json!({"id": "w1", "tenant_id": SHARED_TENANT_MARKER}),
+                ..UpsertPlanRequest::default()
+            },
+        );
+        assert!(
+            upsert.errors.iter().any(|error| error.contains("reserved")),
+            "{:?}",
+            upsert.errors
+        );
+    }
+
     #[test]
     fn planner_resolves_system_tenant_column() {
         let mut tenant = test_column("_tenant_id");
@@ -4735,6 +5069,113 @@ mod tests {
         );
     }
 
+    fn array_column_manifest() -> CatalogManifest {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let mut tags = test_column("tags");
+        tags.sql_type = "TEXT[]".to_string();
+        let mut owner_ids = test_column("owner_ids");
+        owner_ids.sql_type = "UUID[]".to_string();
+        test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, tags, owner_ids],
+            ..ManifestTable::default()
+        })
+    }
+
+    // `$overlaps` renders like `$contains`: `col && $N`, the value bound as the
+    // column's own (typed array) type, for TEXT[] and UUID[] columns alike.
+    #[test]
+    fn select_plan_overlaps_renders_array_overlap_for_text_and_uuid_arrays() {
+        let manifest = array_column_manifest();
+        let filter = json!({
+            "tenant_id": "tenant-a",
+            "tags": {"$overlaps": ["red", "blue"]},
+            "owner_ids": {"$overlaps": ["7f1c2a4e-0000-4000-8000-000000000001"]},
+        });
+        let plan = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: filter.clone(),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        let tags_at = plan
+            .parameter_columns
+            .iter()
+            .position(|c| c == "tags")
+            .expect("tags binds a parameter")
+            + 1;
+        let owners_at = plan
+            .parameter_columns
+            .iter()
+            .position(|c| c == "owner_ids")
+            .expect("owner_ids binds a parameter")
+            + 1;
+        assert!(
+            plan.sql.contains(&format!("\"tags\" && ${tags_at}")),
+            "{}",
+            plan.sql
+        );
+        assert!(
+            plan.sql.contains(&format!("\"owner_ids\" && ${owners_at}")),
+            "{}",
+            plan.sql
+        );
+        assert!(!plan.sql.contains("&& $0"), "{}", plan.sql);
+        // One bound value per caller placeholder: tenant + two arrays.
+        let values = crate::runtime::postgres_helpers::filter_bind_values(&filter);
+        assert_eq!(values.len(), 3, "{values:?}");
+    }
+
+    // `$overlap` is accepted as an alias of `$overlaps`, and the operator is
+    // refused (not mis-rendered) on a non-PostgreSQL backend.
+    #[test]
+    fn overlap_alias_compiles_and_non_postgres_backend_refuses() {
+        let mut errors = Vec::new();
+        let mut columns = Vec::new();
+        let compiled = compile_column_predicate(
+            "tags",
+            &json!({"$overlap": ["red"]}),
+            &mut errors,
+            &mut columns,
+            4,
+            &BackendKind::Postgres,
+        );
+        assert_eq!(errors, Vec::<String>::new());
+        assert_eq!(compiled.sql, "\"tags\" && $4");
+        assert_eq!(compiled.next_param, 5);
+        assert_eq!(columns, ["tags"]);
+
+        let contains = compile_column_predicate(
+            "owner_ids",
+            &json!({"$contains": ["7f1c2a4e-0000-4000-8000-000000000001"]}),
+            &mut errors,
+            &mut columns,
+            1,
+            &BackendKind::Postgres,
+        );
+        assert_eq!(contains.sql, "\"owner_ids\" @> $1");
+
+        let mut errors = Vec::new();
+        let refused = compile_column_predicate(
+            "tags",
+            &json!({"$overlaps": ["red"]}),
+            &mut errors,
+            &mut Vec::new(),
+            1,
+            &BackendKind::Mysql,
+        );
+        assert!(refused.sql.is_empty());
+        assert!(
+            errors.iter().any(|e| e.contains("PostgreSQL-only")),
+            "{errors:?}"
+        );
+        assert!(is_operator("$overlap") && is_operator("$overlaps"));
+    }
+
     #[test]
     fn upsert_planner_logical_write_preserves_wrapper_value_adds() {
         let mut tenant = test_column("tenant_id");
@@ -5047,6 +5488,114 @@ mod tests {
             compiled_params.len(),
             3,
             "2 caller params + tenant backstop"
+        );
+    }
+
+    fn pii_object_manifest() -> CatalogManifest {
+        let mut document = crate::generation::ManifestColumn {
+            field_name: "document".to_string(),
+            column_name: "document".to_string(),
+            ..crate::generation::ManifestColumn::default()
+        };
+        document.security.is_pii = true;
+        CatalogManifest {
+            tables: vec![ManifestTable {
+                schema: "kyc".to_string(),
+                table: "applicants".to_string(),
+                columns: vec![document],
+                ..ManifestTable::default()
+            }],
+            stores: vec![crate::generation::ManifestStore {
+                store_kind: "object".to_string(),
+                resource_name: "pii_docs".to_string(),
+                owner_schema: "kyc".to_string(),
+                owner_table: "applicants".to_string(),
+                options: vec![crate::generation::ManifestStoreOption {
+                    key: "column_name".to_string(),
+                    value: "document".to_string(),
+                }],
+                ..crate::generation::ManifestStore::default()
+            }],
+            ..CatalogManifest::default()
+        }
+    }
+
+    fn pii_object_request(purpose: &str, scopes: &[&str]) -> ObjectAccessRequest {
+        ObjectAccessRequest {
+            context: RequestContext {
+                tenant_id: "tenant-1".to_string(),
+                purpose: purpose.to_string(),
+                scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
+                ..RequestContext::default()
+            },
+            bucket: "pii_docs".to_string(),
+            object_key: "tenant-1/doc.pdf".to_string(),
+            method: "GET".to_string(),
+            presigned: false,
+        }
+    }
+
+    // A purpose stated only in the `x-purpose` header never unlocks a PII
+    // object; a purpose the verified credential asserts does, as does the
+    // `udb:object:pii` scope.
+    #[test]
+    fn pii_object_access_trusts_only_a_verified_purpose() {
+        let manifest = pii_object_manifest();
+        let header_only = evaluate_object_access(&manifest, &pii_object_request("export", &[]));
+        assert!(header_only.pii);
+        assert!(!header_only.allowed, "a header purpose must not unlock PII");
+
+        let unverified = evaluate_object_access_with_verified_purpose(
+            &manifest,
+            &pii_object_request("audit", &[]),
+            false,
+        );
+        assert!(!unverified.allowed);
+
+        for purpose in ["export", "verification", "audit"] {
+            let verified = evaluate_object_access_with_verified_purpose(
+                &manifest,
+                &pii_object_request(purpose, &[]),
+                true,
+            );
+            assert!(verified.allowed, "{purpose}: {:?}", verified.errors);
+        }
+        let other = evaluate_object_access_with_verified_purpose(
+            &manifest,
+            &pii_object_request("processing", &[]),
+            true,
+        );
+        assert!(!other.allowed, "only the privileged purposes count");
+
+        let scoped =
+            evaluate_object_access(&manifest, &pii_object_request("", &["udb:object:pii"]));
+        assert!(scoped.allowed, "{:?}", scoped.errors);
+    }
+
+    // The plan's masked column list matches the runtime output mask: PII,
+    // mask-in-logs, and both encrypted flags.
+    #[test]
+    fn masked_columns_include_encrypted_columns() {
+        let column = |name: &str| crate::generation::ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            ..crate::generation::ManifestColumn::default()
+        };
+        let mut pii = column("email");
+        pii.security.is_pii = true;
+        let mut logged = column("phone");
+        logged.security.mask_in_logs = true;
+        let mut encrypted = column("national_id");
+        encrypted.security.is_encrypted = true;
+        let mut legacy = column("legacy_secret");
+        legacy.encrypted = true;
+        let table = ManifestTable {
+            columns: vec![column("id"), pii, logged, encrypted, legacy],
+            ..ManifestTable::default()
+        };
+        assert_eq!(
+            masked_columns(&table),
+            vec!["email", "phone", "national_id", "legacy_secret"]
         );
     }
 }

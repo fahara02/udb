@@ -52,6 +52,13 @@ func loadPreparedBenchmarkFixtures(t testing.TB, fix *perfFixtures, tenant, proj
 			fix.set(key, value)
 		}
 	}
+	// The delegating service account for ExchangeTokenForJob; absent when the
+	// prepared fixtures predate delegated job tokens.
+	for _, key := range delegateFixtureKeys {
+		if value := prepared.Fixtures[key]; value != "" {
+			fix.set(key, value)
+		}
+	}
 	// 0.6.6 identity-flow fixtures (tenant auth policy, passwordless sign-in,
 	// invitations, step-up, OIDC); absent when the benchmark broker predates
 	// them or (OIDC only) runs without UDB_OIDC_TEST_MODE.
@@ -97,6 +104,16 @@ var membershipFixtureKeys = []string{
 	"membership_id",
 	"membership_exchange_username",
 	"membership_exchange_project_id",
+}
+
+// delegateFixtureKeys are the `delegate_service_*` bench-body fixtures
+// scripts/prepare-benchmark-fixtures.py provisions for ExchangeTokenForJob (the
+// same list in every harness): a service account in the bench tenant whose
+// ACTIVE grant holds udb:token:delegate. Its password is UDB_LIVE_PASSWORD and
+// is never part of the prepared file.
+var delegateFixtureKeys = []string{
+	"delegate_service_username",
+	"delegate_service_project_id",
 }
 
 // messagingFixtureKeys are the `mls_*` bench-body fixtures

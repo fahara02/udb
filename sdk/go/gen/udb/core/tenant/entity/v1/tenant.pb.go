@@ -153,7 +153,7 @@ var File_udb_core_tenant_entity_v1_tenant_proto protoreflect.FileDescriptor
 
 const file_udb_core_tenant_entity_v1_tenant_proto_rawDesc = "" +
 	"\n" +
-	"&udb/core/tenant/entity/v1/tenant.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xdc\x0e\n" +
+	"&udb/core/tenant/entity/v1/tenant.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xe9\x0e\n" +
 	"\x06Tenant\x12L\n" +
 	"\ttenant_id\x18\x01 \x01(\tB/\x82\xb7\x18+\n" +
 	"\ttenant_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()\x98\x02\x01R\btenantId\x12S\n" +
@@ -187,10 +187,10 @@ const file_udb_core_tenant_entity_v1_tenant_proto_rawDesc = "" +
 	"\n" +
 	"deleted_by\x18\v \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xc4\x06\xfa\xb6\x18\xa2\x05\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xd1\x06\xfa\xb6\x18\xaf\x05\n" +
 	"\atenants\x12\n" +
-	"udb_tenant\x18\x01 \x01*KMulti-tenancy support for organizations, workspaces, accounts, and projects0\x018\x01@\x01b\x97\x01\n" +
-	"\x17tenant_self_or_platform\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01<\n" +
+	"udb_tenant\x18\x01 \x01*KMulti-tenancy support for organizations, workspaces, accounts, and projects0\x018\x01@\x01b\xa4\x01\n" +
+	"\x17tenant_self_or_platform\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01<\n" +
 	"\x19idx_tenants_parent_status\x12\x05BTREEZ\x10parent_tenant_idZ\x06status\xaa\x01R\n" +
 	"\x1ctrg_tenants_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"\x1dudb_tenant.touch_updated_at()*\x03ROW\xc2\x01\xdb\x01\n" +
 	"\x19touch_updated_at_function\x12\bpostgres\x1a\x0fbefore_triggers\"\xa2\x01CREATE OR REPLACE FUNCTION udb_tenant.touch_updated_at()\n" +

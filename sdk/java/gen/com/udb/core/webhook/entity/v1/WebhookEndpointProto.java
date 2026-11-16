@@ -45,7 +45,7 @@ public final class WebhookEndpointProto {
       "\037google/protobuf/timestamp.proto\032\033udb/co" +
       "re/common/v1/db.proto\032!udb/core/common/v" +
       "1/security.proto\032\036udb/core/common/v1/typ" +
-      "es.proto\"\204\r\n\017WebhookEndpoint\022O\n\013endpoint" +
+      "es.proto\"\221\r\n\017WebhookEndpoint\022O\n\013endpoint" +
       "_id\030\001 \001(\tB.\202\267\030*\n\013endpoint_id\022\004UUID\030\001(\001:\021" +
       "gen_random_uuid()R\nendpointId\0227\n\ttenant_" +
       "id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002\001R\010te" +
@@ -72,28 +72,29 @@ public final class WebhookEndpointProto {
       "t\022\013TIMESTAMPTZZ\025Soft delete timestampR\td" +
       "eletedAt\022H\n\ndeleted_by\030\014 \001(\tB)\202\267\030%\n\ndele" +
       "ted_by\022\004UUIDZ\021Soft delete actorR\tdeleted" +
-      "By:\322\004\372\266\030\257\003\n\021webhook_endpoints\022\013udb_webho" +
+      "By:\337\004\372\266\030\274\003\n\021webhook_endpoints\022\013udb_webho" +
       "ok\030\001 \001*>Per-tenant external webhook deli" +
-      "very targets (master-plan 9.4)0\0018\001@\001b\230\001\n" +
-      "\030webhook_tenant_isolation\032z(tenant_id::t" +
-      "ext = current_setting(\'app.current_tenan" +
-      "t_id\', true) OR current_setting(\'app.pla" +
-      "tform_admin\', true) = \'true\')(\001h\001\212\0010\n\034id" +
-      "x_webhook_endpoints_tenant\022\005BTREEZ\ttenan" +
-      "t_id\212\001?\n#idx_webhook_endpoints_tenant_ac" +
-      "tive\022\005BTREEZ\ttenant_idZ\006active\362\001!udb.web" +
-      "hook.webhook_endpoints.cdc\372\001\014webhook:rea" +
-      "d\212\262\031\231\001\n\006tenant\032\ttenant_id*4tenant_id = c" +
-      "urrent_setting(\'app.current_tenant_id\')2" +
-      "\013soft_delete:\023webhook.operational@\373\023H\002R\006" +
-      "tenantZ\010standardr\025tenant.data_residencyB" +
-      "\213\002\n\036com.udb.core.webhook.entity.v1B\024Webh" +
-      "ookEndpointProtoP\001ZFgithub.com/fahara02/" +
-      "udb/sdk/go/gen/udb/core/webhook/entity/v" +
-      "1;entityv1\242\002\004UCWE\252\002\032Udb.Core.Webhook.Ent" +
-      "ity.V1\312\002\032Udb\\Core\\Webhook\\Entity\\V1\342\002&Ud" +
-      "b\\GPBMetadata\\Core\\Webhook\\Entity\\V1\352\002\036U" +
-      "db::Core::Webhook::Entity::V1b\006proto3"
+      "very targets (master-plan 9.4)0\0018\001@\001b\245\001\n" +
+      "\030webhook_tenant_isolation\032\206\001(tenant_id =" +
+      " NULLIF(current_setting(\'app.current_ten" +
+      "ant_id\', true), \'\')::uuid OR current_set" +
+      "ting(\'app.platform_admin\', true) = \'true" +
+      "\')(\001h\001\212\0010\n\034idx_webhook_endpoints_tenant\022" +
+      "\005BTREEZ\ttenant_id\212\001?\n#idx_webhook_endpoi" +
+      "nts_tenant_active\022\005BTREEZ\ttenant_idZ\006act" +
+      "ive\362\001!udb.webhook.webhook_endpoints.cdc\372" +
+      "\001\014webhook:read\212\262\031\231\001\n\006tenant\032\ttenant_id*4" +
+      "tenant_id = current_setting(\'app.current" +
+      "_tenant_id\')2\013soft_delete:\023webhook.opera" +
+      "tional@\373\023H\002R\006tenantZ\010standardr\025tenant.da" +
+      "ta_residencyB\213\002\n\036com.udb.core.webhook.en" +
+      "tity.v1B\024WebhookEndpointProtoP\001ZFgithub." +
+      "com/fahara02/udb/sdk/go/gen/udb/core/web" +
+      "hook/entity/v1;entityv1\242\002\004UCWE\252\002\032Udb.Cor" +
+      "e.Webhook.Entity.V1\312\002\032Udb\\Core\\Webhook\\E" +
+      "ntity\\V1\342\002&Udb\\GPBMetadata\\Core\\Webhook\\" +
+      "Entity\\V1\352\002\036Udb::Core::Webhook::Entity::" +
+      "V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

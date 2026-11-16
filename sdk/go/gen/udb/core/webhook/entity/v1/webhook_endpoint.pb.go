@@ -182,7 +182,7 @@ var File_udb_core_webhook_entity_v1_webhook_endpoint_proto protoreflect.FileDesc
 
 const file_udb_core_webhook_entity_v1_webhook_endpoint_proto_rawDesc = "" +
 	"\n" +
-	"1udb/core/webhook/entity/v1/webhook_endpoint.proto\x12\x1audb.core.webhook.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\x84\r\n" +
+	"1udb/core/webhook/entity/v1/webhook_endpoint.proto\x12\x1audb.core.webhook.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\x91\r\n" +
 	"\x0fWebhookEndpoint\x12O\n" +
 	"\vendpoint_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vendpoint_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -215,9 +215,9 @@ const file_udb_core_webhook_entity_v1_webhook_endpoint_proto_rawDesc = "" +
 	"\n" +
 	"deleted_by\x18\f \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xd2\x04\xfa\xb6\x18\xaf\x03\n" +
-	"\x11webhook_endpoints\x12\vudb_webhook\x18\x01 \x01*>Per-tenant external webhook delivery targets (master-plan 9.4)0\x018\x01@\x01b\x98\x01\n" +
-	"\x18webhook_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x010\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xdf\x04\xfa\xb6\x18\xbc\x03\n" +
+	"\x11webhook_endpoints\x12\vudb_webhook\x18\x01 \x01*>Per-tenant external webhook delivery targets (master-plan 9.4)0\x018\x01@\x01b\xa5\x01\n" +
+	"\x18webhook_tenant_isolation\x1a\x86\x01(tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x010\n" +
 	"\x1cidx_webhook_endpoints_tenant\x12\x05BTREEZ\ttenant_id\x8a\x01?\n" +
 	"#idx_webhook_endpoints_tenant_active\x12\x05BTREEZ\ttenant_idZ\x06active\xf2\x01!udb.webhook.webhook_endpoints.cdc\xfa\x01\fwebhook:read\x8a\xb2\x19\x99\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x13webhook.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x8b\x02\n" +

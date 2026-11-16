@@ -607,16 +607,16 @@ pub fn render_bootstrap_table(
 /// proto entities already declare.
 fn default_tenant_rls_policy(table: &ManifestTable) -> Option<ManifestPolicy> {
     let mut predicates = Vec::new();
-    if let Some(column_name) = resolve_tenant_column(table) {
+    if let Some(column) = resolve_tenant_column_ref(table) {
         predicates.push(format!(
-            "({col}::text = current_setting('{TENANT_CONTEXT_GUC}', true)::text)",
-            col = qi(column_name)
+            "({})",
+            scope_column_predicate(column, TENANT_CONTEXT_GUC)
         ));
     }
-    if let Some(column_name) = resolve_project_column(table) {
+    if let Some(column) = resolve_project_column_ref(table) {
         predicates.push(format!(
-            "({col}::text = current_setting('{PROJECT_CONTEXT_GUC}', true)::text)",
-            col = qi(column_name)
+            "({})",
+            scope_column_predicate(column, PROJECT_CONTEXT_GUC)
         ));
     }
     if predicates.is_empty() {
@@ -630,6 +630,35 @@ fn default_tenant_rls_policy(table: &ManifestTable) -> Option<ManifestPolicy> {
         with_check: predicate,
         permissive: true,
     })
+}
+
+/// `<column> = <the setting as the column's type>`: the column is compared as
+/// stored, so an index on it serves the policy (casting the column to text
+/// made every query under the policy a sequential scan). An unset or empty
+/// setting is NULL and matches no row. A column of another type keeps the text
+/// comparison.
+fn scope_column_predicate(column: &ManifestColumn, guc: &str) -> String {
+    let col = qi(&column.column_name);
+    let setting = format!("current_setting('{guc}', true)");
+    let base = column.sql_type.trim().to_ascii_uppercase();
+    let base = base
+        .split('(')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    match base.as_str() {
+        "TEXT" | "VARCHAR" | "CHARACTER VARYING" | "CITEXT" => {
+            format!("{col} = NULLIF({setting}, '')")
+        }
+        "UUID" | "BIGINT" | "INT8" | "INTEGER" | "INT" | "INT4" => {
+            format!(
+                "{col} = NULLIF({setting}, '')::{}",
+                base.to_ascii_lowercase()
+            )
+        }
+        _ => format!("{col}::text = {setting}::text"),
+    }
 }
 
 /// Resolve the tenant-isolation column under the shared policy used by
@@ -704,6 +733,50 @@ pub(crate) use render_ext::*;
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    fn enum_column_table(sql_type: &str) -> ManifestTable {
+        ManifestTable {
+            schema: "public".into(),
+            table: "orders".into(),
+            columns: vec![ManifestColumn {
+                field_name: "status".into(),
+                column_name: "status".into(),
+                sql_type: sql_type.into(),
+                enum_values: vec!["ORDER_STATUS_OPEN".into(), "ORDER_STATUS_CLOSED".into()],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }
+    }
+
+    /// A text column with enum_values is constrained by its CHECK alone: no
+    /// `CREATE TYPE` nothing would use. A column declared with its derived
+    /// enum type, bare, schema-qualified or quoted, gets the type.
+    #[test]
+    fn enum_type_is_created_only_for_a_column_that_uses_it() {
+        for text in ["VARCHAR(32)", "TEXT", "orders_status", "other_status_enum"] {
+            let table = enum_column_table(text);
+            assert!(
+                !render_enum_types(&table).contains("CREATE TYPE"),
+                "{text} must not get an orphan enum type"
+            );
+            assert!(!column_uses_enum_type(&table, &table.columns[0]), "{text}");
+        }
+        for typed in [
+            "orders_status_enum",
+            "public.orders_status_enum",
+            "\"public\".\"orders_status_enum\"",
+            "ORDERS_STATUS_ENUM",
+        ] {
+            let table = enum_column_table(typed);
+            let sql = render_enum_types(&table);
+            assert!(
+                sql.contains("CREATE TYPE \"public\".orders_status_enum AS ENUM ('ORDER_STATUS_OPEN', 'ORDER_STATUS_CLOSED')")
+                    || sql.contains("CREATE TYPE public.orders_status_enum AS ENUM ('ORDER_STATUS_OPEN', 'ORDER_STATUS_CLOSED')"),
+                "{typed} must get its enum type, got: {sql}"
+            );
+        }
+    }
 
     pub(crate) fn partial_unique_fixture(
         schema: &str,
@@ -1348,6 +1421,107 @@ pub(crate) mod tests {
             !sql.contains("date_trunc('month', now())"),
             "default partition should remain the fallback for tables that opt in:\n{sql}"
         );
+    }
+
+    fn rls_partitioned_table() -> ManifestTable {
+        let mut table = partitioned_table();
+        table.enable_rls = true;
+        table.force_rls = true;
+        table.rls_policies = vec![ManifestPolicy {
+            name: "tenant_scope".to_string(),
+            command: "ALL".to_string(),
+            using_expression: "tenant_id::text = current_setting('app.current_tenant_id', true) \
+                               AND code LIKE 'x%'"
+                .to_string(),
+            with_check: "tenant_id IS NOT NULL".to_string(),
+            permissive: true,
+        }];
+        table
+    }
+
+    // Every partition the fallback creates carries the parent's row-level
+    // security: enabled, forced and the parent's policy, so a query that names
+    // the partition directly cannot bypass it.
+    #[test]
+    fn fallback_partitions_carry_the_parents_row_level_security() {
+        let sql = render_partition_setup(&rls_partitioned_table());
+        let create = sql
+            .find("PARTITION OF %I.%I FOR VALUES FROM (%L) TO (%L)")
+            .expect("fallback creates partitions");
+        let rls = &sql[create..];
+        assert!(
+            rls.contains(
+                "EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', _schema, _child_table);"
+            ),
+            "{sql}"
+        );
+        assert!(
+            rls.contains(
+                "EXECUTE format('ALTER TABLE %I.%I FORCE ROW LEVEL SECURITY', _schema, _child_table);"
+            ),
+            "{sql}"
+        );
+        // The policy text is quoted for format(): `'` doubled, `%` escaped.
+        assert!(
+            rls.contains(
+                "EXECUTE format('CREATE POLICY \"tenant_scope\" ON %I.%I AS PERMISSIVE FOR ALL \
+                 USING (tenant_id::text = current_setting(''app.current_tenant_id'', true) \
+                 AND code LIKE ''x%%'') WITH CHECK (tenant_id IS NOT NULL)', _schema, _child_table);"
+            ),
+            "{sql}"
+        );
+        // Inside the creating block, before the duplicate-table handler.
+        assert!(
+            rls.find("CREATE POLICY") < rls.find("EXCEPTION WHEN duplicate_table"),
+            "{sql}"
+        );
+    }
+
+    #[test]
+    fn default_partition_carries_the_parents_row_level_security() {
+        let mut table = rls_partitioned_table();
+        table.partition_default = true;
+        let sql = render_partition_setup(&table);
+        let child = "\"example_mfs\".\"mfs_transactions_default\"";
+        assert!(
+            sql.contains(&format!("ALTER TABLE {child} ENABLE ROW LEVEL SECURITY;")),
+            "{sql}"
+        );
+        assert!(
+            sql.contains(&format!("ALTER TABLE {child} FORCE ROW LEVEL SECURITY;")),
+            "{sql}"
+        );
+        assert!(
+            sql.contains(
+                "CREATE POLICY \"tenant_scope\" ON \"example_mfs\".\"mfs_transactions_default\""
+            ),
+            "{sql}"
+        );
+
+        // No declared policy: the synthesized tenant policy is the parent's, so
+        // it is the partition's too.
+        let mut table = partitioned_table();
+        table.enable_rls = true;
+        table.partition_default = true;
+        table.columns.push(ManifestColumn {
+            column_name: "tenant_id".to_string(),
+            sql_type: "UUID".to_string(),
+            is_tenant_column: true,
+            ..ManifestColumn::default()
+        });
+        let sql = render_partition_setup(&table);
+        assert!(
+            sql.contains(
+                "CREATE POLICY \"tenant_isolation\" ON \"example_mfs\".\"mfs_transactions_default\""
+            ),
+            "{sql}"
+        );
+        assert!(!sql.contains("FORCE ROW LEVEL SECURITY"), "{sql}");
+
+        // A parent without row-level security gives its partitions none.
+        let sql = render_partition_setup(&partitioned_table());
+        assert!(!sql.contains("ROW LEVEL SECURITY"), "{sql}");
+        assert!(!sql.contains("CREATE POLICY"), "{sql}");
     }
 
     #[test]

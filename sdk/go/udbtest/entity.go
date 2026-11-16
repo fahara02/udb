@@ -8,9 +8,11 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	commonv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
@@ -103,8 +105,8 @@ func (e *entity) addUnique(index *commonv1.IndexOptions, fallback string) {
 	if key.name == "" {
 		key.name = e.tableName + "_" + strings.Join(key.columns, "_") + "_key"
 	}
-	// A fake must never silently drop a partial uniqueness predicate. The
-	// common soft-delete predicates are supported; other SQL needs Start.
+	// A fake must never silently drop a partial uniqueness predicate. Conjunctions of
+	// IS [NOT] NULL and literal comparisons are supported; other SQL needs Start.
 	if key.where != "" {
 		if _, err := e.inUnique(key, map[string]any{}); err != nil {
 			e.schemaError = err.Error()
@@ -118,15 +120,101 @@ func (e *entity) inUnique(key uniqueKey, row map[string]any) (bool, error) {
 	if key.where == "" {
 		return true, nil
 	}
-	parts := strings.Fields(key.where)
-	if (len(parts) == 3 || len(parts) == 4) && strings.EqualFold(parts[1], "IS") &&
-		strings.EqualFold(parts[len(parts)-1], "NULL") && (len(parts) == 3 || strings.EqualFold(parts[2], "NOT")) {
-		name, ok := e.aliases[strings.Trim(parts[0], "\"")]
-		if ok {
-			return (row[name] == nil) == (len(parts) == 3), nil
+	test, err := uniquePredicate(key.where, func(column string) (string, bool) {
+		name, ok := e.aliases[column]
+		return name, ok
+	})
+	if err != nil {
+		return false, err
+	}
+	return test(row), nil
+}
+
+var (
+	nullTerm    = regexp.MustCompile(`(?i)^"?([A-Za-z_][A-Za-z0-9_]*)"?\s+IS\s+(NOT\s+)?NULL$`)
+	literalTerm = regexp.MustCompile(`^"?([A-Za-z_][A-Za-z0-9_]*)"?\s*(=|<>|!=)\s*'((?:[^']|'')*)'$`)
+)
+
+// splitOnAnd splits a predicate on the keyword AND (any case) where it stands
+// outside a quoted literal.
+func splitOnAnd(where string) []string {
+	var parts []string
+	quoted := false
+	start := 0
+	for i := 0; i < len(where); i++ {
+		ch := where[i]
+		if ch == '\'' {
+			quoted = !quoted
+			continue
+		}
+		if quoted || !unicode.IsSpace(rune(ch)) {
+			continue
+		}
+		if i+4 < len(where) && strings.EqualFold(where[i+1:i+4], "AND") && unicode.IsSpace(rune(where[i+4])) {
+			parts = append(parts, strings.TrimSpace(where[start:i]))
+			start = i + 4
+			i += 3
 		}
 	}
-	return false, fmt.Errorf("udbtest: unsupported unique-index predicate %q; use Start for SQL expressions", key.where)
+	return append(parts, strings.TrimSpace(where[start:]))
+}
+
+// literalText is the stored value as SQL compares it with a text literal.
+func literalText(value any) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case map[string]any, []any:
+		encoded, _ := json.Marshal(v)
+		return string(encoded)
+	}
+	return fmt.Sprint(value)
+}
+
+// uniquePredicate reads a partial unique-index predicate into a row test. The
+// fake understands a conjunction of `col IS [NOT] NULL` and
+// `col = | <> | != 'literal'` terms. As in SQL, a NULL value makes `=` and `<>`
+// false. Anything else (OR, parentheses, functions) is refused, so a predicate
+// is never silently dropped; such SQL needs Start.
+func uniquePredicate(where string, resolve func(string) (string, bool)) (func(map[string]any) bool, error) {
+	unsupported := fmt.Errorf("udbtest: unsupported unique-index predicate %q; use Start for SQL expressions", where)
+	var tests []func(map[string]any) bool
+	for _, part := range splitOnAnd(strings.TrimSpace(where)) {
+		if match := nullTerm.FindStringSubmatch(part); match != nil {
+			name, ok := resolve(strings.ToLower(match[1]))
+			if !ok {
+				return nil, unsupported
+			}
+			wantNull := match[2] == ""
+			tests = append(tests, func(row map[string]any) bool { return (row[name] == nil) == wantNull })
+			continue
+		}
+		if match := literalTerm.FindStringSubmatch(part); match != nil {
+			name, ok := resolve(strings.ToLower(match[1]))
+			if !ok {
+				return nil, unsupported
+			}
+			equalTo := match[2] == "="
+			literal := strings.ReplaceAll(match[3], "''", "'")
+			tests = append(tests, func(row map[string]any) bool {
+				value := row[name]
+				if value == nil {
+					return false
+				}
+				return (literalText(value) == literal) == equalTo
+			})
+			continue
+		}
+		return nil, unsupported
+	}
+	return func(row map[string]any) bool {
+		for _, test := range tests {
+			if !test(row) {
+				return false
+			}
+		}
+		return true
+	}, nil
 }
 
 func (e *entity) normalize(record map[string]any) (map[string]any, error) {
@@ -161,6 +249,16 @@ func (e *entity) normalize(record map[string]any) (map[string]any, error) {
 			}
 			out[name] = document
 			continue
+		}
+		// A text enum column that declares enum_values has a CHECK; the broker
+		// refuses a value outside it with the database's check violation.
+		if constraint := udbclient.EnumCheckViolation(e.columns[name], e.options[name], e.tableName, value); constraint != "" {
+			refused := refuse(codes.FailedPrecondition, "", "the value breaks constraint "+constraint).(*refusal)
+			refused.detail = &entityv1.ErrorDetail{
+				Kind: entityv1.ErrorKind_ERROR_KIND_SCHEMA, Backend: "database",
+				Operation: "check_constraint", CapabilityRequired: "check_violation",
+			}
+			return nil, refused
 		}
 		// Reuse the SDK codec for coercion, enums, timestamps, nested JSON and
 		// exact integer bounds. No second lossy JSON-to-protobuf implementation.

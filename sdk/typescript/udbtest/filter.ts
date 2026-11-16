@@ -7,7 +7,68 @@ import { refuse } from "./refusal";
 
 export type Row = Record<string, any>;
 
-const SUPPORTED = new Set(["$eq", "$ne", "$gt", "$gte", "$lt", "$lte", "$in", "$nin", "$between", "$is_null", "$not_null", "$not", "$like", "$ilike"]);
+const SUPPORTED = new Set([
+  "$eq", "$ne", "$gt", "$gte", "$lt", "$lte", "$in", "$nin", "$between", "$is_null", "$not_null", "$not", "$like", "$ilike",
+  "$contains", "$contained_by", "$overlaps", "$overlap",
+]);
+
+/** The array/JSON operators. `$overlap` is an alias of `$overlaps`. */
+export const ARRAY_OPERATORS = new Set(["$contains", "$contained_by", "$overlaps", "$overlap"]);
+
+/** How the broker evaluates `$contains`/`$contained_by` on a JSON column: JSON
+ *  containment (`@>`/`<@` on jsonb). Entity rules rewrite the operator to these
+ *  internal names once the column is known to be JSON; callers can never send them. */
+export const JSON_CONTAINS = "$contains:json";
+export const JSON_CONTAINED_BY = "$contained_by:json";
+
+function isScalar(value: unknown): boolean {
+  return value === null || (typeof value !== "object" && !Array.isArray(value));
+}
+
+/** jsonb scalar equality: same JSON type, numbers compared by value. */
+function jsonScalarEqual(a: unknown, b: unknown): boolean {
+  const left = numberOf(a);
+  const right = numberOf(b);
+  if (left !== undefined && right !== undefined) return left == right; // eslint-disable-line eqeqeq -- bigint with number compares exactly.
+  return a === b;
+}
+
+/** jsonb `container @> contained`: objects by key (recursively), arrays by
+ *  element (each contained element is contained in some container element), and,
+ *  at the top level only, an array contains a bare scalar it holds. */
+export function jsonContains(container: unknown, contained: unknown, top = true): boolean {
+  if (Array.isArray(container)) {
+    if (Array.isArray(contained)) {
+      return contained.every((want) => container.some((have) => jsonContains(have, want, false)));
+    }
+    if (top && isScalar(contained)) return container.some((have) => isScalar(have) && jsonScalarEqual(have, contained));
+    return false;
+  }
+  if (isObject(container)) {
+    if (!isObject(contained)) return false;
+    return Object.entries(contained).every(([key, want]) => key in container && jsonContains(container[key], want, false));
+  }
+  if (!isScalar(contained)) return false;
+  return jsonScalarEqual(container, contained);
+}
+
+/** SQL array element equality: a NULL element equals nothing. */
+function elementEqual(a: unknown, b: unknown): boolean {
+  if (a === null || a === undefined || b === null || b === undefined) return false;
+  return equal(a, b);
+}
+
+/** SQL array `container @> contained`: every contained element appears in the container. */
+export function arrayContains(container: unknown, contained: unknown): boolean {
+  if (!Array.isArray(container) || !Array.isArray(contained)) return false;
+  return contained.every((want) => container.some((have) => elementEqual(have, want)));
+}
+
+/** SQL array `a && b`: the arrays share an element. */
+export function arrayOverlaps(a: unknown, b: unknown): boolean {
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  return a.some((have) => b.some((want) => elementEqual(have, want)));
+}
 
 function isObject(value: unknown): value is Record<string, any> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -236,6 +297,22 @@ function columnTruth(value: unknown, condition: unknown): boolean | null {
         ok = likeMatch(text, pattern);
         break;
       }
+      case "$contains":
+        ok = arrayContains(value, arg);
+        break;
+      case "$contained_by":
+        ok = arrayContains(arg, value);
+        break;
+      case "$overlaps":
+      case "$overlap":
+        ok = arrayOverlaps(value, arg);
+        break;
+      case JSON_CONTAINS:
+        ok = jsonContains(value, arg);
+        break;
+      case JSON_CONTAINED_BY:
+        ok = jsonContains(arg, value);
+        break;
       default:
         throw refuse(codes.INVALID_ARGUMENT, "UDB_UNSUPPORTED_FILTER_OPERATOR", `unsupported filter operator ${op}`);
     }

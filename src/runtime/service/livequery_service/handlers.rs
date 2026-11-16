@@ -65,18 +65,108 @@ pub(super) fn resolve_resume_cursor(
     }
 }
 
+/// A subscription's predicates read the columns they name, for the snapshot and
+/// for every delta matched afterwards: a predicate on a PII, encrypted or
+/// masked column answers the question the masked rows hide. It follows the
+/// Select filter rule, judged against the subscriber's context (whose rows are
+/// masked by the same scope test below).
+///
+/// `verified_purpose` is the purpose the subscriber's verified bearer token
+/// asserts (see [`verified_bearer_purpose`]); only that one may count as a
+/// privileged purpose. The context's own `purpose` is never verified.
+fn enforce_live_filter_export_controls(
+    manifest: &crate::generation::CatalogManifest,
+    context: &crate::RequestContext,
+    verified_purpose: Option<&str>,
+    message_type: &str,
+    req: &lq_pb::SubscribeRequest,
+) -> Result<(), Status> {
+    let fields: Vec<String> = req
+        .filters
+        .iter()
+        .chain(req.any_of.iter().flat_map(|group| group.predicates.iter()))
+        .map(|predicate| predicate.field.trim().to_string())
+        .filter(|field| !field.is_empty())
+        .collect();
+    let security = crate::runtime::security::SecurityContext {
+        tenant_id: context.tenant_id.clone(),
+        project_id: context.project_id.clone(),
+        purpose: verified_purpose
+            .map(ToString::to_string)
+            .unwrap_or_else(|| context.purpose.clone()),
+        purpose_verified: verified_purpose.is_some(),
+        scopes: context.scopes.clone(),
+        ..crate::runtime::security::SecurityContext::default()
+    };
+    crate::runtime::security::enforce_filter_export_controls(
+        manifest,
+        &security,
+        message_type,
+        None,
+        &fields,
+    )
+}
+
+/// The purpose claim of the subscriber's verified bearer token, if it has one.
+/// Taken only from the bearer principal the credential layer verified, and
+/// only when that principal is the one the method-security gate admitted
+/// (same subject and credential id). A purpose in a request header is never
+/// returned.
+fn verified_bearer_purpose(
+    claim: &crate::runtime::service::method_security::VerifiedClaimContext,
+    preresolved: Option<&crate::runtime::credential_layer::PreresolvedCredentials>,
+) -> Option<String> {
+    if !claim.authenticated {
+        return None;
+    }
+    let principal = preresolved?.bearer.as_ref()?.as_ref().ok()?;
+    if principal.subject != claim.subject || principal.credential_id != claim.credential_id {
+        return None;
+    }
+    principal
+        .purpose
+        .clone()
+        .filter(|purpose| !purpose.trim().is_empty())
+}
+
+/// Give the native context the subscriber's verified scopes. The native
+/// context is built from request metadata and carries none, so a subscriber
+/// holding `udb:pii:read` was refused a predicate on a PII column and saw
+/// masked rows it may read. Only an authenticated claim from the
+/// method-security gate supplies scopes; an in-process call without one keeps
+/// the context as built.
+fn with_verified_scopes(
+    mut context: crate::RequestContext,
+    claim: &crate::runtime::service::method_security::VerifiedClaimContext,
+) -> crate::RequestContext {
+    if claim.authenticated {
+        context.scopes = claim.scopes.clone();
+    }
+    context
+}
+
 pub(crate) async fn subscribe(
     svc: &LiveQueryServiceImpl,
     request: Request<lq_pb::SubscribeRequest>,
 ) -> Result<Response<LiveQueryStream>, Status> {
     let metadata = request.metadata().clone();
+    let claim = crate::runtime::service::method_security::current_claim_context();
+    let verified_purpose = verified_bearer_purpose(
+        &claim,
+        request
+            .extensions()
+            .get::<crate::runtime::credential_layer::PreresolvedCredentials>(),
+    );
     let req = request.into_inner();
     // Scope guard FIRST: body tenant/project must match the verified claim and
     // request metadata before either value reaches the runtime context.
     let tenant_id = req.tenant_id.trim().to_string();
     let message_type = req.message_type.trim().to_string();
     let project_id = req.project_id.trim().to_string();
-    let context = validated_native_service_context(&metadata, &tenant_id, &project_id)?;
+    let context = with_verified_scopes(
+        validated_native_service_context(&metadata, &tenant_id, &project_id)?,
+        &claim,
+    );
     if message_type.is_empty() {
         return Err(livequery_required_field(
             "message_type",
@@ -100,6 +190,13 @@ pub(crate) async fn subscribe(
         .map_or(native, |catalog| &catalog.manifest);
     let source = resolve_source(&message_type, source_manifest)?;
     let user_filter = build_user_filter(&req.filters, &req.any_of)?;
+    enforce_live_filter_export_controls(
+        source_manifest,
+        &context,
+        verified_purpose.as_deref(),
+        &message_type,
+        &req,
+    )?;
 
     // Durable-resume cursor (optional): the client's last-delivered event_id.
     // The typed `since_event_id` field is canonical; the older
@@ -218,11 +315,17 @@ pub(crate) async fn subscribe(
     );
     let read = LogicalRead {
         message_type: message_type.clone(),
-        filter: Some(snapshot_filter(
-            &source.tenant_field,
-            &tenant_id,
-            user_filter.clone(),
-        )),
+        // A shared table has no tenant column to scope on: every tenant reads
+        // all of its rows, so only the caller's predicates apply.
+        filter: if source.shared {
+            user_filter.clone()
+        } else {
+            Some(snapshot_filter(
+                &source.tenant_field,
+                &tenant_id,
+                user_filter.clone(),
+            ))
+        },
         projection: None,
         sort: Vec::new(),
         include: Vec::new(),
@@ -375,4 +478,168 @@ pub(crate) async fn subscribe(
         }
     };
     Ok(Response::new(Box::pin(stream)))
+}
+
+#[cfg(test)]
+mod filter_export_control_tests {
+    use super::*;
+    use crate::generation::{
+        CatalogManifest, ManifestColumn, ManifestColumnSecurity, ManifestTable,
+    };
+
+    fn manifest() -> CatalogManifest {
+        CatalogManifest {
+            tables: vec![ManifestTable {
+                message_name: "Customer".to_string(),
+                columns: vec![
+                    ManifestColumn {
+                        field_name: "status".to_string(),
+                        column_name: "status".to_string(),
+                        ..ManifestColumn::default()
+                    },
+                    ManifestColumn {
+                        field_name: "phone".to_string(),
+                        column_name: "phone".to_string(),
+                        security: ManifestColumnSecurity {
+                            mask_in_logs: true,
+                            ..ManifestColumnSecurity::default()
+                        },
+                        ..ManifestColumn::default()
+                    },
+                ],
+                ..ManifestTable::default()
+            }],
+            ..CatalogManifest::default()
+        }
+    }
+
+    fn on(field: &str) -> lq_pb::LiveQueryPredicate {
+        lq_pb::LiveQueryPredicate {
+            field: field.to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn a_live_query_predicate_on_a_masked_column_needs_the_pii_scope() {
+        let subscriber = crate::RequestContext {
+            tenant_id: "acme".to_string(),
+            ..crate::RequestContext::default()
+        };
+        let plain = lq_pb::SubscribeRequest {
+            filters: vec![on("status")],
+            ..Default::default()
+        };
+        enforce_live_filter_export_controls(&manifest(), &subscriber, None, "Customer", &plain)
+            .expect("a predicate on an unmasked column");
+        let probe = lq_pb::SubscribeRequest {
+            any_of: vec![lq_pb::LiveQueryAnyOf {
+                predicates: vec![on("status"), on("PHONE")],
+            }],
+            ..Default::default()
+        };
+        let err =
+            enforce_live_filter_export_controls(&manifest(), &subscriber, None, "Customer", &probe)
+                .expect_err("a predicate on a masked column needs the scope");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        let scoped = crate::RequestContext {
+            scopes: vec!["udb:pii:read".to_string()],
+            ..subscriber
+        };
+        enforce_live_filter_export_controls(&manifest(), &scoped, None, "Customer", &probe)
+            .expect("udb:pii:read may filter on it");
+
+        // A purpose the verified token asserts counts; the same purpose stated
+        // only on the context (a header) does not.
+        let header_purpose = crate::RequestContext {
+            purpose: "audit".to_string(),
+            ..crate::RequestContext::default()
+        };
+        enforce_live_filter_export_controls(&manifest(), &header_purpose, None, "Customer", &probe)
+            .expect_err("a header purpose unlocks nothing");
+        enforce_live_filter_export_controls(
+            &manifest(),
+            &header_purpose,
+            Some("audit"),
+            "Customer",
+            &probe,
+        )
+        .expect("a verified audit purpose may filter on a masked column");
+    }
+
+    fn claim(scopes: &[&str]) -> crate::runtime::service::method_security::VerifiedClaimContext {
+        crate::runtime::service::method_security::VerifiedClaimContext {
+            subject: "user-a".to_string(),
+            tenant_id: "acme".to_string(),
+            scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
+            credential_id: "jwt-a".to_string(),
+            authenticated: true,
+            ..Default::default()
+        }
+    }
+
+    // The native context carries no scopes; the subscriber's verified scopes
+    // must reach the filter check and the mask.
+    #[test]
+    fn a_subscriber_holding_the_pii_scope_may_filter_on_a_masked_column() {
+        let native = crate::RequestContext {
+            tenant_id: "acme".to_string(),
+            ..crate::RequestContext::default()
+        };
+        let probe = lq_pb::SubscribeRequest {
+            filters: vec![on("phone")],
+            ..Default::default()
+        };
+        let context = with_verified_scopes(native.clone(), &claim(&["udb:stream", "udb:pii:read"]));
+        assert_eq!(context.scopes, vec!["udb:stream", "udb:pii:read"]);
+        enforce_live_filter_export_controls(&manifest(), &context, None, "Customer", &probe)
+            .expect("the verified udb:pii:read scope is honoured");
+
+        // No authenticated claim (in-process call): nothing is added.
+        let unauthenticated = crate::runtime::service::method_security::VerifiedClaimContext {
+            scopes: vec!["udb:pii:read".to_string()],
+            ..Default::default()
+        };
+        assert!(
+            with_verified_scopes(native, &unauthenticated)
+                .scopes
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn only_the_admitted_bearer_supplies_a_verified_purpose() {
+        let principal = crate::runtime::credential_layer::VerifiedPrincipal {
+            subject: "user-a".to_string(),
+            credential_id: "jwt-a".to_string(),
+            purpose: Some("export".to_string()),
+            ..Default::default()
+        };
+        let credentials = crate::runtime::credential_layer::PreresolvedCredentials {
+            bearer: Some(Ok(principal.clone())),
+            ..Default::default()
+        };
+        assert_eq!(
+            verified_bearer_purpose(&claim(&[]), Some(&credentials)).as_deref(),
+            Some("export")
+        );
+        assert_eq!(verified_bearer_purpose(&claim(&[]), None), None);
+        let unauthenticated = crate::runtime::service::method_security::VerifiedClaimContext {
+            authenticated: false,
+            ..claim(&[])
+        };
+        assert_eq!(
+            verified_bearer_purpose(&unauthenticated, Some(&credentials)),
+            None
+        );
+        // A bearer that is not the admitted principal is ignored.
+        let other = crate::runtime::credential_layer::PreresolvedCredentials {
+            bearer: Some(Ok(crate::runtime::credential_layer::VerifiedPrincipal {
+                credential_id: "jwt-b".to_string(),
+                ..principal
+            })),
+            ..Default::default()
+        };
+        assert_eq!(verified_bearer_purpose(&claim(&[]), Some(&other)), None);
+    }
 }
