@@ -3,6 +3,7 @@ package udbclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -1605,19 +1606,50 @@ func isLiveMountFailure(err error) bool {
 
 // isFieldLevelRefusal reports whether an UNIMPLEMENTED came from the RPC's own
 // handler refusing one request field it cannot honour ("CacheSet.idempotency_key
-// is not supported: ..."), with the broker's typed error detail attached. That
-// proves the call reached the implemented RPC: the populated probe request set a
-// field the broker refuses loudly instead of ignoring. A bare UNIMPLEMENTED (no
-// detail, or no field named) is still a mount failure.
+// is not supported: ..."), with the broker's typed error detail attached (the
+// generated client carries it as *Error.DetailBin from the udb-error-detail-bin
+// trailer). That proves the call reached the implemented RPC: the populated probe
+// request set a field the broker refuses loudly instead of ignoring. A bare
+// UNIMPLEMENTED (no detail, or no field named) is still a mount failure.
 func isFieldLevelRefusal(fullMethod string, err error) bool {
-	st, ok := status.FromError(err)
-	if !ok || st.Code() != codes.Unimplemented || len(st.Details()) == 0 {
+	var code codes.Code
+	var message string
+	var hasDetail bool
+	var typed *Error
+	if errors.As(err, &typed) {
+		code, message, hasDetail = typed.Code, typed.Message, len(typed.DetailBin) > 0
+	} else if st, ok := status.FromError(err); ok {
+		code, message, hasDetail = st.Code(), st.Message(), len(st.Details()) > 0
+	} else {
+		return false
+	}
+	if code != codes.Unimplemented || !hasDetail {
 		return false
 	}
 	method := fullMethod[strings.LastIndex(fullMethod, "/")+1:]
-	message := st.Message()
 	at := strings.Index(message, method+".")
 	return at >= 0 && strings.Contains(message[at:], " is not supported")
+}
+
+func TestFieldLevelRefusalCountsAsReached(t *testing.T) {
+	detail := []byte{0x0a, 0x01, 0x78}
+	refusal := &Error{Code: codes.Unimplemented, RPC: "/udb.services.v1.DataBroker/CacheSet",
+		Message: "CacheSet.idempotency_key is not supported: replay protection is only available on the relational data RPCs", DetailBin: detail}
+	if !isFieldLevelRefusal("/udb.services.v1.DataBroker/CacheSet", refusal) {
+		t.Fatal("a field-level refusal with a typed detail must count as reaching the RPC")
+	}
+	if isFieldLevelRefusal("/udb.services.v1.DataBroker/CacheSet", &Error{Code: codes.Unimplemented, Message: refusal.Message}) {
+		t.Fatal("without the typed detail it is still a mount failure")
+	}
+	if isFieldLevelRefusal("/udb.services.v1.DataBroker/CacheGet", refusal) {
+		t.Fatal("a refusal naming another RPC's field is not this RPC's")
+	}
+	if isFieldLevelRefusal("/udb.services.v1.DataBroker/CacheSet", &Error{Code: codes.Unimplemented, Message: "unknown method", DetailBin: detail}) {
+		t.Fatal("an UNIMPLEMENTED that names no field is a mount failure")
+	}
+	if isFieldLevelRefusal("/udb.services.v1.DataBroker/CacheSet", status.Error(codes.Unimplemented, "unknown method CacheSet")) {
+		t.Fatal("a bare gRPC UNIMPLEMENTED is a mount failure")
+	}
 }
 
 func assertRequiredLiveBackends(t *testing.T, enabled []string) {
