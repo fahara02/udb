@@ -1771,15 +1771,16 @@ def test_timeseries_benchmark_body_keeps_resource_authority():
     fix.set("project", "project-1")
     fix.set("ts_table", "sdk_perf_ts")
     request = perf_real_body(DataBrokerClient, method, Metadata(
-        tenant_id="tenant-1", project_id="project-1"), fix)
+        tenant_id="tenant-1", project_id="project-1", purpose="sdk.live.perf",
+        correlation_id="timeseries-body"), fix)
     assert request.resource.backend == "clickhouse"
     assert request.resource.resource_name == "sdk_perf_ts"
-    # The explicit resource-based contract does not name the unrelated SQL
-    # entity. A legacy fallback used to inject SdkLiveRecord after failing to
-    # parse the Timestamp's JSON representation, changing its authority.
-    assert request.message_type == ""
+    # The request is resource-based: it names the ClickHouse resource, never a SQL entity.
     assert len(request.points) == 1
-    assert request.points[0].timestamp.seconds == 1767225600
+    # The raw resource declares no time_field, so the body sends no timestamp
+    # (the broker refuses one instead of dropping it).
+    assert not request.points[0].HasField("timestamp")
+    assert request.points[0].values["cpu"] == 0.5
 
 
 def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "PerfFixtures") -> None:

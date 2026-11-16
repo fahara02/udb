@@ -1168,7 +1168,9 @@ test("manifest JSON body hydrates all remaining DataBroker rows", () => {
   assert.equal(rollback?.project_id, "project-1");
   assert.equal(stage?.manifest_json, "e30=");
   assert.equal(stage?.reason, "stage");
-  assert.deepEqual(timeSeries?.points?.[0]?.timestamp, { seconds: 1767225600, nanos: 0 });
+  // The raw resource declares no time_field, so the body sends no timestamp (the broker refuses one).
+  assert.equal(timeSeries?.points?.[0]?.timestamp, undefined);
+  assert.equal(timeSeries?.points?.[0]?.values?.cpu, 0.5);
   assert.equal(timeSeries?.points?.[0]?.values?.cpu, 0.5);
   assert.equal(validate?.manifest_json, "e30=");
   assert.equal(validate?.reason, "validate");
