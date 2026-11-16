@@ -2996,8 +2996,8 @@
     "operation_id": "timeSeriesWrite",
     "op_kind": "MUTATION",
     "request_msg": "TimeSeriesWriteRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"clickhouse\", \"resource_name\": \"<seed:ts_table>\" }, \"points\": [{ \"timestamp\": \"2026-01-01T00:00:00Z\", \"tags\": { \"host\": \"a\" }, \"values\": { \"cpu\": 0.5 } }] }`",
-    "notes": "TimeSeriesPoint = `{timestamp(Timestamp), tags<map str,str>, values<map str,double>, fields(Struct)}`. `idempotency_key` optional."
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"clickhouse\", \"resource_name\": \"<seed:ts_table>\" }, \"points\": [{ \"tags\": { \"host\": \"a\" }, \"values\": { \"cpu\": 0.5 } }] }`",
+    "notes": "TimeSeriesPoint = `{timestamp(Timestamp), tags<map str,str>, values<map str,double>, fields(Struct)}`. `timestamp` only when the target declares a `timeseries_store` time_field (this raw resource does not, so it is refused). `idempotency_key` optional."
   },
   {
     "file": "data_broker.md",
