@@ -61,7 +61,7 @@ const COMMANDS: &[CmdHelp] = &[
   Setting flags (each also an environment variable or `.env` entry; a flag wins):
     --cleanup-enabled <true|false>         UDB_CLEANUP_ENABLED
     --cleanup-retention <table=dur,...>     UDB_CLEANUP_RETENTION
-    --cleanup-reclaim <off|vacuum|full>    UDB_CLEANUP_RECLAIM
+    --cleanup-reclaim <off|vacuum|full|online>    UDB_CLEANUP_RECLAIM
     --cleanup-interval <dur>      UDB_CLEANUP_INTERVAL
     --cleanup-batch <rows>        UDB_CLEANUP_BATCH
     --cleanup-max-size <size|off> UDB_CLEANUP_MAX_SIZE (default 1GB)
@@ -79,7 +79,7 @@ const COMMANDS: &[CmdHelp] = &[
         name: "cleanup",
         group: "Core",
         summary: "The cleanup service for UDB's own tables: show its settings or run a pass now.",
-        usage: "udb cleanup show  |  udb cleanup run [--dsn <postgres-dsn>] [--reclaim off|vacuum|full]",
+        usage: "udb cleanup show  |  udb cleanup run [--dsn <postgres-dsn>] [--reclaim off|vacuum|full|online]",
         details: "\
   show  prints each UDB table the cleanup service keeps (decision audit, auth
         audit log, metering events, every time-partitioned table), the retention

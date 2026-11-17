@@ -49,6 +49,14 @@ runs:
         "CARGO_NET_RETRY=10" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         "CARGO_HTTP_MULTIPLEXING=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         "CARGO_HTTP_TIMEOUT=120" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        # Full debug info for the `udb` crate needs more than a 16 GB runner
+        # once the library and its test harness compile side by side (an
+        # all-targets build OOM-killed the runner, which then reports "lost
+        # communication" or a timeout). Line tables keep backtraces readable.
+        # A job that sets its own value keeps it.
+        if (-not $env:CARGO_PROFILE_DEV_DEBUG) {
+          "CARGO_PROFILE_DEV_DEBUG=line-tables-only" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        }
 
     # Native build deps. aws-lc-sys (s3) needs cmake + NASM; WebAuthn pulls
     # vendored OpenSSL and requires a platform-native Perl plus compiler tools.

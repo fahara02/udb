@@ -76,9 +76,14 @@
 //! table: `vacuum` (default) runs `VACUUM (ANALYZE)` on it so the space is
 //! reused at once and nothing is locked; `full` runs `VACUUM FULL`, which gives
 //! the space back to the operating system but locks the table while it runs;
-//! `off` leaves it to autovacuum. `udb cleanup run --reclaim full` does a full
-//! reclaim once, for a maintenance window. Dropped partitions free their space
-//! immediately.
+//! `off` leaves it to autovacuum; `online` gives the space back to the
+//! operating system while the table stays in use: it copies the live rows into
+//! a compact twin page range by page range, then swaps the two under a lock
+//! held only for the swap (bounded by a 3 s `lock_timeout`, retried when the
+//! table is busy). A table it cannot move faithfully (triggers, foreign keys,
+//! identity columns, views over it, no primary key...) is refused with the
+//! reason. `udb cleanup run --reclaim full` (or `online`) reclaims once, for a
+//! maintenance window. Dropped partitions free their space immediately.
 //!
 //! **Size cap.** `UDB_CLEANUP_MAX_SIZE` (default `1GB`, `off` turns it off)
 //! caps the estimated size of the log tables that have a retention. While
@@ -195,6 +200,12 @@ pub enum Reclaim {
     /// `VACUUM FULL`: the space goes back to the operating system; the table
     /// is locked while it runs.
     Full,
+    /// Online compaction: the space goes back to the operating system and
+    /// the table stays in use; it is locked only for a short swap at the end
+    /// (see [`compact`]), a partitioned table partition by partition. A table
+    /// too small or not bloated enough to be worth copying only gets
+    /// `VACUUM (ANALYZE)`.
+    Online,
 }
 
 impl Reclaim {
@@ -203,8 +214,9 @@ impl Reclaim {
             "off" | "none" | "0" | "false" => Ok(Reclaim::Off),
             "vacuum" | "" => Ok(Reclaim::Vacuum),
             "full" => Ok(Reclaim::Full),
+            "online" => Ok(Reclaim::Online),
             other => Err(format!(
-                "{CLEANUP_RECLAIM_ENV}: `{other}` is not off, vacuum or full"
+                "{CLEANUP_RECLAIM_ENV}: `{other}` is not off, vacuum, full or online"
             )),
         }
     }
@@ -214,6 +226,7 @@ impl Reclaim {
             Reclaim::Off => "off",
             Reclaim::Vacuum => "vacuum",
             Reclaim::Full => "full",
+            Reclaim::Online => "online",
         }
     }
 }
@@ -465,6 +478,8 @@ const DEFAULT_SWEEP_PAGES: i64 = 4_096;
 /// (`UDB_CLEANUP_STATEMENT_TIMEOUT`, `UDB_CLEANUP_SWEEP_PAGES`).
 static STATEMENT_TIMEOUT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
 static SWEEP_PAGES: std::sync::OnceLock<i64> = std::sync::OnceLock::new();
+
+mod compact;
 
 fn statement_timeout() -> &'static str {
     STATEMENT_TIMEOUT.get().map_or("0", String::as_str)
@@ -1433,7 +1448,7 @@ fn sweep_due(target: &Target, every: Duration) -> bool {
 pub async fn run_cleanup_with(
     runtime: &crate::runtime::DataBrokerRuntime,
     settings: &CleanupSettings,
-    reclaim: Reclaim,
+    reclaim_mode: Reclaim,
     drain: bool,
     reclaim_all: bool,
 ) -> Result<i64, String> {
@@ -1470,17 +1485,9 @@ pub async fn run_cleanup_with(
                 changed += outcome.total();
                 // A dropped partition already gave its space back; deleted
                 // rows leave free space in the table file.
-                let vacuum = match reclaim {
-                    Reclaim::Off => None,
-                    Reclaim::Vacuum => {
-                        (outcome.deleted > 0 || reclaim_all).then_some("VACUUM (ANALYZE)")
-                    }
-                    Reclaim::Full => {
-                        (outcome.deleted > 0 || reclaim_all).then_some("VACUUM (FULL, ANALYZE)")
-                    }
-                };
-                if let Some(vacuum) = vacuum
-                    && let Err(why) = reclaim_space(&pool, &target.relation(), vacuum).await
+                if (outcome.deleted > 0 || reclaim_all)
+                    && let Err(why) =
+                        reclaim(&pool, &target.relation(), reclaim_mode, reclaim_all).await
                 {
                     failures.push(format!("{}: {why}", target.qualified()));
                 }
@@ -1509,22 +1516,14 @@ pub async fn run_cleanup_with(
         }
     }
     // An explicit reclaim gives the space the journal sweep freed back too.
-    if reclaim_all
-        && reclaim != Reclaim::Off
-        && let Some(pool) = runtime.pg_pool_clone()
-    {
+    if reclaim_all && let Some(pool) = runtime.pg_pool_clone() {
         let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
-        let vacuum = if reclaim == Reclaim::Full {
-            "VACUUM (FULL, ANALYZE)"
-        } else {
-            "VACUUM (ANALYZE)"
-        };
-        if let Err(why) = reclaim_space(&pool, &journal, vacuum).await {
+        if let Err(why) = reclaim(&pool, &journal, reclaim_mode, true).await {
             failures.push(format!("{journal}: {why}"));
         }
     }
     match &settings.max_size {
-        Ok(Some(max)) => match enforce_size_cap(runtime, settings, *max, reclaim).await {
+        Ok(Some(max)) => match enforce_size_cap(runtime, settings, *max, reclaim_mode).await {
             Ok(deleted) => changed += deleted,
             Err(why) => failures.push(why),
         },
@@ -1551,6 +1550,25 @@ fn store_pool(runtime: &crate::runtime::DataBrokerRuntime, target: &Target) -> O
         runtime
             .native_store_pool_for_service(&target.service, true, "")
             .ok()
+    }
+}
+
+/// Give the free space of `relation` back the way `mode` says. `force`
+/// (an explicit `udb cleanup run`) compacts any table worth copying, not
+/// only a bloated one.
+async fn reclaim(pool: &PgPool, relation: &str, mode: Reclaim, force: bool) -> Result<(), String> {
+    match mode {
+        Reclaim::Off => Ok(()),
+        Reclaim::Vacuum => reclaim_space(pool, relation, "VACUUM (ANALYZE)").await,
+        Reclaim::Full => reclaim_space(pool, relation, "VACUUM (FULL, ANALYZE)").await,
+        Reclaim::Online => {
+            // The plain VACUUM first: it makes the space reusable at once and
+            // refreshes the statistics the bloat estimate reads.
+            reclaim_space(pool, relation, "VACUUM (ANALYZE)").await?;
+            compact::compact_online(pool, relation, force)
+                .await
+                .map(|_| ())
+        }
     }
 }
 
@@ -2522,7 +2540,7 @@ async fn enforce_size_cap(
     runtime: &crate::runtime::DataBrokerRuntime,
     settings: &CleanupSettings,
     max: u64,
-    reclaim: Reclaim,
+    reclaim_mode: Reclaim,
 ) -> Result<i64, String> {
     let config = &settings.retention;
     let mut tables = Vec::new();
@@ -2637,14 +2655,7 @@ async fn enforce_size_cap(
                     "deleted the oldest rows to stay under {CLEANUP_MAX_SIZE_ENV}"
                 );
                 deleted += removed;
-                let vacuum = match reclaim {
-                    Reclaim::Off => None,
-                    Reclaim::Vacuum => Some("VACUUM (ANALYZE)"),
-                    Reclaim::Full => Some("VACUUM (FULL, ANALYZE)"),
-                };
-                if let Some(vacuum) = vacuum
-                    && let Err(why) = reclaim_space(pool, &target.relation(), vacuum).await
-                {
+                if let Err(why) = reclaim(pool, &target.relation(), reclaim_mode, false).await {
                     failures.push(format!("{}: {why}", target.qualified()));
                 }
             } else if age == SIZE_CAP_FLOOR {
@@ -4237,10 +4248,11 @@ mod tests {
         assert_eq!(Reclaim::parse("vacuum"), Ok(Reclaim::Vacuum));
         assert_eq!(Reclaim::parse(" FULL "), Ok(Reclaim::Full));
         assert_eq!(Reclaim::parse("off"), Ok(Reclaim::Off));
+        assert_eq!(Reclaim::parse("Online"), Ok(Reclaim::Online));
         assert!(
             Reclaim::parse("shrink")
                 .unwrap_err()
-                .contains("off, vacuum or full")
+                .contains("off, vacuum, full or online")
         );
     }
 

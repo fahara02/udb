@@ -62,6 +62,7 @@ graph LR
   runtime_authz["runtime/authz"]
   runtime_canonical_store["runtime/canonical_store"]
   runtime_cdc["runtime/cdc"]
+  runtime_cleanup["runtime/cleanup"]
   runtime_config["runtime/config"]
   runtime_core["runtime/core"]
   runtime_executors["runtime/executors"]
@@ -473,6 +474,10 @@ graph LR
 - **src/runtime/cdc/postgres_source.rs** — Transactional PostgreSQL INSERT capture and per-consumer receipts. A capture sequence orders finite scan cycles; only receipts establish completion. The source pool never participates in the destination journal transa… · types: `PreparedPostgresSource` · fns: `identity_digest`, `prepare` · consts: `REGISTRY`, `CONSUMERS`, `CAPTURE`, `RECEIPTS`, `DESTINATIONS`
 - **src/runtime/cdc/source.rs** — Per-backend CDC source trait (C2 + C3). Pre-C2 the CDC engine in `runtime/cdc/engine_tail.rs` was hard-wired to PostgreSQL logical replication — `LogicalReplicationStream` over the Postgres replication protocol. Other… · traits: `CdcSource` · types: `CdcEvent`, `PostgresCdcSource`, `MongoCdcSource`, `MysqlBinlogSource` · fns: `insert`, `update`, `delete`, `validate_identity`
 - **src/runtime/cdc/topic_filter.rs** — SQL form of a CDC topic pattern. Topic patterns are matched with `WildMatch` everywhere in memory: `*` spans any run of characters (dots included), `?` is exactly one character, and matching is case-sensitive. A journ… · types: `TopicFilter` · fns: `compile`, `sql`
+
+### runtime/cleanup  (1 files)
+
+- **src/runtime/cleanup/compact.rs** — Online compaction: give a bloated table's space back to the operating system without locking it while its rows are copied. `VACUUM FULL` rewrites a table under an ACCESS EXCLUSIVE lock held for the whole rewrite: on a… · types: `Compacted` · fns: `compact_online`
 
 ### runtime/config  (4 files)
 

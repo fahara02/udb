@@ -2433,7 +2433,7 @@ pub enum CleanupCommand {
     /// Print the retention in force per table and the related settings.
     Show,
     /// Run one cleanup pass now (partition upkeep, retention, reclaim);
-    /// `--reclaim off|vacuum|full` overrides `UDB_CLEANUP_RECLAIM` for it.
+    /// `--reclaim off|vacuum|full|online` overrides `UDB_CLEANUP_RECLAIM` for it.
     Run {
         dsn: Option<String>,
         reclaim: Option<String>,
