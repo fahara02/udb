@@ -670,6 +670,7 @@ impl DataBrokerRuntime {
                                     .and_then(|canonical| {
                                         self.encrypt_record_for_table(table, &canonical)
                                     })
+                                    .map(|encrypted| (table, encrypted))
                                 }
                                 Err(error) => Err(tx_object_invalid_field(
                                     "message_type",
@@ -678,7 +679,7 @@ impl DataBrokerRuntime {
                                 )),
                             };
                         match encrypted_record {
-                            Ok(encrypted_record) => {
+                            Ok((table, encrypted_record)) => {
                                 let plan = build_upsert_plan(
                                     manifest,
                                     &UpsertPlanRequest {
@@ -724,7 +725,22 @@ impl DataBrokerRuntime {
                                             Err(status)
                                         } else if affected == 0 {
                                             Ok(affected)
-                                        } else if let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+                                        // A partial record keeps the row's other
+                                        // columns: project the row as stored, read
+                                        // back in this tx by the same helper the
+                                        // unary upsert uses, so a projection_filter
+                                        // judges the whole row on both paths.
+                                        } else if let Err(err) = match super::setup_data::upsert_projection_source_row(
+                                                &mut tx,
+                                                table,
+                                                &projection_plans,
+                                                &mutation.message_type,
+                                                &encrypted_record,
+                                            )
+                                            .await
+                                        {
+                                            Err(status) => Err(status),
+                                            Ok(stored_row) => crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                                                 &mut tx,
                                                 &projection_config,
                                                 crate::runtime::projection::task_project_id(&context.project_id),
@@ -733,15 +749,18 @@ impl DataBrokerRuntime {
                                                 // Encrypted + column-keyed: the
                                                 // bytes the row holds (no
                                                 // plaintext leaves the DB).
-                                                &encrypted_record,
+                                                stored_row.as_ref().unwrap_or(&encrypted_record),
                                                 &projection_plans,
                                             )
                                             .await
-                                        {
-                                            Err(tx_object_internal_status(
-                                                "enqueue_projection_tasks",
-                                                format!("projection task enqueue failed: {err}"),
-                                            ))
+                                            .map_err(|err| {
+                                                tx_object_internal_status(
+                                                    "enqueue_projection_tasks",
+                                                    format!("projection task enqueue failed: {err}"),
+                                                )
+                                            }),
+                                        } {
+                                            Err(err)
                                         // mutations→CDC: emit the transactional-outbox
                                         // change event IN THE SAME TX, exactly as the
                                         // unary upsert does (setup_data.rs). Without
@@ -2962,8 +2981,18 @@ impl DataBrokerRuntime {
                 };
             }
         };
-        let consumer: BaseConsumer = match ClientConfig::new()
-            .set("bootstrap.servers", &brokers)
+        let mut client_config = match crate::runtime::config::kafka_client_config(&brokers) {
+            Ok(client_config) => client_config,
+            Err(err) => {
+                return BackendProbeResult {
+                    backend: "kafka".into(),
+                    ok: false,
+                    latency_ms: 0,
+                    error: Some(err),
+                };
+            }
+        };
+        let consumer: BaseConsumer = match client_config
             .set("group.id", "udb-doctor")
             .set("enable.auto.commit", "false")
             .set("session.timeout.ms", "6000")

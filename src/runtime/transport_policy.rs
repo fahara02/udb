@@ -16,8 +16,8 @@
 //! * `UDB_REDIS_TLS_REQUIRED`    — every Redis connection must use `rediss://`
 //!   without `#insecure`.
 //! * `UDB_OUTBOUND_TLS_REQUIRED` — every other outbound connection (HTTP
-//!   backends, MySQL, SQL Server, MongoDB, Neo4j, Cassandra, Memcached, object
-//!   storage, OTLP, webhooks) must be encrypted and verified.
+//!   backends, MySQL, SQL Server, MongoDB, Neo4j, Cassandra, Memcached, Kafka,
+//!   object storage, OTLP, webhooks) must be encrypted and verified.
 //!
 //! A backend marked as a cloud deployment (`UDB_<BACKEND>_DEPLOY_MODE=cloud`,
 //! a well-known cloud hostname, or `deploy.tls_override = true`) must be at
@@ -28,7 +28,10 @@
 //! sidecar listening on loopback is the supported way to reach a backend this
 //! build cannot speak TLS to (Cassandra, Memcached).
 //!
-//! Kafka is deliberately not judged here; it has its own settings.
+//! Kafka has no DSN: its brokers come from `UDB_KAFKA_BROKERS` and its
+//! security from `UDB_KAFKA_SECURITY_PROTOCOL` and `UDB_KAFKA_SSL_*`
+//! ([`crate::runtime::config::KafkaTlsConfig`]). The gate judges the two
+//! together.
 //!
 //! The flags are read once, at startup, by [`TransportPolicy::from_env`]; the
 //! per-request helpers ([`https_only_for`], [`check_secret_url`]) consult the
@@ -124,6 +127,9 @@ pub enum EndpointKind {
     Neo4j,
     /// `memcache://`; this build has no Memcached TLS.
     Memcached,
+    /// Kafka brokers with their client security, written by
+    /// [`kafka_endpoint`] as `kafka://host:port,…?security.protocol=…`.
+    Kafka,
 }
 
 /// How an endpoint protects its traffic, judged from its DSN or URL.
@@ -459,6 +465,36 @@ fn classify_memcached(parsed: &ParsedUrl) -> TransportSecurity {
     }
 }
 
+fn classify_kafka(parsed: &ParsedUrl) -> TransportSecurity {
+    if parsed.hosts.is_empty() {
+        return TransportSecurity::Unknown;
+    }
+    if all_local(&parsed.hosts) {
+        return TransportSecurity::Local;
+    }
+    let protocol = parsed
+        .param(&["security.protocol"])
+        .unwrap_or("plaintext")
+        .trim()
+        .to_ascii_lowercase();
+    if !matches!(protocol.as_str(), "ssl" | "sasl_ssl") {
+        return TransportSecurity::Plaintext;
+    }
+    let verifies_certificate = parsed
+        .param(&["enable.ssl.certificate.verification"])
+        .is_none_or(is_true);
+    let checks_hostname = parsed
+        .param(&["ssl.endpoint.identification.algorithm"])
+        .unwrap_or("https")
+        .trim()
+        .eq_ignore_ascii_case("https");
+    if verifies_certificate && checks_hostname {
+        TransportSecurity::Verified
+    } else {
+        TransportSecurity::EncryptedUnverified
+    }
+}
+
 /// Judge one DSN or URL. `pg_default_sslmode` is `PGSSLMODE`, which the
 /// PostgreSQL driver uses when the DSN carries no `sslmode`.
 pub fn classify(
@@ -481,6 +517,7 @@ pub fn classify(
                 EndpointKind::Mongo => classify_mongo(&parsed),
                 EndpointKind::Neo4j => classify_neo4j(&parsed),
                 EndpointKind::Memcached => classify_memcached(&parsed),
+                EndpointKind::Kafka => classify_kafka(&parsed),
                 EndpointKind::Postgres | EndpointKind::Mssql | EndpointKind::Cassandra => {
                     TransportSecurity::Unknown
                 }
@@ -517,6 +554,11 @@ fn remedy(kind: EndpointKind) -> &'static str {
         EndpointKind::Memcached => {
             "this build has no Memcached TLS; reach Memcached through a TLS tunnel listening on a \
              loopback address"
+        }
+        EndpointKind::Kafka => {
+            "set UDB_KAFKA_SECURITY_PROTOCOL=ssl (add UDB_KAFKA_SSL_CA_LOCATION=/path/to/ca.pem \
+             for a private CA) and leave UDB_KAFKA_SSL_CERTIFICATE_VERIFICATION and \
+             UDB_KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM unset, or set them to true and https"
         }
     }
 }
@@ -631,6 +673,69 @@ fn host_summary(kind: EndpointKind, dsn: &str) -> String {
     } else {
         format!(", host {}", hosts.join(","))
     }
+}
+
+/// The librdkafka properties the gate reads; file paths and the key password
+/// never enter the endpoint string.
+const KAFKA_JUDGED_PROPERTIES: [&str; 3] = [
+    "security.protocol",
+    "ssl.endpoint.identification.algorithm",
+    "enable.ssl.certificate.verification",
+];
+
+/// The Kafka brokers as an endpoint the gate can judge: the broker hosts plus
+/// the client's security properties (from
+/// [`crate::runtime::config::KafkaTlsConfig::client_properties`]) as query
+/// parameters. A `PROTOCOL://` prefix on a broker is dropped; librdkafka takes
+/// the protocol from `security.protocol`, not from the broker address.
+pub fn kafka_endpoint(brokers: &str, properties: &[(&'static str, String)]) -> OutboundEndpoint {
+    let hosts = brokers
+        .split(',')
+        .map(|broker| {
+            let broker = broker.trim();
+            broker
+                .split_once("://")
+                .map(|(_, address)| address)
+                .unwrap_or(broker)
+        })
+        .filter(|broker| !broker.is_empty())
+        .collect::<Vec<_>>()
+        .join(",");
+    let query = properties
+        .iter()
+        .filter(|(key, _)| KAFKA_JUDGED_PROPERTIES.contains(key))
+        .map(|(key, value)| format!("{key}={value}"))
+        .collect::<Vec<_>>()
+        .join("&");
+    OutboundEndpoint::new(
+        "Kafka",
+        "UDB_KAFKA_BROKERS / UDB_KAFKA_SECURITY_PROTOCOL",
+        EndpointKind::Kafka,
+        &format!("kafka://{hosts}?{query}"),
+    )
+}
+
+/// The configured Kafka broker list, when there is one.
+#[cfg(feature = "kafka")]
+fn configured_kafka_brokers(config: &UdbConfig) -> Option<&str> {
+    config
+        .kafka_brokers
+        .as_deref()
+        .map(str::trim)
+        .filter(|brokers| !brokers.is_empty())
+}
+
+/// A refusal for Kafka security settings that cannot be applied at all (a
+/// typo, a half-configured client certificate, TLS files on a plaintext
+/// connection). Judged only when Kafka brokers are configured.
+#[cfg(feature = "kafka")]
+fn kafka_settings_refusal(config: &UdbConfig) -> Option<String> {
+    configured_kafka_brokers(config)?;
+    config
+        .kafka_tls
+        .client_properties()
+        .err()
+        .map(|err| format!("Kafka (UDB_KAFKA_BROKERS) client settings are invalid: {err}"))
 }
 
 // ── Startup gate ──────────────────────────────────────────────────────────────
@@ -959,6 +1064,16 @@ pub fn endpoints_from_config(config: &UdbConfig) -> Vec<OutboundEndpoint> {
         }
     }
 
+    // Kafka: every producer and consumer uses the one broker list and the one
+    // set of security settings. Settings that cannot be applied are refused
+    // separately by `kafka_settings_refusal`.
+    #[cfg(feature = "kafka")]
+    if let Some(brokers) = configured_kafka_brokers(config)
+        && let Ok(properties) = config.kafka_tls.client_properties()
+    {
+        out.push(kafka_endpoint(brokers, &properties));
+    }
+
     // The same connection is often named twice (the primary and its legacy
     // instance); judge each (kind, dsn) once.
     let mut seen = std::collections::HashSet::new();
@@ -972,9 +1087,16 @@ pub fn endpoints_from_config(config: &UdbConfig) -> Vec<OutboundEndpoint> {
 pub fn enforce_at_startup(config: &UdbConfig) -> Result<(), String> {
     let policy = TransportPolicy::from_env();
     install(policy);
+    crate::runtime::config::install_kafka_tls(config.kafka_tls.clone());
     let pg_default_sslmode = non_empty_env("PGSSLMODE");
     let endpoints = endpoints_from_config(config);
     let refusals = evaluate(&policy, &endpoints, pg_default_sslmode.as_deref());
+    #[cfg(feature = "kafka")]
+    let refusals = {
+        let mut refusals = refusals;
+        refusals.extend(kafka_settings_refusal(config));
+        refusals
+    };
     if refusals.is_empty() {
         tracing::info!(
             production = policy.production,
@@ -1386,6 +1508,163 @@ mod tests {
         let err =
             check_secret_url_with("ws://lk.example.com", "UDB_LIVEKIT_URL", true).unwrap_err();
         assert!(err.contains("UDB_LIVEKIT_URL") && err.contains("UDB_OUTBOUND_TLS_REQUIRED=false"));
+    }
+
+    use crate::runtime::config::KafkaTlsConfig;
+
+    fn kafka(brokers: &str, tls: KafkaTlsConfig) -> Vec<OutboundEndpoint> {
+        let properties = tls.client_properties().expect("valid Kafka settings");
+        vec![kafka_endpoint(brokers, &properties)]
+    }
+
+    fn kafka_ssl() -> KafkaTlsConfig {
+        KafkaTlsConfig {
+            security_protocol: Some("ssl".into()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn kafka_plaintext_to_a_remote_broker_is_refused() {
+        let endpoints = kafka(
+            "kafka-1.example.com:9092,kafka-2.example.com:9092",
+            KafkaTlsConfig::default(),
+        );
+        let refusals = evaluate(&policy(false, false, true), &endpoints, None);
+        assert_eq!(refusals.len(), 1, "{refusals:?}");
+        let refusal = &refusals[0];
+        assert!(
+            refusal.starts_with(
+                "Kafka (UDB_KAFKA_BROKERS / UDB_KAFKA_SECURITY_PROTOCOL, host \
+                 kafka-1.example.com,kafka-2.example.com) is plaintext"
+            ),
+            "{refusal}"
+        );
+        assert!(
+            refusal.contains("UDB_OUTBOUND_TLS_REQUIRED is on"),
+            "{refusal}"
+        );
+        assert!(
+            refusal.contains("UDB_KAFKA_SECURITY_PROTOCOL=ssl"),
+            "{refusal}"
+        );
+        assert!(
+            refusal.contains("UDB_OUTBOUND_TLS_REQUIRED=false"),
+            "{refusal}"
+        );
+    }
+
+    #[test]
+    fn kafka_tls_with_verification_passes() {
+        let strict = policy(true, true, true);
+        assert!(evaluate(&strict, &kafka("kafka.example.com:9093", kafka_ssl()), None).is_empty());
+        let with_ca_and_client_cert = KafkaTlsConfig {
+            ssl_ca_location: Some("/etc/udb/kafka-ca.pem".into()),
+            ssl_certificate_location: Some("/etc/udb/kafka.crt".into()),
+            ssl_key_location: Some("/etc/udb/kafka.key".into()),
+            ssl_certificate_verification: Some("true".into()),
+            ssl_endpoint_identification_algorithm: Some("https".into()),
+            ..kafka_ssl()
+        };
+        assert!(
+            evaluate(
+                &strict,
+                &kafka("SSL://kafka.example.com:9093", with_ca_and_client_cert),
+                None
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn kafka_tls_without_verification_is_refused() {
+        let strict = policy(true, true, true);
+        let no_certificate_check = KafkaTlsConfig {
+            ssl_certificate_verification: Some("false".into()),
+            ..kafka_ssl()
+        };
+        let refusals = evaluate(
+            &strict,
+            &kafka("kafka.example.com:9093", no_certificate_check),
+            None,
+        );
+        assert_eq!(refusals.len(), 1, "{refusals:?}");
+        assert!(refusals[0].contains("does not verify the server certificate"));
+        assert!(refusals[0].contains("UDB_OUTBOUND_TLS_REQUIRED=false"));
+
+        let no_hostname_check = KafkaTlsConfig {
+            ssl_endpoint_identification_algorithm: Some("none".into()),
+            ..kafka_ssl()
+        };
+        assert_eq!(
+            evaluate(
+                &strict,
+                &kafka("kafka.example.com:9093", no_hostname_check),
+                None
+            )
+            .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn kafka_plaintext_to_loopback_is_allowed() {
+        let strict = policy(true, true, true);
+        for brokers in [
+            "localhost:9092",
+            "127.0.0.1:9092,127.0.0.2:9093",
+            "[::1]:9092",
+        ] {
+            assert!(
+                evaluate(&strict, &kafka(brokers, KafkaTlsConfig::default()), None).is_empty(),
+                "{brokers}"
+            );
+        }
+        // One remote broker in the list is enough to need TLS.
+        assert_eq!(
+            evaluate(
+                &strict,
+                &kafka(
+                    "localhost:9092,kafka.example.com:9092",
+                    KafkaTlsConfig::default()
+                ),
+                None
+            )
+            .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn kafka_plaintext_passes_with_the_outbound_flag_off() {
+        let endpoints = kafka("kafka.example.com:9092", KafkaTlsConfig::default());
+        assert!(evaluate(&policy(true, true, false), &endpoints, None).is_empty());
+        assert!(evaluate(&policy(false, false, false), &endpoints, None).is_empty());
+    }
+
+    #[cfg(feature = "kafka")]
+    #[test]
+    fn kafka_settings_that_cannot_be_applied_are_refused() {
+        let config = UdbConfig {
+            kafka_brokers: Some("kafka.example.com:9093".into()),
+            kafka_tls: KafkaTlsConfig {
+                ssl_ca_location: Some("/etc/udb/kafka-ca.pem".into()),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let refusal = kafka_settings_refusal(&config).expect("refused");
+        assert!(refusal.contains("UDB_KAFKA_SSL_CA_LOCATION"), "{refusal}");
+        assert!(
+            refusal.contains("UDB_KAFKA_SECURITY_PROTOCOL=ssl"),
+            "{refusal}"
+        );
+
+        let no_brokers = UdbConfig {
+            kafka_brokers: None,
+            ..config
+        };
+        assert!(kafka_settings_refusal(&no_brokers).is_none());
     }
 
     #[test]

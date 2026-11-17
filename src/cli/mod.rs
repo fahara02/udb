@@ -450,6 +450,25 @@ fn run_cleanup_command(command: args::CleanupCommand) -> i32 {
                 }
             })
         }
+        args::CleanupCommand::PartitionAuditLog { dsn } => with_catalog_runtime(
+            "cleanup partition-audit-log",
+            dsn.as_deref(),
+            |rt| async move {
+                match udb::runtime::cleanup::partition_auth_audit_log(&rt).await {
+                    Ok(report) => {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&report).unwrap_or_default()
+                        );
+                        0
+                    }
+                    Err(err) => {
+                        eprintln!("cleanup partition-audit-log: {err}");
+                        1
+                    }
+                }
+            },
+        ),
     }
 }
 

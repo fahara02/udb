@@ -723,6 +723,10 @@ impl DataBrokerService {
             Ok(key_tenant) => key_tenant,
             Err(e) => return self.record_grpc("CacheScan", started, Err(e)),
         };
+        let backend = self.store_backend_kind(&security, &req.resource);
+        if let Err(e) = cache_scan_backend_supported(backend) {
+            return self.record_grpc("CacheScan", started, Err(e));
+        }
         let spec = serde_json::json!({
             "operation": "scan",
             "pattern": req.key_pattern,
@@ -1678,6 +1682,28 @@ fn shared_cache_backend_supported(
     }
 }
 
+/// Memcached cannot enumerate keys, so `CacheScan` on a Memcached cache (own
+/// or shared namespace) is refused `Unimplemented` with capability
+/// `key_enumeration`, never answered with an empty page that reads as "no key
+/// matched". The Memcached executor refuses a raw scan the same way, so a
+/// target whose backend does not resolve here is still refused there.
+fn cache_scan_backend_supported(
+    backend: Option<crate::backend::BackendKind>,
+) -> Result<(), Status> {
+    if matches!(backend, Some(crate::backend::BackendKind::Memcached)) {
+        return Err(crate::runtime::executor_utils::capability_status_with_code(
+            tonic::Code::Unimplemented,
+            "memcached",
+            "CacheScan",
+            "key_enumeration",
+            "CacheScan is not supported on a Memcached cache: Memcached cannot list keys, so a \
+             scan would report no matches for keys that exist; read known keys with CacheGet, \
+             or scan a Redis cache",
+        ));
+    }
+    Ok(())
+}
+
 fn refuse_unsupported_fields(rpc: &str, fields: &[(&str, bool, &str)]) -> Result<(), Status> {
     for (field, is_set, why) in fields {
         if *is_set {
@@ -2551,6 +2577,31 @@ mod store_field_honesty_tests {
                 shared_cache_backend_supported(backend).expect_err("not a tenant-keyed cache");
             assert_eq!(err.code(), Code::InvalidArgument);
         }
+    }
+
+    /// Memcached cannot list keys, so CacheScan on it (own or shared
+    /// namespace: the check does not depend on `shared`) is refused with a
+    /// typed `key_enumeration` reason instead of an empty page.
+    #[test]
+    fn cache_scan_on_memcached_is_refused_because_it_cannot_list_keys() {
+        for backend in [Some(crate::backend::BackendKind::Redis), None] {
+            cache_scan_backend_supported(backend).expect("a scannable or unresolved backend");
+        }
+        let err = cache_scan_backend_supported(Some(crate::backend::BackendKind::Memcached))
+            .expect_err("Memcached cannot list keys");
+        assert_eq!(err.code(), Code::Unimplemented);
+        assert!(err.message().contains("cannot list keys"), "{err:?}");
+        assert!(err.message().contains("CacheScan"), "{err:?}");
+        let raw = err
+            .metadata()
+            .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        let detail = crate::runtime::executor_utils::decode_error_detail_from_raw(&raw);
+        assert_eq!(detail.kind, crate::proto::ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "memcached");
+        assert_eq!(detail.operation, "CacheScan");
+        assert_eq!(detail.capability_required, "key_enumeration");
+        assert!(!detail.retryable);
     }
 
     #[test]

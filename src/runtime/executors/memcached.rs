@@ -41,8 +41,8 @@ use crate::runtime::backend_context::{
     AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
 };
 use crate::runtime::executor_utils::{
-    backend_transport_status, build_probe, capability_status, deadline_exceeded_status,
-    executor_timeout_duration, internal_status, invalid_argument_fields,
+    backend_transport_status, build_probe, capability_status, capability_status_with_code,
+    deadline_exceeded_status, executor_timeout_duration, internal_status, invalid_argument_fields,
 };
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
@@ -146,6 +146,20 @@ fn unsupported_memcached_operation_status(kind: &'static str, operation: &str) -
             "mutate" => format!("memcached mutate op '{operation}' is not supported"),
             _ => format!("unsupported Memcached {kind} operation '{operation}'"),
         },
+    )
+}
+
+/// Memcached has no key enumeration, so a scan is refused (`Unimplemented`,
+/// capability `key_enumeration`) instead of answering with an empty page that
+/// reads as "no key matched" while matching keys may well exist.
+fn memcached_scan_refused_status() -> tonic::Status {
+    capability_status_with_code(
+        tonic::Code::Unimplemented,
+        "memcached",
+        "scan",
+        "key_enumeration",
+        "scan is not supported on memcached: Memcached cannot list keys, so a scan would \
+         report no matches for keys that exist; read known keys with get, or scan a Redis cache",
     )
 }
 
@@ -298,11 +312,7 @@ impl QueryExecutor for MemcachedExecutor {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
         let (op, key, _, _) = parse_kv_request(request_json)?;
         if op == "scan" || op == "cache_scan" {
-            return Ok(serde_json::json!({
-                "entries": [],
-                "next_page_token": ""
-            })
-            .to_string());
+            return Err(memcached_scan_refused_status());
         }
         if op != "get" && op != "cache_get" {
             return Err(unsupported_memcached_operation_status("query", &op));
@@ -488,6 +498,26 @@ mod tests {
         assert_eq!(detail.kind, ErrorKind::Internal as i32);
         assert_eq!(detail.backend, "memcached");
         assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    /// Memcached cannot list keys: a scan is refused with a typed capability
+    /// reason, never answered with an empty page that reads as "no match".
+    #[test]
+    fn scan_is_refused_because_memcached_cannot_list_keys() {
+        for op in ["scan", "cache_scan"] {
+            let request = serde_json::json!({ "operation": op, "pattern": "*" }).to_string();
+            let (parsed, _, _, _) = parse_kv_request(&request).expect("a scan needs no key");
+            assert_eq!(parsed, op);
+        }
+        let status = memcached_scan_refused_status();
+        assert_eq!(status.code(), tonic::Code::Unimplemented);
+        assert!(status.message().contains("cannot list keys"), "{status:?}");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "memcached");
+        assert_eq!(detail.operation, "scan");
+        assert_eq!(detail.capability_required, "key_enumeration");
         assert!(!detail.retryable);
     }
 

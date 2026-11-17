@@ -31,26 +31,26 @@ const STORAGE_FINALIZED_RECV_ERROR_BACKOFF_SECS: u64 = 2;
 const STORAGE_FINALIZED_RECV_ERROR_LOG_COOLDOWN_SECS: u64 = 30;
 
 #[cfg(feature = "kafka")]
-pub(crate) fn storage_finalized_consumer_config(brokers: &str) -> rdkafka::ClientConfig {
-    let mut config = rdkafka::ClientConfig::new();
+pub(crate) fn storage_finalized_consumer_config(
+    brokers: &str,
+) -> Result<rdkafka::ClientConfig, String> {
+    let mut config = crate::runtime::config::kafka_client_config(brokers)?;
     config
-        .set("bootstrap.servers", brokers)
         .set("group.id", "udb-asset-storage-finalized-trigger")
         .set("enable.auto.commit", "false")
         .set("auto.offset.reset", "earliest");
-    config
+    Ok(config)
 }
 
 #[cfg(feature = "kafka")]
 async fn ensure_storage_finalized_topic(brokers: &str) -> Result<(), String> {
-    use rdkafka::ClientConfig;
     use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
     use rdkafka::client::DefaultClientContext;
 
-    let admin: AdminClient<DefaultClientContext> = ClientConfig::new()
-        .set("bootstrap.servers", brokers)
-        .create()
-        .map_err(|err| format!("create Kafka admin client failed: {err}"))?;
+    let admin: AdminClient<DefaultClientContext> =
+        crate::runtime::config::kafka_client_config(brokers)?
+            .create()
+            .map_err(|err| format!("create Kafka admin client failed: {err}"))?;
     match admin
         .create_topics(
             &[NewTopic::new(
@@ -162,7 +162,16 @@ impl AssetServiceImpl {
                     "asset storage-finalized consumer: topic preflight failed; consumer will retry metadata"
                 );
             }
-            let config = storage_finalized_consumer_config(&brokers);
+            let config = match storage_finalized_consumer_config(&brokers) {
+                Ok(config) => config,
+                Err(err) => {
+                    tracing::error!(
+                        error = %err,
+                        "asset storage-finalized consumer: Kafka client settings refused"
+                    );
+                    return;
+                }
+            };
             let consumer: StreamConsumer = match config.create() {
                 Ok(c) => c,
                 Err(err) => {
@@ -330,14 +339,13 @@ fn trigger_consumer_group_id(topic: &str) -> String {
 /// and `auto.offset.reset=earliest` (replay backlog), keyed by `topic`.
 #[cfg(feature = "kafka")]
 #[allow(dead_code)] // alive once serve() wires spawn_trigger_manager (master-plan 5.2)
-fn trigger_consumer_config(brokers: &str, topic: &str) -> rdkafka::ClientConfig {
-    let mut config = rdkafka::ClientConfig::new();
+fn trigger_consumer_config(brokers: &str, topic: &str) -> Result<rdkafka::ClientConfig, String> {
+    let mut config = crate::runtime::config::kafka_client_config(brokers)?;
     config
-        .set("bootstrap.servers", brokers)
         .set("group.id", trigger_consumer_group_id(topic))
         .set("enable.auto.commit", "false")
         .set("auto.offset.reset", "earliest");
-    config
+    Ok(config)
 }
 
 /// Fail-closed existence check for a `trigger_topic`: returns `true` only when the
@@ -349,10 +357,8 @@ fn trigger_consumer_config(brokers: &str, topic: &str) -> rdkafka::ClientConfig 
 #[cfg(feature = "kafka")]
 #[allow(dead_code)] // alive once serve() wires spawn_trigger_manager (master-plan 5.2)
 async fn trigger_topic_exists(brokers: &str, topic: &str) -> Result<bool, String> {
-    use rdkafka::ClientConfig;
     use rdkafka::consumer::{Consumer, StreamConsumer};
-    let consumer: StreamConsumer = ClientConfig::new()
-        .set("bootstrap.servers", brokers)
+    let consumer: StreamConsumer = crate::runtime::config::kafka_client_config(brokers)?
         .set("group.id", trigger_consumer_group_id(topic))
         .create()
         .map_err(|err| format!("create Kafka client for topic check failed: {err}"))?;
@@ -574,7 +580,17 @@ impl AssetServiceImpl {
     async fn run_trigger_consumer(self: std::sync::Arc<Self>, brokers: String, topic: String) {
         use rdkafka::Message;
         use rdkafka::consumer::{CommitMode, Consumer, StreamConsumer};
-        let config = trigger_consumer_config(&brokers, &topic);
+        let config = match trigger_consumer_config(&brokers, &topic) {
+            Ok(config) => config,
+            Err(err) => {
+                tracing::error!(
+                    error = %err,
+                    topic = %topic,
+                    "asset trigger consumer: Kafka client settings refused"
+                );
+                return;
+            }
+        };
         let consumer: StreamConsumer = match config.create() {
             Ok(c) => c,
             Err(err) => {

@@ -20,8 +20,6 @@ use aws_sdk_s3::primitives::ByteStream;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 // prost_types imported transitively via executor_utils::*
 #[cfg(feature = "kafka")]
-use rdkafka::ClientConfig;
-#[cfg(feature = "kafka")]
 use rdkafka::consumer::{BaseConsumer, Consumer};
 #[cfg(feature = "redis")]
 use redis::AsyncCommands;

@@ -199,7 +199,7 @@ or `UDB_ENV=production`), in any `UDB_ENV`:
 | Gate | Effect |
 |---|---|
 | TLS and mTLS forced on | `UDB_REQUIRE_SECURE_TRANSPORT`, `UDB_MTLS_REQUIRED` and both internal mTLS flags are forced on, overriding an explicit `false`. |
-| TLS defaults | `UDB_TLS_REQUIRED`, `UDB_PG_TLS_REQUIRED`, `UDB_REDIS_TLS_REQUIRED`, `UDB_OUTBOUND_TLS_REQUIRED`, `UDB_KAFKA_TLS_REQUIRED` and `UDB_SERVICE_IDENTITY_REQUIRED` default to `true` (an explicit value still wins). |
+| TLS defaults | `UDB_TLS_REQUIRED`, `UDB_PG_TLS_REQUIRED`, `UDB_REDIS_TLS_REQUIRED`, `UDB_OUTBOUND_TLS_REQUIRED` (which also covers Kafka) and `UDB_SERVICE_IDENTITY_REQUIRED` default to `true` (an explicit value still wins). `UDB_KAFKA_TLS_REQUIRED` is read but has no effect; Kafka follows `UDB_OUTBOUND_TLS_REQUIRED`. |
 | Outbound transport gate | Startup aborts when any outbound connection is plaintext or does not verify the server certificate: PostgreSQL needs `sslmode=verify-ca`/`verify-full`, Redis `rediss://`, everything else `https://` or its verified TLS mode. Loopback and unix sockets are exempt. Each refusal names the backend, the DSN parameter to set and the flag that turns it off. See [Outbound connections](operations.md#outbound-connections). |
 | Insecure dev overrides refused | `UDB_DEV_MODE` no longer lets `UDB_VAULT_ADDR` use `http://` to a non-loopback host, and `UDB_LIVEKIT_ALLOW_INSECURE` aborts startup. |
 | Encryption required at config load | `UDB_OBJECT_NATIVE_STATE_ENCRYPTION_REQUIRED` is forced on, so config validation fails without a key source. |

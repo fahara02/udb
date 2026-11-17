@@ -245,11 +245,10 @@ set, and the flag that turns the check off. It never prints the DSN.
 |---|---|---|
 | `UDB_PG_TLS_REQUIRED` | `true` under `UDB_ENV=production`, else `false` | PostgreSQL: primary, backup, signal, read replicas (`UDB_PG_REPLICA_DSNS`), every `postgres` backend instance, the CDC source (`UDB_CDC_POSTGRES_SOURCE_DSN`) |
 | `UDB_REDIS_TLS_REQUIRED` | same | Redis (`UDB_REDIS_DSN` / `REDIS_URL`, `redis` backend instances) |
-| `UDB_OUTBOUND_TLS_REQUIRED` | same | Everything else: Qdrant, Elasticsearch, Weaviate, MongoDB, Neo4j, ClickHouse, MySQL, SQL Server, Cassandra, Memcached, MinIO/S3, `OTEL_EXPORTER_OTLP_ENDPOINT`, `UDB_OTP_DELIVERY_WEBHOOK_URL`, `UDB_AUDIT_SINK_URL`, `UDB_AUDIT_EXPORT_WEBHOOK_URL`, `UDB_SCHEMA_REGISTRY_URL`, `UDB_EMBEDDING_RERANK_URL`, `UDB_JWT_JWKS_URL`, `UDB_OIDC_ISSUER`, `UDB_VAULT_ADDR`, `UDB_LIVEKIT_URL`, the migration notification URL |
+| `UDB_OUTBOUND_TLS_REQUIRED` | same | Everything else: Qdrant, Elasticsearch, Weaviate, MongoDB, Neo4j, ClickHouse, MySQL, SQL Server, Cassandra, Memcached, Kafka (`UDB_KAFKA_BROKERS`), MinIO/S3, `OTEL_EXPORTER_OTLP_ENDPOINT`, `UDB_OTP_DELIVERY_WEBHOOK_URL`, `UDB_AUDIT_SINK_URL`, `UDB_AUDIT_EXPORT_WEBHOOK_URL`, `UDB_SCHEMA_REGISTRY_URL`, `UDB_EMBEDDING_RERANK_URL`, `UDB_JWT_JWKS_URL`, `UDB_OIDC_ISSUER`, `UDB_VAULT_ADDR`, `UDB_LIVEKIT_URL`, the migration notification URL |
 
 `0`, `false`, `no` and `off` turn a flag off; any other value turns it on. An
-explicit value always wins over the production default. Kafka has its own
-setting (`UDB_KAFKA_TLS_REQUIRED`) and is not judged by this check.
+explicit value always wins over the production default.
 
 A backend marked as a cloud deployment (`UDB_<BACKEND>_DEPLOY_MODE=cloud`, a
 well-known managed hostname such as `*.neon.tech`, or `tls_override: true` in the
@@ -272,6 +271,7 @@ loopback is the supported way to reach a backend this build cannot speak TLS to.
 | MongoDB | `mongodb+srv://`, or `mongodb://…?tls=true` | `tls=false`, `tlsInsecure=true`, `tlsAllowInvalidCertificates=true`, `tlsAllowInvalidHostnames=true` |
 | Neo4j | `neo4j+s://`, `bolt+s://`, `https://` | `neo4j://`, `bolt://`, `+ssc` schemes, `http://` |
 | ClickHouse | `https://` in `UDB_COLUMN_DSN` or `UDB_COLUMN_HTTP_URL` | `http://`, `clickhouse://` (sent as plain HTTP) |
+| Kafka | `UDB_KAFKA_SECURITY_PROTOCOL=ssl`, with certificate and hostname checks left on | no `UDB_KAFKA_SECURITY_PROTOCOL` (plaintext), `plaintext`, `UDB_KAFKA_SSL_CERTIFICATE_VERIFICATION=false`, `UDB_KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=none`; every broker in `UDB_KAFKA_BROKERS` must be loopback to pass in plaintext |
 | Cassandra, Memcached | loopback only: this build has no TLS for them | any non-loopback host; `memcache+tls://` is refused at connect |
 
 `PGSSLMODE` is honoured when a PostgreSQL DSN carries no `sslmode`, because the
@@ -297,6 +297,35 @@ root store: download the region bundle and point `sslrootcert` at it.
 Redis and the HTTPS clients verify against the system root store; add a private
 CA to the container's trust store (`/usr/local/share/ca-certificates` plus
 `update-ca-certificates` on Debian-based images).
+
+### Kafka over TLS
+
+Kafka has no DSN, so its security has its own settings. They apply to every
+Kafka client UDB opens: the CDC and outbox relay, the transactional CDC
+producer, the asset-service consumers and the `udb doctor` probe.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `UDB_KAFKA_SECURITY_PROTOCOL` | `plaintext` | `ssl` turns TLS on. SASL is not supported. |
+| `UDB_KAFKA_SSL_CA_LOCATION` | system roots | CA file that signed the brokers' certificates |
+| `UDB_KAFKA_SSL_CERTIFICATE_LOCATION` | unset | Client certificate, for mutual TLS |
+| `UDB_KAFKA_SSL_KEY_LOCATION` | unset | Client private key, for mutual TLS. Set it together with the certificate. |
+| `UDB_KAFKA_SSL_KEY_PASSWORD` | unset | Password of an encrypted client key |
+| `UDB_KAFKA_SSL_CERTIFICATE_VERIFICATION` | `true` | `false` stops checking the broker certificate. The startup check refuses it. |
+| `UDB_KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM` | `https` | `none` stops checking the broker hostname. The startup check refuses it. |
+
+```bash
+UDB_KAFKA_BROKERS=kafka-1.internal:9093,kafka-2.internal:9093
+UDB_KAFKA_SECURITY_PROTOCOL=ssl
+UDB_KAFKA_SSL_CA_LOCATION=/etc/udb/kafka-ca.pem
+# Mutual TLS, when the brokers ask for a client certificate:
+UDB_KAFKA_SSL_CERTIFICATE_LOCATION=/etc/udb/kafka-client.pem
+UDB_KAFKA_SSL_KEY_LOCATION=/etc/udb/kafka-client.key
+```
+
+The broker refuses to start on settings it cannot apply: a CA or client
+certificate while the protocol is still `plaintext`, a certificate without its
+key, or a value it does not know. It never falls back to plaintext.
 
 ### Clients that send secrets
 
@@ -371,7 +400,7 @@ And these point the broker at whichever backends your deployment uses:
 | S3 / MinIO | `UDB_MINIO_ENDPOINT` (or `S3_ENDPOINT`), `UDB_MINIO_ACCESS_KEY`, `UDB_MINIO_SECRET_KEY`, `UDB_MINIO_REGION`; `UDB_STORAGE_BUCKET` for native storage |
 | Azure Blob | `UDB_AZUREBLOB_DSN` |
 | Google Cloud Storage | `UDB_GCS_DSN` |
-| Kafka / CDC | `UDB_KAFKA_BROKERS` (or `KAFKA_BROKERS`) |
+| Kafka / CDC | `UDB_KAFKA_BROKERS` (or `KAFKA_BROKERS`); TLS with `UDB_KAFKA_SECURITY_PROTOCOL` and `UDB_KAFKA_SSL_*` (see [Kafka over TLS](#kafka-over-tls)) |
 
 ### Transaction refusals and replay
 
@@ -638,7 +667,7 @@ it; it is on by default.
 | Table | What writes a row | Default retention |
 | --- | --- | --- |
 | `udb_authz.access_decision_audits` (monthly partitions) | every deny; a delegated allow (a service checking access for a user) once per window for the same decision | `declared`: 30 days, for allows and denies (`access_decision_audits:deny` can keep denies longer) |
-| `udb_system.auth_audit_log` | every auth event, when `UDB_AUDIT_EXPORT_POSTGRES=1` | `declared`: same as the decision audit |
+| `udb_system.auth_audit_log` (monthly partitions; see below for a log created before 0.6.22) | every auth event, when `UDB_AUDIT_EXPORT_POSTGRES=1` | `declared`: same as the decision audit |
 | `udb_metering.usage_events` | every native-service call | `declared`: 400 days |
 | `udb_apikey.api_key_usages`, `udb_notification.notification_logs` (monthly partitions) | every API-key call; every notification sent | `declared`: 365 and 90 days |
 | other time-partitioned UDB tables (analytics summaries, ...) | | kept; listed tables only |
@@ -749,6 +778,32 @@ including the space the CDC journal sweep freed. It locks each table while it
 rewrites it, so run it in a quiet window; `pg_repack`, if installed, does the
 same without the lock. `VACUUM FULL` needs free disk about the size of the
 rows that are kept in the table it rewrites.
+
+#### The partitioned auth audit log
+
+From 0.6.22 a new `udb_system.auth_audit_log` is partitioned by month on
+`occurred_at`, with a default partition so a write never fails for want of a
+month. Retention then drops a whole month (`auth_audit_log_p_YYYYMM`) once
+every row in it is past retention, and with the evidence export on, once every
+row in it was exported; the disk comes back at once and nothing is locked for
+long. Rows in the default partition are deleted one by one as before. The
+primary key is `(audit_id, occurred_at)`.
+
+A log created by an older release stays one plain table until you convert it:
+
+```sh
+udb cleanup partition-audit-log       # UDB_PG_DSN or --dsn
+```
+
+It runs next to live brokers. It builds two indexes without blocking writes,
+checks that every row is older than the first day of the month after next,
+then swaps in the partitioned table in one short transaction (3 s
+`lock_timeout`, retried; a busy table gives up with "busy, retry later" and
+nothing changed). No row is moved: the old table becomes the default
+partition `auth_audit_log_legacy` with its rows, grants, row-level security
+and policies, and the months start at the month after next. It prints what it
+did. A table with triggers, foreign keys, views over it or other constraints
+it cannot carry over is refused with the reason.
 
 ### Consumer start and progress markers
 

@@ -2068,8 +2068,15 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     reclaim: flag_value("--reclaim"),
                 })
             }
+            Some("partition-audit-log") => {
+                offset = 2;
+                Command::Cleanup(CleanupCommand::PartitionAuditLog {
+                    dsn: flag_value("--dsn"),
+                })
+            }
             _ => Command::InvalidUsage {
-                message: "usage: udb cleanup show | udb cleanup run [--dsn <postgres-dsn>] [--reclaim full]"
+                message: "usage: udb cleanup show | udb cleanup run [--dsn <postgres-dsn>] [--reclaim full] \
+                          | udb cleanup partition-audit-log [--dsn <postgres-dsn>]"
                     .to_string(),
             },
         },
@@ -2438,6 +2445,9 @@ pub enum CleanupCommand {
         dsn: Option<String>,
         reclaim: Option<String>,
     },
+    /// Convert an unpartitioned `udb_system.auth_audit_log` into monthly
+    /// partitions, online; the old table becomes the default partition.
+    PartitionAuditLog { dsn: Option<String> },
 }
 
 /// Settings `udb serve` (and `udb retention`) take as flags. A flag sets its

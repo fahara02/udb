@@ -1950,54 +1950,14 @@ impl DataBrokerRuntime {
                 crate::runtime::projection::ProjectionPlan::from_manifest(manifest);
             // A partial upsert keeps the row's other columns, so a projection built from
             // the record alone would lose them. Project the row as stored.
-            let projects_this_message = projection_plans.iter().any(|plan| {
-                crate::runtime::projection::message_type_matches(
-                    &plan.message_type,
-                    &request.message_type,
-                )
-            });
-            let record_is_partial = table.columns.iter().any(|column| {
-                !column.generated && encrypted_record.get(column.column_name.as_str()).is_none()
-            });
-            let mut stored_row = None;
-            if projects_this_message && record_is_partial && !table.primary_key.is_empty() {
-                let key = record_values(&encrypted_record, &table.primary_key)?;
-                if !key.iter().any(JsonValue::is_null) {
-                    let predicates = table
-                        .primary_key
-                        .iter()
-                        .enumerate()
-                        .map(|(index, column)| {
-                            format!(
-                                "{} = ${}",
-                                crate::runtime::executor_utils::qi_runtime(column),
-                                index + 1
-                            )
-                        })
-                        .collect::<Vec<_>>()
-                        .join(" AND ");
-                    let sql = format!(
-                        "SELECT * FROM {}.{} WHERE {predicates}",
-                        crate::runtime::executor_utils::qi_runtime(&table.schema),
-                        crate::runtime::executor_utils::qi_runtime(&table.table),
-                    );
-                    let mut read = sqlx::query(&sql);
-                    for (column, value) in table.primary_key.iter().zip(&key) {
-                        let declared = table
-                            .columns
-                            .iter()
-                            .find(|candidate| candidate.column_name == *column);
-                        read = bind_one(read, declared, value)?;
-                    }
-                    let rows = read.fetch_all(&mut *tx).await.map_err(|err| {
-                        crate::runtime::executor_utils::sqlx_error_to_status(
-                            "upsert_projection_row",
-                            &err,
-                        )
-                    })?;
-                    stored_row = stored_row_values(&rows)?.into_iter().next();
-                }
-            }
+            let stored_row = upsert_projection_source_row(
+                &mut tx,
+                table,
+                &projection_plans,
+                &request.message_type,
+                &encrypted_record,
+            )
+            .await?;
             projection_task_ids =
                 crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                     &mut tx,
@@ -6532,6 +6492,88 @@ mod upsert_scope_guard_tests {
     }
 }
 
+#[cfg(test)]
+mod upsert_projection_source_row_tests {
+    use super::upsert_needs_stored_row;
+    use crate::generation::{ManifestColumn, ManifestTable};
+    use crate::runtime::projection::ProjectionPlan;
+    use serde_json::json;
+
+    const MESSAGE: &str = "acme.v1.Concept";
+
+    fn column(name: &str, generated: bool) -> ManifestColumn {
+        ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            generated,
+            ..ManifestColumn::default()
+        }
+    }
+
+    fn table(primary_key: &[&str]) -> ManifestTable {
+        ManifestTable {
+            message_name: "Concept".to_string(),
+            primary_key: primary_key.iter().map(|key| key.to_string()).collect(),
+            columns: vec![
+                column("id", false),
+                column("state", false),
+                column("note", false),
+                column("search_text", true),
+            ],
+            ..ManifestTable::default()
+        }
+    }
+
+    fn plan(message_type: &str) -> ProjectionPlan {
+        ProjectionPlan {
+            message_type: message_type.to_string(),
+            source_schema: "public".to_string(),
+            source_table: "concepts".to_string(),
+            primary_key_columns: vec!["id".to_string()],
+            manifest_checksum: "sha256:test".to_string(),
+            targets: Vec::new(),
+        }
+    }
+
+    /// The unary Upsert and a BeginTx upsert both ask this: a partial record of
+    /// a projected message is projected from the row as stored, so a
+    /// `projection_filter` naming a column the record leaves out can judge it.
+    #[test]
+    fn a_partial_record_of_a_projected_message_needs_the_stored_row() {
+        let partial = json!({"id": "c-1", "note": "v2"});
+        let full = json!({"id": "c-1", "state": "PUBLISHED", "note": "v2"});
+        let plans = [plan(MESSAGE)];
+        assert!(upsert_needs_stored_row(
+            &table(&["id"]),
+            &plans,
+            MESSAGE,
+            &partial
+        ));
+        // A generated column is never in the record; its absence is not partial.
+        assert!(!upsert_needs_stored_row(
+            &table(&["id"]),
+            &plans,
+            MESSAGE,
+            &full
+        ));
+        // No projection of this message: nothing to project.
+        let other = [plan("acme.v1.Other")];
+        assert!(!upsert_needs_stored_row(
+            &table(&["id"]),
+            &other,
+            MESSAGE,
+            &partial
+        ));
+        // No primary key to read the row back by.
+        assert!(!upsert_needs_stored_row(
+            &table(&[]),
+            &plans,
+            MESSAGE,
+            &partial
+        ));
+    }
+}
+
 /// Canonical, type-stable token for a single primary-key value used to build a
 /// revision-map key. Integer-valued numbers collapse to `i:<n>` regardless of
 /// whether the value arrived as an INTEGER column (`8`) or as a
@@ -6591,6 +6633,80 @@ fn row_revision_key(
 /// uniqueness or index, so a different rendering never collides a real row.
 fn row_key_text(pk_canonical: &str) -> String {
     pk_canonical.replace('\u{0}', "\u{1f}")
+}
+
+/// The row an upsert's projection tasks carry, when it is not the record as
+/// written: `Some(row as stored)` for a partial record (one that leaves out a
+/// non-generated column) of a projected message whose primary key it names,
+/// read back in the write's own transaction; `None` when the record is the
+/// row. A partial upsert keeps the row's other columns, so a task built from
+/// the record alone would project a row without them, and a
+/// `projection_filter` naming one of them could not judge it. The unary Upsert
+/// and a BeginTx upsert/insert both go through here, so the two paths project
+/// the same row.
+pub(crate) async fn upsert_projection_source_row(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    table: &crate::generation::ManifestTable,
+    projection_plans: &[crate::runtime::projection::ProjectionPlan],
+    message_type: &str,
+    encrypted_record: &JsonValue,
+) -> Result<Option<JsonValue>, tonic::Status> {
+    if !upsert_needs_stored_row(table, projection_plans, message_type, encrypted_record) {
+        return Ok(None);
+    }
+    let key = record_values(encrypted_record, &table.primary_key)?;
+    if key.iter().any(JsonValue::is_null) {
+        return Ok(None);
+    }
+    let predicates = table
+        .primary_key
+        .iter()
+        .enumerate()
+        .map(|(index, column)| {
+            format!(
+                "{} = ${}",
+                crate::runtime::executor_utils::qi_runtime(column),
+                index + 1
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" AND ");
+    let sql = format!(
+        "SELECT * FROM {}.{} WHERE {predicates}",
+        crate::runtime::executor_utils::qi_runtime(&table.schema),
+        crate::runtime::executor_utils::qi_runtime(&table.table),
+    );
+    let mut read = sqlx::query(&sql);
+    for (column, value) in table.primary_key.iter().zip(&key) {
+        let declared = table
+            .columns
+            .iter()
+            .find(|candidate| candidate.column_name == *column);
+        read = bind_one(read, declared, value)?;
+    }
+    let rows = read.fetch_all(&mut **tx).await.map_err(|err| {
+        crate::runtime::executor_utils::sqlx_error_to_status("upsert_projection_row", &err)
+    })?;
+    Ok(stored_row_values(&rows)?.into_iter().next())
+}
+
+/// Whether an upsert's projection tasks need the row as stored rather than the
+/// record as written (see [`upsert_projection_source_row`]): the message is
+/// projected, the record leaves out a non-generated column, and the table has
+/// a primary key to read the row back by.
+pub(crate) fn upsert_needs_stored_row(
+    table: &crate::generation::ManifestTable,
+    projection_plans: &[crate::runtime::projection::ProjectionPlan],
+    message_type: &str,
+    encrypted_record: &JsonValue,
+) -> bool {
+    let projects_this_message = projection_plans.iter().any(|plan| {
+        crate::runtime::projection::message_type_matches(&plan.message_type, message_type)
+    });
+    let record_is_partial = table.columns.iter().any(|column| {
+        !column.generated && encrypted_record.get(column.column_name.as_str()).is_none()
+    });
+    projects_this_message && record_is_partial && !table.primary_key.is_empty()
 }
 
 /// D1: RETURNING rows rendered EXACTLY as PostgreSQL holds them — column-keyed,

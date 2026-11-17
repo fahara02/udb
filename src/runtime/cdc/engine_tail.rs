@@ -1524,8 +1524,7 @@ impl CdcEngine {
             let tx_cfg = super::kafka_tx::KafkaTxConfig::from_cdc_config(kafka_brokers, config);
             return super::kafka_tx::build_transactional_producer(&tx_cfg).map(Some);
         }
-        ClientConfig::new()
-            .set("bootstrap.servers", kafka_brokers)
+        crate::runtime::config::kafka_client_config(kafka_brokers)?
             .set("enable.idempotence", "true")
             .set("acks", "all")
             .set("compression.type", "lz4")

@@ -1326,6 +1326,10 @@ pub struct UdbConfig {
     /// Kafka brokers for CDC.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kafka_brokers: Option<String>,
+    /// Kafka connection security (`UDB_KAFKA_SECURITY_PROTOCOL`,
+    /// `UDB_KAFKA_SSL_*`), used by every Kafka client UDB builds.
+    #[serde(default, skip_serializing_if = "KafkaTlsConfig::is_empty")]
+    pub kafka_tls: KafkaTlsConfig,
 }
 
 // Manual `Debug` for the top-level config. Every embedded backend config
@@ -1388,6 +1392,7 @@ impl std::fmt::Debug for UdbConfig {
             .field("abac_schema", &self.abac_schema)
             .field("abac_table", &self.abac_table)
             .field("kafka_brokers", &self.kafka_brokers)
+            .field("kafka_tls", &self.kafka_tls)
             .finish()
     }
 }
@@ -1879,6 +1884,7 @@ pub fn merge_udb_config(base: UdbConfig, source: UdbConfig) -> UdbConfig {
             source.abac_table
         },
         kafka_brokers: source.kafka_brokers.or(base.kafka_brokers),
+        kafka_tls: KafkaTlsConfig::merged(base.kafka_tls, source.kafka_tls),
     }
 }
 
@@ -2161,6 +2167,7 @@ impl UdbConfig {
         if let Some(v) = env_first(&["UDB_KAFKA_BROKERS", "KAFKA_BROKERS"]) {
             self.kafka_brokers = Some(v);
         }
+        self.kafka_tls.merge_env();
 
         // Migration options — overlay env onto file-loaded config (do NOT
         // replace, which would discard YAML-configured hooks/approval/sinks).
@@ -2456,9 +2463,11 @@ mod tests;
 mod backends;
 mod deploy;
 mod instances;
+mod kafka;
 pub use backends::*;
 pub use deploy::*;
 pub use instances::*;
+pub use kafka::*;
 
 // ── Node-level startup knobs read outside `UdbConfig` ─────────────────────────
 //

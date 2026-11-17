@@ -1,8 +1,6 @@
 use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "kafka")]
-use rdkafka::ClientConfig;
-#[cfg(feature = "kafka")]
 use rdkafka::producer::{FutureProducer, FutureRecord};
 #[cfg(feature = "redis")]
 use redis::AsyncCommands;

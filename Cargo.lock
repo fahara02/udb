@@ -6206,6 +6206,7 @@ dependencies = [
  "curl-sys",
  "libc",
  "num_enum",
+ "openssl-sys",
  "pkg-config",
 ]
 

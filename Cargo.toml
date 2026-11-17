@@ -192,7 +192,11 @@ prometheus = "0.13"
 prost = "0.13"
 prost-types = "0.13"
 rcgen = "0.13"
-rdkafka = { version = "0.36", default-features = false, features = ["cmake-build", "tokio", "curl-static"], optional = true }
+# `ssl-vendored` builds librdkafka with a vendored OpenSSL (the same
+# `openssl-sys` the `webauthn` feature already vendors, so it needs Perl like
+# that one), so `UDB_KAFKA_SECURITY_PROTOCOL=ssl` works. Without it librdkafka
+# refuses `security.protocol=ssl` when the client is created.
+rdkafka = { version = "0.36", default-features = false, features = ["cmake-build", "tokio", "curl-static", "ssl-vendored"], optional = true }
 # `tokio-rustls-comp` compiles rustls TLS in so `rediss://` URLs connect
 # (verified against the system root store); without it they fail at connect.
 redis = { version = "0.27", features = ["tokio-comp", "tokio-rustls-comp", "connection-manager"], optional = true }

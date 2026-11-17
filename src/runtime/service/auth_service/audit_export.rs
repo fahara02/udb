@@ -92,32 +92,35 @@ impl PostgresAuditLogSink {
     /// sink fully self-creating even on a fresh database with no migration run.
     /// Serialized per relation (advisory lock + collision retry), so two first
     /// writes racing on a cold database cannot both CREATE and fail one export.
+    ///
+    /// A new log is range-partitioned by month on `occurred_at` (primary key
+    /// `(audit_id, occurred_at)`), with a default partition and the current
+    /// and next month, so retention can drop a whole month. An existing log is
+    /// used as it is: a plain table from an older release stays plain until an
+    /// operator converts it (`udb cleanup partition-audit-log`); it is never
+    /// converted here, on the write path.
     pub(crate) async fn ensure_table(&self) -> Result<(), String> {
-        let sql = format!(
-            "CREATE TABLE IF NOT EXISTS {rel} ( \
-                 audit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), \
-                 event_id UUID NOT NULL, \
-                 event_type VARCHAR(200) NOT NULL, \
-                 tenant_id VARCHAR(64) NOT NULL, \
-                 actor VARCHAR(200) NOT NULL DEFAULT '', \
-                 target_resource VARCHAR(400) NOT NULL DEFAULT '', \
-                 operation VARCHAR(80) NOT NULL DEFAULT '', \
-                 outcome VARCHAR(40) NOT NULL DEFAULT '', \
-                 reason_code VARCHAR(200) NOT NULL DEFAULT '', \
-                 correlation_id VARCHAR(120) NOT NULL DEFAULT '', \
-                 trace_id VARCHAR(64) NOT NULL DEFAULT '', \
-                 decision_id VARCHAR(120) NOT NULL DEFAULT '', \
-                 source_ip VARCHAR(64) NOT NULL DEFAULT '', \
-                 redaction_version VARCHAR(16) NOT NULL DEFAULT '', \
-                 envelope JSONB NOT NULL, \
-                 occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW() \
-             )",
-            rel = self.relation
-        );
+        use crate::runtime::cleanup::audit_log;
+        let (schema, table) = audit_log::split(&self.relation);
+        let existed: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+            .bind(&self.relation)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| format!("look up auth audit log {}: {e}", self.relation))?;
+        let mut statements = vec!["CREATE SCHEMA IF NOT EXISTS udb_system".to_string()];
+        if !existed {
+            let months = audit_log::month_bounds(&self.pool, 1).await?;
+            statements.extend(audit_log::create_statements(
+                &schema,
+                &table,
+                AUTH_AUDIT_COLUMNS,
+                &months,
+            ));
+        }
         crate::runtime::core::audit::run_audit_ddl_serialized(
             &self.pool,
             &self.relation,
-            &["CREATE SCHEMA IF NOT EXISTS udb_system".to_string(), sql],
+            &statements,
         )
         .await?;
         // Same hole as the data-plane sink had: `CREATE TABLE IF NOT EXISTS` is a
@@ -132,6 +135,16 @@ impl PostgresAuditLogSink {
             &AUTH_AUDIT_BOUND_COLUMNS,
         )
         .await?;
+        if audit_log::is_partitioned(&self.pool, &self.relation).await? {
+            // The current and next month, in case the process starts in a
+            // month the cleanup pass has not reached yet. A month that cannot
+            // be made now only means its rows land in the default partition,
+            // so a failure is logged, never raised on the write path.
+            if let Err(err) = audit_log::create_months_ahead(&self.pool, &schema, &table, 1).await {
+                tracing::warn!(error = %err, relation = %self.relation, "auth audit log month partitions not created; the cleanup pass retries");
+            }
+            return Ok(());
+        }
         // The cleanup service deletes by `occurred_at`. Build its index without
         // blocking audit writes: CONCURRENTLY, outside any transaction, in the
         // background (on a large existing log this takes minutes). A failure
@@ -211,6 +224,26 @@ impl PostgresAuditLogSink {
             .map_err(|e| format!("auth audit-log insert failed: {e}"))
     }
 }
+
+/// The log's columns, without its key: a new log's key is `(audit_id,
+/// occurred_at)`, since a key of a partitioned table must hold its partition
+/// column. Nothing looks a row up by `audit_id` alone or conflicts on it.
+const AUTH_AUDIT_COLUMNS: &str = "audit_id UUID NOT NULL DEFAULT gen_random_uuid(), \
+     event_id UUID NOT NULL, \
+     event_type VARCHAR(200) NOT NULL, \
+     tenant_id VARCHAR(64) NOT NULL, \
+     actor VARCHAR(200) NOT NULL DEFAULT '', \
+     target_resource VARCHAR(400) NOT NULL DEFAULT '', \
+     operation VARCHAR(80) NOT NULL DEFAULT '', \
+     outcome VARCHAR(40) NOT NULL DEFAULT '', \
+     reason_code VARCHAR(200) NOT NULL DEFAULT '', \
+     correlation_id VARCHAR(120) NOT NULL DEFAULT '', \
+     trace_id VARCHAR(64) NOT NULL DEFAULT '', \
+     decision_id VARCHAR(120) NOT NULL DEFAULT '', \
+     source_ip VARCHAR(64) NOT NULL DEFAULT '', \
+     redaction_version VARCHAR(16) NOT NULL DEFAULT '', \
+     envelope JSONB NOT NULL, \
+     occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()";
 
 /// The columns [`PostgresAuditLogSink::export`] binds. Kept beside the INSERT so
 /// the shape check and the binder cannot drift apart.

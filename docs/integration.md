@@ -264,5 +264,8 @@ Things worth knowing:
 - Change events for shared writes carry `*shared*` as their tenant (and the
   writer's tenant as `actor_tenant_id`), the same way changes to shared table
   rows do. The data-plane cache RPCs emit no per-key events.
-- Memcached cannot list keys, so a `CacheScan` against Memcached returns no
-  entries, for the shared namespace as for your own.
+- Memcached cannot list keys, so a `CacheScan` against Memcached is refused
+  with `UNIMPLEMENTED` (typed detail: backend `memcached`, capability
+  `key_enumeration`), for the shared namespace as for your own. It never
+  answers with an empty page that would read as "nothing matched". Read known
+  keys with `CacheGet`, or scan a Redis cache.

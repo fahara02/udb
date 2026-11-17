@@ -366,6 +366,42 @@ async fn served_delete(
     .unwrap_or_else(|err| panic!("served Delete {filter}: {err:?}"));
 }
 
+/// One committed BeginTx upsert of `record`, through the runtime's BeginTx
+/// apply loop (the served handler authorizes each mutation, then calls it).
+/// The manifest is the service's active catalog, so the tasks it enqueues
+/// carry the checksum the worker checks them against.
+async fn tx_upsert(
+    svc: &DataBrokerService,
+    tenant: &str,
+    message: &str,
+    record: serde_json::Value,
+) {
+    let context = crate::RequestContext {
+        tenant_id: tenant.to_string(),
+        project_id: PROJECT.to_string(),
+        purpose: "admin".to_string(),
+        scopes: FULL_SCOPES.split(',').map(str::to_string).collect(),
+        ..crate::RequestContext::default()
+    };
+    let catalog = svc.catalog.active_for(PROJECT);
+    let mutation = crate::proto::Mutation {
+        operation: "upsert".to_string(),
+        message_type: message.to_string(),
+        record_json: serde_json::to_vec(&record).unwrap(),
+        commit: true,
+        ..crate::proto::Mutation::default()
+    };
+    let statuses = svc
+        .runtime_snapshot()
+        .begin_tx_buffered(&catalog.manifest, vec![mutation], context)
+        .await;
+    let committed = statuses
+        .iter()
+        .flatten()
+        .any(|status| status.state == crate::proto::tx_status::State::TxStateCommitted as i32);
+    assert!(committed, "BeginTx upsert {record}: {statuses:?}");
+}
+
 async fn served_vector_payloads(
     svc: &DataBrokerService,
     tenant: &str,
@@ -2284,6 +2320,286 @@ async fn live_projection_filter_keeps_only_matching_rows_in_qdrant() {
         .await
         .expect("count unfinished projection tasks");
         assert_eq!(unfinished, 0, "every filtered task completes");
+    })
+    .catch_unwind()
+    .await;
+    delete_tasks_for_resource(&pool, &collection).await;
+    drop_qdrant_collection(&qdrant, &collection).await;
+    drop_schema(&pool, &schema).await;
+    if let Err(panic) = outcome {
+        std::panic::resume_unwind(panic);
+    }
+}
+
+/// The newest projection task of row `id` on `resource`, as the worker reads
+/// it: `(source_row_key, target_options, source_payload)`.
+async fn newest_task_inputs(
+    pool: &PgPool,
+    resource: &str,
+    id: &str,
+) -> (serde_json::Value, serde_json::Value, serde_json::Value) {
+    let rel = SystemCatalogConfig::current().projection_tasks_relation();
+    let (row_key, options, payload): (String, String, String) = sqlx::query_as(&format!(
+        "SELECT source_row_key::TEXT, target_options::TEXT, source_payload::TEXT FROM {rel} \
+         WHERE resource_name = $1 AND source_payload ->> 'id' = $2 \
+         ORDER BY row_revision DESC LIMIT 1"
+    ))
+    .bind(resource)
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .unwrap_or_else(|err| panic!("the newest projection task of {id}: {err}"));
+    let parse = |text: &str| serde_json::from_str::<serde_json::Value>(text).expect("task JSON");
+    (parse(&row_key), parse(&options), parse(&payload))
+}
+
+/// A BeginTx upsert that carries only SOME columns projects the row as
+/// stored, exactly like the unary Upsert: the task's payload is the whole row,
+/// so a `projection_filter` naming a column the record leaves out judges the
+/// row instead of failing the task. A partial upsert of a row that still
+/// matches stays projected; one that moves the row out of the filter becomes
+/// a delete.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn a_begin_tx_partial_upsert_projects_the_whole_stored_row_live() {
+    use futures::FutureExt;
+
+    let _guard = crate::runtime::service::live_tests::support::live_native_service_db_lock()
+        .lock()
+        .await;
+    let pool = ledger_pool().await;
+    let schema = format!("udb_proj_{}", Uuid::new_v4().simple());
+    let resource = format!("txpartial_{}", Uuid::new_v4().simple());
+    const MSG: &str = "acme.proj.v1.TxPartial";
+    create_source_table(
+        &pool,
+        &schema,
+        "tx_partials",
+        ", state TEXT, to_seq BIGINT, note TEXT",
+    )
+    .await;
+    let mut to_seq = text_col("to_seq", false);
+    to_seq.sql_type = "BIGINT".to_string();
+    to_seq.proto_type = "int64".to_string();
+    let manifest = served_manifest(
+        &schema,
+        "tx_partials",
+        "TxPartial",
+        vec![text_col("state", false), to_seq, text_col("note", false)],
+        vec![projection(
+            "TxPartial",
+            "cache",
+            "redis",
+            &resource,
+            vec![
+                opt("key_pattern", "txpartial:{id}"),
+                opt(
+                    "projection_filter",
+                    "state = 'PUBLISHED' AND to_seq IS NULL",
+                ),
+            ],
+        )],
+        Vec::new(),
+    );
+    let svc = served_service(manifest).await;
+    let tenant = Uuid::new_v4().to_string();
+    let id = format!("txpartial-{}", Uuid::new_v4().simple());
+    // What the worker decides for a task: `Ok(None)` projects the row,
+    // `Ok(Some(identity))` removes it, `Err` fails the task.
+    let decide = |task: &(serde_json::Value, serde_json::Value, serde_json::Value)| {
+        filtered_out_delete_payload(
+            "redis", "cache", &resource, "upsert", &task.0, &task.1, &task.2,
+        )
+    };
+
+    let outcome = std::panic::AssertUnwindSafe(async {
+        served_upsert(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": id, "tenant_id": tenant, "state": "PUBLISHED", "note": "v1"}),
+        )
+        .await;
+
+        // The record names neither filter column; the stored row still matches.
+        tx_upsert(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": id, "tenant_id": tenant, "note": "v2"}),
+        )
+        .await;
+        let task = newest_task_inputs(&pool, &resource, &id).await;
+        assert_eq!(task.2["state"], json!("PUBLISHED"), "state was kept");
+        assert_eq!(task.2["note"], json!("v2"));
+        assert_eq!(decide(&task), Ok(None), "a matching row is projected");
+
+        // The record sets to_seq but not state: the row leaves the filter.
+        tx_upsert(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": id, "tenant_id": tenant, "to_seq": 7}),
+        )
+        .await;
+        let task = newest_task_inputs(&pool, &resource, &id).await;
+        assert_eq!(task.2["state"], json!("PUBLISHED"), "state was kept");
+        assert_eq!(task.2["note"], json!("v2"));
+        let removal = decide(&task).expect("the filter judges the stored row");
+        assert!(
+            removal.is_some(),
+            "a row that leaves the filter is removed by its identity"
+        );
+    })
+    .catch_unwind()
+    .await;
+    delete_tasks_for_resource(&pool, &resource).await;
+    drop_schema(&pool, &schema).await;
+    if let Err(panic) = outcome {
+        std::panic::resume_unwind(panic);
+    }
+}
+
+/// End to end through the worker: BeginTx partial upserts against a Qdrant
+/// projection with `projection_filter`. A partial upsert of a matching row
+/// keeps its point and its task completes; one that moves the row out of the
+/// filter removes the point.
+#[tokio::test]
+#[ignore = "requires live Postgres+Qdrant (UDB_INTEGRATION_PG_DSN + UDB_QDRANT_URL); runs in the CI --ignored live lane"]
+async fn live_begin_tx_partial_upsert_follows_the_projection_filter_in_qdrant() {
+    use futures::FutureExt;
+
+    let _guard = crate::runtime::service::live_tests::support::live_native_service_db_lock()
+        .lock()
+        .await;
+    let qdrant = qdrant_url();
+    let pool = ledger_pool().await;
+    let store = ledger_store(&pool).await;
+
+    let schema = format!("udb_proj_{}", Uuid::new_v4().simple());
+    let collection = format!("udb_tx_projection_filter_{}", Uuid::new_v4().simple());
+    const MSG: &str = "acme.proj.v1.TxFilteredConcept";
+    create_source_table(
+        &pool,
+        &schema,
+        "tx_filtered_concepts",
+        ", vector JSONB, state TEXT, to_seq BIGINT, note TEXT",
+    )
+    .await;
+    create_qdrant_collection(&qdrant, &collection).await;
+
+    let mut vector = text_col("vector", false);
+    vector.sql_type = "JSONB".to_string();
+    vector.is_jsonb = true;
+    let mut to_seq = text_col("to_seq", false);
+    to_seq.sql_type = "BIGINT".to_string();
+    to_seq.proto_type = "int64".to_string();
+    let svc = served_service(served_manifest(
+        &schema,
+        "tx_filtered_concepts",
+        "TxFilteredConcept",
+        vec![
+            vector,
+            text_col("state", false),
+            to_seq,
+            text_col("note", false),
+        ],
+        vec![projection(
+            "TxFilteredConcept",
+            "vector",
+            "qdrant",
+            &collection,
+            vec![
+                opt("vector_field", "vector"),
+                opt(
+                    "projection_filter",
+                    "state = 'PUBLISHED' AND to_seq IS NULL",
+                ),
+            ],
+        )],
+        vec![ManifestStore {
+            store_kind: "vector".to_string(),
+            backend: "qdrant".to_string(),
+            resource_name: collection.clone(),
+            options: vec![opt("dimension", "4")],
+            ..ManifestStore::default()
+        }],
+    ))
+    .await;
+    let worker = worker(store, svc.runtime_snapshot(), svc.catalog.clone());
+    let tenant = Uuid::new_v4().to_string();
+    let ids = |points: Vec<serde_json::Value>| {
+        let mut ids = points
+            .iter()
+            .filter_map(|point| point["id"].as_str().map(str::to_string))
+            .collect::<Vec<_>>();
+        ids.sort();
+        ids
+    };
+    let rel = SystemCatalogConfig::current().projection_tasks_relation();
+    let unfinished = || {
+        let pool = pool.clone();
+        let rel = rel.clone();
+        let collection = collection.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>(&format!(
+                "SELECT COUNT(*) FROM {rel} WHERE resource_name = $1 AND status <> 'COMPLETED'"
+            ))
+            .bind(&collection)
+            .fetch_one(&pool)
+            .await
+            .expect("count unfinished projection tasks")
+        }
+    };
+
+    let outcome = std::panic::AssertUnwindSafe(async {
+        let first = json!({
+            "id": "c-1",
+            "tenant_id": tenant,
+            "state": "PUBLISHED",
+            "note": "v1",
+            "vector": [0.1, 0.2, 0.3, 0.4]
+        });
+        served_upsert(&svc, &tenant, MSG, first).await;
+        worker.run_once().await;
+        assert_eq!(
+            ids(served_vector_payloads(&svc, &tenant, &collection).await),
+            vec!["c-1".to_string()]
+        );
+
+        // The record names neither filter column: the stored row still
+        // matches, so the point stays and the task completes.
+        tx_upsert(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": "c-1", "tenant_id": tenant, "note": "v2"}),
+        )
+        .await;
+        worker.run_once().await;
+        assert_eq!(unfinished().await, 0, "the partial task completes");
+        assert_eq!(
+            ids(served_vector_payloads(&svc, &tenant, &collection).await),
+            vec!["c-1".to_string()],
+            "a partial tx upsert of a matching row keeps it projected"
+        );
+
+        // The record sets to_seq only: the row leaves the filter and goes.
+        tx_upsert(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": "c-1", "tenant_id": tenant, "to_seq": 7}),
+        )
+        .await;
+        worker.run_once().await;
+        assert_eq!(unfinished().await, 0, "the removing task completes");
+        assert!(
+            served_vector_payloads(&svc, &tenant, &collection)
+                .await
+                .is_empty(),
+            "a partial tx upsert that moves the row out of the filter removes it"
+        );
     })
     .catch_unwind()
     .await;

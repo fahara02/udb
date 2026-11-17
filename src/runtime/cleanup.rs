@@ -46,7 +46,12 @@
 //! - `udb_system.auth_audit_log` and `udb_metering.usage_events` delete rows
 //!   older than the retention in bounded batches. When the compliance evidence
 //!   export is on, `auth_audit_log` rows not yet exported are kept, so the
-//!   exported hash chain stays complete.
+//!   exported hash chain stays complete. A new `auth_audit_log` is partitioned
+//!   by month (an older one once `udb cleanup partition-audit-log` converted
+//!   it, see [`audit_log`]): months are kept ahead, and a UDB-named month whose
+//!   rows are all past retention (and, with the export on, all exported) is
+//!   dropped whole; rows in the default partition and the current month are
+//!   deleted as before.
 //! - Every other native table that declares `retention_days` and whose rows
 //!   have an end (sessions, token revocations, MFA challenges, webhook
 //!   deliveries, revoked devices, ...) follows its declared retention, counted
@@ -479,6 +484,7 @@ const DEFAULT_SWEEP_PAGES: i64 = 4_096;
 static STATEMENT_TIMEOUT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
 static SWEEP_PAGES: std::sync::OnceLock<i64> = std::sync::OnceLock::new();
 
+pub(crate) mod audit_log;
 mod compact;
 
 fn statement_timeout() -> &'static str {
@@ -573,6 +579,13 @@ pub(crate) enum TargetKind {
         only_when: Option<String>,
         /// What else decides which expired rows may go.
         guard: RowGuard,
+        /// The table may be range-partitioned by month on `column` (the auth
+        /// audit log, once converted): while it is, months are kept ahead and
+        /// UDB-named months past retention (and, with an evidence export,
+        /// fully exported) are dropped whole; rows past retention are still
+        /// deleted from the partitions that stay. While it is not, nothing
+        /// changes.
+        monthly_partitions: bool,
     },
 }
 
@@ -782,6 +795,7 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
                 .then(|| crate::runtime::singleton::WORKER_EVIDENCE_EXPORT.to_string()),
             only_when: None,
             guard: RowGuard::Unguarded,
+            monthly_partitions: true,
         },
         default_retention: None,
         capped: true,
@@ -801,6 +815,7 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
                 evidence_state_key: None,
                 only_when: None,
                 guard: RowGuard::Unguarded,
+                monthly_partitions: false,
             },
             default_retention: None,
             capped: true,
@@ -827,6 +842,7 @@ pub(crate) fn targets(evidence_export: bool) -> Vec<Target> {
                 evidence_state_key: None,
                 only_when: None,
                 guard: RowGuard::Unguarded,
+                monthly_partitions: false,
             },
             default_retention: declared_days(table.retention_days),
             capped: false,
@@ -913,6 +929,7 @@ fn system_targets(keep_versions: u32) -> Vec<Target> {
             evidence_state_key: None,
             only_when: Some(only_when),
             guard: RowGuard::Unguarded,
+            monthly_partitions: false,
         },
         default_retention: default,
         capped: false,
@@ -1553,6 +1570,36 @@ fn store_pool(runtime: &crate::runtime::DataBrokerRuntime, target: &Target) -> O
     }
 }
 
+/// `udb cleanup partition-audit-log`: convert the durable auth audit log
+/// (`udb_system.auth_audit_log`) from one plain table into monthly
+/// partitions, online and without moving a row (see [`audit_log`]). A log
+/// that is already partitioned is left as it is. Returns what was done; a
+/// refusal or a busy table is an error that names why, with nothing changed.
+pub async fn partition_auth_audit_log(
+    runtime: &crate::runtime::DataBrokerRuntime,
+) -> Result<serde_json::Value, String> {
+    let target = targets(false)
+        .into_iter()
+        .find(|target| {
+            matches!(
+                target.kind,
+                TargetKind::Rows {
+                    monthly_partitions: true,
+                    ..
+                }
+            )
+        })
+        .ok_or_else(|| "the auth audit log is not among the cleanup targets".to_string())?;
+    let pool = store_pool(runtime, &target).ok_or_else(|| {
+        format!(
+            "{}: this process cannot reach the store that holds it",
+            target.qualified()
+        )
+    })?;
+    let done = audit_log::convert_online(&pool, &target.schema, &target.table).await?;
+    Ok(done.to_json())
+}
+
 /// Give the free space of `relation` back the way `mode` says. `force`
 /// (an explicit `udb cleanup run`) compacts any table worth copying, not
 /// only a bloated one.
@@ -1684,7 +1731,7 @@ async fn upkeep_target(
                         .await?;
                 // A partition goes whole once even its longest-kept rows expired.
                 if let Some(kept) = retention.kept {
-                    outcome.dropped = drop_expired_partitions(pool, target, kept).await?;
+                    outcome.dropped = drop_expired_partitions(pool, target, kept, None).await?;
                 }
             }
             if mode.sweep_partitions
@@ -1714,16 +1761,39 @@ async fn upkeep_target(
             evidence_state_key,
             only_when,
             guard,
+            monthly_partitions,
         } => {
+            let mut outcome = Outcome::default();
+            // A log converted to monthly partitions: months ahead, and whole
+            // months past retention dropped (only UDB-named ones, never the
+            // default partition that holds the rows from before the
+            // conversion). Rows past retention in the partitions that stay
+            // are deleted below, leaf by leaf.
+            if *monthly_partitions
+                && audit_log::is_partitioned(pool, &target.relation()).await?
+                && !partman_manages(pool, target).await?
+            {
+                outcome.created = audit_log::create_months_ahead(
+                    pool,
+                    &target.schema,
+                    &target.table,
+                    DEFAULT_PREMAKE,
+                )
+                .await?;
+                if let Some(kept) = retention.kept {
+                    outcome.dropped =
+                        drop_expired_partitions(pool, target, kept, evidence_state_key.as_deref())
+                            .await?;
+                }
+            }
             let Some(rows) = retention.rows else {
-                return Ok(Outcome::default());
+                return Ok(outcome);
             };
             let only_when = match guard {
                 RowGuard::AdminAuditChain => {
-                    return Ok(Outcome {
-                        deleted: prune_admin_audit_chain(pool, target, column, rows, mode).await?,
-                        ..Outcome::default()
-                    });
+                    outcome.deleted =
+                        prune_admin_audit_chain(pool, target, column, rows, mode).await?;
+                    return Ok(outcome);
                 }
                 RowGuard::ReferencedBy(relation, key) => {
                     let present: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
@@ -1748,10 +1818,8 @@ async fn upkeep_target(
                 evidence_state_key: evidence_state_key.as_deref(),
                 only_when: only_when.as_deref(),
             };
-            Ok(Outcome {
-                deleted: delete_expired_rows(pool, target, &expiry, mode).await?,
-                ..Outcome::default()
-            })
+            outcome.deleted = delete_expired_rows(pool, target, &expiry, mode).await?;
+            Ok(outcome)
         }
     }
 }
@@ -2137,16 +2205,39 @@ async fn secure_partitions(pool: &PgPool, target: &Target) -> Result<i64, String
 }
 
 /// Drop UDB-created partitions whose whole range is older than the retention.
+/// With `evidence_state_key` (the compliance evidence export is on), a
+/// partition goes only once every row in it was exported too: its whole range
+/// is before the export's high-water mark, the same cutoff the row delete
+/// keeps to. Before the export ever ran, nothing is dropped.
 async fn drop_expired_partitions(
     pool: &PgPool,
     target: &Target,
     retention: Duration,
+    evidence_state_key: Option<&str>,
 ) -> Result<i64, String> {
+    let exported = match evidence_state_key {
+        None => String::new(),
+        Some(key) => {
+            let ready: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+                .bind(EVIDENCE_STATE)
+                .fetch_one(pool)
+                .await
+                .map_err(|err| format!("look up the evidence export state: {err}"))?;
+            if !ready {
+                return Ok(0);
+            }
+            format!(
+                " AND upper_bound::timestamptz <= COALESCE((SELECT last_occurred_at \
+                 FROM {EVIDENCE_STATE} WHERE worker = {}), 'epoch'::timestamptz)",
+                ql(key)
+            )
+        }
+    };
     let prefix = format!("{}_p_", target.table)
         .replace('\\', "\\\\")
         .replace('%', "\\%")
         .replace('_', "\\_");
-    let children: Vec<String> = sqlx::query_scalar(
+    let sql = format!(
         "SELECT child FROM ( \
              SELECT c.relname::text AS child, \
                     (regexp_match(pg_get_expr(c.relpartbound, c.oid), 'TO \\(''([^'']+)''\\)'))[1] AS upper_bound \
@@ -2154,15 +2245,16 @@ async fn drop_expired_partitions(
              WHERE i.inhparent = to_regclass($1) AND c.relname LIKE $2 ESCAPE '\\' \
          ) AS bounds \
          WHERE upper_bound IS NOT NULL \
-           AND upper_bound::timestamptz <= now() - $3::interval \
-         ORDER BY upper_bound",
-    )
-    .bind(target.relation())
-    .bind(format!("{prefix}%"))
-    .bind(format!("{} seconds", retention.as_secs()))
-    .fetch_all(pool)
-    .await
-    .map_err(|err| format!("list expired partitions: {err}"))?;
+           AND upper_bound::timestamptz <= now() - $3::interval{exported} \
+         ORDER BY upper_bound"
+    );
+    let children: Vec<String> = sqlx::query_scalar(&sql)
+        .bind(target.relation())
+        .bind(format!("{prefix}%"))
+        .bind(format!("{} seconds", retention.as_secs()))
+        .fetch_all(pool)
+        .await
+        .map_err(|err| format!("list expired partitions: {err}"))?;
     let mut dropped = 0i64;
     for child in children {
         sqlx::query(&format!(
@@ -2644,7 +2736,14 @@ async fn enforce_size_cap(
                             continue;
                         }
                     }
-                    sweep_expired_rows(pool, &target.relation(), &expiry).await?
+                    // Leaf by leaf: a log converted to monthly partitions has
+                    // no rows of its own (the leaf list of a plain table is
+                    // the table itself).
+                    let mut removed = 0i64;
+                    for leaf in leaf_relations(pool, target).await? {
+                        removed += sweep_expired_rows(pool, &leaf, &expiry).await?;
+                    }
+                    removed
                 }
             };
             if removed > 0 {
@@ -3199,6 +3298,7 @@ mod tests {
                 evidence_state_key: None,
                 only_when: None,
                 guard: RowGuard::Unguarded,
+                monthly_partitions: false,
             },
         };
         let small = PassMode {
@@ -3377,6 +3477,7 @@ mod tests {
                 evidence_state_key: None,
                 only_when: None,
                 guard: RowGuard::Unguarded,
+                monthly_partitions: false,
             },
         };
         let swept = PassMode {
@@ -3425,6 +3526,7 @@ mod tests {
                 evidence_state_key: None,
                 only_when: Some("status = 'COMPLETED'".to_string()),
                 guard: RowGuard::Unguarded,
+                monthly_partitions: false,
             },
         };
         let week = Duration::from_secs(7 * 86_400);
@@ -3472,6 +3574,7 @@ mod tests {
                     2,
                 )),
                 guard: RowGuard::Unguarded,
+                monthly_partitions: false,
             },
             ..tasks.clone()
         };
@@ -3527,6 +3630,7 @@ mod tests {
                     format!("{schema}.transitions"),
                     "run_id".to_string(),
                 ),
+                monthly_partitions: false,
             },
             ..tasks.clone()
         };
@@ -3645,6 +3749,7 @@ mod tests {
                 evidence_state_key: None,
                 only_when: None,
                 guard: RowGuard::AdminAuditChain,
+                monthly_partitions: false,
             },
         };
         // Pages of two: the anchor is written with each page.

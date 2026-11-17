@@ -79,7 +79,7 @@ const COMMANDS: &[CmdHelp] = &[
         name: "cleanup",
         group: "Core",
         summary: "The cleanup service for UDB's own tables: show its settings or run a pass now.",
-        usage: "udb cleanup show  |  udb cleanup run [--dsn <postgres-dsn>] [--reclaim off|vacuum|full|online]",
+        usage: "udb cleanup show  |  udb cleanup run [--dsn <postgres-dsn>] [--reclaim off|vacuum|full|online]  |  udb cleanup partition-audit-log [--dsn <postgres-dsn>]",
         details: "\
   show  prints each UDB table the cleanup service keeps (decision audit, auth
         audit log, metering events, every time-partitioned table), the retention
@@ -94,6 +94,15 @@ const COMMANDS: &[CmdHelp] = &[
         while it runs, so use a maintenance window).
         Denied decisions can be kept longer than allows:
         UDB_CLEANUP_RETENTION=access_decision_audits=7d,access_decision_audits:deny=90d
+  partition-audit-log
+        converts an auth_audit_log created by an older release (one plain
+        table) into monthly partitions, so retention drops whole months. It
+        runs online: indexes are built without blocking writes, and the swap
+        holds its lock for a moment (3 s lock_timeout, retried; a busy table
+        gives up with nothing changed). No row moves: the old table becomes
+        the default partition and its rows are deleted as they pass
+        retention. Prints what it did; a log already partitioned is left as
+        it is. A new auth_audit_log is created partitioned.
   The broker runs the same pass every UDB_CLEANUP_INTERVAL (default 10m) unless
   UDB_CLEANUP_ENABLED=false. Every setting is an environment variable, a `.env`
   entry or a `udb serve` flag (`udb help serve`).

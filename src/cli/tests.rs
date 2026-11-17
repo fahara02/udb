@@ -987,6 +987,16 @@ fn parse_args_recognizes_cleanup() {
         parse_args(&full).0,
         Command::Cleanup(CleanupCommand::Run { dsn: None, reclaim: Some(mode) }) if mode == "full"
     ));
+    let partition: Vec<String> = vec![
+        "cleanup".into(),
+        "partition-audit-log".into(),
+        "--dsn".into(),
+        "postgres://x".into(),
+    ];
+    assert!(matches!(
+        parse_args(&partition).0,
+        Command::Cleanup(CleanupCommand::PartitionAuditLog { dsn: Some(dsn) }) if dsn == "postgres://x"
+    ));
     let bad: Vec<String> = vec!["cleanup".into(), "prune".into()];
     assert!(matches!(parse_args(&bad).0, Command::InvalidUsage { .. }));
 }

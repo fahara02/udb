@@ -11,6 +11,27 @@ release line was tagged.
 
 ### Breaking for callers
 
+- **In production the broker refuses to start on a plaintext or unverified Kafka connection.**
+  With `UDB_OUTBOUND_TLS_REQUIRED` on (the default under `UDB_ENV=production`), every broker in
+  `UDB_KAFKA_BROKERS` that is not on loopback must be reached over TLS with its certificate and
+  hostname checked. Every Kafka client UDB opens uses the same settings: the CDC and outbox
+  relay, the transactional producer, the asset consumers and `udb doctor`.
+  - detect: config: startup fails with `Kafka (UDB_KAFKA_BROKERS / UDB_KAFKA_SECURITY_PROTOCOL, host …) is plaintext … and UDB_OUTBOUND_TLS_REQUIRED is on`
+  - fix: set `UDB_KAFKA_SECURITY_PROTOCOL=ssl` (plus `UDB_KAFKA_SSL_CA_LOCATION` for a private CA,
+    and `UDB_KAFKA_SSL_CERTIFICATE_LOCATION`/`UDB_KAFKA_SSL_KEY_LOCATION` for mutual TLS), or set
+    `UDB_OUTBOUND_TLS_REQUIRED=false`
+- **CacheScan against a Memcached cache is refused instead of returning an empty page.** Memcached
+  cannot list keys, so the empty answer read as "nothing matched" while matching keys existed.
+  This holds for the own and the shared namespace, and for a raw scan dispatched to Memcached.
+  - detect: code: `UNIMPLEMENTED`, error detail kind CAPABILITY, backend `memcached`, capability
+    `key_enumeration`
+  - fix: read known keys with CacheGet, or keep keys you need to enumerate in a Redis cache
+- **The auth audit log's primary key is `(audit_id, occurred_at)` once it is partitioned.** New
+  installs create `udb_system.auth_audit_log` partitioned by month, and `udb cleanup
+  partition-audit-log` converts an existing one (see Added).
+  - detect: sql: anything outside UDB that uses `ON CONFLICT (audit_id)` or a foreign key to
+    `audit_id` alone on that table
+  - fix: include `occurred_at` in the conflict target or key
 - **A project can no longer activate a table another project already uses.** Two projects that
   declared the same table (with no project column) on the same PostgreSQL shared its rows. Now
   staging or activating the second catalog is refused unless both mark the table
@@ -25,6 +46,8 @@ release line was tagged.
 
 ### Added
 
+- **Kafka over TLS.** `UDB_KAFKA_SECURITY_PROTOCOL=ssl` with `UDB_KAFKA_SSL_CA_LOCATION`, an optional client certificate and key (`UDB_KAFKA_SSL_CERTIFICATE_LOCATION`, `UDB_KAFKA_SSL_KEY_LOCATION`, `UDB_KAFKA_SSL_KEY_PASSWORD`), and certificate and hostname checks on by default. Settings that cannot be applied stop the broker; it never falls back to plaintext. Kafka joins the production outbound-TLS rule (see Breaking).
+- **The durable auth audit log is partitioned by month, so retention drops whole months instead of leaving dead space.** A new `udb_system.auth_audit_log` is created range-partitioned on `occurred_at`, with a default partition. The cleanup pass keeps months ahead and drops a UDB-named month once all its rows are past retention (and, with the evidence export on, exported); the disk comes back at once, with no long lock. A log created by an older release stays a plain table, with row deletes as before, until the operator runs `udb cleanup partition-audit-log`, which converts it online: indexes are built concurrently, the swap takes a lock for a moment (3 s `lock_timeout`, retried, and nothing changes if the table stays busy), and the old table becomes the default partition with every row, grant, row-level security setting and policy kept. The size cap now also reaches the rows of a partitioned log.
 - **Online space reclaim: `UDB_CLEANUP_RECLAIM=online` / `udb cleanup run --reclaim online`.** `VACUUM FULL` locks a table for its whole rewrite, minutes on a multi-gigabyte audit log, so every read and write of it waits. `online` copies the live rows into a compact twin page range by page range while the table stays in use, then swaps the two under a lock held only for the swap: bounded by a 3 s `lock_timeout` and retried while the table is busy, so it never queues the application behind it. Rows changed during the copy are applied before the swap and the row counts must match, or nothing changes. Grants, owner, row-level security and its policies, owned sequences, index and constraint names and the table comment carry over. A table it cannot move faithfully (triggers, foreign keys, identity columns, views over it, inheritance, publication membership, no primary key) is refused with the reason, never compacted in part. A partitioned table is compacted partition by partition: a bloated partition (the current month, which retention cannot drop yet) is detached and its compact copy attached under the same bound, in the same short swap.
 - **Projections can take a row filter.** `projection_filter` on `vector_store`, `document_store`, `graph_store` and `data_store` is a small expression over the entity's own columns, such as `state = 'PUBLISHED' AND superseded_at IS NULL`. Only matching rows are projected; a row that stops matching is removed from the store, and a delete still deletes. The filter is checked when the catalog is built and shown in the catalog manifest; replay, backfill, drift scan and repair, and the hybrid-search text leg apply it too.
 - **Delegated job tokens in every SDK.** PHP, Rust, Java and C# can exchange a user's access token for a delegated job token (`AuthnService.ExchangeTokenForJob`) with the same checks and result as Go, TypeScript and Python, and their errors expose the broker's typed reason (`isTokenExpired` / `isTokenRevoked`).
@@ -38,6 +61,8 @@ release line was tagged.
 
 ### Fixed
 
+- **A BeginTx upsert or insert that carries only some columns projects the row as stored, like the unary Upsert.** The transaction path built projection tasks from the partial request record, so a `projection_filter` naming a column the record left out could not judge the row and the task failed. Both paths now read the row back through one shared helper, in the write's own transaction.
+- **The TypeScript `bulkUpsert` sends only the fields each row carries**, as Go and Python do. It filled every absent column with its default, so a row of another shape passed the broker's check and stored values the caller never sent.
 - **Two projects can no longer share one table by accident.** Two projects that declared the same table (with no project column) on the same PostgreSQL used to share its rows silently. Staging or activating such a catalog is now refused with `catalog_relation_claimed_by_other_project`, naming the table, the other project and how to resolve it. A table can be shared on purpose with `pg_table.cross_project_shared: true` in both projects; tables scoped by project in both catalogs stay allowed.
 - Startup and `udb doctor` warn about unlabeled backends that serve several projects under permissive routing, and about tables active catalogs already share.
 - The cleanup service prunes UDB's migration runs after 90 days (`udb_migration_runs`), keeping runs in flight, awaiting approval or failed, each project's newest completed run, and runs a reviewed catalog transition names.

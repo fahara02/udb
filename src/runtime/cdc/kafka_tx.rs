@@ -43,7 +43,6 @@
 
 use std::time::Duration;
 
-use rdkafka::ClientConfig;
 use rdkafka::error::KafkaError;
 use rdkafka::producer::{FutureProducer, FutureRecord, Producer};
 
@@ -88,8 +87,7 @@ impl KafkaTxConfig {
 /// error to the CDC engine startup path so the operator sees a
 /// concrete recovery action.
 pub fn build_transactional_producer(cfg: &KafkaTxConfig) -> Result<FutureProducer, String> {
-    let producer: FutureProducer = ClientConfig::new()
-        .set("bootstrap.servers", &cfg.brokers)
+    let producer: FutureProducer = crate::runtime::config::kafka_client_config(&cfg.brokers)?
         // Transactional producers require idempotence + acks=all. rdkafka
         // also enforces `max.in.flight.requests.per.connection <= 5`
         // automatically when `transactional.id` is set.

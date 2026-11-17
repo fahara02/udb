@@ -707,7 +707,8 @@ mod storage_finalized_consumer_tests {
 
     #[test]
     fn consumer_config_replays_backlog_and_disables_auto_commit() {
-        let config = storage_finalized_consumer_config("broker-a:9092");
+        let config =
+            storage_finalized_consumer_config("broker-a:9092").expect("Kafka consumer config");
 
         assert_eq!(config.get("bootstrap.servers"), Some("broker-a:9092"));
         assert_eq!(
