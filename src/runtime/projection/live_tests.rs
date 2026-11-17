@@ -2298,6 +2298,7 @@ async fn live_projection_filter_keeps_only_matching_rows_in_qdrant() {
 /// A MongoDB projection deletes by FILTER, so a row leaving the filter must be
 /// removed by its identity, not by its new (non-matching) values; a row the
 /// filter cannot judge fails its task instead of being projected.
+#[cfg(feature = "mongodb-native")]
 #[tokio::test]
 #[ignore = "requires live Postgres+MongoDB (UDB_MONGODB_DSN); runs in the CI --ignored live lane"]
 async fn live_projection_filter_removes_a_document_that_leaves_the_filter() {

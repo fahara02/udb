@@ -432,7 +432,6 @@ impl TokenManager {
     }
 }
 
-/// The `RefreshToken` request for the stored credential.
 // ── Delegated job tokens ─────────────────────────────────────────────────────
 //
 // A durable async job (an export, a report, a nightly sync) often has to act for
@@ -590,6 +589,7 @@ fn delegated_job_token(
     })
 }
 
+/// The `RefreshToken` request for the stored credential.
 fn refresh_request(stored: &Token) -> authn::RefreshTokenRequest {
     authn::RefreshTokenRequest {
         refresh_token: stored.refresh_token.clone(),
