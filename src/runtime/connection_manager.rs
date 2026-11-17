@@ -1667,6 +1667,9 @@ mod tests {
             // `CleanupSettings::from_env` (at worker spawn, or by `udb cleanup`);
             // its passes take the resolved settings. Its live test reads its DSN.
             "src/runtime/cleanup.rs",
+            // Online compaction reads nothing from env; its `#[cfg(test)]` live
+            // tests read their DSN, like the cleanup live tests above.
+            "src/runtime/cleanup/compact.rs",
             // `#[cfg(test)]` live seam test: reads its backend DSNs from env.
             "src/runtime/service/tenant_service/vector_purge_live.rs",
             "src/runtime/service/tenant_service/graph_purge_live.rs",
