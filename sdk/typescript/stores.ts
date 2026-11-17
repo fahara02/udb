@@ -1077,8 +1077,21 @@ function bulkResponse(raw: any): BulkUpsertResponse {
 }
 
 /** One row as BulkUpsert carries it: encoded like an upsert's record. */
+/** One bulk row, encoded as an upsert encodes its values but carrying only the
+ *  fields the row gives, as the Go and Python SDKs send it. The full encoding
+ *  fills every absent column with its default, which would hide a row of
+ *  another shape from the broker's check and write values the caller never
+ *  sent. */
 function bulkRowBytes(schemas: ProtoSchemas, messageType: string, row: Record<string, unknown>): Buffer {
-  return jsonBytes(writeRecord(schemaOf(schemas, messageType), schemas, messageType, row));
+  const schema = schemaOf(schemas, messageType);
+  const record = writeRecord(schema, schemas, messageType, row);
+  if (!schema || record === null || typeof record !== "object") return jsonBytes(record);
+  const given = new Set(Object.keys(row).map((key) => schema.field(key)?.name ?? key));
+  const carried: Record<string, unknown> = {};
+  for (const [column, value] of Object.entries(record as Record<string, unknown>)) {
+    if (given.has(column)) carried[column] = value;
+  }
+  return jsonBytes(carried);
 }
 
 async function sendBulk(
