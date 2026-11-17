@@ -288,8 +288,11 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     # Windows compiles from cold whenever the previous run failed (the cache is
     # only saved on success), and then the release-binary build overran 45
-    # minutes after every test had already passed.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 45 }}
+    # minutes after every test had already passed. Linux hits the same wall
+    # after any Cargo.lock change (a version bump): a cold debug build of all
+    # targets no longer fits in 45 minutes, and a timed-out run saves no cache,
+    # so every retry starts cold again.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 90 }}
     # Windows runners have a small paging file: with full debug info, the
     # parallel test links each map the multi-hundred-MB `udb` rlib and fail
     # with "The paging file is too small" (os error 1455). Line tables keep
